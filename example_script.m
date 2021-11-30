@@ -34,8 +34,8 @@ baseline = prctile(spect_bl, baseline_ptile, 2); % Get baseline
 
 %% Pick a segment of the spectrogram to extract peaks from 
 % Use only a segment of the spectrogram (4000-12000 seconds) for example to save computing time
-[~,start] = min(abs(4000 - stimes)); 
-[~,last] = min(abs(12000 - stimes)); 
+[~,start] = min(abs(9000 - stimes)); 
+[~,last] = min(abs(9050 - stimes)); 
 spect_in = spect(:, start:last);
 stimes_in = stimes(start:last);
 
