@@ -1,10 +1,44 @@
 function [SO_resized, freqcbins_resize, SO_cbins_resize] = rebin_histogram(hist_data, TIB_data, freq_cbins, SO_cbins, freq_binsizestep, ...
                                                                            SO_binsizestep, SOtype, conv_type, ispartial, isrepeating, TIB_req)
-% IN PROGRESS
+% Takes in SOpow/phase histogram data and rebins to specified bin size and step
 %
 % Inputs:
-%       hist_data: MxNxP 3D double - [freq, SO_feature, num_subjs]
+%       hist_data:        MxNxP 3D double - [freq, SO_feature, num_subjs]
+%                         histogram data to rebin.  --required
+%       TIB_data:         NxP 2D double - [SO_feature, num_subjs] Sleep time spent in each 
+%                         SO_feature bin --required
+%       freq_cbins:       double vector - frequency bin centers for hist_data.
+%                         Must be same size as M in hist_data. --required
+%       SO_cbins:         double vector - SO feature bin centers for hist_data.
+%                         Must be same size as N in hist_data. --required
+%       freq_binsizestep: 1x2 double - 
+%       SO_binsizestep:   1x2 double - 
+%       SOtype:           char - 'power' or 'phase' indicating default
+%                         params for rebinning (conv_type, isrepeating, TIB_req)
+%       conv_type:        integer or char - indicates the convolution padding
+%                         options. Integer indicates number of 0s to pad with. 'circular' 
+%                         indicates bins wrap around. Default = 0 for
+%                         'power' and default = 'circular' for 'phase'
+%       ispartial:        logical - indicates whether combined bins in columns of
+%                         hist_data can be partial. Default = true
+%       isrepeating:      logical - indicates whether the first and last columns
+%                         of SO_resized should be the same/repeated to show circularity of 
+%                         bins. Default = false for 'power' and default =
+%                         true for 'phase'
+%       TIB_req:          double - minutes required in each y bin. Y bins with <
+%                         TIB_req minutes will be tured to NaNs. Default =
+%                         1 for 'power' and default = 0 for 'phase'
 %
+% Outputs:
+%       SO_resized:       AxBxP 3D double - [new freqs, new SO_feature, num_subjs] rebinned histograms
+%       freqcbins_resize: double vector - new frequency bin centers for SO_resized
+%       SO_cbins_resize:  double vector - new SO_feature bin centers for SO_resized
+%
+%   Copyright 2020 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
+%   Last modified:
+%       - Created - Tom Possidente 1/03/2022
+%%%************************************************************************************%%%
+
 
 %% Deal with Inputs
 assert(nargin >= 7, '7 arguments required (hist_data, TIB_data, freq_cbins, SO_cbins, freq_binsizestep, SO_binsizestep, SOtype)');
@@ -16,7 +50,7 @@ switch lower(SOtype)
         end
         
         if nargin < 9 || isempty(ispartial)
-            ispartial = false;
+            ispartial = true;
         end
         
         if nargin < 10 || isempty(isrepeating)
