@@ -161,7 +161,7 @@ SO_mat = nan(num_SObins, num_freqbins);
 time_in_bin = zeros(num_SObins,1);
 prop_in_bin = zeros(num_SObins,1);
 
-for s = 1:num_SObins
+parfor s = 1:num_SObins
     
     % Check for bins that need to be wrapped because phase is circular -pi to pi
     if (SO_bin_edges(1,s) <= -pi) % Lower limit should be wrapped
@@ -183,30 +183,27 @@ for s = 1:num_SObins
     time_in_bin(s) = (sum(time_in_bin_inds' & SOphase_valid) * SOphase_binsize) / 60;
     time_in_bin_allstages = (sum(time_in_bin_inds & SOphase_valid_times') * SOphase_binsize) / 60;
     prop_in_bin(s) = time_in_bin(s) / time_in_bin_allstages;
-        
-    if sum(SO_inds & peak_selection_inds) >= 1
-        
-        for f = 1:num_freqbins    
-            
-            % Get indices of TFpeaks that occur in this frequency bin
-            freq_inds = (TFpeak_freqs >= freq_bin_edges(1,f)) & (TFpeak_freqs < freq_bin_edges(2,f));
-            
-            % Fill histogram with count of peaks in this freq/SOphase bin
-            SO_mat(s,f) = sum(SO_inds & freq_inds & peak_selection_inds);
-            
-        end
-    else
-        SO_mat(s,:) = 0;
+                
+    for f = 1:num_freqbins    
+
+        % Get indices of TFpeaks that occur in this frequency bin
+        freq_inds = (TFpeak_freqs >= freq_bin_edges(1,f)) & (TFpeak_freqs < freq_bin_edges(2,f));
+
+        % Fill histogram with count of peaks in this freq/SOphase bin
+        SO_mat(s,f) = sum(SO_inds & freq_inds & peak_selection_inds);
+
     end
     
-    if smooth_flag == true 
+end
+
+if smooth_flag == true 
+    for s = 1:num_SObins % separated from parfor loop due to parallelization constraints
         SO_mat(s,:) = smooth(SO_mat(s,:));
-    end 
-    
-    if rate_flag == true
-        SO_mat(s,:) = SO_mat(s,:) / time_in_bin(s);
     end
-    
+end 
+
+if rate_flag == true
+    SO_mat = SO_mat ./ time_in_bin;
 end
 
 %% Normalize along a dimension if desired

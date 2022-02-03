@@ -2,13 +2,13 @@
 %           as well as merge existing axes.
 %
 %   Usage:
-%       axis_handles=figdesign([num_rows, num_cols], options)
 %       axis_handles=figdesign(num_rows, num_cols, options)
-%       axis_handles=figdesign(num_rows, num_cols, margins, options)
+%       axis_handles=figdesign(fig_handle, num_rows, num_cols, options)
 %
 %   Input:
 %   num_rows: the number of rows in the subplot
 %   num_cols: the number of columns in the subplot
+%   fig_handle: handle to parent figure
 %
 %   Options:
 %   iteract: a boolean, which enables/disables grid interaction window (default: false).
@@ -17,12 +17,11 @@
 %
 %            To get new figure handles after interactive mergine, use:
 %               axes_handles=figdesign('handles');
-%   margins: a vector of margin size defined as [top bottom left right middle]
-%            (default: [.1 .05 .08 .05 .08])
-%   units: a string defining the units of the margin vector (default: 'normalized')
-%   merge: a array or cell array, with indices of axes to merge
-%   type: defines paper type for figure
-%   orient: defindes paper orientation (default: portrait)
+%   margins: a vector of margin size defined as [top bottom left right column row]
+%            (default: [.1 .05 .08 .05 .08 .08])
+%   merge: an array or cell array, with indices of axes to merge
+%   numberaxes: logical, titles each axis with the axis number (default: false)
+%   <figure options>: list of name-value pairs of valid options for figure class
 %
 %   Output:
 %   axis_handles: 1x(num_rows*numcols) vector of axis handles
@@ -46,10 +45,11 @@
 %             bottom=.05;
 %             left=.08;
 %             right=.05;
-%             middle=.08;
+%             column=.2;
+%             row=.3;
 %
 %             %Create subplot
-%             figdesign(2,2,[top bottom left right middle]);
+%             figdesign(2,2,'margins',[top bottom left right column row]);
 %
 %         EXAMPLE 3:
 %             %Define specific page size and orient
@@ -81,36 +81,39 @@
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %
-%   last modified 05/15/2013
+%   last modified 12/02/2021
 %********************************************************************
-function axis_handles=figdesign(num_rows,num_cols,varargin)
+function axis_handles=figdesign(varargin)
 %Run demo
-if nargin==1
-    if strcmpi(num_rows,'demo')
-        demo();
-        return;
-    elseif strcmpi(num_rows,'handles');
-        axis_handles=findobj(gcf,'type','axes');
-        apos=get(axis_handles,'position');
-        apos=reshape([apos{:}],4,numel([apos{:}])/4)';
-        [~,ind]=sortrows(apos,2);
-        axis_handles=axis_handles(flipud(ind));
-        return
-    end
+if nargin==1 && strcmpi(varargin{1},'demo')
+    demo();
+    return;
+end
+
+if isa(varargin{1},'matlab.ui.Figure')
+    mainfig_h = varargin{1};
+    varargin = varargin(2:end);
+else
+    mainfig_h = gcf;
 end
 
 %Parse input options
 p=inputParser;
-p.addOptional('margins',[.05 .05 .08 .05 .08 .08],@(x)any(isnumeric(x)));
+p.addOptional('numrows',@(x)validateattributes(x,{'numeric'},{'positive','integer'}));
+p.addOptional('numcols',@(x)validateattributes(x,{'numeric'},{'positive','integer'}));
+p.addOptional('margins',[.05 .05 .08 .05 .08 .08],@(x)validateattributes(x,{'numeric','1d','vector'},{'positive','<=',1}));
 p.addOptional('interact',false,@logical);
-p.addOptional('units','normalized',@(x)any(strcmpi(x,{'normalized', 'inches', 'centimeters', 'points'})))
+p.addOptional('units','normalized',@(x)any(validatestring(x,{'normalized', 'inches', 'centimeters', 'points'})))
 p.addOptional('merge','');
 p.addOptional('orient','portrait', @(x)any(validatestring(x,{'portrait','landscape'})));
-p.addOptional('type', []);
+p.addOptional('type', 'usletter');
 p.addOptional('numberaxes', false);
+p.KeepUnmatched = true;
 
 p.parse(varargin{:});
 
+num_rows = p.Results.numrows;
+num_cols = p.Results.numcols;
 margins=p.Results.margins;
 interact=logical(p.Results.interact);
 units=p.Results.units;
@@ -119,24 +122,17 @@ orientation=p.Results.orient;
 paper_type=p.Results.type;
 numberaxes = p.Results.numberaxes;
 
-%Check for one argument
-if nargin==1
-    %check if it's [num_rows, num_cols]
-    if length(num_rows)==2
-        num_cols=num_rows(2);
-        num_rows=num_rows(1);
-        %make the best matrix if just the number of plots
-    elseif length(num_rows)==1
-        [num_rows, num_cols]=spconfig(num_rows);
-    end
-end
+%Sets default to portrait letter
+set(mainfig_h,'units','inches','position',[0 0 get(mainfig_h,'papersize')],'color','w');
+set(mainfig_h,'units',units,'paperorientation',orientation,'papertype',paper_type,'color','w');
+set(mainfig_h,'paperpositionmode','auto');
 
-%Get main figure
-mainfig=gcf;
-if ~isempty(paper_type)
-    %Create figure
-    set(mainfig,'paperorientation',orientation,'paperunits','inches','papertype',paper_type)
-    set(mainfig,'units','inches','position',[0 0 get(gcf,'papersize')],'color','w');
+%Recreate varargin removing the x/y axis location name pairs
+varargin = cat(2,fieldnames(p.Unmatched),struct2cell(p.Unmatched));
+varargin = reshape(varargin',1, numel(varargin));
+
+if ~isempty(varargin)
+    set(mainfig_h,varargin{:});
 end
 
 if length(margins)~= 5 && length(margins) ~=6
@@ -147,10 +143,9 @@ if length(margins) == 5
     margins(6) = margins(5);
 end
 
-set(mainfig,'units',units);
-set(mainfig,'paperpositionmode','auto');
+
 %Set up axesaxis_handles
-axis_handles=create_axes(mainfig, margins(1),margins(2),margins(3),margins(4), margins(5), margins(6), num_cols, num_rows, units);
+axis_handles=create_axes(mainfig_h, margins(1),margins(2),margins(3),margins(4), margins(5), margins(6), num_cols, num_rows, units);
 
 %Disable interaction for merged
 if ~isempty(merge)
@@ -166,7 +161,7 @@ if ~isempty(merge)
             merge_axes(axis_handles(merge{i}));
         end
     end
-    axis_handles=findobj(gcf,'type','axes');
+    axis_handles=findobj(mainfig_h,'type','axes');
     apos=get(axis_handles,'position');
     apos=reshape([apos{:}],4,numel([apos{:}])/4)';
     
@@ -186,100 +181,118 @@ end
 
 %Set up interaction
 if interact
-    if ~strcmpi(units,'normalized')
-        pos=get(mainfig,'position');
-        wmax=pos(3);
-        hmax=pos(4);
-    else
-        hmax=1;
-        wmax=1;
-    end
-    
-    %Create the position interaction figure
-    posfig = figure('Position',[250 250 350 280],...
-        'MenuBar','none','NumberTitle','off',...
-        'Name','Adjust Subplots','closerequestfcn',@(src,evnt)merge_on(mainfig));
-    
-    %Create the sliders
-    topslider_h = uicontrol(posfig,'units','pixel','Style','slider',...
-        'Max',hmax,'Min',1e-100,'Value',margins(1),...
-        'SliderStep',[0.05 0.2],...
-        'Position',[25 25 300 20]);
-    bottomslider_h = uicontrol(posfig,'units','pixel','Style','slider',...
-        'Max',hmax,'Min',1e-100,'Value',margins(2),...
-        'SliderStep',[0.05 0.2],...
-        'Position',[25 75 300 20]);
-    leftslider_h = uicontrol(posfig,'units','pixel','Style','slider',...
-        'Max',wmax,'Min',1e-100,'Value',margins(3),...
-        'SliderStep',[0.05 0.2],...
-        'Position',[25 125 300 20]);
-    rightslider_h = uicontrol(posfig,'units','pixel','Style','slider',...
-        'Max',wmax,'Min',1e-100,'Value',margins(4),...
-        'SliderStep',[0.05 0.2],...
-        'Position',[25 175 300 20]);
-    midslider_h = uicontrol(posfig,'units','pixel','Style','slider',...
-        'Max',max([wmax hmax]),'Min',1e-100,'Value',margins(5),...
-        'SliderStep',[0.05 0.2],...
-        'Position',[25 225 300 20]);
-    
-    %Array of all slider handles
-    sliders_h=[topslider_h bottomslider_h leftslider_h rightslider_h midslider_h];
-    
-    %Create descriptor texts for the sliders
-    uicontrol(gcf,'units','pixel','Style','text','string','Top Margin','Position',[25 45 100 20],'backgroundcolor',get(gcf,'color'),'horizontalalign','left');
-    uicontrol(gcf,'units','pixel','Style','text','string','Bottom Margin','Position',[25 95 100 20],'backgroundcolor',get(gcf,'color'),'horizontalalign','left');
-    uicontrol(gcf,'units','pixel','Style','text','string','Left Margin','Position',[25 145 100 20],'backgroundcolor',get(gcf,'color'),'horizontalalign','left');
-    uicontrol(gcf,'units','pixel','Style','text','string','Right Margin','Position',[25 195 100 20],'backgroundcolor',get(gcf,'color'),'horizontalalign','left');
-    uicontrol(gcf,'units','pixel','Style','text','string','Middle Margins','Position',[25 245 100 20],'backgroundcolor',get(gcf,'color'),'horizontalalign','left');
-    
-    %Create the edit boxes for manual entry of parameter values
-    topedit_h=uicontrol(gcf,'units','pixel','Style','edit','string',num2str(margins(1)),'Position',[120 47 70 20],'backgroundcolor',get(gcf,'color'),'horizontalalign','right');
-    bottomedit_h=uicontrol(gcf,'units','pixel','Style','edit','string',num2str(margins(2)),'Position',[120 97 70 20],'backgroundcolor',get(gcf,'color'),'horizontalalign','right');
-    leftedit_h=uicontrol(gcf,'units','pixel','Style','edit','string',num2str(margins(3)),'Position',[120 147 70 20],'backgroundcolor',get(gcf,'color'),'horizontalalign','right');
-    rightedit_h=uicontrol(gcf,'units','pixel','Style','edit','string',num2str(margins(4)),'Position',[120 197 70 20],'backgroundcolor',get(gcf,'color'),'horizontalalign','right');
-    midedit_h=uicontrol(gcf,'units','pixel','Style','edit','string',num2str(margins(5)),'Position',[120 247 70 20],'backgroundcolor',get(gcf,'color'),'horizontalalign','right');
-    
-    %Array of all edit box handles
-    editboxes_h=[topedit_h bottomedit_h leftedit_h rightedit_h midedit_h];
-    
-    %Set the edit box callbacks
-    set(topedit_h,'callback',@(src,evnt)edit_update(axis_handles,sliders_h,editboxes_h,1, mainfig, num_cols, num_rows, units));
-    set(bottomedit_h,'callback',@(src,evnt)edit_update(axis_handles,sliders_h,editboxes_h,2, mainfig, num_cols, num_rows, units));
-    set(leftedit_h,'callback',@(src,evnt)edit_update(axis_handles,sliders_h,editboxes_h,3, mainfig, num_cols, num_rows, units));
-    set(rightedit_h,'callback',@(src,evnt)edit_update(axis_handles,sliders_h,editboxes_h,4, mainfig, num_cols, num_rows, units));
-    set(midedit_h,'callback',@(src,evnt)edit_update(axis_handles,sliders_h,editboxes_h,5, mainfig, num_cols, num_rows, units));
-    
-    %Set continuous callbaxs for the sliders
-    addlistener(topslider_h,'ContinuousValueChange',@(src,evnt)slider_update(axis_handles,sliders_h,editboxes_h,1, mainfig, num_cols, num_rows, units));
-    addlistener(bottomslider_h,'ContinuousValueChange',@(src,evnt)slider_update(axis_handles,sliders_h,editboxes_h,2, mainfig, num_cols, num_rows, units));
-    addlistener(leftslider_h,'ContinuousValueChange',@(src,evnt)slider_update(axis_handles,sliders_h,editboxes_h,3, mainfig, num_cols, num_rows, units));
-    addlistener(rightslider_h,'ContinuousValueChange',@(src,evnt)slider_update(axis_handles,sliders_h,editboxes_h,4, mainfig, num_cols, num_rows, units));
-    addlistener(midslider_h,'ContinuousValueChange',@(src,evnt)slider_update(axis_handles,sliders_h,editboxes_h,5, mainfig, num_cols, num_rows, units));
-    
-    %Fix the main figure so that it closes the adjustment window when
-    %deleted
-    set(mainfig,'closerequestfcn',@(src,evnt)close_all(mainfig, posfig));
+    run_interaction(mainfig_h,margins, axis_handles, num_rows, num_cols, units);
 else
-    %If not adjusting, add the merge menu to the main figure toolbar
-    f = uimenu('Label','Merge Axes');
-    uimenu(f,'Label','Merge...','Callback',@(src,evnt)merge_axes);
+    c = get(mainfig_h,'children');
+    menu_inds = arrayfun(@(x)strcmpi(class(x),'matlab.ui.container.Menu'),c);
     
-    % Add numbers to axes for easy identification
-    if numberaxes
-        for ii = 1:length(axis_handles)
-            title(axis_handles(ii), num2str(ii));
-        end
+    if ~any(menu_inds) || ~any(strcmpi({c(menu_inds).Text},'Merge Axes'))
+        %If not adjusting, add the merge menu to the main figure toolbar
+        f = uimenu('Label','Merge Axes');
+        uimenu(f,'Label','Merge...','Callback',@(src,evnt)merge_axes);
     end
-    
 end
+
+% Add numbers to axes for easy identification
+if numberaxes
+    for ii = 1:length(axis_handles)
+        title(axis_handles(ii), ['Axis ' num2str(ii)]);
+    end
+end
+
+%*****************************************************
+%             CREATE INTERACTIVE AXES
+%*****************************************************
+function run_interaction(mainfig_h, margins, axis_handles, num_rows, num_cols, units)
+if ~strcmpi(get(mainfig_h,'units'),'normalized')
+    pos=get(mainfig_h,'position');
+    wmax=pos(3);
+    hmax=pos(4);
+else
+    hmax=1;
+    wmax=1;
+end
+
+%Create the position interaction figure
+posfig = figure('Position',[250 250 350 330],...
+    'MenuBar','none','NumberTitle','off','color','w',...
+    'Name','Adjust Subplots','closerequestfcn',@(src,evnt)merge_on(mainfig_h));
+
+%Create the sliders
+topslider_h = uicontrol(posfig,'units','pixel','Style','slider',...
+    'Max',hmax,'Min',1e-100,'Value',margins(1),...
+    'SliderStep',[0.05 0.2],...
+    'Position',[25 275 300 20]);
+bottomslider_h = uicontrol(posfig,'units','pixel','Style','slider',...
+    'Max',hmax,'Min',1e-100,'Value',margins(2),...
+    'SliderStep',[0.05 0.2],...
+    'Position',[25 225 300 20]);
+leftslider_h = uicontrol(posfig,'units','pixel','Style','slider',...
+    'Max',wmax,'Min',1e-100,'Value',margins(3),...
+    'SliderStep',[0.05 0.2],...
+    'Position',[25 175 300 20]);
+rightslider_h = uicontrol(posfig,'units','pixel','Style','slider',...
+    'Max',wmax,'Min',1e-100,'Value',margins(4),...
+    'SliderStep',[0.05 0.2],...
+    'Position',[25 125 300 20]);
+col_midslider_h = uicontrol(posfig,'units','pixel','Style','slider',...
+    'Max',max([wmax hmax]),'Min',1e-100,'Value',margins(5),...
+    'SliderStep',[0.05 0.2],...
+    'Position',[25 75 300 20]);
+row_midslider_h = uicontrol(posfig,'units','pixel','Style','slider',...
+    'Max',max([wmax hmax]),'Min',1e-100,'Value',margins(5),...
+    'SliderStep',[0.05 0.2],...
+    'Position',[25 25 300 20]);
+
+%Array of all slider handles
+sliders_h=[topslider_h bottomslider_h leftslider_h rightslider_h col_midslider_h row_midslider_h];
+
+%Create descriptor texts for the sliders
+uicontrol(posfig,'units','pixel','Style','text','string','Top Margin','Position',[25 295 100 20],'backgroundcolor',get(mainfig_h,'color'),'horizontalalign','left');
+uicontrol(posfig,'units','pixel','Style','text','string','Bottom Margin','Position',[25 245 100 20],'backgroundcolor',get(mainfig_h,'color'),'horizontalalign','left');
+uicontrol(posfig,'units','pixel','Style','text','string','Left Margin','Position',[25 195 100 20],'backgroundcolor',get(mainfig_h,'color'),'horizontalalign','left');
+uicontrol(posfig,'units','pixel','Style','text','string','Right Margin','Position',[25 145 100 20],'backgroundcolor',get(mainfig_h,'color'),'horizontalalign','left');
+uicontrol(posfig,'units','pixel','Style','text','string','Column Margins','Position',[25 95 100 20],'backgroundcolor',get(mainfig_h,'color'),'horizontalalign','left');
+uicontrol(posfig,'units','pixel','Style','text','string','Row Margins','Position',[25 45 100 20],'backgroundcolor',get(mainfig_h,'color'),'horizontalalign','left');
+
+%Create the edit boxes for manual entry of parameter values
+topedit_h=uicontrol(posfig,'units','pixel','Style','edit','string',num2str(margins(1)),'Position',[120 297 70 20],'backgroundcolor',get(mainfig_h,'color'),'horizontalalign','right');
+bottomedit_h=uicontrol(posfig,'units','pixel','Style','edit','string',num2str(margins(2)),'Position',[120 247 70 20],'backgroundcolor',get(mainfig_h,'color'),'horizontalalign','right');
+leftedit_h=uicontrol(posfig,'units','pixel','Style','edit','string',num2str(margins(3)),'Position',[120 197 70 20],'backgroundcolor',get(mainfig_h,'color'),'horizontalalign','right');
+rightedit_h=uicontrol(posfig,'units','pixel','Style','edit','string',num2str(margins(4)),'Position',[120 147 70 20],'backgroundcolor',get(mainfig_h,'color'),'horizontalalign','right');
+col_midedit_h=uicontrol(posfig,'units','pixel','Style','edit','string',num2str(margins(5)),'Position',[120 97 70 20],'backgroundcolor',get(mainfig_h,'color'),'horizontalalign','right');
+row_midedit_h=uicontrol(posfig,'units','pixel','Style','edit','string',num2str(margins(6)),'Position',[120 47 70 20],'backgroundcolor',get(mainfig_h,'color'),'horizontalalign','right');
+
+%Array of all edit box handles
+editboxes_h=[topedit_h bottomedit_h leftedit_h rightedit_h col_midedit_h row_midedit_h];
+
+%Set the edit box callbacks
+set(topedit_h,'callback',@(src,evnt)edit_update(axis_handles,sliders_h,editboxes_h,1, mainfig_h, num_cols, num_rows, units));
+set(bottomedit_h,'callback',@(src,evnt)edit_update(axis_handles,sliders_h,editboxes_h,2, mainfig_h, num_cols, num_rows, units));
+set(leftedit_h,'callback',@(src,evnt)edit_update(axis_handles,sliders_h,editboxes_h,3, mainfig_h, num_cols, num_rows, units));
+set(rightedit_h,'callback',@(src,evnt)edit_update(axis_handles,sliders_h,editboxes_h,4, mainfig_h, num_cols, num_rows, units));
+set(col_midedit_h,'callback',@(src,evnt)edit_update(axis_handles,sliders_h,editboxes_h,5, mainfig_h, num_cols, num_rows, units));
+set(row_midedit_h,'callback',@(src,evnt)edit_update(axis_handles,sliders_h,editboxes_h,6, mainfig_h, num_cols, num_rows, units));
+
+%Set continuous callbaxs for the sliders
+addlistener(topslider_h,'ContinuousValueChange',@(src,evnt)slider_update(axis_handles,sliders_h,editboxes_h,1, mainfig_h, num_cols, num_rows, units));
+addlistener(bottomslider_h,'ContinuousValueChange',@(src,evnt)slider_update(axis_handles,sliders_h,editboxes_h,2, mainfig_h, num_cols, num_rows, units));
+addlistener(leftslider_h,'ContinuousValueChange',@(src,evnt)slider_update(axis_handles,sliders_h,editboxes_h,3, mainfig_h, num_cols, num_rows, units));
+addlistener(rightslider_h,'ContinuousValueChange',@(src,evnt)slider_update(axis_handles,sliders_h,editboxes_h,4, mainfig_h, num_cols, num_rows, units));
+addlistener(col_midslider_h,'ContinuousValueChange',@(src,evnt)slider_update(axis_handles,sliders_h,editboxes_h,5, mainfig_h, num_cols, num_rows, units));
+addlistener(row_midslider_h,'ContinuousValueChange',@(src,evnt)slider_update(axis_handles,sliders_h,editboxes_h,6, mainfig_h, num_cols, num_rows, units));
+
+%Fix the main figure so that it closes the adjustment window when
+%deleted
+set(mainfig_h,'closerequestfcn',@(src,evnt)close_all(mainfig_h, posfig));
 
 %*****************************************************
 %             UPDATE AXIS GRID FROM SLIDER
 %*****************************************************
-function slider_update(axs, slider_h, edit_h, value, mainfig_h, num_cols, num_rows, units)
+function slider_update(axs, slider_h, edit_h, value, mainfig_h_h, num_cols, num_rows, units)
 %Get the max and min figure bounds
 if ~strcmpi(units,'normalized')
-    pos=get(mainfig_h,'position');
+    pos=get(mainfig_h_h,'position');
     wmax=pos(3);
     hmax=pos(4);
 else
@@ -353,7 +366,7 @@ ax_height=(hmax-top_margin-bottom_margin-midv_margin*(num_rows-1))/num_rows;
 
 %Set up output vector
 num_axes=num_cols*num_rows;
-axis_handles=zeros(1,num_axes);
+axis_handles=matlab.graphics.axis.Axes.empty(num_axes,0);
 
 %Loop through each axis and define properties
 ax_number=1; %Counter
@@ -365,7 +378,7 @@ for r=1:num_rows
             bottom=hmax-top_margin-midv_margin*(r-1)-ax_height*r;
             
             %Create new axis
-            axis_handles(ax_number)=axes('units',units,'position',[left bottom ax_width ax_height]);
+            axis_handles(ax_number)=axes('parent',mainfig_h,'units',units,'position',[left bottom ax_width ax_height]);
             
             %Update counter
             ax_number=ax_number+1;
@@ -376,13 +389,13 @@ end
 %*****************************************************
 %     UPDATE SLIDERS AND FIGURE WHEN TEXT IS EDITED
 %*****************************************************
-function edit_update(axs, slider_h, edit_h, value, mainfig_h, num_cols, num_rows, units)
+function edit_update(axs, slider_h, edit_h, value, mainfig_h_h, num_cols, num_rows, units)
 %Get the new value from the edited text box
 newval=get(edit_h(value),'string');
 
 %Set the slider to the appropriate value
 set(slider_h(value),'value',str2double(newval));
-slider_update(axs, slider_h, edit_h, value, mainfig_h, num_cols, num_rows,units);
+slider_update(axs, slider_h, edit_h, value, mainfig_h_h, num_cols, num_rows,units);
 
 %*****************************************************
 %             MERGE SELECTED AXES
@@ -393,20 +406,20 @@ if nargin==0
     %If interactive selection is on
     disp('Click to select axes. Double click on final axis to merge...');
     %Create log of axes clicked
-    handle=guidata(gcf);
+    handle=guidata(mainfig_h);
     handle.axes=[];
-    guidata(gcf,handle);
+    guidata(mainfig_h,handle);
     
     %Get the axes in the figure
-    all_axes=findobj(gcf,'type','axes');
+    all_axes=findobj(mainfig_h,'type','axes');
     %Allow them to accept clicks
     set(all_axes,'buttondownfcn',@select_axes);
     
     %Pause until double click
-    uiwait(gcf);
+    uiwait(mainfig_h);
     
     %Grab axes to be merged
-    handle=guidata(gcf);
+    handle=guidata(mainfig_h);
     merger_axes=handle.axes;
 end
 
@@ -443,7 +456,7 @@ new_pos=[min(pos(:,1:2)) new_width new_height];
 delete(merger_axes)
 new_axis=axes('units',units,'position',new_pos);
 
-%Put new axisbelow other axes
+%Put new axis below other axes
 uistack(new_axis,'bottom');
 
 %*****************************************************
@@ -451,29 +464,29 @@ uistack(new_axis,'bottom');
 %*****************************************************
 function select_axes(varargin)
 %Add selected axis to data
-handle=guidata(gcf);
+handle=guidata(mainfig_h);
 handle.axes=unique([handle.axes gca]);
-guidata(gcf,handle);
+guidata(mainfig_h,handle);
 
 %Continue merging
-if strcmpi(get(gcf,'selectiontype'),'open')
-    uiresume(gcf);
+if strcmpi(get(mainfig_h,'selectiontype'),'open')
+    uiresume(mainfig_h);
 end
 
 %*****************************************************
 %   TURN ON MERGE MENU WHEN ADJUSTMENT WINDOW CLOSES
 %*****************************************************
-function merge_on(mainfig_h)
-delete(gcf)
-figure(mainfig_h)
+function merge_on(mainfig_h_h)
+delete(mainfig_h)
+figure(mainfig_h_h)
 f = uimenu('Label','Merge Axes');
 uimenu(f,'Label','Merge...','Callback',@(src,evnt)merge_axes);
 
 %*****************************************************
 %               PROPERLY CLOSE WINDOWS
 %*****************************************************
-function close_all(mainfig_h, posfig_h)
-delete(mainfig_h)
+function close_all(mainfig_h_h, posfig_h)
+delete(mainfig_h_h)
 if ishandle(posfig_h)
     delete(posfig_h)
 end
@@ -518,12 +531,11 @@ disp('top=.1;');
 disp('bottom=.1;');
 disp('left=.1;');
 disp('right=.1;');
-disp('middle=.2;');
+disp('column=.2;');
+disp('row=.3;');
 disp(' ');
 disp('%Create grid of axes with custom margins');
-disp('figdesign(2,2,[top bottom left right middle]);');
-disp(' ');
-disp('%NOTE: Can also be: figdesign(2,2,''margins'',[top bottom left right middle]);');
+disp('figdesign(2,2,''margins'',[top bottom left right column row]);');
 disp(' ');
 
 figure;
@@ -532,10 +544,11 @@ top=.1;
 bottom=.1;
 left=.1;
 right=.1;
-middle=.2;
+column=.2;
+row=.3;
 
 %Create subplot
-figdesign(2,2,[top bottom left right middle]);
+figdesign(2,2,[top bottom left right column row]);
 disp('Press any key to continue...');
 pause;
 close all;

@@ -38,8 +38,12 @@ switch lower(bin_method)
         bin_edges = max(min(bin_centers + [-bin_width/2 ; bin_width/2], bin_range(2)),bin_range(1));
         
     case {'full_extend', 'full extend', 'extend'}
-        bin_centers = (bin_range(1):bin_step:bin_range(2));
+        bin_range_new(1) = bin_range(1) - floor((bin_width/2)/bin_step)*bin_step;
+        bin_range_new(2) = bin_range(2) + floor((bin_width/2)/bin_step)*bin_step;
+        
+        bin_centers = (bin_range_new(1)+(bin_width/2)):bin_step:(bin_range_new(2)-(bin_width/2));
         bin_edges = bin_centers + [-bin_width/2; bin_width/2];
+        
 end
 
 
