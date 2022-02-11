@@ -46,7 +46,7 @@ function [SOdata_counts, SOdata_rates, SO_TIB_out, freq_cbins, SO_cbins] = SOhis
 
 %% Deal with inputs
 assert(nargin >= 6, '6 inputs required');
-assert(size(SO_TIB,1)==1, 'SO_TIB must be 1xN');
+assert(size(SO_TIB,1)==5, 'SO_TIB must be 5xN');
 
 if nargin < 7 || isempty(conv_type)
     conv_type = 0; % 0 for pow, 'circular' for phase
@@ -83,8 +83,11 @@ conv_filt = ones(row_fact, col_fact);
 
 %Run the convolution
 matfilt = imfilter(SO_data,conv_filt,'full',conv_type,'conv');
-timesfilt = imfilter(SO_TIB,conv_filt(1,:),'full',conv_type,'conv');
-%timesfilt = [timesfilt];
+
+timesfilt = nan(size(SO_TIB,1), size(SO_TIB,2)+(col_fact-1));
+for ii = 1:size(SO_TIB,1)
+    timesfilt(ii,:) = imfilter(SO_TIB(ii,:),conv_filt(1,:),'full',conv_type,'conv');
+end
 
 %Set up selection from full matrix
 row_start = row_fact;
@@ -94,7 +97,7 @@ col_start = col_fact;
 row_end = size(SO_data,1);
 col_end = size(SO_data,2);
 
-%Handle partial columns
+%Handle partial bins
 if ispartial
     if mod(col_fact,2)
         col_end = col_end + floor(col_fact/2);
@@ -102,6 +105,15 @@ if ispartial
     else
         col_end = col_end + col_fact/2;
         col_start = col_start - col_fact/2;
+
+    end
+    
+    if mod(row_fact,2)
+        row_end = row_end + floor(row_fact/2);
+        row_start = row_start - ceil(row_fact/2);
+    else
+        row_end = (row_end + row_fact/2) - 1;
+        row_start = row_start - row_fact/2;
     end
     
     if ~isrepeating
@@ -110,33 +122,44 @@ if ispartial
 end
 
 %Create new matrix
-if ispartial && col_skip~=1
-    col_inds = sort(unique([col_fact:-col_skip:col_start, col_fact:col_skip:col_end]));
-else
-    col_inds = col_start:col_skip:col_end;
+if ispartial 
+    if col_skip~=1
+        col_inds = sort(unique([col_fact:-col_skip:col_start, col_fact:col_skip:col_end]));
+    else
+        col_inds = col_start:col_skip:col_end;
+    end
+    
+    if row_skip~=1
+        row_inds = sort(unique([row_fact:-row_skip:row_start, row_fact:row_skip:row_end]));
+    else
+        row_inds = col_start:row_skip:row_end;
+    end
 end
 
-row_inds = row_start:row_skip:row_end;
 
 SOdata_counts = matfilt(row_inds, col_inds);
 
-SO_TIB_out = timesfilt(col_inds);
+SO_TIB_out = timesfilt(:,col_inds);
 
 %Compute rate
-SOdata_rates = SOdata_counts./SO_TIB_out;
+SOdata_rates = SOdata_counts./sum(SO_TIB_out,1);
 
 %Make new bins 
-freq_cbins = x_cbins(row_fact/2:row_skip:end-(row_fact/2));
-if isrepeating && max(col_inds>length(y_cbins))
+if isrepeating && ispartial && max(col_inds>length(y_cbins))
     col_inds_alt = col_inds(1:end-1);
     SO_cbins = [y_cbins(col_inds_alt-(col_start-1)), y_cbins(end)+(y_cbins(2)-y_cbins(1))];
+    freq_cbins = x_cbins(row_inds - (row_start-1));
+elseif ispartial
+    SO_cbins = y_cbins(col_inds - (col_start-1));
+    freq_cbins = x_cbins(row_inds - (row_start-1));
 else
     SO_cbins = y_cbins(col_fact/2:col_skip:end-(col_fact/2));
+    freq_cbins = x_cbins(row_fact/2:row_skip:end-(row_fact/2));
 end
 
 % If column doesn't have enough time, mark as nan
 if TIB_req ~= 0 
-    bad_inds = SO_TIB_out < TIB_req;
+    bad_inds = sum(SO_TIB_out,1) < TIB_req;
     SOdata_counts(:, bad_inds(:)) = NaN;
     SOdata_rates(:, bad_inds(:)) = NaN;
 end

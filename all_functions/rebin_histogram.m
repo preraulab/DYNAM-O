@@ -1,4 +1,4 @@
-function [SO_resized, freqcbins_resize, SO_cbins_resize] = rebin_histogram(hist_data, TIB_data, freq_cbins, SO_cbins, freq_binsizestep, ...
+function [SO_resized, freqcbins_resize, SO_cbins_resize, TIB] = rebin_histogram(hist_data, TIB_data, freq_cbins, SO_cbins, freq_binsizestep, ...
                                                                            SO_binsizestep, SOtype, conv_type, ispartial, isrepeating, TIB_req)
 % Takes in SOpow/phase histogram data and rebins to specified bin size and step
 %
@@ -30,9 +30,11 @@ function [SO_resized, freqcbins_resize, SO_cbins_resize] = rebin_histogram(hist_
 %                         1 for 'power' and default = 0 for 'phase'
 %
 % Outputs:
-%       SO_resized:       AxBxP 3D double - [new freqs, new SO_feature, num_subjs] rebinned histograms
+%       SO_resized:       PxAxB 3D double - [num_subjs, new freqs, new SO_feature] rebinned histograms
 %       freqcbins_resize: double vector - new frequency bin centers for SO_resized
 %       SO_cbins_resize:  double vector - new SO_feature bin centers for SO_resized
+%       TIB:              NxP 2D double - [new_SO_feature, num_subjs] Time spent in each SO_feature 
+%                                         bin (minutes).
 %
 %   Copyright 2020 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
 %   Last modified:
@@ -97,45 +99,69 @@ freq_nskip = round(freq_binsizestep(2) / freq_smallbinsize, 6);
 SO_ncomb = round(SO_binsizestep(1) / SO_smallbinsize, 6);
 SO_nskip = round(SO_binsizestep(2) / SO_smallbinsize, 6);
 
-%% Resize SOpow and SOphase data
+%% Calculate output shape of hist
 N_subj = size(hist_data,3);
 
-len_freq_resized = length(freq_ncomb:freq_nskip:length(freq_cbins));
-switch lower(SOtype)
-    case {'pow','power'}
-        % Calculate resized dimensions SOpow
-        SO_resized = nan(N_subj, len_freq_resized, length(SO_ncomb:SO_nskip:length(SO_cbins)));
+if ispartial
+    col_start = SO_ncomb;
+    row_start = freq_ncomb;
+    col_end = length(SO_cbins);
+    row_end = length(freq_cbins);
+    col_skip = SO_nskip;
+    row_skip = freq_nskip;
+    
+    if mod(SO_ncomb,2)
+        col_end = col_end + floor(SO_ncomb/2);
+        col_start = col_start - ceil(SO_ncomb/2);
+    else
+        col_end = col_end + SO_ncomb/2;
+        col_start = col_start - SO_ncomb/2;
+    end
         
-    case {'phase'}
-        % Calculate resized dimensions for SOphase
-        col_start = SO_ncomb;
-        col_end = length(SO_cbins);
-        if mod(SO_ncomb,2)
-            col_end = col_end + floor(SO_ncomb/2);
-            col_start = col_start - ceil(SO_ncomb/2);
-        else
-            col_end = col_end + SO_ncomb/2;
-            col_start = col_start - SO_ncomb/2;
-        end
+    if mod(freq_ncomb,2)
+        row_end = row_end + floor(freq_ncomb/2);
+        row_start = row_start - ceil(freq_ncomb/2);
+    else
+        row_end = (row_end + freq_ncomb/2) - 1;
+        row_start = row_start - freq_ncomb/2;
+    end
+    
+    if ~isrepeating
+        col_end = col_end - 1;
+    end
 
+    if ispartial
         if SO_nskip~=1
             col_inds = sort(unique([SO_ncomb:-SO_nskip:col_start, SO_ncomb:SO_nskip:col_end]));
         else
             col_inds = col_start:col_skip:col_end;
         end
+        
+        if freq_nskip~=1
+            row_inds = sort(unique([freq_ncomb:-freq_nskip:row_start, freq_ncomb:freq_nskip:row_end]));
+        else
+            row_inds = col_start:row_skip:row_end;
+        end
+    end
 
-        SO_resized = nan(N_subj, len_freq_resized, length(col_inds));
+    SO_resized = nan(N_subj, length(row_inds), length(col_inds));
+    
 end
 
+
+%% Resize hist data
+
+TIB = nan(N_subj, 5, length(col_inds));
 
 % Loop through and resize
 for ii = 1:N_subj
     
     % Resize SO hists and get rates 
-    [~, hist_rates, ~, freqcbins_resize, SO_cbins_resize] = SOhist_conv(hist_data(:,:,ii), TIB_data(ii,:), freq_cbins, ...
+    [~, hist_rates, SO_TIB_out, freqcbins_resize, SO_cbins_resize] = SOhist_conv(hist_data(:,:,ii), squeeze(TIB_data(ii,:,:))', freq_cbins, ...
                                                                                    SO_cbins, [freq_ncomb, SO_ncomb], [freq_nskip, SO_nskip],...
                                                                                    conv_type, ispartial, isrepeating, TIB_req, false);
     SO_resized(ii,:,:) = hist_rates;
+    TIB(ii,:,:) = SO_TIB_out;
     
     % Normalize SOphase
     if strcmpi(SOtype, 'phase')
