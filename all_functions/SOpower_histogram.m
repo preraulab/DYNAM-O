@@ -116,6 +116,10 @@ SOpow_full_binsize = SOpower_times(2) - SOpower_times(1);
 % Normalize SO power
 switch norm_method
     
+    case {'proportion', 'normalized'}
+        [totalpower, ~] = compute_mtspect_power(nanEEG, Fs, 'freq_range', [0.3, 40]);
+        SOpower_norm = db2pow(SOpower)./db2pow(totalpower);
+    
     case {'percentile', 'percent'}
         low_val =  1;
         high_val =  99;
@@ -129,7 +133,7 @@ switch norm_method
         SOpower_norm = SOpower-ptile(1);
 
     case {'absolute', 'none'}
-        % Do nothing
+        SOpower_norm = SOpower;
         
     otherwise
         error(['Normalization method "', norm_method, '" not recognized']);
@@ -163,10 +167,10 @@ peak_SOpower_norm = interp1(SOpower_times, SOpower_norm, TFpeak_times);
 
 %% Compute the SO power historgram
 % Get frequency and SO power bins
-[freq_bin_edges, freq_cbins] = create_bins(freq_range, freq_binsizestep(1), freq_binsizestep(2));
+[freq_bin_edges, freq_cbins] = create_bins(freq_range, freq_binsizestep(1), freq_binsizestep(2), 'partial');
 num_freqbins = length(freq_cbins);
 
-[SO_bin_edges, SO_cbins] = create_bins(SO_range, SO_binsizestep(1), SO_binsizestep(2));
+[SO_bin_edges, SO_cbins] = create_bins(SO_range, SO_binsizestep(1), SO_binsizestep(2), 'partial');
 num_SObins = length(SO_cbins);
 
 % Intialize SOpow * freq matrix

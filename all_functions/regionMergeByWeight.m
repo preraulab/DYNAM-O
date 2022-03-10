@@ -13,7 +13,7 @@ function [rgn, Lborders] = regionMergeByWeight(data,rgn,rgn_lbls,Lborders,amatr,
 %                   each row contains region lables of two adjacent regions.
 %   merge_thresh -- threshold weight value for when to stop merge rule. default 8.
 %   max_merges   -- maximum number of merges to perform. default inf.
-%   merge_rule   --
+%   merge_rule   -- default = absolute
 %   f_verb       -- number indicating depth of output text statements of progress.
 %                   0 - no output. 1 - output current function level.
 %                   >1 - output at subfunction levels. defaults to 0, unless using defaul data.

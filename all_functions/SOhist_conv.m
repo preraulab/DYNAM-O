@@ -1,6 +1,6 @@
-function [SOdata_counts, SOdata_rates, SO_TIB_out, freq_cbins, SO_cbins] = SOhist_conv(SO_data, SO_TIB, x_cbins, y_cbins, num_combine, num_skip, conv_type, ispartial, ...
-                                                                                       isrepeating, TIB_req, ploton)
-%
+function [SOdata_counts, SOdata_rates, SO_TIB_out, freq_cbins, SO_cbins] = SOhist_conv(SO_data, SO_TIB, x_cbins, ...
+                                                y_cbins, num_combine, num_skip, conv_type, ispartial, isrepeating, ...
+                                                TIB_req, edge_correct, ploton)
 %
 % Inputs:
 %       SO_data: MxN double - SO data (counts not rates) with frequency as 1st dim and SO
@@ -22,6 +22,7 @@ function [SOdata_counts, SOdata_rates, SO_TIB_out, freq_cbins, SO_cbins] = SOhis
 %                    show circularity of bins. Default = false
 %       TIB_req: double - minutes required in each y bin. Y bins with <
 %                TIB_req minutes will be tured to NaNs. Defauly = 0.
+%       edge_correct: logical - 
 %       ploton: logical - plot new 2D heatmap of rates. Default = false
 %       
 %
@@ -64,7 +65,11 @@ if nargin < 10 || isempty(TIB_req)
     TIB_req = 0;
 end
 
-if nargin < 11 || isempty(ploton)
+if nargin < 11 || isempty(edge_correct)
+    edge_correct = true;
+end
+
+if nargin < 12 || isempty(ploton)
     ploton = false;
 end
 
@@ -75,18 +80,26 @@ col_fact = num_combine(2);
 row_skip = num_skip(1);
 col_skip = num_skip(2);
 
-%First full conv
+%Show first full conv
 %disp(['First full conv = ' num2str(sum(SO_data(1:row_fact,1:col_fact),'all'))]);
 
 %Define convolution filter
 conv_filt = ones(row_fact, col_fact);
 
-%Run the convolution
+%Run the convolution on 2D SO data and 1D TIB data
 matfilt = imfilter(SO_data,conv_filt,'full',conv_type,'conv');
 
 timesfilt = nan(size(SO_TIB,1), size(SO_TIB,2)+(col_fact-1));
 for ii = 1:size(SO_TIB,1)
     timesfilt(ii,:) = imfilter(SO_TIB(ii,:),conv_filt(1,:),'full',conv_type,'conv');
+end
+
+if edge_correct
+    % Correct for edge effect
+    binmult = ones(size(SO_data,1),1)/size(conv_filt,1); 
+    binfilt = ones(size(conv_filt,1),1);
+    binprop = imfilter(binmult,binfilt,'full',0,'conv');
+    matfilt = matfilt./binprop;
 end
 
 %Set up selection from full matrix
@@ -136,9 +149,8 @@ if ispartial
     end
 end
 
-
+% Select data necessary to get desired step size
 SOdata_counts = matfilt(row_inds, col_inds);
-
 SO_TIB_out = timesfilt(:,col_inds);
 
 %Compute rate

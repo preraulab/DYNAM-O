@@ -1,5 +1,7 @@
-function [SO_resized, freqcbins_resize, SO_cbins_resize, TIB] = rebin_histogram(hist_data, TIB_data, freq_cbins, SO_cbins, freq_binsizestep, ...
-                                                                           SO_binsizestep, SOtype, conv_type, ispartial, isrepeating, TIB_req)
+function [SO_resized, SOpow_resize_counts, freqcbins_resize, SO_cbins_resize, TIB] = rebin_histogram(hist_data, TIB_data,...
+                                    freq_cbins, SO_cbins, freq_binsizestep, freq_smallbinsizestep, SO_binsizestep, SO_smallbinsizestep,...
+                                    SOtype, SOpow_col_norm, conv_type, ispartial, isrepeating, edge_correct, TIB_req)
+
 % Takes in SOpow/phase histogram data and rebins to specified bin size and step
 %
 % Inputs:
@@ -11,10 +13,16 @@ function [SO_resized, freqcbins_resize, SO_cbins_resize, TIB] = rebin_histogram(
 %                         Must be same size as M in hist_data. --required
 %       SO_cbins:         double vector - SO feature bin centers for hist_data.
 %                         Must be same size as N in hist_data. --required
-%       freq_binsizestep: 1x2 double - 
-%       SO_binsizestep:   1x2 double - 
-%       SOtype:           char - 'power' or 'phase' indicating default
+%       freq_binsizestep: 1x2 double - [binsize, binstep] - desired frequency bin size and 
+%                         bin step --required
+%       freq_smallbinsizestep: 
+%       SO_binsizestep:   1x2 double - [binsize, binstep] - desired frequency bin size and 
+%                         bin step --required
+%       SO_smallbinsizestep: 
+%       SOtype:           char - 'power' or 'phase' indicating default --required
 %                         params for rebinning (conv_type, isrepeating, TIB_req)
+%       SOpow_col_norm:   logical - whether or not to normalize SOpow so that columns add 
+%                         to 1. Default = true for 'power' and false for 'phase'
 %       conv_type:        integer or char - indicates the convolution padding
 %                         options. Integer indicates number of 0s to pad with. 'circular' 
 %                         indicates bins wrap around. Default = 0 for
@@ -25,6 +33,7 @@ function [SO_resized, freqcbins_resize, SO_cbins_resize, TIB] = rebin_histogram(
 %                         of SO_resized should be the same/repeated to show circularity of 
 %                         bins. Default = false for 'power' and default =
 %                         true for 'phase'
+%       edge_correct: logical - 
 %       TIB_req:          double - minutes required in each y bin. Y bins with <
 %                         TIB_req minutes will be tured to NaNs. Default =
 %                         1 for 'power' and default = 0 for 'phase'
@@ -43,40 +52,56 @@ function [SO_resized, freqcbins_resize, SO_cbins_resize, TIB] = rebin_histogram(
 
 
 %% Deal with Inputs
-assert(nargin >= 7, '7 arguments required (hist_data, TIB_data, freq_cbins, SO_cbins, freq_binsizestep, SO_binsizestep, SOtype)');
+assert(nargin >= 9, '9 arguments required (hist_data, TIB_data, freq_cbins, SO_cbins, freq_binsizestep, freq_smallbinsizestep, SO_binsizestep, SO_smallbinsizestep, SOtype)');
 
 switch lower(SOtype)
     case {'pow', 'power'}
-        if nargin < 8 || isempty(conv_type)
+        if nargin < 10 || isempty(SOpow_col_norm)
+            SOpow_col_norm = false;
+        end
+        
+        if nargin < 11 || isempty(conv_type)
             conv_type = 0;
         end
         
-        if nargin < 9 || isempty(ispartial)
+        if nargin < 12 || isempty(ispartial)
             ispartial = true;
         end
         
-        if nargin < 10 || isempty(isrepeating)
+        if nargin < 13 || isempty(isrepeating)
             isrepeating = false;
         end
         
-        if nargin < 11 || isempty(TIB_req)
+        if nargin < 14 || isempty(edge_correct)
+            edge_correct = true;
+        end
+        
+        if nargin < 15 || isempty(TIB_req)
             TIB_req = 1;
         end
         
     case {'phase'}
-        if nargin < 8 || isempty(conv_type)
+        if nargin < 10 || isempty(SOpow_col_norm)
+            SOpow_col_norm = false;
+        end
+        
+        if nargin < 11 || isempty(conv_type)
             conv_type = 'circular';
         end
         
-        if nargin < 9 || isempty(ispartial)
+        if nargin < 12 || isempty(ispartial)
             ispartial = true;
         end
         
-        if nargin < 10 || isempty(isrepeating)
+        if nargin < 13 || isempty(isrepeating)
             isrepeating = true;
         end
         
-        if nargin < 11 || isempty(TIB_req)
+        if nargin < 14 || isempty(edge_correct)
+            edge_correct = true;
+        end
+        
+        if nargin < 15 || isempty(TIB_req)
             TIB_req = 0;
         end
         
@@ -85,19 +110,37 @@ switch lower(SOtype)
 end
 
 %% Calc small bin sizes
-freq_smallbinsize = freq_cbins(2) - freq_cbins(1);
-SO_smallbinsize = SO_cbins(2) - SO_cbins(1);
+freq_smallbinsize_test = freq_cbins(2) - freq_cbins(1);
+SO_smallbinsize_test = SO_cbins(2) - SO_cbins(1);
+
+% Make sure inputs for small bin sizes are correct
+assert(abs(freq_smallbinsize_test - freq_smallbinsizestep(1)) <= 1e-6, 'Small bin size from freq_smallbinsizestep is not the same as caluclated small bin size');
+assert(abs(SO_smallbinsize_test - SO_smallbinsizestep(1)) <= 1e-6, 'Small bin size from SO_smallbinsizestep is not the same as caluclated small bin size');
 
 %% Make sure bin sizes and binsteps are divisible by small bin size
-assert( all(round(mod(freq_binsizestep, freq_smallbinsize),6) == 0),  ['frequency bin size and bin step need to be divisible by ', num2str(freq_smallbinsize)] )
-assert( all(round(mod(SO_binsizestep, SO_smallbinsize),6) == 0),  ['SO bin size and bin step need to be divisible by ', num2str(SO_smallbinsize)] )
+
+if mod(freq_binsizestep(1), freq_smallbinsizestep(1)) ~= 0
+   error('Desired frequency bin size is not divisible by small bin data binsize.')
+end
+
+if mod(freq_binsizestep(2), freq_smallbinsizestep(1)) ~= 0
+   error('Desired frequency bin step is not divisible by small bin data binstep.')
+end
+
+if mod(SO_binsizestep(1), SO_smallbinsizestep(1)) ~= 0
+   error('Desired SO feature bin size is not divisible by small bin data binsize.')
+end
+
+if mod(SO_binsizestep(2), SO_smallbinsizestep(1)) ~= 0
+   error('Desired SO feature bin step is not divisible by small bin data binstep.')
+end
 
 %% Calculate number of bins to combine and number of bins to skip
-freq_ncomb = round(freq_binsizestep(1) / freq_smallbinsize, 6);
-freq_nskip = round(freq_binsizestep(2) / freq_smallbinsize, 6);
+freq_ncomb = round(freq_binsizestep(1) / freq_smallbinsizestep(1), 6);
+freq_nskip = round(freq_binsizestep(2) / freq_smallbinsizestep(1), 6);
 
-SO_ncomb = round(SO_binsizestep(1) / SO_smallbinsize, 6);
-SO_nskip = round(SO_binsizestep(2) / SO_smallbinsize, 6);
+SO_ncomb = round(SO_binsizestep(1) / SO_smallbinsizestep(1), 6);
+SO_nskip = round(SO_binsizestep(2) / SO_smallbinsizestep(1), 6);
 
 %% Calculate output shape of hist
 N_subj = size(hist_data,3);
@@ -145,31 +188,32 @@ if ispartial
     end
 
     SO_resized = nan(N_subj, length(row_inds), length(col_inds));
-    
+    SOpow_resize_counts = nan(N_subj, length(row_inds), length(col_inds));
 end
 
 
-%% Resize hist data
-
+% Initialize storage var for TIB
 TIB = nan(N_subj, 5, length(col_inds));
 
-% Loop through and resize
+%% Resize hist data
 for ii = 1:N_subj
     
-    % Resize SO hists and get rates 
-    [~, hist_rates, SO_TIB_out, freqcbins_resize, SO_cbins_resize] = SOhist_conv(hist_data(:,:,ii), squeeze(TIB_data(ii,:,:))', freq_cbins, ...
-                                                                                   SO_cbins, [freq_ncomb, SO_ncomb], [freq_nskip, SO_nskip],...
-                                                                                   conv_type, ispartial, isrepeating, TIB_req, false);
+    % Resize SO hists
+    [hist_counts, hist_rates, SO_TIB_out, freqcbins_resize, SO_cbins_resize] = ...
+                        SOhist_conv(hist_data(:,:,ii), squeeze(TIB_data(ii,:,:))', freq_cbins, SO_cbins, ...
+                        [freq_ncomb, SO_ncomb], [freq_nskip, SO_nskip], conv_type, ispartial, isrepeating, TIB_req,...
+                        edge_correct, false);
     SO_resized(ii,:,:) = hist_rates;
+    SOpow_resize_counts(ii,:,:) = hist_counts;
     TIB(ii,:,:) = SO_TIB_out;
     
-    % Normalize SOphase
+    % Normalize
     if strcmpi(SOtype, 'phase')
         SO_resized(ii,:,:) = squeeze(SO_resized(ii,:,:)) ./ sum(squeeze(SO_resized(ii,:,:)),2);
+    elseif SOpow_col_norm
+        SO_resized(ii,:,:) = squeeze(SO_resized(ii,:,:)) ./ sum(squeeze(SO_resized(ii,:,:)),1);
     end
 end
 
 
-
 end
-
