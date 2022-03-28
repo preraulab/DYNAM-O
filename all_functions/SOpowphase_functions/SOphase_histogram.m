@@ -148,7 +148,7 @@ SOphase = mod(SOphase, 2*pi) - pi;
 
 %% Compute the SO power historgram
 % Get frequency and SO phase bins
-[freq_bin_edges, freq_cbins] = create_bins(freq_range, freq_binsizestep(1), freq_binsizestep(2));
+[freq_bin_edges, freq_cbins] = create_bins(freq_range, freq_binsizestep(1), freq_binsizestep(2), 'partial');
 num_freqbins = length(freq_cbins);
 
 [SO_bin_edges, SO_cbins] = create_bins(SO_range, SO_binsizestep(1), SO_binsizestep(2), 'extend');

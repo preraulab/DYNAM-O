@@ -1,5 +1,5 @@
 function [SOfeat_allstages, freqcbins_new, TIB_allstages, PIB_allstages, issz_out, night_out] = ...
-                    reconstruct_SOpowphase(SO_data, TIB, PIB, freq_cbins, SO_feat, night, SZ, stages, TIB_limit,...
+                    sumstages_SOpowphase(SO_data, TIB, PIB, freq_cbins, SO_feat, night, SZ, stages, TIB_limit,...
                     freq_range, issz, count_flag)
 % Takes in per-stage SO power/phase peak counts and integrates them into a
 % single SO power/phase rate histogram
@@ -20,7 +20,7 @@ function [SOfeat_allstages, freqcbins_new, TIB_allstages, PIB_allstages, issz_ou
 %                           in bin will be set to NaN. Default = 1.
 %       freq_range: double - [min freq, max freq]. Default = [4, 35];
 %       issz: logical vector - indicates the SZ status of each subject in SO_data. 
-%                              Default = [false(17,1); true(23,1)]
+%                              Default = [false(16,1); true(22,1)]
 %       count_flag: logical - return histograms in raw counts per bin instead of rates 
 %                             (events/min). Default = false.
 %
@@ -45,7 +45,7 @@ function [SOfeat_allstages, freqcbins_new, TIB_allstages, PIB_allstages, issz_ou
 
 
 %% Deal with inputs
-assert(nargin >=5, '5 inputs required: SO_data, TIB, PIB, freq_cbins SO_feat');
+assert(nargin >=5, '5 inputs required: SO_data, TIB, PIB, freq_cbins, SO_feat');
 
 if any(strcmpi(SO_feat, {'pow', 'power'}))
     SO_feat = 'power';
@@ -101,7 +101,7 @@ freqcbins_new = freq_cbins(freqs_use);
 
 % Select relevant SO, TIB (time in bin), and PIB (proportion in bin) data
 SO_data = SO_data(:,freqs_use,use_SZ,night_logical,stages_logical); %(SOfeat_bins, freq_bins, num_subjs, num_nights, num_stages)
-TIB = TIB(:,use_SZ,night_logical,stages_logical);
+TIB = TIB(:,use_SZ,night_logical,stages_logical); %(SOfeat_bins, num_nights, num_stages)
 PIB = PIB(:,use_SZ,night_logical,stages_logical);
 
 % Initialize data storage

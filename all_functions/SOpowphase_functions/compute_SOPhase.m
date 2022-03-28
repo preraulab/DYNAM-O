@@ -28,7 +28,7 @@ end
 
 if isempty(filter)
     
-    SOphase_filter_path = './SOphase_filters/SOphase_filters.mat';
+    SOphase_filter_path = 'SOphase_filters.mat';
     filter_name = ['filter_', num2str(Fs), 'Hz_', strrep(num2str(SO_freqrange(1)),'.','dot'), '_', strrep(num2str(SO_freqrange(2)),'.','dot')];
     
     if ~isempty(who('-file', SOphase_filter_path, filter_name))

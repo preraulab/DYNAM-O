@@ -1,6 +1,6 @@
 function [SO_resized, SOpow_resize_counts, freqcbins_resize, SO_cbins_resize, TIB] = rebin_histogram(hist_data, TIB_data,...
-                                    freq_cbins, SO_cbins, freq_binsizestep, freq_smallbinsizestep, SO_binsizestep, SO_smallbinsizestep,...
-                                    SOtype, SOpow_col_norm, conv_type, ispartial, isrepeating, edge_correct, TIB_req)
+                                    freq_cbins, SO_cbins, freq_binsizestep,SO_binsizestep, SOtype, freq_smallbinsizestep,...
+                                    SO_smallbinsizestep, SOpow_col_norm, conv_type, ispartial, isrepeating, edge_correct, TIB_req)
 
 % Takes in SOpow/phase histogram data and rebins to specified bin size and step
 %
@@ -15,12 +15,15 @@ function [SO_resized, SOpow_resize_counts, freqcbins_resize, SO_cbins_resize, TI
 %                         Must be same size as N in hist_data. --required
 %       freq_binsizestep: 1x2 double - [binsize, binstep] - desired frequency bin size and 
 %                         bin step --required
-%       freq_smallbinsizestep: 
 %       SO_binsizestep:   1x2 double - [binsize, binstep] - desired frequency bin size and 
 %                         bin step --required
-%       SO_smallbinsizestep: 
 %       SOtype:           char - 'power' or 'phase' indicating default --required
 %                         params for rebinning (conv_type, isrepeating, TIB_req)
+%       freq_smallbinsizestep: 1x2 double - [binsize, binstep] - frequency
+%                         bin size and bin step of smallbin data. Default = [0.05,0.05]
+%       SO_smallbinsizestep: 1x2 double - [binsize, binstep] - SO bin size
+%                         and bin step of smallbin data. Default = [0.005,0.005] for power
+%                         and [(2*pi)/400, (2*pi)/400] for phase.
 %       SOpow_col_norm:   logical - whether or not to normalize SOpow so that columns add 
 %                         to 1. Default = true for 'power' and false for 'phase'
 %       conv_type:        integer or char - indicates the convolution padding
@@ -52,10 +55,18 @@ function [SO_resized, SOpow_resize_counts, freqcbins_resize, SO_cbins_resize, TI
 
 
 %% Deal with Inputs
-assert(nargin >= 9, '9 arguments required (hist_data, TIB_data, freq_cbins, SO_cbins, freq_binsizestep, freq_smallbinsizestep, SO_binsizestep, SO_smallbinsizestep, SOtype)');
+assert(nargin >= 7, '7 arguments required (hist_data, TIB_data, freq_cbins, SO_cbins, freq_binsizestep, SO_binsizestep, SOtype)');
 
 switch lower(SOtype)
     case {'pow', 'power'}
+        if nargin < 8 || isempty(freq_smallbinsizestep)
+            freq_smallbinsizestep = [0.05, 0.05];
+        end
+        
+        if nargin < 9 || isempty(SO_smallbinsizestep)
+            SO_smallbinsizestep = [0.005, 0.005];
+        end
+        
         if nargin < 10 || isempty(SOpow_col_norm)
             SOpow_col_norm = false;
         end
@@ -81,6 +92,14 @@ switch lower(SOtype)
         end
         
     case {'phase'}
+        if nargin < 8 || isempty(freq_smallbinsizestep)
+            freq_smallbinsizestep = [0.05, 0.05];
+        end
+        
+        if nargin < 9 || isempty(SO_smallbinsizestep)
+            SO_smallbinsizestep = [(2*pi)/400, (2*pi)/400];
+        end
+        
         if nargin < 10 || isempty(SOpow_col_norm)
             SOpow_col_norm = false;
         end
@@ -142,18 +161,19 @@ freq_nskip = round(freq_binsizestep(2) / freq_smallbinsizestep(1), 6);
 SO_ncomb = round(SO_binsizestep(1) / SO_smallbinsizestep(1), 6);
 SO_nskip = round(SO_binsizestep(2) / SO_smallbinsizestep(1), 6);
 
-%% Calculate output shape of hist
+%% Calculate output shape of hist for preallocation
 N_subj = size(hist_data,3);
 
-if ispartial
-    col_start = SO_ncomb;
-    row_start = freq_ncomb;
-    col_end = length(SO_cbins);
-    row_end = length(freq_cbins);
-    col_skip = SO_nskip;
-    row_skip = freq_nskip;
+col_start = SO_ncomb;
+row_start = freq_ncomb;
+col_end = length(SO_cbins); 
+row_end = length(freq_cbins);
+col_skip = SO_nskip;
+row_skip = freq_nskip;
+
+if ispartial %if partial bins desired, add half of ncomb to end and subtract from start
     
-    if mod(SO_ncomb,2)
+    if mod(SO_ncomb,2) 
         col_end = col_end + floor(SO_ncomb/2);
         col_start = col_start - ceil(SO_ncomb/2);
     else
@@ -169,27 +189,30 @@ if ispartial
         row_start = row_start - freq_ncomb/2;
     end
     
-    if ~isrepeating
+    if ~isrepeating % if not repeating final bin at beginning, subtract a bin
         col_end = col_end - 1;
     end
 
-    if ispartial
-        if SO_nskip~=1
-            col_inds = sort(unique([SO_ncomb:-SO_nskip:col_start, SO_ncomb:SO_nskip:col_end]));
-        else
-            col_inds = col_start:col_skip:col_end;
-        end
-        
-        if freq_nskip~=1
-            row_inds = sort(unique([freq_ncomb:-freq_nskip:row_start, freq_ncomb:freq_nskip:row_end]));
-        else
-            row_inds = col_start:row_skip:row_end;
-        end
+    if SO_nskip~=1
+        col_inds = sort(unique([SO_ncomb:-SO_nskip:col_start, SO_ncomb:SO_nskip:col_end])); % ensures that there is a bin center exactly at SO_ncomb
+    else
+        col_inds = col_start:col_skip:col_end;
     end
 
-    SO_resized = nan(N_subj, length(row_inds), length(col_inds));
-    SOpow_resize_counts = nan(N_subj, length(row_inds), length(col_inds));
+    if freq_nskip~=1
+        row_inds = sort(unique([freq_ncomb:-freq_nskip:row_start, freq_ncomb:freq_nskip:row_end]));
+    else
+        row_inds = col_start:row_skip:row_end;
+    end
+    
+else
+    col_inds = col_start:col_skip:col_end;
+    row_inds = col_start:row_skip:row_end;
 end
+
+% Finally preallocate resized hist output sizes
+SO_resized = nan(N_subj, length(row_inds), length(col_inds));
+SOpow_resize_counts = nan(N_subj, length(row_inds), length(col_inds));
 
 
 % Initialize storage var for TIB
@@ -208,9 +231,9 @@ for ii = 1:N_subj
     TIB(ii,:,:) = SO_TIB_out;
     
     % Normalize
-    if strcmpi(SOtype, 'phase')
+    if strcmpi(SOtype, 'phase') % if phase, always normalize rows to add to 1
         SO_resized(ii,:,:) = squeeze(SO_resized(ii,:,:)) ./ sum(squeeze(SO_resized(ii,:,:)),2);
-    elseif SOpow_col_norm
+    elseif SOpow_col_norm % if pow, and column normalization is desired, normalize cols to add to 1
         SO_resized(ii,:,:) = squeeze(SO_resized(ii,:,:)) ./ sum(squeeze(SO_resized(ii,:,:)),1);
     end
 end

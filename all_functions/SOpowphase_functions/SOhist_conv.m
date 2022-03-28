@@ -16,7 +16,7 @@ function [SOdata_counts, SOdata_rates, SO_TIB_out, freq_cbins, SO_cbins] = SOhis
 %                  options. Integer indicates number of 0s to pad with. 'circular' 
 %                  indicates bins wrap around. Default = 0
 %       ispartial: logical - indicates whether combined bins in columns of
-%                  SO_data can be partial. Default = false
+%                  SO_data can be partial. Default = true
 %       isrepeating: logical - indicates whether the first and last columns
 %                    of SOdata_counts and SOdata_rates should be the same/repeated to
 %                    show circularity of bins. Default = false
@@ -54,7 +54,7 @@ if nargin < 7 || isempty(conv_type)
 end
 
 if nargin < 8 || isempty(ispartial)
-    ispartial = false; % false for pow, true for phase
+    ispartial = true;
 end
 
 if nargin < 9 || isempty(isrepeating)
@@ -147,6 +147,9 @@ if ispartial
     else
         row_inds = col_start:row_skip:row_end;
     end
+else
+    col_inds = col_start:col_skip:col_end;
+    row_inds = col_start:row_skip:row_end;
 end
 
 % Select data necessary to get desired step size
