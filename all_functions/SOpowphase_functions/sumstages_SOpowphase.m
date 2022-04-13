@@ -2,7 +2,8 @@ function [SOfeat_allstages, freqcbins_new, TIB_allstages, PIB_allstages, issz_ou
                     sumstages_SOpowphase(SO_data, TIB, PIB, freq_cbins, SO_feat, night, SZ, stages, TIB_limit,...
                     freq_range, issz, count_flag)
 % Takes in per-stage SO power/phase peak counts and integrates them into a
-% single SO power/phase rate histogram
+% single SO power/phase rate histogram based on which night(s) and stage(s)
+% are desired
 %
 % Inputs:
 %       SO_data: 5D double - Slow oscillation feature data (dimensions = freqbins, SObins, subjs, nights, 
@@ -18,7 +19,7 @@ function [SOfeat_allstages, freqcbins_new, TIB_allstages, PIB_allstages, issz_ou
 %                        3=NREM1, 2=NREM2, 1=NREM1. Default = [1:5]
 %       TIB_limit: double - number of minutes required in SO bin to use the bin, else all values 
 %                           in bin will be set to NaN. Default = 1.
-%       freq_range: double - [min freq, max freq]. Default = [4, 35];
+%       freq_range: double - [min freq, max freq]. Default = [4, 25];
 %       issz: logical vector - indicates the SZ status of each subject in SO_data. 
 %                              Default = [false(16,1); true(22,1)]
 %       count_flag: logical - return histograms in raw counts per bin instead of rates 
@@ -68,7 +69,7 @@ if nargin < 9 || isempty(TIB_limit)
 end
 
 if nargin < 10 || isempty(freq_range)
-    freq_range = [4, 35];
+    freq_range = [4, 25];
 end
 
 if nargin < 11 || isempty(issz)
@@ -92,14 +93,15 @@ else
     error('SZ input not recognized. Should be empty, true, or false.');
 end
 
-% Get SO data for desired subjects, nights, and stages
+% Get logical mask indicating night and stages to use
 night_logical = ismember([1,2], night); % turn indices to logical
 stages_logical = ismember([1,2,3,4,5], stages); % turn indices to logical
 
+% Get logical mask indicating frequencies to use
 freqs_use = (freq_cbins <= freq_range(2)) & (freq_cbins >= freq_range(1));
 freqcbins_new = freq_cbins(freqs_use);
 
-% Select relevant SO, TIB (time in bin), and PIB (proportion in bin) data
+% Select relevant SO data, TIB (time in bin), and PIB (proportion in bin) data
 SO_data = SO_data(:,freqs_use,use_SZ,night_logical,stages_logical); %(SOfeat_bins, freq_bins, num_subjs, num_nights, num_stages)
 TIB = TIB(:,use_SZ,night_logical,stages_logical); %(SOfeat_bins, num_nights, num_stages)
 PIB = PIB(:,use_SZ,night_logical,stages_logical);
@@ -112,7 +114,7 @@ PIB_allstages = zeros(n_mats, size(PIB,1), 5);
 issz_out = NaN(n_mats,1);
 night_out = NaN(n_mats,1);
 
-%% Sum stages
+%% Loop over subj, night, and stages to get TFpeak counts
 count = 0;
 for ii = 1:sum(use_SZ) % for each subj 
     for n = 1:length(night) % for each  night

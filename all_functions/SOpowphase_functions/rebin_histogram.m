@@ -36,13 +36,17 @@ function [SO_resized, SOpow_resize_counts, freqcbins_resize, SO_cbins_resize, TI
 %                         of SO_resized should be the same/repeated to show circularity of 
 %                         bins. Default = false for 'power' and default =
 %                         true for 'phase'
-%       edge_correct: logical - 
+%       edge_correct: logical - correct for edge effects introduced by imfilter. 
+%                     Default = true
 %       TIB_req:          double - minutes required in each y bin. Y bins with <
 %                         TIB_req minutes will be tured to NaNs. Default =
 %                         1 for 'power' and default = 0 for 'phase'
 %
 % Outputs:
-%       SO_resized:       PxAxB 3D double - [num_subjs, new freqs, new SO_feature] rebinned histograms
+%       SO_resized:       PxAxB 3D double - [num_subjs, new freqs, new_SO_feature] rebinned 
+%                         histograms rates
+%       SOpow_resize_counts: PxAxB 3D double - [num_subjs, new_freqs, new_SO_feature] rebinned 
+%                            histograms counts
 %       freqcbins_resize: double vector - new frequency bin centers for SO_resized
 %       SO_cbins_resize:  double vector - new SO_feature bin centers for SO_resized
 %       TIB:              NxP 2D double - [new_SO_feature, num_subjs] Time spent in each SO_feature 
@@ -60,11 +64,11 @@ assert(nargin >= 7, '7 arguments required (hist_data, TIB_data, freq_cbins, SO_c
 switch lower(SOtype)
     case {'pow', 'power'}
         if nargin < 8 || isempty(freq_smallbinsizestep)
-            freq_smallbinsizestep = [0.05, 0.05];
+            freq_smallbinsizestep = [0.05, 0.05]; %standard freq bin size/step used in this analysis
         end
         
         if nargin < 9 || isempty(SO_smallbinsizestep)
-            SO_smallbinsizestep = [0.005, 0.005];
+            SO_smallbinsizestep = [0.005, 0.005]; %standard SO bin size/step used in this analysis
         end
         
         if nargin < 10 || isempty(SOpow_col_norm)
@@ -93,11 +97,11 @@ switch lower(SOtype)
         
     case {'phase'}
         if nargin < 8 || isempty(freq_smallbinsizestep)
-            freq_smallbinsizestep = [0.05, 0.05];
+            freq_smallbinsizestep = [0.05, 0.05]; %standard freq bin size/step used in this analysis
         end
         
         if nargin < 9 || isempty(SO_smallbinsizestep)
-            SO_smallbinsizestep = [(2*pi)/400, (2*pi)/400];
+            SO_smallbinsizestep = [(2*pi)/400, (2*pi)/400]; %standard SO bin size/step used in this analysis
         end
         
         if nargin < 10 || isempty(SOpow_col_norm)

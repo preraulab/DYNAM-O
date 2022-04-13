@@ -21,8 +21,9 @@ function [SOdata_counts, SOdata_rates, SO_TIB_out, freq_cbins, SO_cbins] = SOhis
 %                    of SOdata_counts and SOdata_rates should be the same/repeated to
 %                    show circularity of bins. Default = false
 %       TIB_req: double - minutes required in each y bin. Y bins with <
-%                TIB_req minutes will be tured to NaNs. Defauly = 0.
-%       edge_correct: logical - 
+%                TIB_req minutes will be tured to NaNs. Default = 0.
+%       edge_correct: logical - correct for edge effects introduced by imfilter. 
+%                     Default = true.
 %       ploton: logical - plot new 2D heatmap of rates. Default = false
 %       
 %
