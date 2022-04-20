@@ -5,15 +5,15 @@ function [rate_true, rate_recon, rate_times, rate_SOpow] = SOpow_hist_rate_recon
 %                                                                         peak_times, peak_freqs, time_window, fwindow_size, plot_on)
 %
 % Inputs:
-%     SOpow: 1xT vector - slow oscillation power
-%     SOpow_times: 1xT vector - slow oscillation power times
-%     SOpow_hist: SO-power histogram
-%     SOpow_bins: SO-power histogram power bins 
-%     SOpow_freqs: SO-power histogram frequency bins 
-%     peak_times: times of raw TF-peaks
-%     peak_freqs: frequencies of raw TF-peaks
-%     time_window: temporal window for rate for reconstruction 
-%     fwindow_size: frequency window for reconstruction (should match SOP hist freq bin width)
+%     SOpow: 1xT vector - slow oscillation power --required
+%     SOpow_times: 1xT vector - slow oscillation power times --required
+%     SOpow_hist: SO-power histogram --required
+%     SOpow_bins: SO-power histogram power bins --required
+%     SOpow_freqs: SO-power histogram frequency bins --required
+%     peak_times: times of raw TF-peaks --required
+%     peak_freqs: frequencies of raw TF-peaks --required
+%     time_window: temporal window for rate for reconstruction  --required
+%     fwindow_size: frequency window for reconstruction (should match SOPhist freq bin width) --required
 %     plot_on: logical - show plot (default: true)
 %
 % Outputs:
@@ -29,32 +29,36 @@ function [rate_true, rate_recon, rate_times, rate_SOpow] = SOpow_hist_rate_recon
 %
 %   Last modified 03/10/2022
 %********************************************************************
+
+%% Deal with Inputs
 if nargin == 0
     gen_powsummary;
     return;
 end
 
-if nargin<9
+assert(nargin >= 9, '9 inputs required: SOpow, SOpow_times, SOpow_hist, SOpow_bins, SOpow_freqs, peak_times, peak_freqs, time_window, fwindow_size')
+
+if nargin < 10 || isempty(plot_on)
     plot_on = true;
 end
 
-%Time windows for computing the sliding rate
+%% Get time windows for computing the sliding rate
 [tbin_edges, rate_times] = create_bins(SOpow_times([1 end]), time_window(1), time_window(2), 'full_extend');
 
-%Get time in bin in minutes
+%% Get time in bin in minutes
 bin_time = time_window(1)/60;
 
-%Freq windows should match the SO-pow hist windows
+%% Freq windows should match the SO-pow hist windows
 fbin_edges(1,:) = SOpow_freqs(:) - (fwindow_size/2);
 fbin_edges(2,:) = SOpow_freqs(:) + (fwindow_size/2);
 
-%Prealocate rate matrices
+%% Prealocate rate matrices
 T = length(rate_times);
 F = length(SOpow_freqs);
 rate_true = zeros(F,T);
 rate_recon = zeros(F,T);
 
-%Create the rate over time
+%% Create the rate over time
 for tt = 1:T
     %Grab the peaks within the temporal bin
     t_inds = peak_times>tbin_edges(1,tt) & peak_times<=tbin_edges(2,tt);
@@ -90,6 +94,7 @@ for tt = 1:T
     rate_recon(:,tt) = SOpow_hist(:,idx);
 end
 
+%% Plotting
 if plot_on
     fh = figure;
     ax = figdesign(12,4,'orient','landscape','merge',{[1:28],[29:36],[37:44],[45:48]},...

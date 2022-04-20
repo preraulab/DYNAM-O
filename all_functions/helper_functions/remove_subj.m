@@ -33,7 +33,11 @@ function [SOpow_data, SOpow_prop_data, SOpow_time_data, SOphase_data, SOphase_pr
 %       SOphase_prop_data: Same as input with nans replacing data for selected subjs/elects
 %       Sophase_time_data: Same as input with nans replacing data for selected subjs/elects
 %
-%
+%%   Copyright 2020 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
+%   Last modified:
+%       - Created - Tom Possidente 1/03/2022
+%%%************************************************************************************%%%
+
 
 assert((length(elect_inds) == length(subj_inds)), 'elect_inds and subj_inds must be the same length');
 
