@@ -1,4 +1,4 @@
-# TF_peaks_histogram_toolbox
+# watershed_TFpeaks_toolbox
 
 ### This is the repository for the code referenced in: 
 > 
