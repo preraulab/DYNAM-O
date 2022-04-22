@@ -74,5 +74,5 @@ All implementations are complete and functional.
 
 
 ## References
-1. 
+1. Dimitrov, T., He, M., Stickgold, R. & Prerau, M. J. Sleep spindles comprise a subset of a broader class of electroencephalogram events. Sleep (2021). doi:10.1093/sleep/zsab099
 
