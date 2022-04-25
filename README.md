@@ -67,7 +67,7 @@ which should be cited for academic use of this code.
 
 
 ## Status 
-All implementations are complete and functional.
+All implementations are complete and functional, but are subject to change.
 
 <br/>
 <br/>
