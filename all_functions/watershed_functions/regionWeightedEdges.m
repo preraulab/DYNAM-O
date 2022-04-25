@@ -137,7 +137,8 @@ function e = edgeWeight(rgn_ii,bnds_ii,rgn_jj,bnds_jj,data,merge_rule)
 %
 
 % fastest version to get intersection of "to region" boundary with "from region"
-adj_bnd = bnds_ii(builtin('_ismemberhelper',bnds_ii,sort(rgn_jj)));
+%adj_bnd = bnds_ii(builtin('_ismemberhelper',bnds_ii,sort(rgn_jj)));
+adj_bnd = bnds_ii(ismembc(bnds_ii,sort(rgn_jj)));
 
 switch merge_rule
     case {'absolute','abs'}

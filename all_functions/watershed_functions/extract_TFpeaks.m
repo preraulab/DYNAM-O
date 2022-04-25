@@ -1,5 +1,7 @@
-function  [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues, ...
-    rgn,bndry,chunks_minmax, chunks_xyminmax, chunks_time, bad_chunks,chunk_error] = extract_TFpeaks(spect, stimes, sfreqs, baseline,max_area,conn_wshed,merge_thresh,max_merges,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,CI_upper_bl,merge_rule,f_verb,verb_pref,f_disp,f_save,ofile_pref)
+function [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues, ...
+    rgn,bndry,chunks_minmax, chunks_xyminmax, chunks_time, bad_chunks,chunk_error] = extract_TFpeaks(spect, stimes, sfreqs, baseline,...
+            max_area, conn_wshed, merge_thresh, max_merges, trim_vol, trim_shift, conn_trim, conn_stats, bl_thresh, CI_upper_bl, merge_rule,...
+            f_verb, verb_pref, f_disp, f_save, ofile_pref)
 % extract_TFpeaks computes the time-frequency peaks and their
 % features from a time-series signal. It uses peaksWShedStatsWrapper to find the peaks and
 % determine their features. A baseline can be removed prior to peak
@@ -7,10 +9,10 @@ function  [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValue
 % to output files.
 %
 % INPUTS:
-%   spect
-%   stimes
-%   sfreqs 
-%   baseline 
+%   spect        --  2D image data used to extract TFpeaks [freq, time] --required
+%   stimes       --  1D timestamps corresponding to the 2nd dim of spect (seconds) --required
+%   sfreqs       --  1D frequencies corresponding to the 1st dim of spect (Hertz) --required
+%   baseline     --  1D baseline spectrum used to normalize the spectrogram. default []
 %   max_area     -- maximum square-pixel size of image chunks to use. default 487900.
 %   conn_wshed   -- pixel connection to be used by peaksWShed. default 8.
 %   merge_thresh -- threshold weight value for when to stop merge rule. default 8.
@@ -23,8 +25,10 @@ function  [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValue
 %   conn_stats   -- pixel connection to be used by peaksWShedStats_LData. default 8.
 %   bl_thresh    -- flag indicating use of baseline thresholding to reduce volume of data
 %                   being run through watershed and merging. Default = []
-%   CI_upper_bl  -- 
-%   merge_rule   --
+%   CI_upper_bl  -- upper confidence interval of the baseline, used to
+%                   compute the threshold used in bl_thresh. Default = []
+%   merge_rule   -- rule used to merge segments into complete TFpeaks. Options are 
+%                   'relative' and 'absolute'. Default = 'absolute'
 %   f_verb       -- number indicating depth of output text statements of progress.
 %                   0 - no output. 
 %                   1 - output current function level.
