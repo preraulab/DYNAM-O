@@ -1,4 +1,4 @@
-# watershed_TFpeaks_toolbox
+# TF-Peaks Toolbox - SO-power/phase Histograms
 
 ### This is the repository for the code referenced in: 
 > 
