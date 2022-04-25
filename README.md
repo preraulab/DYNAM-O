@@ -50,7 +50,7 @@ An [example script](https://github.com/preraulab/watershed_TFpeaks_toolbox/blob/
 <br/>
 <br/>
 
-## Paramteres
+## Parameters
 Input and output parameter descriptions and function descriptions for each function can be found in the documentation string under the function definition in each function file (.m). The top-level function to identify TF-peaks using the watershed algorithm is the [extract_TFpeaks](https://github.com/preraulab/watershed_TFpeaks_toolbox/blob/master/all_functions/watershed_functions/extract_TFpeaks.m) function. The top level functions to compute and plot the SO-power and SO-phase histograms are [SOpower_histogram](https://github.com/preraulab/watershed_TFpeaks_toolbox/blob/master/all_functions/SOpowphase_functions/SOpower_histogram.m) and [SOphase_histogram](https://github.com/preraulab/watershed_TFpeaks_toolbox/blob/master/all_functions/SOpowphase_functions/SOphase_histogram.m).
 
 <br/>
