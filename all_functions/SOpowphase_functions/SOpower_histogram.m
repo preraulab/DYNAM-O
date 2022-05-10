@@ -156,7 +156,7 @@ timerange_inds_peaks = (TFpeak_times >= time_range(1)) & (TFpeak_times <= time_r
 % Combine all indices to select peaks that occur during valid stages/times
 peak_selection_inds = stage_inds_peaks & ~artifact_inds_peaks & timerange_inds_peaks;
 
-%% Get valid SOphase values
+%% Get valid SOpower values
 % Exclude unwanted stages and times
 SOpower_stages_valid = logical(interp1(t, double(~stage_exclude), SOpower_times, 'nearest'));
 SOpower_times_valid = (SOpower_times>=time_range(1) & SOpower_times<=time_range(2));

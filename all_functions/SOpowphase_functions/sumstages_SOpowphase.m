@@ -102,9 +102,9 @@ freqs_use = (freq_cbins <= freq_range(2)) & (freq_cbins >= freq_range(1));
 freqcbins_new = freq_cbins(freqs_use);
 
 % Select relevant SO data, TIB (time in bin), and PIB (proportion in bin) data
-SO_data = SO_data(:,freqs_use,use_SZ,night_logical,stages_logical); %(SOfeat_bins, freq_bins, num_subjs, num_nights, num_stages)
-TIB = TIB(:,use_SZ,night_logical,stages_logical); %(SOfeat_bins, num_nights, num_stages)
-PIB = PIB(:,use_SZ,night_logical,stages_logical);
+SO_data = SO_data(:,freqs_use,use_SZ,night_logical,:); %(SOfeat_bins, freq_bins, num_subjs, num_nights, num_stages)
+TIB = TIB(:, use_SZ, night_logical, :); %(SOfeat_bins, num_nights, num_stages)
+PIB = PIB(:, use_SZ, night_logical, :);
 
 % Initialize data storage
 n_mats = sum(use_SZ) * length(night);
@@ -122,9 +122,9 @@ for ii = 1:sum(use_SZ) % for each subj
         
         for s = 1:length(stages) % for each selected stage
             % Sum SO, TIB, and PIB data for relevant stages
-            SOfeat_allstages(count,:,:) = nansum(cat(3, squeeze(SOfeat_allstages(count,:,:)), SO_data(:,:,ii,n,s)),3);
-            TIB_allstages(count,:, s) = TIB(:,ii,n,s);
-            PIB_allstages(count,:, s) = PIB(:,ii,n,s);
+            SOfeat_allstages(count,:,:) = sum(cat(3, squeeze(SOfeat_allstages(count,:,:)), SO_data(:,:,ii,n,stages(s))),3,'omitnan');
+            TIB_allstages(count,:, stages(s)) = TIB(:,ii,n,stages(s));
+            PIB_allstages(count,:, stages(s)) = PIB(:,ii,n,stages(s));
         end
         
         if isempty(SZ)

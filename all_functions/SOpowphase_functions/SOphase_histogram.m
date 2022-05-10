@@ -62,7 +62,7 @@ addOptional(p, 'freq_binsizestep', [0.5, 0.1], @(x) validateattributes(x, {'nume
 addOptional(p, 'SO_range', [-pi,pi], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'SO_binsizestep', [1, 0.05], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
 addOptional(p, 'SO_freqrange', [0.3, 1.5], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan'}));
-addOptional(p, 'SOphase_filter', [], @(x) validateattricbutes(x, {'structure'},{}));
+addOptional(p, 'SOphase_filter', []);
 addOptional(p, 'artifacts', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
 addOptional(p, 'stage_exclude', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
 addOptional(p, 't', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
@@ -220,7 +220,7 @@ if plot_flag == true
    figure;
    imagesc(SO_cbins, freq_cbins, SO_mat')
    axis xy
-   colormap plasma
+   colormap magma
    climscale;
    colorbar;
    xlabel('SO Phase (radians)');
