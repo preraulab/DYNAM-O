@@ -1,6 +1,9 @@
 function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds] = SOpower_histogram(varargin)
-% [SO_mat, freq_cbins, SO_cbins, time_in_bin] = SO_histogram(EEG, Fs, TFpeak_freqs, TFpeak_times, freq_range, freq_binsizestep, SO_range, SO_binsizestep, SOfreq_range, artifacts, ...
-%                                                            stage_exclude, t, norm_method, min_time_in_bin, lightsonoff_times, pow_freqSO_norm, rate_flag, smooth_flag, plot_flag)
+% [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds] = ...
+%                           SO_histogram(EEG, Fs, TFpeak_freqs, TFpeak_times, freq_range, freq_binsizestep, ...
+%                                        SO_range, SO_binsizestep, SOfreq_range, artifacts, ...
+%                                        stage_exclude, t, norm_method, min_time_in_bin, lightsonoff_times, ...
+%                                        pow_freqSO_norm, rate_flag, smooth_flag, plot_flag)
 %
 %  Inputs:
 %       EEG: 1xN double - timeseries EEG data --required
@@ -31,7 +34,7 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_n
 %                          of the SO phase histogram [frequency, SOphase]. Default = [true, false]
 %       rate_flag: logical - histogram output in terms of TFpeaks/min instead of count. Default = true.
 %       smooth_flag: logical - smooth the histogram using 5pt moving average 2D smoothing. Default = false.
-%       plot_flag: logical - SO phase histogram plots. Default = false
+%       plot_flag: logical - SO power histogram plots. Default = false
 %
 %  Outputs:
 %       SO_mat: SO power histogram (SOpower x frequency)

@@ -1,6 +1,6 @@
 function [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues, ...
     rgn,bndry,chunks_minmax, chunks_xyminmax, chunks_time, bad_chunks,chunk_error] = extract_TFpeaks(spect, stimes, sfreqs, baseline,...
-            max_area, conn_wshed, merge_thresh, max_merges, trim_vol, trim_shift, conn_trim, conn_stats, bl_thresh, CI_upper_bl, merge_rule,...
+            chunk_time, conn_wshed, merge_thresh, max_merges, trim_vol, trim_shift, conn_trim, conn_stats, bl_thresh, CI_upper_bl, merge_rule,...
             f_verb, verb_pref, f_disp, f_save, ofile_pref)
 % extract_TFpeaks computes the time-frequency peaks and their
 % features from a time-series signal. It uses peaksWShedStatsWrapper to find the peaks and
@@ -76,11 +76,13 @@ if nargin < 4 || isempty(baseline)
     baseline = [];
 end
 
-if nargin < 5 || isempty(max_area)
+if nargin < 5 || isempty(chunk_time)
     % chunk size should be number of pixels in 1 min of data
-    dt = stimes(2) - stimes(1);
-    one_min_stimes = 60/dt; 
-    max_area = one_min_stimes*length(sfreqs); %487900
+%     dt = stimes(2) - stimes(1);
+%     desired_chunk_time = 15; % seconds
+%     num_stimes = desired_chunk_time/dt; 
+%     max_area = num_stimes*length(sfreqs); %487900
+    chunk_time = 30; % seconds
 end
 
 if nargin < 6 || isempty(conn_wshed)
@@ -181,7 +183,7 @@ if f_verb > 0
     computetime = tic;
 end
 [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues, ...
-    rgn,bndry,chunks_minmax, chunks_xyminmax, chunks_time, bad_chunks,chunk_error] = peaksWShedStatsWrapper(spect,stimes,sfreqs,max_area,conn_wshed,...
+    rgn,bndry,chunks_minmax, chunks_xyminmax, chunks_time, bad_chunks,chunk_error] = peaksWShedStatsWrapper(spect,stimes,sfreqs,chunk_time,conn_wshed,...
                                                                                                             merge_thresh,max_merges,trim_vol,trim_shift,conn_trim,...
                                                                                                             conn_stats,wshed_threshold,merge_rule,f_verb-1,['  ' verb_pref],...
                                                                                                             f_disp);
@@ -246,6 +248,33 @@ switch f_save
         saveout_table = [saveout_table, peaks_table];
 
         [~, ~, ~, combined_mask] = filterpeaks_watershed(peaks_matr, matr_fields, matr_names, PixelIdxList, [0.5,5], [2,15], [0,40]);
+        
+%         %% Testing
+%         img = zeros(size(spect));
+%         
+%         for ii = 1:height(saveout_table)
+% 
+%             if combined_mask(ii) 
+%                 peak_height = max(spect(PixelIdxList{ii}));
+%                 if peak_height > 1
+%                     img(PixelIdxList{ii}) = ii;
+%                 end
+%             end
+%         
+%         end
+%         
+%         figure;
+%         RGB2 = label2rgb(img, 'jet', 'c', 'shuffle');
+%         R = squeeze(RGB2(:,:,1));
+%         G = squeeze(RGB2(:,:,2));
+%         B = squeeze(RGB2(:,:,3));
+%         R(~img) = 100;
+%         G(~img) = 100;
+%         B(~img) = 100;
+%         RGB2 = cat(3,R,G,B);
+%         imagesc(RGB2);
+%         axis xy;
+        %% 
 
         saveout_table(~combined_mask,:) = [];
 

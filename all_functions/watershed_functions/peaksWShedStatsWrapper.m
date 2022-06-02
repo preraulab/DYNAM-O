@@ -1,5 +1,5 @@
 function  [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues,...
-         rgn,bndry,chunks_minmax, chunks_xyminmax, chunks_time, bad_chunks,chunk_error] = peaksWShedStatsWrapper(data,x,y,max_area,conn_wshed,merge_thresh,max_merges,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
+         rgn,bndry,chunks_minmax, chunks_xyminmax, chunks_time, bad_chunks,chunk_error] = peaksWShedStatsWrapper(data,x,y,chunk_time,conn_wshed,merge_thresh,max_merges,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
 %peaksWShedStatsWrapper determines the peak regions of a 2D image and 
 % extracts a set of features for each. It initially divides the data into 
 % chunks to allow parallel computation of peaks and processing of larger images.
@@ -9,7 +9,7 @@ function  [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValue
 %   data         -- 2D matrix of image data. defaults to peaks(100).
 %   x            -- x axis of image data. default 1:size(data,2).
 %   y            -- y axis of image data. default 1:size(data,1).
-%   max_area     -- maximum square-pixel size of image chunks to use. default 487900.
+%   chunk_time     -- seconds per chunk to use (default = 30).
 %   conn_wshed   -- pixel connection to be used by peaksWShed. default 8. 
 %   merge_thresh -- threshold weight value for when to stop merge rule. default 8. 
 %   max_merges   -- maximum number of merges to perform. default inf. 
@@ -68,7 +68,7 @@ if nargin < 3
     y = [];
 end
 if nargin < 4
-    max_area = [];
+    chunk_time = [];
 end
 if nargin < 5
     conn_wshed = [];
@@ -127,8 +127,8 @@ if isempty(y)
     y = 1:size(data,1);
 end
 % maximum number of pixels per chunk 
-if isempty(max_area)
-    max_area = 487900; % 975800; % 400000;
+if isempty(chunk_time)
+    chunk_time = 15; %487900 % 975800; % 400000;
 end
 % connection parameter in labeling watershed boundaries
 if isempty(conn_wshed)
@@ -181,11 +181,13 @@ end
 % Determine data chunks *
 %************************
 % This chunking prevents having a small chunk at the end.
-dy = length(y);
-dx = length(x);
-max_dx = floor(max_area/dy);
-n_chunks = ceil(dx/max_dx);
-new_dx = ceil(dx/n_chunks);
+len_y = length(y);
+len_x = length(x);
+dt = x(2) - x(1);
+max_area = floor((chunk_time/dt) * len_y);
+max_dx = floor(max_area/len_y);
+n_chunks = ceil(len_x/max_dx);
+new_dx = ceil(len_x/n_chunks);
 data_chunks = cell(n_chunks,1); 
 x_chunks = cell(n_chunks,1); 
 
@@ -197,7 +199,7 @@ chunks_xyminmax = zeros(n_chunks,4);
 chunks_minmax = zeros(n_chunks,4);
 for ii = 1:n_chunks
     idx1 = (ii-1)*new_dx+1;
-    idx2 = min([ii*new_dx,dx]);
+    idx2 = min([ii*new_dx,len_x]);
     
     % disp(['Chunk ' num2str(ii) ' of ' num2str(n_chunks) ': ' num2str(diff(x([idx1 idx2]))/60) ' minutes']);
     

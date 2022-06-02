@@ -147,7 +147,17 @@ switch merge_rule
         % e = c - d;
         e = 2*max(data(adj_bnd)) - min(data(bnds_ii)) - max(data(rgn_jj)); % equivalent to lines 144-146
     case {'relative', 'rel'}
-        e = 1 / (max(data(rgn_ii)) / (max(data(adj_bnd)) - min(data(adj_bnd)))); % alternative merge rule
+        %e = (max(data(adj_bnd)) - min(data(adj_bnd))) / (max(data(rgn_ii)); % alternative merge rule
+        baseline = min([data(bnds_jj); data(bnds_ii)]);
+        a = max(data(rgn_jj)) - baseline;
+        b = max(data(adj_bnd)) - baseline;
+        c =  max(data(rgn_ii)) - baseline;
+        
+        minh = min([a,c]);
+        maxh = max([a,c]);
+        e = b/maxh * b/minh;
+        %pmax = max([a,c]);
+        %e = b / pmax;
 end
 
 end
