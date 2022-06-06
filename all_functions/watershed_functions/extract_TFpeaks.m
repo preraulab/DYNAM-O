@@ -13,7 +13,10 @@ function [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues
 %   stimes       --  1D timestamps corresponding to the 2nd dim of spect (seconds) --required
 %   sfreqs       --  1D frequencies corresponding to the 1st dim of spect (Hertz) --required
 %   baseline     --  1D baseline spectrum used to normalize the spectrogram. default []
-%   max_area     -- maximum square-pixel size of image chunks to use. default 487900.
+%   chunk_time   --  length of each segment/chunk of spectrogram to process
+%                    at a time (in seconds). Default = 30. Note that a 60s chunk time is
+%                    used in the paper accompanying this code, but using 30s offers large
+%                    speedup and should not greatly affect results
 %   conn_wshed   -- pixel connection to be used by peaksWShed. default 8.
 %   merge_thresh -- threshold weight value for when to stop merge rule. default 8.
 %   max_merges   -- maximum number of merges to perform. default inf.
@@ -27,8 +30,7 @@ function [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues
 %                   being run through watershed and merging. Default = []
 %   CI_upper_bl  -- upper confidence interval of the baseline, used to
 %                   compute the threshold used in bl_thresh. Default = []
-%   merge_rule   -- rule used to merge segments into complete TFpeaks. Options are 
-%                   'relative' and 'absolute'. Default = 'absolute'
+%   merge_rule   -- rule used to merge segments into complete TFpeaks. Default = 'absolute'
 %   f_verb       -- number indicating depth of output text statements of progress.
 %                   0 - no output. 
 %                   1 - output current function level.
