@@ -60,7 +60,12 @@ function [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues
 %   chunk_error     --
 %   f_success       --
 %
-% Created by: Patrick Stokes
+%  Copyright 2022 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
+%   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
+%   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
+%      
+%   Authors: Patrick Stokes
+%
 % Created on: 20190228
 % Modified: 4/21/2021 - Tom P - fixed multitaper arguments to be compatable with new multitaper function
 % Modified: 11/24/2021 - Tom P - multitaper spectrogram and baseline now are inputs (not internally 

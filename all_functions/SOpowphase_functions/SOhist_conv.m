@@ -39,9 +39,14 @@ function [SOdata_counts, SOdata_rates, SO_TIB_out, freq_cbins, SO_cbins] = SOhis
 %                 SOdata_rates
 %
 %
+%   Copyright 2022 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
+%   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
+%   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
+%      
+%   Authors: Michael Prerau, Thomas Possidente
+%
 % Last Modified:
 %       - created: Tom P and Mike P - 12/29/2021
-%
 %
 %%%************************************************************************************%%%
 

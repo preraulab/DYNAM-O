@@ -23,7 +23,12 @@ function [rgn, brdrs, ematr, pick_update] = regionMerge(rgn,a,b,lbls,brdrs,ematr
 %   pick_update        -- logical vector indicating weights that need to be
 %                         updated
 %
-% Created by: Patrick Stokes
+%   Copyright 2022 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
+%   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
+%   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
+%      
+%   Authors: Patrick Stokes
+%
 % Created on: 20171016 -- forked from version in wshed1;
 % Modified: 20190422 -- avoids unique in fill-hole
 %           20190215 -- cleaned up for toolbox

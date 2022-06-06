@@ -1,4 +1,10 @@
 function SO_phase_sim(Fs, minutes, phase_pref, sim_density, method)
+%  
+%   Copyright 2022 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
+%   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
+%   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
+%      
+%   Authors: Patrick Stokes
 
 if nargin == 0
 %Set simulation time

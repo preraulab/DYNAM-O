@@ -1,61 +1,83 @@
-function sh=hypnoplot(varargin)
+function sh = hypnoplot(time,stage,varargin)
 % HYPNOPLOT Make a pretty plot of a hypnogram
 %
 %   Usage:
-%       hyp_handle = hypnoplot(times, stages, groupNREM)
-%       hyp_handle = hypnoplot(hypnostruct, groupNREM)
+%       hyp_handle = hypnoplot(times, stages)
 %
 %   Input:
 %       times: 1xN vector of stage times
-%       stages: 1xN vector of stage values (0:Undefined, 5: Wake, 4:REM, 3:N1, 2:N2, 1:N3)
-%       groupNREM: boolean - Use the same color for all NREM stages (default: true)
-%       hypnostruct: structure with .time and .stage fields
+%       stages: 1xN vector of stage values (6: Artifact 5: Wake, 4:REM, 3:N1, 2:N2, 1:N3, 0:Undefined)
+%       
+%       Optional Name-Value Pairs:
+%       'HypnogramLabels': 1x7 cell, stage name labels, default: {'Undef','N3','N2','N1','REM','Wake','Art'}
+%       'LabelPos': 'top' or 'left', label position, default: 'left'
+%       'StageColors': 7x3 double
+%       'GroupNREMColors': logical, use one color for NREM vs different colors for N1-3, default: true
+%       'PlotBuffer': double, axis gap on top/bottom, default: 0.3
 %
 %   Output:
 %       hyp_handle: handle to stairs object for hypnogram
 %
 %
 %   Example:
-%         %Load example data
-%         load('/data/preraugp/archive/Lunesta Study/sleep_stages/Lun01-Night1.mat');
-%
-%         %Make reduced hypnogram
-%         t_inds=unique([1; find(diff(stage_struct.stage)~=0)+1; length(stage_struct.stage)]);
-%
-%         hyp_times=stage_struct.time(t_inds);
-%         hyp_stages=stage_struct.stage(t_inds);
-%
-%         figure;
-%         hypnoplot(hyp_times, hyp_stages);
+%         stage = [0 0 0 5 4 3 2 2 6 6 6 2 1 2 3 5 6 5 6 5 6 6 5 5 3 2 1 4 4 6 5 4 0 3 2 1 1 0 0 6 nan];
+%         time = (1:length(stage))*30;
+%         
+%         figure
+%         subplot(211)
+%         hypnoplot(time, stage);
+%         
+%         subplot(212)
+%         hypnoplot(time, stage,'HypnogramLabels', {'U','3','2','1','R','W','A'},'LabelPos','top');
 %
 %   Copyright 2022 Michael J. Prerau, Ph.D.
 %
 %   Last modified 06/02/2022
 %% ********************************************************************
 
-if isstruct(varargin{1})
-    s=varargin{1};
-    time=s.time(:)';
-    stage=s.stage(:)';
-    
-    if nargin==2
-        groupNREM=varargin{2};
-    else
-        groupNREM=true;
-    end
-elseif nargin>=2
-    time=varargin{1}(:)';
-    stage=varargin{2}(:)';
-    
-    if nargin==3
-        groupNREM=varargin{3};
-    else
-        groupNREM=true;
-    end
+%Check for old input
+if isstruct(time)
+    hypnoplot(time.time, time.stage, varargin{2:end});
+    warning('Avoid using stage structure for input. Use separate time and stage variables')
+    return;
 end
 
-time =[time, time(end)+30];
-stage=[stage, stage(end)];
+%Default colors for plot
+default_colors = [    0.9000    0.9000    0.9000; ...
+    0.6000    0.6000    1.0000; ...
+    0.8000    0.8000    1.0000; ...
+    0.8000    1.0000    1.0000; ...
+    0.7000    1.0000    0.7000; ...
+    1.0000    0.7000    0.7000; ...
+    0.6000    0.6000    0.6000];
+
+p = inputParser;
+
+addRequired(p,'time',@(x)validateattributes(x,{'numeric'},{'nonempty'}));
+addRequired(p,'stage',@(x)validateattributes(x,{'numeric'},{'nonempty'}));
+addParameter(p,'HypnogramLabels',{'Undef','N3','N2','N1','REM','Wake','Art'},@iscell);
+addParameter(p,'StageColors',default_colors,@(x)validateattributes(x,{'numeric'},{'nonempty'}));
+addParameter(p,'PlotBuffer', .3, @(x)validateattributes(x,{'numeric'},{'nonempty','positive'}));
+addParameter(p,'LabelPos', 'left', @ischar);
+addParameter(p,'GroupNREMColors',true, @islogical);
+
+parse(p,time,stage,varargin{:});
+
+HypnogramLabels = p.Results.HypnogramLabels;
+StageColors = p.Results.StageColors;
+PlotBuffer = p.Results.PlotBuffer;
+LabelPos = p.Results.LabelPos;
+GroupNREMColors = p.Results.GroupNREMColors;
+
+%Do additional input checks
+assert(isequal(size(time),size(stage)),'time and stage must be the same dimensions')
+assert(size(StageColors,2)==3,'Colors must be an N x 3 matrix')
+assert(length(HypnogramLabels)==7,'Hypnogram labels must be a 1 x 7 cell of strings - Undefined, N3, N2, N1, R, W, Artifiact')
+assert(ismember(lower(LabelPos),{'left','top'}),'LabelPos must be "left" or "top"')
+
+%Adds a 30s epoch at the end for plotting
+time(end+1) = time(end)+30;
+stage(end+1) = stage(end);
 
 %Simplify vector
 inds=[1 find(diff(stage)~=0)+1 length(time)];
@@ -67,29 +89,8 @@ stage=stage(inds);
 stage(stage<0 | isnan(stage)) = 0;
 stage(stage>6) = 6;
 
-%Create hypnogram labes
-hypnogram_labels={'Undef','N3','N2','N1','REM','Wake','Art'};
-
-%Define the colors by stages
-NS=[.9 .9 .9]; %No stage
-W=[1 .7 .7];
-N3=[.6 .6 1];
-N2=[.8 .8 1];
-N1=[.8 1  1];
-REM=[.7 1 .7];
-art = [.6 .6 .6]; % artifact
-
-%Create color matrix
-colors=[NS; ...
-    N3; ...
-    N2; ...
-    N1; ...
-    REM; ...
-    W;...
-    art];
-
 %Plot the hypnogram
-sh=stairs(time,stage,'k','linewidth',2);
+sh = stairs(time,stage,'k','linewidth',2);
 
 %Adjust plot to include no stage and artifacts
 if any(~stage)
@@ -105,33 +106,46 @@ else
 end
 
 %Set ylim range
-buffer=.3;
-min_y = val_min - buffer;
-max_y = val_max + buffer;
-
-set(gca,'ytick',val_min:val_max,'yticklabel',{hypnogram_labels{val_min+1:val_max+1}},'xticklabel','');
+min_y = val_min - PlotBuffer;
+max_y = val_max + PlotBuffer;
 
 hold on;
 
-if groupNREM %Merge all NREM 
+if GroupNREMColors %Merge all NREM
     stage(stage==1 | stage == 3) = 2;
 end
 
 for stage_num = 0:6 %Loop through all stages
     inds = find(stage(1:end-1)==stage_num);
-    
+
     %Get epoch times
     a = time(inds);
     b = time(inds+1);
     c = ones(1,length(a))*min_y;
     d = ones(1,length(a))*max_y;
-     
+
     %Plot shaded rectangle
-    fill([a;b;b;a],[c;c;d;d],colors(stage_num + 1,:),'edgecolor','none')
+    fill([a;b;b;a],[c;c;d;d], StageColors(stage_num + 1,:),'edgecolor','none')
 end
 
 %Keep hypnogram trace on top
 uistack(sh,'top');
+
+if strcmpi(LabelPos,'left')
+    set(gca,'ytick',val_min:val_max,'yticklabel',HypnogramLabels(val_min+1:val_max+1),'xticklabel','');
+else
+    %Get just the stages that exist
+    stage_list = unique(stage);
+
+    %Plot all the first letter at the top of the first instance
+    for ss = 1:length(stage_list)
+        stg = stage_list(ss);
+        first_stage = find(stage==stg,1,"first");
+
+        text(time(first_stage),max_y,HypnogramLabels{stg+1},'VerticalAlignment','baseline','HorizontalAlignment','center');
+    end
+    set(gca,'yticklabel','')
+end
 
 %Set the proper limits
 if length(time) == 2

@@ -13,7 +13,11 @@ function [ Ldata ] = cell2Ldata( rgn, data_size, Lborders , min_area)
 % INPUTS:
 %   Ldata   -- 2D matrix of image data. 0 indicates border pixels.
 %
-% Created by: Patrick Stokes
+%   Copyright 2022 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
+%   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
+%   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
+%      
+%   Authors: Patrick Stokes
 % Created on: 
 % Modified: 20170908 -- Added min_area option to zero-out small regions 
 %           20170906 -- Commented and cleaned up

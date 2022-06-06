@@ -27,6 +27,8 @@ function [rate_true, rate_recon, rate_times, rate_SOpow] = SOpow_hist_rate_recon
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %
+%   Authors: Michael Prerau
+%
 %   Last modified 03/10/2022
 %********************************************************************
 

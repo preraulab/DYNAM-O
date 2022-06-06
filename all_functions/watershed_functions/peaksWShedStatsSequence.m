@@ -40,7 +40,12 @@ function [trim_matr, matr_names, matr_fields, trim_PixelIdxList,trim_PixelList, 
 %   rgn          -- same as PixelIdxList.
 %   bndry        -- 1D cell array of vector lists of linear idx of border pixels for each region. 
 %
-% Created by: Patrick Stokes
+%   Copyright 2022 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
+%   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
+%   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
+%      
+%   Authors: Patrick Stokes
+%
 % Created on: 20190214 -- extracted from peaksWShedStatsWrapper.
 % Modified: 20190410 -- commented and cleaned up for toolbox.
 %

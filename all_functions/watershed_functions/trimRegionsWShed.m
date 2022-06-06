@@ -20,7 +20,12 @@ function [trimmed_regions, trimmed_borders] = trimRegionsWShed(data,regions,vol_
 %   trimmed_regions -- 1D cell array of vector lists of linear idx of all pixels for each region.
 %   trimmed_borders -- 1D cell array of vector lists of linear idx of border pixels for each region. 
 %
-% Created by: Patrick Stokes
+%   Copyright 2022 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
+%   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
+%   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
+%      
+%   Authors: Patrick Stokes
+%
 % Created on: 20171005 
 % Modified: 20190413 -- commented
 %           20190305 -- cleaned up for toolbox

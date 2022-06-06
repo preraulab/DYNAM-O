@@ -24,7 +24,12 @@ function [rgn, Lborders] = regionMergeByWeight(data,rgn,rgn_lbls,Lborders,amatr,
 % OUTPUTS:
 %   rgn, Lborders -- versions of inputs after merger
 %
-% Created by: Patrick Stokes
+%   Copyright 2022 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
+%   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
+%   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
+%      
+%   Authors: Patrick Stokes
+%
 % Created on: 20170907 -- forked from version in wshed1, the code of this
 %                         function was consolidated from peaks_wshed_excerpt.m
 % Modified: 20190215 -- cleaned up for toolbox

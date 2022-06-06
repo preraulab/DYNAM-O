@@ -16,7 +16,12 @@ function [rgn, rgn_lbls, borders, Amatr] = labelWShedBorders_imdilate(Ldata,excl
 %   amatr       -- two-column matrix of region adjacencies.
 %                  each row contains region lables of two adjacent regions.  
 %
-% Created by: Patrick Stokes
+%   Copyright 2022 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
+%   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
+%   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
+%      
+%   Authors: Patrick Stokes
+%
 % Created on: 20171016 -- forked from version in wshed1
 % Modified: 20190422 -- made faster by using regionprops to get pixelIdxList
 %           20190214 -- cleaned up for toolbox

@@ -1,5 +1,12 @@
 function [SO_power, stimes] = compute_mtspect_power(varargin)
 % [SO_power, stimes] = compute_mtspect_power(data, Fs, freq_range, tapers, window_params, smoothing_method, smoothing_param, interp_times, verbose)
+%
+%
+%   Copyright 2022 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
+%   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
+%   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
+%      
+%   Authors: Patrick Stokes, Michael Prerau, Thomas Possidente
 
 %% Parse input
 %Input Error handling

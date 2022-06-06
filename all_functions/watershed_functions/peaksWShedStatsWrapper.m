@@ -47,7 +47,12 @@ function  [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValue
 %   bad_chunks      --
 %   chunk_error     --
 %
-% Created by: Patrick Stokes
+%   Copyright 2022 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
+%   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
+%   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
+%      
+%   Authors: Patrick Stokes
+%
 % Created on: 20171015 -- forked from version in wshed1
 % Modified: 20190410 -- commented and cleaned up for toolbox.
 %           20190214 -- spectrogram moved up to peaksWShedFromData, and 
