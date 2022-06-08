@@ -25,7 +25,7 @@ function [SO_resized, SOpow_resize_counts, freqcbins_resize, SO_cbins_resize, TI
 %                         and bin step of smallbin data. Default = [0.005,0.005] for power
 %                         and [(2*pi)/400, (2*pi)/400] for phase.
 %       SOpow_col_norm:   logical - whether or not to normalize SOpow so that columns add 
-%                         to 1. Default = true for 'power' and false for 'phase'
+%                         to 1. Default = false
 %       conv_type:        integer or char - indicates the convolution padding
 %                         options. Integer indicates number of 0s to pad with. 'circular' 
 %                         indicates bins wrap around. Default = 0 for

@@ -47,19 +47,19 @@ if nargin < 12 || isempty(ROI_pow)
     ROI_pow = [.15 1; .65 1; 0.2 0.85; 0 .8; 0 .2]; % region of interest power boundaries;
 end
 
-if nargin < 12 || isempty(ROI_freq)
+if nargin < 13 || isempty(ROI_freq)
     ROI_freq = [12 15; 10 12; 7 10; 0 6; 8 12];
 end
 
-if nargin < 13 || isempty(fsave_path)
+if nargin < 14 || isempty(fsave_path)
     fsave_path = '.';
 end
 
-if nargin < 14 || isempty(print_png)
+if nargin < 15 || isempty(print_png)
     print_png = false;
 end
 
-if nargin < 15 || isempty(print_eps)
+if nargin < 16 || isempty(print_eps)
     print_eps = false;
 end
 

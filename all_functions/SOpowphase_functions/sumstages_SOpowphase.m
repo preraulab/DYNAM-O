@@ -6,7 +6,7 @@ function [SOfeat_allstages, freqcbins_new, TIB_allstages, PIB_allstages, issz_ou
 % are desired
 %
 % Inputs:
-%       SO_data: 5D double - Slow oscillation feature data (dimensions = freqbins, SObins, subjs, nights, 
+%       SO_data: 5D double - Slow oscillation feature data (dimensions = SObins, freqbins, subjs, nights, 
 %                            stages) --required
 %       TIB: 4D double - Time in bin data (SObins, subjs, nights, stages) --required
 %       PIB: 4D double - Proportion time in bin data (SObins, subjs, nights, stages) --required
@@ -94,7 +94,8 @@ else
 end
 
 % Get logical mask indicating night and stages to use
-night_logical = ismember([1,2], night); % turn indices to logical
+possible_nights = 1:size(SO_data,4);
+night_logical = ismember(possible_nights, night); % turn indices to logical
 stages_logical = ismember([1,2,3,4,5], stages); % turn indices to logical
 
 % Get logical mask indicating frequencies to use
