@@ -9,11 +9,11 @@ function[feature_matrix,feature_names,chunk_nums,dx,dy,loc,xywcntrd] = extract_p
 %    : spect_info: 2xnum_peaks containing boundary information for each
 %      peak
 %
-%   Copyright 2022 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
+%   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %      
-%   Authors: Patrick Stokes
+%   Authors: Patrick Stokes, Thomas Possidente, Michael Prerau
 
 
 %% area

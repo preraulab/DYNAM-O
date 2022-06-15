@@ -1,4 +1,4 @@
-function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds] = SOpower_histogram(varargin)
+function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds, SOpower_norm, ptile] = SOpower_histogram(varargin)
 % [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds] = ...
 %                           SO_histogram(EEG, Fs, TFpeak_freqs, TFpeak_times, freq_range, freq_binsizestep, ...
 %                                        SO_range, SO_binsizestep, SOfreq_range, artifacts, ...
@@ -126,9 +126,9 @@ switch norm_method
     case {'percentile', 'percent'}
         low_val =  1;
         high_val =  99;
-        ptiles = prctile(SOpower(SOpower_times>=time_range(1) & SOpower_times<=time_range(2)), [low_val, high_val]);
-        SOpower_norm = SOpower-ptiles(1);
-        SOpower_norm = SOpower_norm/(ptiles(2) - ptiles(1));
+        ptile = prctile(SOpower(SOpower_times>=time_range(1) & SOpower_times<=time_range(2)), [low_val, high_val]);
+        SOpower_norm = SOpower-ptile(1);
+        SOpower_norm = SOpower_norm/(ptile(2) - ptile(1));
         
     case 'shift'
         low_val =  5; 
