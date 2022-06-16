@@ -13,7 +13,7 @@ function [ BWdata ] = cell2BWBorders( rgn, data_size, Lborders , min_area)
 % INPUTS:
 %   Ldata   -- 2D matrix of image data. 0 indicates border pixels.
 %
-%   Copyright 2022 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
+%   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %      

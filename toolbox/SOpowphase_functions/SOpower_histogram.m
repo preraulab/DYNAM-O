@@ -47,7 +47,12 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_n
 %       peak_selection_inds: 1xP logical - which TFpeaks are valid give the artifacts and stage_exclusion 
 %                            exclusions
 %
-%   Copyright 2020 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
+%   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
+%   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
+%   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
+%
+%   Authors: Patrick Stokes, Thomas Possidente, Michael Prerau
+%
 %   Last modified:
 %       - Created - Tom P. 11/16/2021
 %

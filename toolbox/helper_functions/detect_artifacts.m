@@ -27,7 +27,7 @@ function [artifacts] = detect_artifacts(data, Fs, crit_units, hf_crit, hf_pass, 
 %   Output:
 %   artifacts: 1xT logical of times flagged as artifacts (logical OR of hf and bb artifacts)
 %
-%   Copyright 2020 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
+%   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %

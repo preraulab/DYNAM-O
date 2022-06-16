@@ -31,7 +31,12 @@ function [pow_params, use_inds, use_issz, pvalues_issz, pvalues_night] = meanSZc
 %       pvalues_night: 1D double - pvalue for night effect on each ROI
 %
 %
-%   Copyright 2020 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
+%   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
+%   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
+%   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
+%
+%   Authors: Thomas Possidente, Michael Prerau
+%
 %   Last modified:
 %       - Created - Tom Possidente 1/03/2022
 %%%************************************************************************************%%%

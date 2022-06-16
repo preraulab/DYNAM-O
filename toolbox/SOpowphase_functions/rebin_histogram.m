@@ -52,7 +52,12 @@ function [SO_resized, SOpow_resize_counts, freqcbins_resize, SO_cbins_resize, TI
 %       TIB:              NxP 2D double - [new_SO_feature, num_subjs] Time spent in each SO_feature 
 %                                         bin (minutes).
 %
-%   Copyright 2020 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
+%   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
+%   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
+%   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
+%
+%   Authors: Thomas Possidnete, Michael Prerau
+%
 %   Last modified:
 %       - Created - Tom Possidente 1/03/2022
 %%%************************************************************************************%%%

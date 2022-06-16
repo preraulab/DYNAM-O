@@ -30,7 +30,9 @@ function sh = hypnoplot(time,stage,varargin)
 %         subplot(212)
 %         hypnoplot(time, stage,'HypnogramLabels', {'U','3','2','1','R','W','A'},'LabelPos','top');
 %
-%   Copyright 2022 Michael J. Prerau, Ph.D.
+%   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
+%   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
+%   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %
 %   Last modified 06/02/2022
 %% ********************************************************************
@@ -69,11 +71,21 @@ PlotBuffer = p.Results.PlotBuffer;
 LabelPos = p.Results.LabelPos;
 GroupNREMColors = p.Results.GroupNREMColors;
 
+
 %Do additional input checks
+if iscolumn(stage)
+    stage = stage';
+end
+
+if iscolumn(time)
+    time = time';
+end
+
 assert(isequal(size(time),size(stage)),'time and stage must be the same dimensions')
 assert(size(StageColors,2)==3,'Colors must be an N x 3 matrix')
 assert(length(HypnogramLabels)==7,'Hypnogram labels must be a 1 x 7 cell of strings - Undefined, N3, N2, N1, R, W, Artifiact')
 assert(ismember(lower(LabelPos),{'left','top'}),'LabelPos must be "left" or "top"')
+
 
 %Adds a 30s epoch at the end for plotting
 time(end+1) = time(end)+30;

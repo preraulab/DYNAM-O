@@ -25,7 +25,7 @@ function [ peaks_matr, matr_names, matr_fields, PixelIdxList, PixelList, PixelVa
 %   rgn          -- same as PixelIdxList.
 %   bndry        -- 1D cell array of vector lists of linear idx of border pixels for each region.
 %
-%   Copyright 2022 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
+%   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %      

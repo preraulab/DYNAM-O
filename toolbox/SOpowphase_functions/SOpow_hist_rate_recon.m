@@ -23,7 +23,7 @@ function [rate_true, rate_recon, rate_times, rate_SOpow] = SOpow_hist_rate_recon
 %     rate_SOpow: SO-power used in the reconstruction
 %
 %
-%   Copyright 2022 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
+%   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %

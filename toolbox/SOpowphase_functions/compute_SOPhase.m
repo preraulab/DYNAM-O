@@ -15,7 +15,7 @@ function [SOPhase, stimes]= compute_SOPhase(data, Fs, SO_freqrange, filter)
 %       SOPhase: 1xN double - timeseries SO-phase data UNWRAPPED (radians)
 %       stimes: 1xN double - times for each data point in SOPhase
 %
-%   Copyright 2022 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
+%   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %      
