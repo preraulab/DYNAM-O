@@ -98,13 +98,15 @@ end
 
 %% Plotting
 if plot_on
-    fh = figure;
-    ax = figdesign(12,4,'orient','landscape','merge',{[1:28],[29:36],[37:44],[45:48]},...
-        'margins',[.09 .1 .05 .05 .07, .07],'numberaxes',true);
-    ax(1).Position=[0.2500    0.5184    0.5000    0.4500];
-    ax(2).Position=[0.1000    0.2986    0.8000    0.1417];
-    ax(3).Position=[0.1000    0.1258    0.8000    0.1417];
-    ax(4).Position=[0.1000    0.0348    0.8000    0.0658];
+
+    % Create figure
+    fh = figure('PaperOrientation','landscape','Color',[1 1 1]);
+    
+    % Create axes
+    ax(4) = axes('Parent',fh,'Position',[0.1 0.0348 0.8 0.0658]);
+    ax(3) = axes('Parent',fh,'Position',[0.1 0.1258 0.8 0.1417]);
+    ax(2) = axes('Parent',fh,'Position',[0.1 0.2986 0.8 0.1417]);
+    ax(1) = axes('Parent',fh,'Position',[0.25 0.5184 0.5 0.45]);
 
     linkaxes(ax(2:end),'x');
     linkaxes(ax(2:3),'y');

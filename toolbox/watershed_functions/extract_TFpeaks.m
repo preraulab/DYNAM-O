@@ -1,7 +1,7 @@
 function [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues, ...
     rgn,bndry,chunks_minmax, chunks_xyminmax, chunks_time, bad_chunks,chunk_error] = extract_TFpeaks(spect, stimes, sfreqs, baseline,...
             chunk_time, conn_wshed, merge_thresh, max_merges, trim_vol, trim_shift, conn_trim, conn_stats, bl_thresh, CI_upper_bl, merge_rule,...
-            f_verb, verb_pref, f_disp, f_save, ofile_pref)
+            f_verb, verb_pref, f_disp, f_save, ofile_pref, mu, SD)
 % extract_TFpeaks computes the time-frequency peaks and their
 % features from a time-series signal. It uses peaksWShedStatsWrapper to find the peaks and
 % determine their features. A baseline can be removed prior to peak
@@ -46,6 +46,8 @@ function [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues
 %                   information to save. [0 = no saving, 1 = save fewer peak stats, 
 %                   2 = save all peak stats]. Default 0.
 %   ofile_pref   -- string of path and data name for outputs. default 'tmp'.
+%   mu           -- mean of spect to be subracted in z-score computation
+%   SD           -- standard deviation of spect to be divided in z-score computation
 %
 % OUTPUTS:
 %   peaks_matr      -- matrix of peak features. each row is a peak.
@@ -152,6 +154,13 @@ if nargin < 20 || isempty(ofile_pref)
     ofile_pref = 'tmp/';
 end
 
+if nargin < 21 || isempty(mu)
+    mu = 0;
+end
+
+if nargin < 22 || isempty(SD)
+    SD = 1;
+end
 
     
 %******************
@@ -163,7 +172,7 @@ if ~isempty(baseline)
         disp([verb_pref 'Removing baseline...']);
     end
 
-    % Remove baseline. Subptraction in dB equivalent to subtraction in non-dB.
+    % Remove baseline. Subtraction in dB equivalent to subtraction in non-dB.
     spect = spect./repmat(baseline,1,size(spect,2));
 
     if bl_thresh == true  % Get threshold used to remove low pow data
@@ -181,6 +190,13 @@ end
 if isempty(trim_shift)
     trim_shift = min(spect,[],'all');
 end
+
+%*********
+% Z-Score *
+%*********
+
+spect = (spect) ./ SD;
+
 
 %*********************
 % Compute peak stats *

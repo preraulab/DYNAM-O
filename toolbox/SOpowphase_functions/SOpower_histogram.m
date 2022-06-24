@@ -1,4 +1,4 @@
-function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds, SOpower_norm, ptile] = SOpower_histogram(varargin)
+function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds, SOpower_norm, ptile, SOpow_times] = SOpower_histogram(varargin)
 % [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds] = ...
 %                           SO_histogram(EEG, Fs, TFpeak_freqs, TFpeak_times, freq_range, freq_binsizestep, ...
 %                                        SO_range, SO_binsizestep, SOfreq_range, artifacts, ...
@@ -118,8 +118,8 @@ nanEEG = EEG;
 nanEEG(artifacts) = nan; 
 
 %% Compute SO power
-[SOpower, SOpower_times] = compute_mtspect_power(nanEEG, Fs, 'freq_range', SO_freqrange);
-SOpow_full_binsize = SOpower_times(2) - SOpower_times(1);
+[SOpower, SOpow_times] = compute_mtspect_power(nanEEG, Fs, 'freq_range', SO_freqrange);
+SOpow_full_binsize = SOpow_times(2) - SOpow_times(1);
 
 % Normalize SO power
 switch norm_method
@@ -131,13 +131,13 @@ switch norm_method
     case {'percentile', 'percent'}
         low_val =  1;
         high_val =  99;
-        ptile = prctile(SOpower(SOpower_times>=time_range(1) & SOpower_times<=time_range(2)), [low_val, high_val]);
+        ptile = prctile(SOpower(SOpow_times>=time_range(1) & SOpow_times<=time_range(2)), [low_val, high_val]);
         SOpower_norm = SOpower-ptile(1);
         SOpower_norm = SOpower_norm/(ptile(2) - ptile(1));
         
     case 'shift'
         low_val =  5; 
-        ptile = prctile(SOpower(SOpower_times>=time_range(1) & SOpower_times<=time_range(2)), low_val);
+        ptile = prctile(SOpower(SOpow_times>=time_range(1) & SOpow_times<=time_range(2)), low_val);
         SOpower_norm = SOpower-ptile(1);
 
     case {'absolute', 'none'}
@@ -166,12 +166,12 @@ peak_selection_inds = stage_inds_peaks & ~artifact_inds_peaks & timerange_inds_p
 
 %% Get valid SOpower values
 % Exclude unwanted stages and times
-SOpower_stages_valid = logical(interp1(t, double(~stage_exclude), SOpower_times, 'nearest'));
-SOpower_times_valid = (SOpower_times>=time_range(1) & SOpower_times<=time_range(2));
+SOpower_stages_valid = logical(interp1(t, double(~stage_exclude), SOpow_times, 'nearest'));
+SOpower_times_valid = (SOpow_times>=time_range(1) & SOpow_times<=time_range(2));
 SOpower_valid = SOpower_stages_valid & SOpower_times_valid;
 
 %% Get SOpower at each peak time
-peak_SOpower_norm = interp1(SOpower_times, SOpower_norm, TFpeak_times);
+peak_SOpower_norm = interp1(SOpow_times, SOpower_norm, TFpeak_times);
 
 %% Compute the SO power historgram
 % Get frequency and SO power bins

@@ -128,7 +128,7 @@ if f_valid_inputs
         disp([verb_pref 'Trimming regions...']);
     end
     if f_verb > 1
-        progressbar;
+        waitbar(0);
     end
     
     % Constants and initialization
@@ -220,7 +220,7 @@ if f_valid_inputs
                 
                 if f_verb > 1
                     if mod(ii,50)==0
-                        progressbar(ii/num_regions);
+                        waitbar(ii/num_regions);
                     end
                 end
                 
@@ -268,7 +268,7 @@ if f_valid_inputs
         end
     end
     if f_verb > 1
-        progressbar(1);
+        waitbar(1);
     end
     
     % Display trimmed regions

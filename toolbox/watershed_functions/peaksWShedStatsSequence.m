@@ -236,7 +236,7 @@ if f_verb > 0
 end
 [trim_matr, matr_names, matr_fields, trim_PixelIdxList,trim_PixelList, trim_PixelValues, ...
     trim_rgn,trim_bndry] = peaksWShedStats_LData(trim_rgn,trim_bndry,img_data,x,y,num_segment,conn_stats,f_verb-1,['    ' verb_pref]);
-seq_time = (now-t_start)/datefact;
+seq_time = (now-t_start)/datenum([0 0 0 0 0 1]);
 if f_verb > 0 
     disp([verb_pref '    stats took: ' num2str(toc(ttic)) ' seconds.']);
     disp([verb_pref 'Sequence took ' num2str(seq_time/60) ' minutes.']); 
