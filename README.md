@@ -19,7 +19,7 @@ This repository contains code to detect time-frequency peaks (TF-peaks) in a spe
 
 <br/>
 <p align="center">
-<img src="https://prerau.bwh.harvard.edu/images/TFpeak_toolbox_example.png" width="400" />
+<img src="https://prerau.bwh.harvard.edu/images/watershed_summary_graphic.png" width="400" />
 </p>
 <p align="center">
   <sup><sub>paper reference</sup></sub>
