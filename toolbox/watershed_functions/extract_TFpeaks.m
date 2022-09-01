@@ -271,33 +271,6 @@ switch f_save
         saveout_table = [saveout_table, peaks_table];
 
         [~, ~, ~, combined_mask] = filterpeaks_watershed(peaks_matr, matr_fields, matr_names, PixelIdxList, [0.5,5], [2,15], [0,40]);
-        
-%         %% Testing
-%         img = zeros(size(spect));
-%         
-%         for ii = 1:height(saveout_table)
-% 
-%             if combined_mask(ii) 
-%                 peak_height = max(spect(PixelIdxList{ii}));
-%                 if peak_height > 1
-%                     img(PixelIdxList{ii}) = ii;
-%                 end
-%             end
-%         
-%         end
-%         
-%         figure;
-%         RGB2 = label2rgb(img, 'jet', 'c', 'shuffle');
-%         R = squeeze(RGB2(:,:,1));
-%         G = squeeze(RGB2(:,:,2));
-%         B = squeeze(RGB2(:,:,3));
-%         R(~img) = 100;
-%         G(~img) = 100;
-%         B(~img) = 100;
-%         RGB2 = cat(3,R,G,B);
-%         imagesc(RGB2);
-%         axis xy;
-        %% 
 
         saveout_table(~combined_mask,:) = [];
 

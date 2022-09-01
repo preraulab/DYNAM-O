@@ -1,4 +1,4 @@
-function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds, SOpower_norm, ptile, SOpow_times] = SOpower_histogram(varargin)
+function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds, SOpower_norm, ptile, SOpow_times] = SOpower_histogram_allstageTIB(varargin)
 % [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds] = ...
 %                           SO_histogram(EEG, Fs, TFpeak_freqs, TFpeak_times, freq_range, freq_binsizestep, ...
 %                                        SO_range, SO_binsizestep, SOfreq_range, artifacts, ...
@@ -10,6 +10,7 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_n
 %       Fs: numerical - sampling frequency of EEG (Hz) --required
 %       TFpeak_freqs: Px1 - frequency each TF peak occurs (Hz) --required
 %       TFpeak_SOphase:  Px1 - times each TF peak occurs (s) --required
+%       stages: 1xN double - sleep stage for each EEG timepoint --required
 %       freq_range: 1x2 double - min and max frequencies to consider in SO phase analysis 
 %                   (Hz). Default = [0,40] 
 %       freq_binsizestep: 1x2 double - [size, step] frequency bin size and bin step for frequency 
@@ -66,6 +67,7 @@ addRequired(p, 'EEG', @(x) validateattributes(x, {'numeric', 'vector'}, {'real',
 addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addRequired(p,'TFpeak_freqs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addRequired(p,'TFpeak_times', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
+addRequired(p,'stages', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addOptional(p, 'freq_range', [0,40], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'freq_binsizestep', [0.5, 0.1], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
 addOptional(p, 'SO_range', [0,1], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
@@ -197,12 +199,15 @@ num_freqbins = length(freq_cbins);
 [SO_bin_edges, SO_cbins] = create_bins(SO_range, SO_binsizestep(1), SO_binsizestep(2), 'partial');
 num_SObins = length(SO_cbins);
 
+% Interpolate stages to SOpow times
+stages_interp = interp1(t, stages, SOpow_times, 'nearest');
+
 % Intialize SOpow * freq matrix
 SO_mat = nan(num_SObins, num_freqbins);
 
 % Initialize time in bin
-time_in_bin = zeros(num_SObins,1);
-prop_in_bin = zeros(num_SObins,1);
+time_in_bin = zeros(num_SObins,5);
+prop_in_bin = zeros(num_SObins,5);
 
 for s = 1:num_SObins
    
@@ -213,12 +218,16 @@ for s = 1:num_SObins
     SO_inds = (peak_SOpower_norm >= SO_bin_edges(1,s)) & (peak_SOpower_norm < SO_bin_edges(2,s));
     
     % Find time in bin (min)
-    time_in_bin(s) = (sum(TIB_inds & SOpower_valid') * SOpow_full_binsize)/60;
-    time_in_bin_allstages = (sum(TIB_inds & SOpower_times_valid') * SOpow_full_binsize)/60;
-    prop_in_bin(s) = time_in_bin(s)/time_in_bin_allstages;
+    for tt = 1:5
+        time_in_bin(s,tt) = (sum(TIB_inds & SOpower_valid' & stages_interp'==tt) * SOpow_full_binsize)/60;
+    end
+    time_in_bin_allstages = (sum(TIB_inds & SOpower_times_valid') .* SOpow_full_binsize)/60;
+    prop_in_bin(s,:) = time_in_bin(s,:)./time_in_bin_allstages;
     
     % if less than threshold time in SO bin, whole column of SO power hist should be nan
-    if time_in_bin(s) < min_time_in_bin
+    if sum(time_in_bin(s,:)) < min_time_in_bin
+        time_in_bin(s,:) = nan;
+        prop_in_bin(s,:) = nan;
         continue
     end 
     
@@ -244,7 +253,7 @@ for s = 1:num_SObins
     end 
     
     if rate_flag == true
-        SO_mat(s,:) = SO_mat(s,:) / time_in_bin(s);
+        SO_mat(s,:) = SO_mat(s,:) / sum(time_in_bin(s,:),2,'omitnan');
     end
     
 end

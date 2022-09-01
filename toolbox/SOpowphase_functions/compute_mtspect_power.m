@@ -1,4 +1,4 @@
-function [SO_power, stimes] = compute_mtspect_power(varargin)
+function [SO_power, stimes, sfreqs] = compute_mtspect_power(varargin)
 % [SO_power, stimes] = compute_mtspect_power(data, Fs, freq_range, tapers, window_params, smoothing_method, smoothing_param, interp_times, verbose)
 %
 %
