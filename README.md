@@ -7,6 +7,8 @@
 ## Table of Contents
 * [General Information](#general-information)
 * [Example](#example)
+* [Repository Structure](#repository-structure)
+* [Parameters](#parameters)
 * [Citations](#citations)
 * [Status](#status)
 * [References](#references)
@@ -19,7 +21,7 @@ This repository contains code to detect time-frequency peaks (TF-peaks) in a spe
 
 <br/>
 <p align="center">
-<img src="https://prerau.bwh.harvard.edu/images/TFpeak_example_graphic.png" width="400" />
+<img src="https://prerau.bwh.harvard.edu/images/watershed_summary_graphic.png" width="400" />
 </p>
 <p align="center">
   <sup><sub>paper reference</sup></sub>
@@ -46,6 +48,23 @@ An [example script](https://github.com/preraulab/watershed_TFpeaks_toolbox/blob/
 <p align="center">
 <img src="https://prerau.bwh.harvard.edu/images/TFpeak_toolbox_example.png" width="600" />
 </p>
+
+<br/>
+<br/>
+
+## Repository Structure
+The contents of the "toolbox" folder is organized as follows:
+* SOphase_filters:
+  - SOphase_filters.mat: File containing precomputed digital filters used in the SO-Phase calculation. If a filter is not provided as an argument to compute_SOPhase(), it will look for a suitable filter in this .mat file. Using precomputed filters saves computing time.
+* SOpowphase_functions: Functions used to compute the SO Power and Phase histograms
+  - Key Functions:
+    - SOpower_histogram: Top level function to compute SO Power histogram from EEG data and TF-peak times and frequencies.
+    - SOphase_histogram: Top level function to compute SO Phase histogram from EEG data and TF-peak times and frequencies. 
+* helper_functions: Utility functions used for plotting figures and performing generic small computations, plus the multitaper spectrogram function. 
+* watershed_functions: Functions involved in carrying out the watershed image segmentation algorithm on EEG spectrograms
+  - Key Functions:
+    - extract_TFpeaks: Top level function to run the watershed pipeline on a given spectrogram, including baseline removal, data chunking, image segmentation, peak merging, peak trimming, and calculating and saving out the TF-peak statistics.  
+  
 
 <br/>
 <br/>
