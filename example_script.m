@@ -10,8 +10,8 @@ load('example_data/example_data.mat', 'EEG', 'stages', 'Fs', 't');
 addpath(genpath('./toolbox'))
 
 %% Pick a segment of the spectrogram to extract peaks from 
-% Use only a segment of the spectrogram (13000-21000 seconds) for example to save computing time
-time_range = [6000,12000]; %[13000, 21000];
+% Use only a segment of the spectrogram for example to save computing time
+time_range = [8000,13000];
 
 %% Run watershed and SO power/phase analyses
 [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, ...
