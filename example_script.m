@@ -1,44 +1,48 @@
-%%%% Example script showing how to compute time-frequency peaks and slow oscillation power and phase %%%%
-
-%% Clear workspace and close plots
+%%%% Example script showing how to compute time-frequency peaks and SO-power/phase histograms
+%% PREPARE DATA
+%Clear workspace and close plots
 clear; close all; clc;
 
-%% Check for parallel toolbox
+%Check for parallel toolbox
 v = ver;
 haspar = any(strcmp({v.Name}, 'Parallel Computing Toolbox'));
 if haspar
     gcp;
 end
 
-%% Load example EEG data
+%Load example EEG data
 load('example_data/example_data.mat', 'EEG', 'stages', 'Fs', 't');
 
-%% Add necessary functions to path
+% Add necessary functions to path
 addpath(genpath('./toolbox'))
 
-%% Pick a segment of the spectrogram to extract peaks from 
-% Use only a segment of the spectrogram for example to save computing time
-time_range = [8458,12985];
+% Pick a segment of the spectrogram to extract peaks from 
+% Choose an example segment from the data
+time_range = [8420 13446];
 
-%% Run watershed and SO power/phase analyses
-[peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, ...
-    spect, stimes, sfreqs] = run_watershed_SOpowphase(EEG, Fs, t, stages, 'time_range', time_range);
+%% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
+[peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times] = run_watershed_SOpowphase(EEG, Fs, t, stages, 'time_range', time_range);
 
-                                                                      
-%% Plot
+%% COMPUTE SPECTROGRAM FOR DISPLAY
+[spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(EEG, Fs, [4,25],[15 29], [30 15],[],'linear',[],false, false);
 
+%% PLOT RESULTS FIGURE
+close all;
 % Create figure
 fh = figure('Color',[1 1 1],'units','inches','position',[0 0 8.5 11]);
 orient portrait;
 
-% Create main axes
-ax(1) = axes('Parent',fh,'Position',[0.06 0.45 0.83 0.2]);
-ax(2) = axes('Parent',fh,'Position',[0.06 0.07 0.335 0.3]);
-ax(3) = axes('Parent',fh,'Position',[0.555 0.07 0.335 0.3]);
+%Hypnogram/spectrogram/SO-power axes
+hypn_spect_ax(1) = axes('Parent',fh,'Position',[0.06 0.913 0.83 0.056]);
+hypn_spect_ax(2) = axes('Parent',fh,'Position',[0.06 0.756 0.83 0.157]);
+hypn_spect_ax(3) = axes('Parent',fh,'Position',[0.06 0.7   0.83 0.056]);
 
-%Create hypnogram axes
-hypn_spect_ax(1) = axes('Parent',fh,'Position',[0.06 0.686 0.83 0.227]);
-hypn_spect_ax(2) = axes('Parent',fh,'Position',[0.06 0.913 0.83 0.056]);
+%Scatter plot axes
+ax(1) = axes('Parent',fh,'Position',[0.06 0.45 0.83 0.2]);
+
+%SO-power/phase axes
+ax(2) = axes('Parent',fh,'Position',[0.06  0.07 0.335 0.3]);
+ax(3) = axes('Parent',fh,'Position',[0.555 0.07 0.335 0.3]);
 
 % Link axes of appropriate plots
 linkaxes([hypn_spect_ax(1), hypn_spect_ax(2), ax(1)], 'x');
@@ -47,41 +51,50 @@ linkaxes([hypn_spect_ax(1), hypn_spect_ax(2), ax(1)], 'x');
 ylimits = [4,25];
 
 % Plot hypnogram
-axes(hypn_spect_ax(2));
+axes(hypn_spect_ax(1));
 hypnoplot(t/3600,stages);
 xlim(time_range/3600)
-ylim(hypn_spect_ax(2),[.3 5.1])
+ylim(hypn_spect_ax(1),[.3 5.1])
 th(1) = title('Hypnogram and Spectrogram');
 
 % Plot spectrogram
-axes(hypn_spect_ax(1))
-[spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(EEG, Fs, [4,25],[15 29], [30 15],[],'linear',[],false, false);
+axes(hypn_spect_ax(2))
 imagesc(stimes_disp/3600, sfreqs_disp, pow2db(spect_disp));
 axis xy
-colormap(hypn_spect_ax(1), 'jet');
+colormap(hypn_spect_ax(2), 'jet');
 climscale;
+
 c = colorbar_noresize; % set colobar
 c.Label.String = 'Power (dB)'; % colobar label
 c.Label.Rotation = -90; % rotate colorbar label
 c.Label.VerticalAlignment = "bottom";
+
 ylabel('Frequency (Hz)');
 xlabel('')
 ylim(ylimits);
 set(hypn_spect_ax(1),'XTick',{})
+xlim(time_range/3600)
 
+%Plot %SO-Power
+axes(hypn_spect_ax(3))
+plot(SOpow_times/3600,SOpower_norm*100,'linewidth',2)
+xlim(time_range/3600)
+ylim([0 120])
+set(hypn_spect_ax(3),'YTick',[0 50 100]);
+ylabel('%SOP')
 
 % Plot time-frequency peak scatterplot
 axes(ax(1))
-
 %Compute peak dot size
 pmax = prctile(peak_props.peak_height, 95); % get 95th ptile of heights
 peak_props.peak_height(peak_props.peak_height>pmax) = pmax; % don't plot larger than 95th ptile or else dots could obscure other things on the plot
-peak_size = peak_props.peak_height/10;
+peak_size = peak_props.peak_height/6;
 
 scatter(peak_props.peak_times/3600, peak_props.peak_freqs, peak_size, peak_props.peak_SOphase, 'filled'); % scatter plot all peaks
 
 %Make circular colormap
 colormap(ax(1),circshift(hsv(2^12),-400))
+
 c = colorbar_noresize;
 c.Label.String = 'Phase (radians)';
 c.Label.Rotation = -90;
@@ -135,7 +148,8 @@ th(4) = title('SO-Phase Histogram');
 set([ax hypn_spect_ax],'fontsize',10)
 set(th,'fontsize',15)
 
-
+%% PRINT OUTPUT
+print(gcf,'-dpng','-r200','toolbox_example.png');
 
 
 

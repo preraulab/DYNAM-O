@@ -1,4 +1,4 @@
-function [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs] = ...
+function [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times] = ...
     run_watershed_SOpowphase(varargin)
 % Run watershed algorithm to extract time-frequency peaks from spectrogram
 % of data, then compute Slow-Oscillation power and phase histograms
@@ -36,6 +36,8 @@ function [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bin
 %                     spect
 %       sfreqs:       1D double - frequency bin center values for dimension 1 of
 %                     spect
+%       SOpower_norm: 1D double - normalized SO-power used to compute histogram
+%       SOpow_times:  1D double - SO-power times
 %
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
@@ -147,7 +149,9 @@ end
  
 if verbose
     disp(['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS')]);
+    disp(' ');
 end
+
 
 %% Filter out noise peaks
 if verbose
@@ -179,11 +183,11 @@ if verbose
 end
 
 % use ('plot_flag', true) to plot directly from this function call
-[SOpow_mat, freq_bins, SOpow_bins, ~, ~, peak_SOpow, peak_inds] = SOpower_histogram(data, Fs, peak_freqs, peak_times, 'stage_exclude', stage_exclude, 'artifacts', artifacts);
+[SOpow_mat, freq_bins, SOpow_bins, ~, ~, peak_SOpow, peak_inds, SOpower_norm, ~, SOpow_times] = SOpower_histogram(data, Fs, peak_freqs, peak_times, 'stage_exclude', stage_exclude, 'artifacts', artifacts);
 
 %% Compute SO phase
 if verbose
-    disp('Computing SO-power histogram...')
+    disp('Computing SO-phase histogram...')
 end
 
 % use ('plot_flag', true) to plot directly from this function call
@@ -207,6 +211,7 @@ peak_props = table(peak_times(peak_inds), peak_freqs(peak_inds), peak_height(pea
 
 
 if verbose
+    disp(' ');
     disp(['Total time: ' datestr(seconds(toc(ttotal)),'HH:MM:SS')]);
 end
 end

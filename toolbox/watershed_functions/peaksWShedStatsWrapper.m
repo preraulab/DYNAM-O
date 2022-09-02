@@ -266,7 +266,7 @@ if n_segs > 1
         if haspar
             send(D, ii);
         else
-            h = waitbar(ii/n_segs,  [num2str(ii) ' out of ' num2str(n_segs) ' (' sprintf('%.2f%%',(ii/n_segs*100)) ') segments processed...']);
+            h = waitbar(ii/n_segs,  [num2str(ii) ' out of ' num2str(n_segs) ' (' num2str((ii/n_segs*100),'%.2f') '%) segments processed...']);
         end
     end
     delete(h); % delete loading bar
@@ -285,7 +285,7 @@ else
 end
 
     function nUpdateWaitbar(~)
-        waitbar(segments_processed/n_segs, h, [num2str(segments_processed) ' out of ' num2str(n_segs) ' (' sprintf('%.2f%%',(ii/n_segs*100)) ') segments processed...']);
+        waitbar(segments_processed/n_segs, h, [num2str(segments_processed) ' out of ' num2str(n_segs) ' (' num2str((segments_processed/n_segs*100),'%.2f') '%) segments processed...']);
         segments_processed = segments_processed + 1;
     end
 
