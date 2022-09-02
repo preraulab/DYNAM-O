@@ -20,8 +20,7 @@ addpath(genpath('./toolbox'))
 % Choose an example segment from the data
 time_range = [8420 13446];
 
-% Uncomment to run full night
-%time_range = t([1 end]);
+
 
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
 [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times] = run_watershed_SOpowphase(EEG, Fs, t, stages, 'time_range', time_range);
