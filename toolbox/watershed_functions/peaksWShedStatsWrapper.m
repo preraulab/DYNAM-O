@@ -1,7 +1,7 @@
 function  [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues,...
-         rgn,bndry,chunks_minmax, chunks_xyminmax, chunks_time, bad_chunks,chunk_error] = peaksWShedStatsWrapper(data,x,y,chunk_time,conn_wshed,merge_thresh,max_merges,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
-%peaksWShedStatsWrapper determines the peak regions of a 2D image and 
-% extracts a set of features for each. It initially divides the data into 
+    rgn,bndry,chunks_minmax, chunks_xyminmax, chunks_time, bad_chunks,chunk_error] = peaksWShedStatsWrapper(data,x,y,chunk_time,conn_wshed,merge_thresh,max_merges,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
+%peaksWShedStatsWrapper determines the peak regions of a 2D image and
+% extracts a set of features for each. It initially divides the data into
 % chunks to allow parallel computation of peaks and processing of larger images.
 % It applies peaksWShedStatsSequence to each chunk.
 %
@@ -10,52 +10,52 @@ function  [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValue
 %   x            -- x axis of image data. default 1:size(data,2).
 %   y            -- y axis of image data. default 1:size(data,1).
 %   chunk_time     -- seconds per chunk to use (default = 30).
-%   conn_wshed   -- pixel connection to be used by peaksWShed. default 8. 
-%   merge_thresh -- threshold weight value for when to stop merge rule. default 8. 
-%   max_merges   -- maximum number of merges to perform. default inf. 
-%   trim_vol     -- fraction maximum trimmed volume (from 0 to 1), 
-%                   i.e. 1 means no trim. default 0.8. 
-%   trim_shift   -- value to be subtracted from image prior to evaulation of trim volume. 
+%   conn_wshed   -- pixel connection to be used by peaksWShed. default 8.
+%   merge_thresh -- threshold weight value for when to stop merge rule. default 8.
+%   max_merges   -- maximum number of merges to perform. default inf.
+%   trim_vol     -- fraction maximum trimmed volume (from 0 to 1),
+%                   i.e. 1 means no trim. default 0.8.
+%   trim_shift   -- value to be subtracted from image prior to evaulation of trim volume.
 %                   default min(min(img_data)).
-%   conn_trim    -- pixel connection to be used by trimRegionsWShed. default 8. 
+%   conn_trim    -- pixel connection to be used by trimRegionsWShed. default 8.
 %   conn_stats   -- pixel connection to be used by peaksWShedStats_LData. default 8.
 %   bl_thresh    -- power threshold used to cut off low power data to speed
 %                   up computation. Default = [];
 %   merge_rule   --
 %   f_verb       -- number indicating depth of output text statements of progress.
-%                   0 - no output. 
-%                   1 - output current function level. indicates chunk progress. 
+%                   0 - no output.
+%                   1 - output current function level. indicates chunk progress.
 %                   2 - output at sequence level within each chunk.
-%                   3 - output within sequence functions. 
-%                   4 - output internal progress of merge and trim functions. 
-%                   defaults to 0, unless using default data. 
-%                   >1 is not recommended unless data is single chunk. 
+%                   3 - output within sequence functions.
+%                   4 - output internal progress of merge and trim functions.
+%                   defaults to 0, unless using default data.
+%                   >1 is not recommended unless data is single chunk.
 %   verb_pref    -- prefix string for verbose output. defaults to ''.
-%   f_disp       -- flag indicator of whether to plot. 
+%   f_disp       -- flag indicator of whether to plot.
 %                   defaults to false, unless using default data.
 % OUTPUTS:
 %   peaks_matr      -- matrix of peak features. each row is a peak.
 %   matr_names      -- 1D cell array of names for each feature.
-%   matr_fields     -- vector indicating number of matrix columns occupied by each feature. 
+%   matr_fields     -- vector indicating number of matrix columns occupied by each feature.
 %   PixelIdxList    -- 1D cell array of vector lists of linear idx of all pixels for each region.
 %   PixelList       -- 1D cell array of vector lists of row-col idx of all pixels for each region.
 %   PixelValues     -- 1D cell array of vector lists of all pixel values for each region.
 %   rgn             -- same as PixelIdxList.
-%   bndry           -- 1D cell array of vector lists of linear idx of border pixels for each region. 
-%   chunks_minmax   -- num_chunks x 4 matrix, each row with [minx miny maxx maxy] indices of a chunk. 
-%   chunks_xyminmax -- num_chunks x 4 matrix, each row with [minx miny maxx maxy] values of a chunk. 
+%   bndry           -- 1D cell array of vector lists of linear idx of border pixels for each region.
+%   chunks_minmax   -- num_chunks x 4 matrix, each row with [minx miny maxx maxy] indices of a chunk.
+%   chunks_xyminmax -- num_chunks x 4 matrix, each row with [minx miny maxx maxy] values of a chunk.
 %   bad_chunks      --
 %   chunk_error     --
 %
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
-%      
+%
 %   Authors: Patrick Stokes
 %
 % Created on: 20171015 -- forked from version in wshed1
 % Modified: 20190410 -- commented and cleaned up for toolbox.
-%           20190214 -- spectrogram moved up to peaksWShedFromData, and 
+%           20190214 -- spectrogram moved up to peaksWShedFromData, and
 %                       other functions moved into peaksWShedStatsSequence.
 %
 %*******************************************
@@ -90,7 +90,7 @@ end
 if nargin < 9
     trim_shift = [];
 end
-if nargin < 10 
+if nargin < 10
     conn_trim = [];
 end
 if nargin < 11
@@ -131,7 +131,7 @@ end
 if isempty(y)
     y = 1:size(data,1);
 end
-% maximum number of pixels per chunk 
+% maximum number of pixels per chunk
 if isempty(chunk_time)
     chunk_time = 15; %487900 % 975800; % 400000;
 end
@@ -193,39 +193,39 @@ max_area = floor((chunk_time/dt) * len_y);
 max_dx = floor(max_area/len_y);
 n_chunks = ceil(len_x/max_dx);
 new_dx = ceil(len_x/n_chunks);
-data_chunks = cell(n_chunks,1); 
-x_chunks = cell(n_chunks,1); 
+data_chunks = cell(n_chunks,1);
+x_chunks = cell(n_chunks,1);
 
 if f_verb > 0
     disp([verb_pref num2str(n_chunks) ' total chunks.']);
     disp([verb_pref 'Chunking data...']);
-end    
+end
 chunks_xyminmax = zeros(n_chunks,4);
 chunks_minmax = zeros(n_chunks,4);
 for ii = 1:n_chunks
     idx1 = (ii-1)*new_dx+1;
     idx2 = min([ii*new_dx,len_x]);
-    
+
     % disp(['Chunk ' num2str(ii) ' of ' num2str(n_chunks) ': ' num2str(diff(x([idx1 idx2]))/60) ' minutes']);
-    
+
     % l_chunks(ii) = length(idx1:idx2);
     data_chunks{ii} = data(:,idx1:idx2); % data_chunks(:,1:l_chunks(ii),ii) = data(:,idx1:idx2);
     x_chunks{ii} = x(idx1:idx2); % x_chunks(ii,1:l_chunks(ii)) = x(idx1:idx2);
     chunks_xyminmax(ii,:) = [min(x_chunks{ii}) min(y) max(x_chunks{ii}) max(y)];
     chunks_minmax(ii,:) = [idx1 1 idx2 length(y)];
-    
+
 end
-   
+
 %*************************************************************
 % Initialize storage for parallel processing of image chunks *
 %*************************************************************
 chunks_matr_names = cell(n_chunks,1);
 chunks_matr_fields = cell(n_chunks,1);
-chunks_peaks_matr = cell(n_chunks,1); 
+chunks_peaks_matr = cell(n_chunks,1);
 chunks_PixelIdxList = cell(n_chunks,1);
 chunks_PixelList = cell(n_chunks,1);
 chunks_PixelValues = cell(n_chunks,1);
-chunks_rgn = cell(n_chunks,1); 
+chunks_rgn = cell(n_chunks,1);
 chunks_bndry = cell(n_chunks,1);
 bad_chunks = false(n_chunks,1);
 chunk_error = cell(n_chunks,1);
@@ -235,7 +235,8 @@ chunks_time = zeros(n_chunks,1);
 % In parallel, find peak stats for each chunk *
 %**********************************************
 if n_chunks > 1
-    parfor ii = 1:n_chunks 
+ 
+    parfor ii = 1:n_chunks
         if f_verb > 0
             disp([verb_pref 'Starting Chunk ' num2str(ii) '...']);
         end
@@ -257,13 +258,13 @@ else
         if f_verb > 0
             disp([verb_pref '  Chunk ' num2str(ii) ' took ' num2str(chunks_time(ii)) ' seconds.']);
         end
-    end    
+    end
 end
 
 %**************************************************************************
 % Assembles peaks stats for all chunks into single matrix and cell arrays *
 %**************************************************************************
-if f_verb > 0 
+if f_verb > 0
     disp([verb_pref 'Assembling stats from chunks...']);
 end
 % Determine number of non-empty peaks
@@ -294,7 +295,7 @@ for ii = 1:n_chunks
     PixelValues((cnt_peaks+1):(cnt_peaks+num_add)) = chunks_PixelValues{ii};
     rgn((cnt_peaks+1):(cnt_peaks+num_add)) = chunks_rgn{ii};
     bndry((cnt_peaks+1):(cnt_peaks+num_add)) = chunks_bndry{ii};
-    
+
     cnt_peaks = cnt_peaks + num_add;
 end
 
