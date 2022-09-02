@@ -55,7 +55,7 @@ axes(hypn_spect_ax(1));
 hypnoplot(t/3600,stages);
 xlim(time_range/3600)
 ylim(hypn_spect_ax(1),[.3 5.1])
-th(1) = title('Hypnogram and Spectrogram');
+th(1) = title('EEG Spectrogram');
 
 % Plot spectrogram
 axes(hypn_spect_ax(2))
