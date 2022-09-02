@@ -1,15 +1,15 @@
 function  [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues,...
-    rgn,bndry,chunks_minmax, chunks_xyminmax, chunks_time, bad_chunks,chunk_error] = peaksWShedStatsWrapper(data,x,y,chunk_time,conn_wshed,merge_thresh,max_merges,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
+    rgn,bndry,segs_minmax, segs_xyminmax, segs_time, bad_segs,seg_error] = peaksWShedStatsWrapper(data,x,y,seg_time,conn_wshed,merge_thresh,max_merges,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
 %peaksWShedStatsWrapper determines the peak regions of a 2D image and
 % extracts a set of features for each. It initially divides the data into
-% chunks to allow parallel computation of peaks and processing of larger images.
-% It applies peaksWShedStatsSequence to each chunk.
+% segs to allow parallel computation of peaks and processing of larger images.
+% It applies peaksWShedStatsSequence to each seg.
 %
 % INPUTS:
 %   data         -- 2D matrix of image data. defaults to peaks(100).
 %   x            -- x axis of image data. default 1:size(data,2).
 %   y            -- y axis of image data. default 1:size(data,1).
-%   chunk_time     -- seconds per chunk to use (default = 30).
+%   seg_time     -- seconds per seg to use (default = 30).
 %   conn_wshed   -- pixel connection to be used by peaksWShed. default 8.
 %   merge_thresh -- threshold weight value for when to stop merge rule. default 8.
 %   max_merges   -- maximum number of merges to perform. default inf.
@@ -24,12 +24,12 @@ function  [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValue
 %   merge_rule   --
 %   f_verb       -- number indicating depth of output text statements of progress.
 %                   0 - no output.
-%                   1 - output current function level. indicates chunk progress.
-%                   2 - output at sequence level within each chunk.
+%                   1 - output current function level. indicates seg progress.
+%                   2 - output at sequence level within each seg.
 %                   3 - output within sequence functions.
 %                   4 - output internal progress of merge and trim functions.
 %                   defaults to 0, unless using default data.
-%                   >1 is not recommended unless data is single chunk.
+%                   >1 is not recommended unless data is single seg.
 %   verb_pref    -- prefix string for verbose output. defaults to ''.
 %   f_disp       -- flag indicator of whether to plot.
 %                   defaults to false, unless using default data.
@@ -42,10 +42,10 @@ function  [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValue
 %   PixelValues     -- 1D cell array of vector lists of all pixel values for each region.
 %   rgn             -- same as PixelIdxList.
 %   bndry           -- 1D cell array of vector lists of linear idx of border pixels for each region.
-%   chunks_minmax   -- num_chunks x 4 matrix, each row with [minx miny maxx maxy] indices of a chunk.
-%   chunks_xyminmax -- num_chunks x 4 matrix, each row with [minx miny maxx maxy] values of a chunk.
-%   bad_chunks      --
-%   chunk_error     --
+%   segs_minmax   -- num_segs x 4 matrix, each row with [minx miny maxx maxy] indices of a segment.
+%   segs_xyminmax -- num_segs x 4 matrix, each row with [minx miny maxx maxy] values of a segment.
+%   bad_segs      --
+%   seg_error     --
 %
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
@@ -73,7 +73,7 @@ if nargin < 3
     y = [];
 end
 if nargin < 4
-    chunk_time = [];
+    seg_time = [];
 end
 if nargin < 5
     conn_wshed = [];
@@ -119,7 +119,7 @@ end
 if isempty(data)
     data = abs(peaks(100))+randn(100)*.5;
     % data = [data data];
-    f_verb = 4;
+    f_verb = 0;
     f_disp = 1;
     merge_thresh = 2;
 end
@@ -131,9 +131,9 @@ end
 if isempty(y)
     y = 1:size(data,1);
 end
-% maximum number of pixels per chunk
-if isempty(chunk_time)
-    chunk_time = 15; %487900 % 975800; % 400000;
+% maximum number of pixels per segment
+if isempty(seg_time)
+    seg_time = 15; %487900 % 975800; % 400000;
 end
 % connection parameter in labeling watershed boundaries
 if isempty(conn_wshed)
@@ -183,58 +183,58 @@ if isempty(f_disp)
 end
 
 %************************
-% Determine data chunks *
+% Determine data segs *
 %************************
-% This chunking prevents having a small chunk at the end.
+% This seging prevents having a small segment at the end.
 len_y = length(y);
 len_x = length(x);
 dt = x(2) - x(1);
-max_area = floor((chunk_time/dt) * len_y);
+max_area = floor((seg_time/dt) * len_y);
 max_dx = floor(max_area/len_y);
-n_chunks = ceil(len_x/max_dx);
-new_dx = ceil(len_x/n_chunks);
-data_chunks = cell(n_chunks,1);
-x_chunks = cell(n_chunks,1);
+n_segs = ceil(len_x/max_dx);
+new_dx = ceil(len_x/n_segs);
+data_segs = cell(n_segs,1);
+x_segs = cell(n_segs,1);
 
 if f_verb > 0
-    disp([verb_pref num2str(n_chunks) ' total chunks.']);
-    disp([verb_pref 'Chunking data...']);
+    disp([verb_pref num2str(n_segs) ' total segments.']);
+    disp([verb_pref 'Segmenting data...']);
 end
-chunks_xyminmax = zeros(n_chunks,4);
-chunks_minmax = zeros(n_chunks,4);
-for ii = 1:n_chunks
+segs_xyminmax = zeros(n_segs,4);
+segs_minmax = zeros(n_segs,4);
+for ii = 1:n_segs
     idx1 = (ii-1)*new_dx+1;
     idx2 = min([ii*new_dx,len_x]);
 
-    % disp(['Chunk ' num2str(ii) ' of ' num2str(n_chunks) ': ' num2str(diff(x([idx1 idx2]))/60) ' minutes']);
+    % disp(['seg ' num2str(ii) ' of ' num2str(n_segs) ': ' num2str(diff(x([idx1 idx2]))/60) ' minutes']);
 
-    % l_chunks(ii) = length(idx1:idx2);
-    data_chunks{ii} = data(:,idx1:idx2); % data_chunks(:,1:l_chunks(ii),ii) = data(:,idx1:idx2);
-    x_chunks{ii} = x(idx1:idx2); % x_chunks(ii,1:l_chunks(ii)) = x(idx1:idx2);
-    chunks_xyminmax(ii,:) = [min(x_chunks{ii}) min(y) max(x_chunks{ii}) max(y)];
-    chunks_minmax(ii,:) = [idx1 1 idx2 length(y)];
+    % l_segs(ii) = length(idx1:idx2);
+    data_segs{ii} = data(:,idx1:idx2); % data_segs(:,1:l_segs(ii),ii) = data(:,idx1:idx2);
+    x_segs{ii} = x(idx1:idx2); % x_segs(ii,1:l_segs(ii)) = x(idx1:idx2);
+    segs_xyminmax(ii,:) = [min(x_segs{ii}) min(y) max(x_segs{ii}) max(y)];
+    segs_minmax(ii,:) = [idx1 1 idx2 length(y)];
 
 end
 
 %*************************************************************
-% Initialize storage for parallel processing of image chunks *
+% Initialize storage for parallel processing of image segs *
 %*************************************************************
-chunks_matr_names = cell(n_chunks,1);
-chunks_matr_fields = cell(n_chunks,1);
-chunks_peaks_matr = cell(n_chunks,1);
-chunks_PixelIdxList = cell(n_chunks,1);
-chunks_PixelList = cell(n_chunks,1);
-chunks_PixelValues = cell(n_chunks,1);
-chunks_rgn = cell(n_chunks,1);
-chunks_bndry = cell(n_chunks,1);
-bad_chunks = false(n_chunks,1);
-chunk_error = cell(n_chunks,1);
-chunks_time = zeros(n_chunks,1);
+segs_matr_names = cell(n_segs,1);
+segs_matr_fields = cell(n_segs,1);
+segs_peaks_matr = cell(n_segs,1);
+segs_PixelIdxList = cell(n_segs,1);
+segs_PixelList = cell(n_segs,1);
+segs_PixelValues = cell(n_segs,1);
+segs_rgn = cell(n_segs,1);
+segs_bndry = cell(n_segs,1);
+bad_segs = false(n_segs,1);
+seg_error = cell(n_segs,1);
+segs_time = zeros(n_segs,1);
 
 %**********************************************
-% In parallel, find peak stats for each chunk *
+% In parallel, find peak stats for each seg *
 %**********************************************
-if n_chunks > 1
+if n_segs > 1
 
     % Check for parallel processing toolbox and set up loading bar
     v = ver;
@@ -248,64 +248,67 @@ if n_chunks > 1
     end
     segments_processed = 1;
 
-    parfor ii = 1:n_chunks
+    if f_verb > 0
+        disp([verb_pref 'Processing segments...']);
+    end
+    parfor ii = 1:n_segs
+        %         if f_verb > 0
+        %             disp([verb_pref 'Starting Segment ' num2str(ii) '...']);
+        %         end
+        [segs_peaks_matr{ii}, segs_matr_names{ii}, segs_matr_fields{ii}, ...
+            segs_PixelIdxList{ii},segs_PixelList{ii},segs_PixelValues{ii}, ...
+            segs_rgn{ii},segs_bndry{ii},segs_time(ii)] = peaksWShedStatsSequence(data_segs{ii},x_segs{ii},y,ii,conn_wshed,merge_thresh,max_merges,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
         if f_verb > 0
-            disp([verb_pref 'Starting Chunk ' num2str(ii) '...']);
-        end
-        [chunks_peaks_matr{ii}, chunks_matr_names{ii}, chunks_matr_fields{ii}, ...
-            chunks_PixelIdxList{ii},chunks_PixelList{ii},chunks_PixelValues{ii}, ...
-            chunks_rgn{ii},chunks_bndry{ii},chunks_time(ii)] = peaksWShedStatsSequence(data_chunks{ii},x_chunks{ii},y,ii,conn_wshed,merge_thresh,max_merges,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
-        if f_verb > 0
-            disp([verb_pref '  Chunk ' num2str(ii) ' took ' num2str(chunks_time(ii)) ' seconds.']);
+            disp([verb_pref '  Segment ' num2str(ii) ' took ' num2str(segs_time(ii)) ' seconds.']);
         end
 
         % Update loading bar
         if haspar
             send(D, ii);
         else
-            h = waitbar(ii/n_chunks,  [num2str(ii) ' out of ' num2str(n_chunks) ' (' num2str((ii/n_chunks*100)) '%) segments processed...']);
+            h = waitbar(ii/n_segs,  [num2str(ii) ' out of ' num2str(n_segs) ' (' sprintf('%.2f%%',(ii/n_segs*100)) ') segments processed...']);
         end
     end
     delete(h); % delete loading bar
 else
-    for ii = 1:n_chunks
+    for ii = 1:n_segs
         if f_verb > 0
-            disp([verb_pref 'Starting Chunk ' num2str(ii) '...']);
+            disp([verb_pref 'Starting seg ' num2str(ii) '...']);
         end
-        [chunks_peaks_matr{ii}, chunks_matr_names{ii}, chunks_matr_fields{ii}, ...
-            chunks_PixelIdxList{ii},chunks_PixelList{ii},chunks_PixelValues{ii}, ...
-            chunks_rgn{ii},chunks_bndry{ii},chunks_time(ii)] = peaksWShedStatsSequence(data_chunks{ii},x_chunks{ii},y,ii,conn_wshed,merge_thresh,max_merges,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
+        [segs_peaks_matr{ii}, segs_matr_names{ii}, segs_matr_fields{ii}, ...
+            segs_PixelIdxList{ii},segs_PixelList{ii},segs_PixelValues{ii}, ...
+            segs_rgn{ii},segs_bndry{ii},segs_time(ii)] = peaksWShedStatsSequence(data_segs{ii},x_segs{ii},y,ii,conn_wshed,merge_thresh,max_merges,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
         if f_verb > 0
-            disp([verb_pref '  Chunk ' num2str(ii) ' took ' num2str(chunks_time(ii)) ' seconds.']);
+            disp([verb_pref '  seg ' num2str(ii) ' took ' num2str(segs_time(ii)) ' seconds.']);
         end
     end
 end
 
     function nUpdateWaitbar(~)
-        waitbar(segments_processed/n_chunks, h, [num2str(segments_processed) ' out of ' num2str(n_chunks) ' (' num2str((segments_processed/n_chunks*100)) '%) segments processed...']);
+        waitbar(segments_processed/n_segs, h, [num2str(segments_processed) ' out of ' num2str(n_segs) ' (' sprintf('%.2f%%',(ii/n_segs*100)) ') segments processed...']);
         segments_processed = segments_processed + 1;
     end
 
 
 %**************************************************************************
-% Assembles peaks stats for all chunks into single matrix and cell arrays *
+% Assembles peaks stats for all segs into single matrix and cell arrays *
 %**************************************************************************
 if f_verb > 0
-    disp([verb_pref 'Assembling stats from chunks...']);
+    disp([verb_pref 'Assembling stats from segs...']);
 end
 % Determine number of non-empty peaks
 num_peaks = 0;
 first_nonempty = 0;
-for ii = 1:n_chunks
-    num_peaks = num_peaks + length(chunks_rgn{ii});
-    if first_nonempty==0 && ~isempty(chunks_rgn{ii})
+for ii = 1:n_segs
+    num_peaks = num_peaks + length(segs_rgn{ii});
+    if first_nonempty==0 && ~isempty(segs_rgn{ii})
         first_nonempty = ii;
     end
 end
 % Allocate storage
-matr_names = chunks_matr_names{first_nonempty};
-matr_fields = chunks_matr_fields{first_nonempty};
-peaks_matr = zeros(num_peaks,size(chunks_peaks_matr{first_nonempty},2));
+matr_names = segs_matr_names{first_nonempty};
+matr_fields = segs_matr_fields{first_nonempty};
+peaks_matr = zeros(num_peaks,size(segs_peaks_matr{first_nonempty},2));
 PixelIdxList = cell(num_peaks,1);
 PixelList = cell(num_peaks,1);
 PixelValues = cell(num_peaks,1);
@@ -313,14 +316,14 @@ rgn = cell(num_peaks,1);
 bndry = cell(num_peaks,1);
 % Extract from cell arrays
 cnt_peaks = 0;
-for ii = 1:n_chunks
-    num_add = length(chunks_rgn{ii});
-    peaks_matr((cnt_peaks+1):(cnt_peaks+num_add),:) = chunks_peaks_matr{ii};
-    PixelIdxList((cnt_peaks+1):(cnt_peaks+num_add)) = chunks_PixelIdxList{ii};
-    PixelList((cnt_peaks+1):(cnt_peaks+num_add)) = chunks_PixelList{ii};
-    PixelValues((cnt_peaks+1):(cnt_peaks+num_add)) = chunks_PixelValues{ii};
-    rgn((cnt_peaks+1):(cnt_peaks+num_add)) = chunks_rgn{ii};
-    bndry((cnt_peaks+1):(cnt_peaks+num_add)) = chunks_bndry{ii};
+for ii = 1:n_segs
+    num_add = length(segs_rgn{ii});
+    peaks_matr((cnt_peaks+1):(cnt_peaks+num_add),:) = segs_peaks_matr{ii};
+    PixelIdxList((cnt_peaks+1):(cnt_peaks+num_add)) = segs_PixelIdxList{ii};
+    PixelList((cnt_peaks+1):(cnt_peaks+num_add)) = segs_PixelList{ii};
+    PixelValues((cnt_peaks+1):(cnt_peaks+num_add)) = segs_PixelValues{ii};
+    rgn((cnt_peaks+1):(cnt_peaks+num_add)) = segs_rgn{ii};
+    bndry((cnt_peaks+1):(cnt_peaks+num_add)) = segs_bndry{ii};
 
     cnt_peaks = cnt_peaks + num_add;
 end

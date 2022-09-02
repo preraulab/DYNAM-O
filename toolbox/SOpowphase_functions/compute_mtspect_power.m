@@ -20,7 +20,7 @@ addOptional(p,'window_params',[30 15], @(x) validateattributes(x,{'numeric', 've
 addOptional(p,'smoothing_method','none', @(x) validateattributes(x,{'char'},{}));
 addOptional(p,'smoothing_param', 60*5, @(x) validateattributes(x,{'numeric'},{'numel',1}));
 addOptional(p,'interp_times',[], @(x) validateattributes(x,{'numeric', 'vector'},{'real'}));
-addOptional(p,'verbose',true, @(x) validateattributes(x,{'logical'},{}));
+addOptional(p,'verbose',false, @(x) validateattributes(x,{'logical'},{}));
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results);
 field_names = fieldnames(p.Results);

@@ -57,6 +57,7 @@ addOptional(p, 'time_range', [], @(x) validateattributes(x,{'numeric', 'vector'}
 addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'isstruct'},{}));
 addOptional(p, 'stages_include', [1,2,3,4], @(x) validateattributes(x,{'numeric', 'vector'}, {'real', 'nonempty'}))
 addOptional(p, 'lightsonoff_mins', 5, @(x) validateattributes(x,{'numeric'},{'real','nonempty', 'nonnan'}));
+addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results);
@@ -79,6 +80,7 @@ if isempty(artifact_filters)
     artifact_filters.detrend_filt = [];
 end
 
+ttotal = tic;
 
 %% Compute spectrogram
 % For more information on the multitaper spectrogram parameters and
@@ -92,15 +94,24 @@ nfft = 2^(nextpow2(Fs/df)); % zero pad data to this minimum value for fft
 detrend = 'off'; % do not detrend
 weight = 'unity'; % each taper is weighted the same
 ploton = false; % do not plot out
+mts_verbose = false;
+
+if verbose
+    disp('Computing TF-peak spectrogram...')
 
 try
-    [spect,stimes,sfreqs] = multitaper_spectrogram_mex(data, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton);
+    [spect,stimes,sfreqs] = multitaper_spectrogram_mex(data, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
 catch
-    [spect,stimes,sfreqs] = multitaper_spectrogram(data, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton);
+    [spect,stimes,sfreqs] = multitaper_spectrogram(data, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
     warning(sprintf('Unable to use mex version of multitaper_spectrogram. Using compiled multitaper spectrogram function will greatly increase the speed of this computaton. \n\nFind mex code at:\n    https://github.com/preraulab/multitaper_toolbox'));
+end
 end
 
 %% Compute baseline spectrum used to flatten data spectrum
+if verbose
+    disp('Performing artifact rejection...')
+end
+
 artifacts = detect_artifacts(data, Fs, [],[],[],[],[],[],[],[],[], ... % detect artifacts in EEG
     artifact_filters.hpFilt_high, artifact_filters.hpFilt_broad, artifact_filters.detrend_filt);
 artifacts_stimes = logical(interp1(t, double(artifacts), stimes, 'nearest')); % get artifacts occuring at spectrogram times
@@ -127,9 +138,22 @@ spect_in = spect(:, start:last);
 stimes_in = stimes(start:last);
 
 %% Compute time-frequency peaks
+if verbose
+    disp('Extracting TF-peaks from the spectrogram...')
+    tfp = tic;
+end
+
 [matr_names, matr_fields, peaks_matr,~,~, pixel_values] = extract_TFpeaks(spect_in, stimes_in, sfreqs, baseline);
+ 
+if verbose
+    disp(['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS')]);
+end
 
 %% Filter out noise peaks
+if verbose
+    disp('Removing noise peaks...')
+end
+
 [feature_matrix, feature_names, xywcntrd, ~] = filterpeaks_watershed(peaks_matr, matr_fields, matr_names, pixel_values);
 
 %% Compute SO power and SO phase
@@ -150,10 +174,18 @@ peak_freqs = xywcntrd(:,2);
 peak_height = feature_matrix(:,strcmp(feature_names, 'Height'));
 
 %% Compute SO power
+if verbose
+    disp('Computing SO-power histogram...')
+end
+
 % use ('plot_flag', true) to plot directly from this function call
 [SOpow_mat, freq_bins, SOpow_bins, ~, ~, peak_SOpow, peak_inds] = SOpower_histogram(data, Fs, peak_freqs, peak_times, 'stage_exclude', stage_exclude, 'artifacts', artifacts);
 
 %% Compute SO phase
+if verbose
+    disp('Computing SO-power histogram...')
+end
+
 % use ('plot_flag', true) to plot directly from this function call
 [SOphase_mat, ~, SOphase_bins, ~, ~, peak_SOphase, ~] = SOphase_histogram(data, Fs, peak_freqs, peak_times, 'stage_exclude', stage_exclude, 'artifacts', artifacts);
 
@@ -165,9 +197,17 @@ peak_height = feature_matrix(:,strcmp(feature_names, 'Height'));
 %                                                                           'SOphase_flter', custom_SOphase_filter);
 
 %% Make output peak properties table
+if verbose
+    disp('Creating output tables...')
+end
+
 peak_props = table(peak_times(peak_inds), peak_freqs(peak_inds), peak_height(peak_inds), ...
     peak_SOpow(peak_inds), peak_SOphase(peak_inds), 'VariableNames', {'peak_times', 'peak_freqs', 'peak_height', ...
     'peak_SOpow', 'peak_SOphase'});
 
+
+if verbose
+    disp(['Total time: ' datestr(seconds(toc(ttotal)),'HH:MM:SS')]);
+end
 end
 

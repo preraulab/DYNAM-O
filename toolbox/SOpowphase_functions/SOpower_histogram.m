@@ -82,6 +82,7 @@ addOptional(p, 'rate_flag', true, @(x) validateattributes(x,{'logical'},{}));
 addOptional(p, 'smooth_flag', false, @(x) validateattributes(x,{'logical'},{}));
 addOptional(p, 'plot_flag', false, @(x) validateattributes(x,{'logical'},{}));
 addOptional(p, 'proportion_freqrange', [0.3, 30], @(x) validateattributes(x, {'numeric','vector'},{'real','finite','nonnan'}));
+addOptional(p, 'mts_verbose', false, @(x) validateattributes(x,{'logical'},{}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results);
@@ -125,9 +126,9 @@ if ~strcmpi(norm_method, {'oof', 'OOF', 'one over f', '1/f'})
 end
 
 % Normalize SO power
-switch norm_method
+switch norm_method 
     case {'oof', 'OOF', 'one over f', '1/f'}
-        [oof_spect, oof_stimes, oof_sfreqs] = multitaper_spectrogram_mex(EEG, Fs, [0, 50], [15,29], [30, 30], [], 'off', [], false);
+        [oof_spect, oof_stimes, oof_sfreqs] = multitaper_spectrogram_mex(EEG, Fs, [0, 50], [15,29], [30, 30], [], 'off', [], false, mts_verbose);
         sfreqs_inds = (oof_sfreqs > 15) & (oof_sfreqs <= 45);
         oof_spect = oof_spect(sfreqs_inds, :); % nanpow2db
         oof_sfreqs = oof_sfreqs(sfreqs_inds);

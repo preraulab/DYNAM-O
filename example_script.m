@@ -3,6 +3,13 @@
 %% Clear workspace and close plots
 clear; close all; clc;
 
+%% Check for parallel toolbox
+v = ver;
+haspar = any(strcmp({v.Name}, 'Parallel Computing Toolbox'));
+if haspar
+    gcp;
+end
+
 %% Load example EEG data
 load('example_data/example_data.mat', 'EEG', 'stages', 'Fs', 't');
 
@@ -11,7 +18,7 @@ addpath(genpath('./toolbox'))
 
 %% Pick a segment of the spectrogram to extract peaks from 
 % Use only a segment of the spectrogram for example to save computing time
-time_range = [8000,13000];
+time_range = [8458,12985];
 
 %% Run watershed and SO power/phase analyses
 [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, ...
@@ -48,7 +55,7 @@ th(1) = title('Hypnogram and Spectrogram');
 
 % Plot spectrogram
 axes(hypn_spect_ax(1))
-[spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(EEG, Fs, [4,25],[15 29], [30 15],[],'linear',[],false);
+[spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(EEG, Fs, [4,25],[15 29], [30 15],[],'linear',[],false, false);
 imagesc(stimes_disp/3600, sfreqs_disp, pow2db(spect_disp));
 axis xy
 colormap(hypn_spect_ax(1), 'jet');
