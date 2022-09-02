@@ -1,7 +1,7 @@
 %%%% Example script showing how to compute time-frequency peaks and slow oscillation power and phase %%%%
 
 %% Clear workspace and close plots
-clear; close all;
+clear; close all; clc;
 
 %% Load example EEG data
 load('example_data/example_data.mat', 'EEG', 'stages', 'Fs', 't');
@@ -19,7 +19,7 @@ time_range = [13000, 21000];
 
                                                                       
 %% Plot
-close all
+
 % Create figure
 fh = figure('Color',[1 1 1],'units','inches','position',[0 0 8.5 11]);
 orient portrait;
@@ -66,7 +66,7 @@ sh.FontSize = 10;
 axes(ax(1))
 pmax = prctile(peak_props.peak_height, 95); % get 95th ptile of heights
 peak_props.peak_height(peak_props.peak_height>pmax) = pmax; % don't plot larger than 95th ptile or else dots could obscure other things on the plot
-scatter(peak_props.peak_times, peak_props.peak_freqs, peak_props.peak_height./12, peak_props.peak_SOphase, 'filled'); % scatter plot all peaks
+scatter(peak_props.peak_times, peak_props.peak_freqs, peak_props.peak_height./10, peak_props.peak_SOphase, 'filled'); % scatter plot all peaks
 colormap(ax(1),circshift(hsv(2^12),-400))
 c = colorbar_noresize;
 c.Label.String = 'Phase (radians)';
