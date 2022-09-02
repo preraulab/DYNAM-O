@@ -25,13 +25,13 @@ fh = figure('Color',[1 1 1],'units','inches','position',[0 0 8.5 11]);
 orient portrait;
 
 % Create main axes
-ax(1) = axes('Parent',fh,'Position',[0.06 0.35+.1 0.83 0.2]);
+ax(1) = axes('Parent',fh,'Position',[0.06 0.45 0.83 0.2]);
 ax(2) = axes('Parent',fh,'Position',[0.06 0.07 0.335 0.3]);
 ax(3) = axes('Parent',fh,'Position',[0.555 0.07 0.335 0.3]);
 
 %Create hypnogram axes
-hypn_spect_ax(1) = axes('Parent',fh,'Position',[0.06 0.6861 0.83 0.2278]);
-hypn_spect_ax(2) = axes('Parent',fh,'Position',[0.06 0.9138 0.83 0.0561]);
+hypn_spect_ax(1) = axes('Parent',fh,'Position',[0.06 0.686 0.83 0.227]);
+hypn_spect_ax(2) = axes('Parent',fh,'Position',[0.06 0.913 0.83 0.056]);
 
 % Link axes of appropriate plots
 linkaxes([hypn_spect_ax(1), hypn_spect_ax(2), ax(1)], 'x');
