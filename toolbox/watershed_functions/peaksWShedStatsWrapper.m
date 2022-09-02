@@ -235,7 +235,19 @@ chunks_time = zeros(n_chunks,1);
 % In parallel, find peak stats for each chunk *
 %**********************************************
 if n_chunks > 1
- 
+
+    % Check for parallel processing toolbox and set up loading bar
+    v = ver;
+    haspar = any(strcmp({v.Name}, 'Parallel Computing Toolbox'));
+    if haspar
+        D = parallel.pool.DataQueue;
+        h = waitbar(0, 'Processing Segments...');
+        afterEach(D, @nUpdateWaitbar);
+    else
+        h = waitbar(0, 'Processing Segments...');
+    end
+    segments_processed = 1;
+
     parfor ii = 1:n_chunks
         if f_verb > 0
             disp([verb_pref 'Starting Chunk ' num2str(ii) '...']);
@@ -246,7 +258,15 @@ if n_chunks > 1
         if f_verb > 0
             disp([verb_pref '  Chunk ' num2str(ii) ' took ' num2str(chunks_time(ii)) ' seconds.']);
         end
+
+        % Update loading bar
+        if haspar
+            send(D, ii);
+        else
+            h = waitbar(ii/n_chunks,  [num2str(ii) ' out of ' num2str(n_chunks) ' (' num2str((ii/n_chunks*100)) '%) segments processed...']);
+        end
     end
+    delete(h); % delete loading bar
 else
     for ii = 1:n_chunks
         if f_verb > 0
@@ -260,6 +280,12 @@ else
         end
     end
 end
+
+    function nUpdateWaitbar(~)
+        waitbar(segments_processed/n_chunks, h, [num2str(segments_processed) ' out of ' num2str(n_chunks) ' (' num2str((segments_processed/n_chunks*100)) '%) segments processed...']);
+        segments_processed = segments_processed + 1;
+    end
+
 
 %**************************************************************************
 % Assembles peaks stats for all chunks into single matrix and cell arrays *
