@@ -110,7 +110,7 @@ xlim(time_range/3600)
 
 % Plot SO-power histogram
 axes(ax(2))
-imagesc(SOpow_bins, freq_bins, SOpow_mat');
+imagesc(SOpow_bins*100, freq_bins, SOpow_mat');
 axis xy;
 colormap(ax(2), 'parula');
 climscale([],[],false);
