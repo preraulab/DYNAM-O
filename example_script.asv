@@ -85,7 +85,7 @@ ylabel('Frequency (Hz)');
 ylim(ylimits);
 
 xlabel('Time (hrs)')
-t(2) = title('Extracted Time-Frequency Peaks');
+t(1) = xtracted Time-Frequency Peaks');
 xlim(time_range/3600)
 
 % Plot SO-power histogram
@@ -103,7 +103,7 @@ c.Label.VerticalAlignment = "bottom";
 xlabel('%SO-Power');
 ylabel('Frequency (Hz)');
 ylim(ylimits);
-t(3) = title('SO-Power Histogram');
+title('SO-Power Histogram');
 
 % Plot SO-phase histogram
 axes(ax(3))
@@ -123,10 +123,9 @@ xticklabels({'-\pi', '-\pi/2', '0', '\pi/2', '\pi'});
 
 ylim(ylimits);
 
-t(4) = title('SO-Phase Histogram');
+title('SO Phase Histogram');
 
 set([ax hypn_spect_ax],'fontsize',10)
-set(t,'fontsize',15)
 
 
 
