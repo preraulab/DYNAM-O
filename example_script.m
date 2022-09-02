@@ -19,26 +19,30 @@ time_range = [13000, 21000];
 
                                                                       
 %% Plot
-
+close all
 % Create figure
-fh = figure('Color',[1 1 1]);
+fh = figure('Color',[1 1 1],'units','inches','position',[0 0 8.5 11]);
+orient portrait;
 
-% Create axes
-ax(4) = axes('Parent',fh,'Position',[0.555 0.0700000000000001 0.335 0.2]);
-ax(3) = axes('Parent',fh,'Position',[0.06 0.0700000000000001 0.335 0.2]);
-ax(2) = axes('Parent',fh,'Position',[0.06 0.35 0.83 0.2]);
+% Create main axes
+ax(1) = axes('Parent',fh,'Position',[0.06 0.35 0.83 0.2]);
+ax(2) = axes('Parent',fh,'Position',[0.06 0.0700000000000001 0.335 0.2]);
+ax(3) = axes('Parent',fh,'Position',[0.555 0.0700000000000001 0.335 0.2]);
+
+%Create hypnogram axes
 hypn_spect_ax(1) = axes('Parent',fh,'Position',[0.06 0.63 0.83 0.2278]);
 hypn_spect_ax(2) = axes('Parent',fh,'Position',[0.06 0.8578 0.83 0.1122]);
 
 % Link axes of appropriate plots
-linkaxes([hypn_spect_ax(1), hypn_spect_ax(2), ax(2)], 'x');
+linkaxes([hypn_spect_ax(1), hypn_spect_ax(2), ax(1)], 'x');
 
 % Set yaxis limits
 ylimits = [4,25];
 
 % Plot hypnogram
 axes(hypn_spect_ax(2));
-hypnoplot(stimes, interp1(t,stages,stimes,'nearest'));
+hypnoplot(t,stages);
+ylim(hypn_spect_ax(2),[.3 5.1])
 title('Hypnogram and Spectrogram')
 
 % Plot spectrogram
@@ -59,11 +63,11 @@ sh.FontSize = 10;
 
 
 % Plot time-frequency peak scatterplot
-axes(ax(2))
+axes(ax(1))
 pmax = prctile(peak_props.peak_height, 95); % get 95th ptile of heights
 peak_props.peak_height(peak_props.peak_height>pmax) = pmax; % don't plot larger than 95th ptile or else dots could obscure other things on the plot
 scatter(peak_props.peak_times, peak_props.peak_freqs, peak_props.peak_height./12, peak_props.peak_SOphase, 'filled'); % scatter plot all peaks
-colormap(ax(2),circshift(hsv(2^12),-400))
+colormap(ax(1),circshift(hsv(2^12),-400))
 c = colorbar_noresize;
 c.Label.String = 'Phase (radians)';
 c.Label.Rotation = -90;
@@ -72,16 +76,16 @@ set(c,'xtick',([-pi -pi/2 0 pi/2 pi]),'xticklabel',({'-\pi', '-\pi/2', '0', '\pi
 ylabel('Frequency (Hz)');
 ylim(ylimits);
 xticklabels({});
-[~, sh] = scaleline(ax(2), 3600,'1 Hour' );
+[~, sh] = scaleline(ax(1), 3600,'1 Hour' );
 sh.FontSize = 10;
 title('TFpeak Scatterplot');
 
 
 % Plot SO power histogram
-axes(ax(3))
+axes(ax(2))
 imagesc(SOpow_bins, freq_bins, SOpow_mat');
 axis xy;
-colormap(ax(3), 'parula');
+colormap(ax(2), 'parula');
 pow_clims = climscale([],[],false);
 c = colorbar_noresize;
 c.Label.String = {'Density', '(peaks/min in bin)'};
@@ -93,10 +97,10 @@ ylim(ylimits);
 title('SO Power Histogram');
 
 % Plot SO phase histogram
-axes(ax(4))
+axes(ax(3))
 imagesc(SOphase_bins, freq_bins, SOphase_mat');
 axis xy;
-colormap(ax(4), 'magma');
+colormap(ax(3), 'magma');
 climscale;
 c = colorbar_noresize;
 c.Label.String = {'Proportion'};
@@ -108,6 +112,8 @@ ylim(ylimits);
 title('SO Phase Histogram');
 xticks([-pi -pi/2 0 pi/2 pi])
 xticklabels({'-\pi', '-\pi/2', '0', '\pi/2', '\pi'});
+
+set([hypn_spect_ax  ax],'fontsize',10);
 
 
 
