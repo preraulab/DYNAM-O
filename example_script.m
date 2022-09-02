@@ -44,7 +44,7 @@ axes(hypn_spect_ax(2));
 hypnoplot(t/3600,stages);
 xlim(time_range/3600)
 ylim(hypn_spect_ax(2),[.3 5.1])
-t(1) = title('Hypnogram and Spectrogram');
+th(1) = title('Hypnogram and Spectrogram');
 
 % Plot spectrogram
 axes(hypn_spect_ax(1))
@@ -85,7 +85,7 @@ ylabel('Frequency (Hz)');
 ylim(ylimits);
 
 xlabel('Time (hrs)')
-t(2) = title('Extracted Time-Frequency Peaks');
+th(2) = title('Extracted Time-Frequency Peaks');
 xlim(time_range/3600)
 
 % Plot SO-power histogram
@@ -103,7 +103,7 @@ c.Label.VerticalAlignment = "bottom";
 xlabel('%SO-Power');
 ylabel('Frequency (Hz)');
 ylim(ylimits);
-t(3) = title('SO-Power Histogram');
+th(3) = title('SO-Power Histogram');
 
 % Plot SO-phase histogram
 axes(ax(3))
@@ -123,10 +123,10 @@ xticklabels({'-\pi', '-\pi/2', '0', '\pi/2', '\pi'});
 
 ylim(ylimits);
 
-t(4) = title('SO-Phase Histogram');
+th(4) = title('SO-Phase Histogram');
 
 set([ax hypn_spect_ax],'fontsize',10)
-set(t,'fontsize',15)
+set(th,'fontsize',15)
 
 
 
