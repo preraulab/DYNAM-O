@@ -163,9 +163,9 @@ end
 %% Compute SO power and SO phase
 % Exclude WAKE stages from analyses
 if length(stage_times) ~= length(t)
-    stages_t = interp1(stage_times, stage_vals, t, 'previous');
+    stages_t = interp1(stage_times, single(stage_vals), t, 'previous');
 elseif all(stage_times ~= t)
-    stages_t = interp1(stage_times, stage_vals, t, 'previous');
+    stages_t = interp1(stage_times, single(stage_vals), t, 'previous');
 else 
     stages_t = stage_vals;
 end

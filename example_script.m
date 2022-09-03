@@ -11,7 +11,10 @@ if haspar
 end
 
 %Load example EEG data
-load('example_data/example_data.mat', 'EEG', 'stages', 'Fs', 't');
+load('example_data/example_data.mat', 'EEG', 'stage_vals', 'stage_times', 'Fs');
+
+%STAGE NOTATION (in order of sleep depth)
+% W = 5, REM = 4, N1 = 3, N2 = 2, N1 = 1, Artifact = 6, Undefined = 0
 
 % Add necessary functions to path
 addpath(genpath('./toolbox'))
@@ -21,10 +24,14 @@ addpath(genpath('./toolbox'))
 time_range = [8420 13446];
 
 % Uncomment to run full night
-%time_range = t([1 end]);
+wake_buffer = 5*60; %5 minute buffer before/after first/last wake
+start_time = stage_times(find(stage_vals<5 & stage_vals>0, 1, 'first')) - wake_buffer;
+end_time = stage_times(find(stage_vals<5 & stage_vals>0, 1, 'last')) + wake_buffer;
+
+time_range = [start_time end_time];
 
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
-[peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times] = run_watershed_SOpowphase(EEG, Fs, t, stages, 'time_range', time_range);
+[peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range);
 
 %% COMPUTE SPECTROGRAM FOR DISPLAY
 [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(EEG, Fs, [4,25],[15 29], [30 15],[],'linear',[],false, false);
@@ -55,7 +62,7 @@ ylimits = [4,25];
 
 % Plot hypnogram
 axes(hypn_spect_ax(1));
-hypnoplot(t/3600,stages);
+hypnoplot(stage_times/3600,stage_vals);
 xlim(time_range/3600)
 ylim(hypn_spect_ax(1),[.3 5.1])
 th(1) = title('EEG Spectrogram');

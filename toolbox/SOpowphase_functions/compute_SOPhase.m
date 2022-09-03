@@ -19,7 +19,7 @@ function [SOPhase, stimes]= compute_SOPhase(data, Fs, SO_freqrange, filter)
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %      
-%   Authors: Patrick Stokes, Michael Prerua, Thomas Possidente
+%   Authors: Patrick Stokes, Michael Prerau, Thomas Possidente
 %
 %%%************************************************************************************%%%
 
@@ -65,7 +65,7 @@ else
     d = filter;
 end
 
-filtdata = filtfilt(d,data);
+filtdata = filtfilt(d,double(data));
 
 data_analytic = hilbert(filtdata);
 SOPhase = unwrap(angle(data_analytic)-pi);
