@@ -19,16 +19,25 @@ load('example_data/example_data.mat', 'EEG', 'stage_vals', 'stage_times', 'Fs');
 % Add necessary functions to path
 addpath(genpath('./toolbox'))
 
-% Pick a segment of the spectrogram to extract peaks from 
-% Choose an example segment from the data
-time_range = [8420 13446];
+run_segment = true;
 
-% Uncomment to run full night
-wake_buffer = 5*60; %5 minute buffer before/after first/last wake
-start_time = stage_times(find(stage_vals<5 & stage_vals>0, 1, 'first')) - wake_buffer;
-end_time = stage_times(find(stage_vals<5 & stage_vals>0, 1, 'last')) + wake_buffer;
+if run_segment
+    % Pick a segment of the spectrogram to extract peaks from
+    % Choose an example segment from the data
+    time_range = [8420 13446];
+    output_fname = 'toolbox_example_segment.png';
+    disp('Running example segment')
+else
+    % Uncomment to run full night
+    wake_buffer = 5*60; %5 minute buffer before/after first/last wake
+    start_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'first')) - wake_buffer;
+    end_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'last')+1) + wake_buffer;
 
-time_range = [start_time end_time];
+    time_range = [start_time end_time];
+
+    output_fname = 'toolbox_example_fullnight.png';
+    disp('Running full night')
+end
 
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
 [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range);
@@ -55,7 +64,7 @@ ax(2) = axes('Parent',fh,'Position',[0.06  0.07 0.335 0.3]);
 ax(3) = axes('Parent',fh,'Position',[0.555 0.07 0.335 0.3]);
 
 % Link axes of appropriate plots
-linkaxes([hypn_spect_ax(1), hypn_spect_ax(2), ax(1)], 'x');
+linkaxes([hypn_spect_ax, ax(1)], 'x');
 
 % Set yaxis limits
 ylimits = [4,25];
@@ -109,7 +118,7 @@ c = colorbar_noresize;
 c.Label.String = 'Phase (radians)';
 c.Label.Rotation = -90;
 c.Label.VerticalAlignment = "bottom";
-set(c,'xtick',([-pi -pi/2 0 pi/2 pi]),'xticklabel',({'-\pi', '-\pi/2', '0', '\pi/2', '\pi'}));    
+set(c,'xtick',([-pi -pi/2 0 pi/2 pi]),'xticklabel',({'-\pi', '-\pi/2', '0', '\pi/2', '\pi'}));
 
 ylabel('Frequency (Hz)');
 ylim(ylimits);
@@ -159,7 +168,7 @@ set([ax hypn_spect_ax],'fontsize',10)
 set(th,'fontsize',15)
 
 %% PRINT OUTPUT
-print(gcf,'-dpng','-r200','toolbox_example.png');
+print(gcf,'-dpng','-r200',output_fname);
 
 
 
