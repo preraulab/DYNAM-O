@@ -98,8 +98,8 @@ switch lower(spect_settings)
         time_window_params = [1,0.1]; % [time window, time step] in seconds
         df = 0.2;
     case 'draft' %10x speed improvement with but phase shift
-        time_window_params = [1,0.25]; % [time window, time step] in seconds
-        df = 0.5;
+        time_window_params = [1,0.1]; % [time window, time step] in seconds
+        df = 0.25;
     otherwise
         error('spect_settings must be ''paper'', ''fast'', or ''draft''')
 end
