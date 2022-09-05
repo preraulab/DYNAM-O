@@ -251,7 +251,7 @@ if n_segs > 1
     if f_verb > 0
         disp([verb_pref 'Processing segments...']);
     end
-    for ii = 1:n_segs
+    parfor ii = 1:n_segs
         %         if f_verb > 0
         %             disp([verb_pref 'Starting Segment ' num2str(ii) '...']);
         %         end

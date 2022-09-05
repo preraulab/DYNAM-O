@@ -19,28 +19,33 @@ load('example_data/example_data.mat', 'EEG', 'stage_vals', 'stage_times', 'Fs');
 % Add necessary functions to path
 addpath(genpath('./toolbox'))
 
-run_segment = true;
+%Select 'segment' or 'night' for example data range
+data_range = 'segment'; 
 
-if run_segment
-    % Pick a segment of the spectrogram to extract peaks from
-    % Choose an example segment from the data
-    time_range = [8420 13446];
-    output_fname = 'toolbox_example_segment.png';
-    disp('Running example segment')
-else
-    % Uncomment to run full night
-    wake_buffer = 5*60; %5 minute buffer before/after first/last wake
-    start_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'first')) - wake_buffer;
-    end_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'last')+1) + wake_buffer;
+switch data_range
+    case 'segment'
+        % Pick a segment of the spectrogram to extract peaks from
+        % Choose an example segment from the data
+        time_range = [8420 13446];
+        output_fname = 'toolbox_example_segment.png';
+        disp('Running example segment')
+    case 'night'
+        % Uncomment to run full night
+        wake_buffer = 5*60; %5 minute buffer before/after first/last wake
+        start_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'first')) - wake_buffer;
+        end_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'last')+1) + wake_buffer;
 
-    time_range = [start_time end_time];
+        time_range = [start_time end_time];
 
-    output_fname = 'toolbox_example_fullnight.png';
-    disp('Running full night')
+        output_fname = 'toolbox_example_fullnight.png';
+        disp('Running full night')
 end
 
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
-[peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range);
+
+WS_settings = "fast"; %Change 'paper' to settings used in SLEEP paper
+
+[peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range,'spect_settings',WS_settings);
 
 %% COMPUTE SPECTROGRAM FOR DISPLAY
 [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(EEG, Fs, [4,25],[15 29], [30 15],[],'linear',[],false, false);

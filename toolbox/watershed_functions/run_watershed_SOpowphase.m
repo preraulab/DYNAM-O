@@ -13,9 +13,9 @@ function [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bin
 %       t (opt):                [1xn] double - timestamps for data. Default = (0:length(data)-1)/Fs;
 %       time_range (opt):       [1x2] double - section of EEG to use in analysis
 %                               (seconds). Default = [0, max(t)]
-%       artifact_filters (opt): struct with 3 digitalFilter fields "hpFilt_high","hpFilt_broad","detrend_filt" - 
+%       artifact_filters (opt): struct with 3 digitalFilter fields "hpFilt_high","hpFilt_broad","detrend_filt" -
 %                               filters to be used for artifact detection
-%       stages_include (opt):   [1xp] double - which stages to include in the SOpower and 
+%       stages_include (opt):   [1xp] double - which stages to include in the SOpower and
 %                               SOphase analyses. Default = [1,2,3,4]
 %       lightsonoff_mins (opt): double - minutes before first non-wake
 %                               stage and after last non-wake stage to include in watershed
@@ -42,7 +42,7 @@ function [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bin
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
-%      
+%
 %   Authors: Patrick Stokes, Thomas Possidente, Michael Prerau
 %
 % Created on: 06/24/2022
@@ -60,6 +60,8 @@ addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'isstruct'},{}
 addOptional(p, 'stages_include', [1,2,3,4], @(x) validateattributes(x,{'numeric', 'vector'}, {'real', 'nonempty'}))
 addOptional(p, 'lightsonoff_mins', 5, @(x) validateattributes(x,{'numeric'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
+addOptional(p, 'spect_settings', 'fast', @(x) validateattributes(x,{'string'},{}));
+
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results);
@@ -88,10 +90,19 @@ ttotal = tic;
 % For more information on the multitaper spectrogram parameters and
 % implementation visit: https://github.com/preraulab/multitaper
 
+switch lower(spect_settings)
+    case {'paper', 'precision'} %Matches SLEEP paper settings
+        time_window_params = [1,0.05]; % [time window, time step] in seconds
+        df = 0.1; % For consistency with our results we expect a df of 0.1 Hz or less
+    case 'fast' %3x speed improvement with little accuracy reduction
+        time_window_params = [1,0.1]; % [time window, time step] in seconds
+        df = 0.2; % For consistency with our results we expect a df of 0.1 Hz or less
+    otherwise
+        error('spect_settings must be ''paper'' or ''fast''')
+end
+
 freq_range = [0,30]; % frequency range to compute spectrum over (Hz)
 taper_params = [2,3]; % [time halfbandwidth product, number of tapers]
-time_window_params = [1,0.05]; % [time window, time step] in seconds
-df = 0.1; % For consistency with our results we expect a df of 0.1 Hz or less
 nfft = 2^(nextpow2(Fs/df)); % zero pad data to this minimum value for fft
 detrend = 'off'; % do not detrend
 weight = 'unity'; % each taper is weighted the same
@@ -101,12 +112,12 @@ mts_verbose = false;
 if verbose
     disp('Computing TF-peak spectrogram...')
 
-try
-    [spect,stimes,sfreqs] = multitaper_spectrogram_mex(data, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
-catch
-    [spect,stimes,sfreqs] = multitaper_spectrogram(data, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
-    warning(sprintf('Unable to use mex version of multitaper_spectrogram. Using compiled multitaper spectrogram function will greatly increase the speed of this computaton. \n\nFind mex code at:\n    https://github.com/preraulab/multitaper_toolbox'));
-end
+    try
+        [spect,stimes,sfreqs] = multitaper_spectrogram_mex(data, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
+    catch
+        [spect,stimes,sfreqs] = multitaper_spectrogram(data, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
+        warning(sprintf('Unable to use mex version of multitaper_spectrogram. Using compiled multitaper spectrogram function will greatly increase the speed of this computaton. \n\nFind mex code at:\n    https://github.com/preraulab/multitaper_toolbox'));
+    end
 end
 
 %% Compute baseline spectrum used to flatten data spectrum
@@ -146,7 +157,7 @@ if verbose
 end
 
 [matr_names, matr_fields, peaks_matr,~,~, pixel_values] = extract_TFpeaks(spect_in, stimes_in, sfreqs, baseline);
- 
+
 if verbose
     disp(['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS')]);
     disp(' ');
@@ -166,7 +177,7 @@ if length(stage_times) ~= length(t)
     stages_t = interp1(stage_times, single(stage_vals), t, 'previous');
 elseif all(stage_times ~= t)
     stages_t = interp1(stage_times, single(stage_vals), t, 'previous');
-else 
+else
     stages_t = stage_vals;
 end
 
