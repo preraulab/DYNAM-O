@@ -10,7 +10,7 @@ function [rgn, Lborders] = regionMergeByWeight(data,rgn,rgn_lbls,Lborders,amatr,
 %   rgn_lbls     -- vector of region labels.
 %   Lborders     -- 1D cell array of vector lists of linear idx of border pixels for each region
 %   amatr        -- two-column matrix of region adjacencies.
-%                   each row contains region lables of two adjacent regions.
+%                   each row contains region labels of two adjacent regions.
 %   merge_thresh -- threshold weight value for when to stop merge rule. default 8.
 %   max_merges   -- maximum number of merges to perform. default inf.
 %   merge_rule   -- default = absolute

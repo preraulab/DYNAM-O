@@ -131,7 +131,7 @@ if nargin < 14 || isempty(CI_upper_bl)
 end
 
 if nargin < 15 || isempty(merge_rule)
-    merge_rule = 'absolute';
+    merge_rule = 'default';
 end
 
 if nargin < 16 || isempty(f_verb)

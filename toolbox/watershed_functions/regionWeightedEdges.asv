@@ -140,9 +140,8 @@ function e = edgeWeight(rgn_ii,bnds_ii,rgn_jj,bnds_jj,data,merge_rule)
 adj_bnd = bnds_ii(ismembc(bnds_ii,sort(rgn_jj)));
 
 %Add switch case to add new merge rules
-% switch merge_rule
-%     case 'default'
-
+switch merge_rule
+    case 'default'
 % c = max(data(adj_bnd)) - min(data(bnds_ii));
 % d = max(data(rgn_jj)) - max(data(adj_bnd));
 % e = c - d;
