@@ -20,7 +20,7 @@ load('example_data/example_data.mat', 'EEG', 'stage_vals', 'stage_times', 'Fs');
 addpath(genpath('./toolbox'))
 
 %Select 'segment' or 'night' for example data range
-data_range = 'segment'; 
+data_range = 'night'; 
 
 switch data_range
     case 'segment'
@@ -43,7 +43,7 @@ end
 
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
 
-WS_settings = "fast"; %Change 'paper' to settings used in SLEEP paper
+WS_settings = "draft"; %Change 'paper' to settings used in SLEEP paper
 
 [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range,'spect_settings',WS_settings);
 

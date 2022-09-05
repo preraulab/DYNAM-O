@@ -96,9 +96,12 @@ switch lower(spect_settings)
         df = 0.1; % For consistency with our results we expect a df of 0.1 Hz or less
     case 'fast' %3x speed improvement with little accuracy reduction
         time_window_params = [1,0.1]; % [time window, time step] in seconds
-        df = 0.2; % For consistency with our results we expect a df of 0.1 Hz or less
+        df = 0.2;
+    case 'draft' %10x speed improvement with but phase shift
+        time_window_params = [1,0.25]; % [time window, time step] in seconds
+        df = 0.5;
     otherwise
-        error('spect_settings must be ''paper'' or ''fast''')
+        error('spect_settings must be ''paper'', ''fast'', or ''draft''')
 end
 
 freq_range = [0,30]; % frequency range to compute spectrum over (Hz)
