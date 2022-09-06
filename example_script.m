@@ -12,7 +12,7 @@ data_range = 'night';
 % 'fast': ~3x speed up with minimal impact on results *suggested*
 % 'draft': ~10x speed-up, good for SO-power histograms, biased SO-phase
 %          Do not use for SO-phase analyses
-WS_settings = "draft"; 
+WS_settings = "paper"; 
 
 %% PREPARE DATA
 %Check for parallel toolbox
@@ -39,7 +39,6 @@ switch data_range
         output_fname = 'toolbox_example_segment.png';
         disp('Running example segment')
     case 'night'
-        % Uncomment to run full night
         wake_buffer = 5*60; %5 minute buffer before/after first/last wake
         start_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'first')) - wake_buffer;
         end_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'last')+1) + wake_buffer;
@@ -51,8 +50,9 @@ switch data_range
 end
 
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
-
+tic;
 [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range,'spect_settings',WS_settings);
+toc;
 
 %% COMPUTE SPECTROGRAM FOR DISPLAY
 [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(EEG, Fs, [4,25],[15 29], [30 15],[],'linear',[],false, false);

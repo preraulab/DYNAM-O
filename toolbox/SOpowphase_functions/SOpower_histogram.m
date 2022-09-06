@@ -13,11 +13,11 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_n
 %       freq_range: 1x2 double - min and max frequencies to consider in SO phase analysis 
 %                   (Hz). Default = [0,40] 
 %       freq_binsizestep: 1x2 double - [size, step] frequency bin size and bin step for frequency 
-%                         axis of SO phase histograms (Hz). Default = [0.5, 0.1]
+%                         axis of SO phase histograms (Hz). Default = [1, 0.2]
 %       SO_range: 1x2 double - min and max SO phase values (radians) to consider in SO phase analysis. 
 %                 Default = [0, 1]
 %       SO_binsizestep: 1x2 double - [size, step] SO phase bin size and step for SO phase axis 
-%                            of histogram. Units are radians. Default = [0.05, 0.01]
+%                            of histogram. Units are radians. Default = [0.2, 0.01]
 %       SO_freqrange: 1x2 double - min and max frequencies (Hz) considered to be "slow oscillation". 
 %                     Default = [0.3, 1.5]
 %       artifacts: 1xN logical - marks each timestep of EEG as artifact or non-artifact. Default = all false. 
@@ -67,9 +67,9 @@ addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 
 addRequired(p,'TFpeak_freqs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addRequired(p,'TFpeak_times', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addOptional(p, 'freq_range', [0,40], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
-addOptional(p, 'freq_binsizestep', [0.5, 0.1], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
+addOptional(p, 'freq_binsizestep', [1, 0.2], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
 addOptional(p, 'SO_range', [0,1], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
-addOptional(p, 'SO_binsizestep', [0.05, 0.01], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
+addOptional(p, 'SO_binsizestep', [0.2, 0.01], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
 addOptional(p, 'SO_freqrange', [0.3, 1.5], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan'}));
 addOptional(p, 'artifacts', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
 addOptional(p, 'stage_exclude', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
