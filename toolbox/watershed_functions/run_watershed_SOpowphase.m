@@ -94,12 +94,13 @@ switch lower(spect_settings)
     case {'paper', 'precision'} %Matches SLEEP paper settings
         time_window_params = [1,0.05]; % [time window, time step] in seconds
         df = 0.1; % For consistency with our results we expect a df of 0.1 Hz or less
-    case 'fast' %3x speed improvement with little accuracy reduction
+    case 'fast' %~3x speed improvement with little accuracy reduction
         time_window_params = [1,0.1]; % [time window, time step] in seconds
         df = 0.2;
     case 'draft' %10x speed improvement with but phase shift
-        time_window_params = [1,0.1]; % [time window, time step] in seconds
-        df = 0.25;
+        time_window_params = [1,0.25]; % [time window, time step] in seconds
+        df = 0.5;
+        disp('Draft mode provides reasonable SO-power Histogram estimates but inaccurate SO-phase')
     otherwise
         error('spect_settings must be ''paper'', ''fast'', or ''draft''')
 end

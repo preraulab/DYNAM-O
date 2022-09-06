@@ -3,6 +3,18 @@
 %Clear workspace and close plots
 clear; close all; clc;
 
+%% SETTINGS
+%Select 'segment' or 'night' for example data range
+data_range = 'night'; 
+
+%Spectral settings for computing watershed
+% 'paper' or 'precision': high res analysis used for SLEEP paper
+% 'fast': ~3x speed up with minimal impact on results *suggested*
+% 'draft': ~10x speed-up, good for SO-power histograms, biased SO-phase
+%          Do not use for SO-phase analyses
+WS_settings = "draft"; 
+
+%% PREPARE DATA
 %Check for parallel toolbox
 v = ver;
 haspar = any(strcmp({v.Name}, 'Parallel Computing Toolbox'));
@@ -18,9 +30,6 @@ load('example_data/example_data.mat', 'EEG', 'stage_vals', 'stage_times', 'Fs');
 
 % Add necessary functions to path
 addpath(genpath('./toolbox'))
-
-%Select 'segment' or 'night' for example data range
-data_range = 'night'; 
 
 switch data_range
     case 'segment'
@@ -42,8 +51,6 @@ switch data_range
 end
 
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
-
-WS_settings = "draft"; %Change 'paper' to settings used in SLEEP paper
 
 [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range,'spect_settings',WS_settings);
 

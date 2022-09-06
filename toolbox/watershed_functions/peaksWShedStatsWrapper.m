@@ -131,9 +131,9 @@ end
 if isempty(y)
     y = 1:size(data,1);
 end
-% maximum number of pixels per segment
+% maximum segment duration in seconds
 if isempty(seg_time)
-    seg_time = 15; %487900 % 975800; % 400000;
+    seg_time = 15; 
 end
 % connection parameter in labeling watershed boundaries
 if isempty(conn_wshed)
@@ -294,7 +294,7 @@ end
 % Assembles peaks stats for all segs into single matrix and cell arrays *
 %**************************************************************************
 if f_verb > 0
-    disp([verb_pref 'Assembling stats from segs...']);
+    disp([verb_pref 'Assembling peak statistics from segments...']);
 end
 % Determine number of non-empty peaks
 num_peaks = 0;
