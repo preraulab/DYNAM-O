@@ -1,6 +1,6 @@
 # Toolbox - Watershed TFpeaks and SO-power/phase Histograms
 
-### This is the repository for the updated and optimized toolbox code used to identify time-frequency peaks in EEG data and create slow-oscillation power and phase histograms from the extracted TF-peak data. The code here is updated and optimized off of the code used in the following publication: 
+### This is the repository for development and optimization of the watershed algorithm and SOpower/phase histogram computations. The code here is updated and optimized off of the code used in the following publication: 
 > 
 --- 
 
