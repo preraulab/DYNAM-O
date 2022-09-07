@@ -1,18 +1,17 @@
 %%%% Example script showing how to compute time-frequency peaks and SO-power/phase histograms
+
+% This script will run using the same parameters used in the SLEEP paper.
+% There is an optimized version available that is less computationally
+% intensive but yields similar results, cutting down on computation time
+% considerably. The optimized version is available on sleepEEG.org 
+
 %% PREPARE DATA
 %Clear workspace and close plots
 clear; close all; clc;
 
 %% SETTINGS
 %Select 'segment' or 'night' for example data range
-data_range = 'night'; 
-
-%Spectral settings for computing watershed
-% 'paper' or 'precision': high res analysis used for SLEEP paper
-% 'fast': ~3x speed up with minimal impact on results *suggested*
-% 'draft': ~10x speed-up, good for SO-power histograms, biased SO-phase
-%          Do not use for SO-phase analyses
-WS_settings = "paper"; 
+data_range = 'segment'; 
 
 %% PREPARE DATA
 %Check for parallel toolbox
@@ -29,7 +28,7 @@ load('example_data/example_data.mat', 'EEG', 'stage_vals', 'stage_times', 'Fs');
 % W = 5, REM = 4, N1 = 3, N2 = 2, N1 = 1, Artifact = 6, Undefined = 0
 
 % Add necessary functions to path
-addpath(genpath('./toolbox'))
+addpath(genpath('./toolbox_paper'))
 
 switch data_range
     case 'segment'
@@ -51,7 +50,7 @@ end
 
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
 tic;
-[peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range,'spect_settings',WS_settings);
+[peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range,'spect_settings',"paper");
 toc;
 
 %% COMPUTE SPECTROGRAM FOR DISPLAY
