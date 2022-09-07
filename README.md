@@ -1,4 +1,4 @@
-# Toolbox - Watershed TFpeaks and SO-power/phase Histograms
+# Toolbox Development - Watershed TFpeaks and SO-power/phase Histograms
 
 ### This is the repository for development and optimization of the watershed algorithm and SOpower/phase histogram computations. The code here is updated and optimized off of the code used in the following publication: 
 > 
