@@ -1,5 +1,5 @@
 function [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, boundaries] = ...
-    run_watershed_SOpowphase(varargin)
+    copy_run_watershed_SOpowphase(varargin)
 % Run watershed algorithm to extract time-frequency peaks from spectrogram
 % of data, then compute Slow-Oscillation power and phase histograms
 %
@@ -56,12 +56,11 @@ addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric', 'vector'}, 
 addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric', 'vector'}, {'real','nonempty'}));
 addOptional(p, 't', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'time_range', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
-addOptional(p, 'downsample_spect', [],  @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'isstruct'},{}));
 addOptional(p, 'stages_include', [1,2,3,4], @(x) validateattributes(x,{'numeric', 'vector'}, {'real', 'nonempty'}))
 addOptional(p, 'lightsonoff_mins', 5, @(x) validateattributes(x,{'numeric'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
-%addOptional(p, 'spect_settings', 'fast', @(x) validateattributes(x,{'string'},{}));
+addOptional(p, 'spect_settings', 'fast', @(x) validateattributes(x,{'string'},{}));
 
 
 parse(p,varargin{:});
@@ -90,24 +89,22 @@ ttotal = tic;
 %% Compute spectrogram
 % For more information on the multitaper spectrogram parameters and
 % implementation visit: https://github.com/preraulab/multitaper
-% 
-% switch lower(spect_settings)
-%     case {'paper', 'precision'} %Matches SLEEP paper settings
-%         time_window_params = [1,0.05]; % [time window, time step] in seconds
-%         df = 0.1; % For consistency with our results we expect a df of 0.1 Hz or less
-%     case 'fast' %~3x speed improvement with little accuracy reduction
-%         time_window_params = [1,0.1]; % [time window, time step] in seconds
-%         df = 0.2;
-%     case 'draft' %10x speed improvement with but phase shift
-%         time_window_params = [1,0.25]; % [time window, time step] in seconds
-%         df = 0.5;
-%         disp('Draft mode provides reasonable SO-power Histogram estimates but inaccurate SO-phase')
-%     otherwise
-%         error('spect_settings must be ''paper'', ''fast'', or ''draft''')
-% end
 
-time_window_params = [1,0.05]; % [time window, time step] in seconds
-df = 0.1; % For consistency with our results we expect a df of 0.1 Hz or less
+switch lower(spect_settings)
+    case {'paper', 'precision'} %Matches SLEEP paper settings
+        time_window_params = [1,0.05]; % [time window, time step] in seconds
+        df = 0.1; % For consistency with our results we expect a df of 0.1 Hz or less
+    case 'fast' %~3x speed improvement with little accuracy reduction
+        time_window_params = [1,0.1]; % [time window, time step] in seconds
+        df = 0.2;
+    case 'draft' %10x speed improvement with but phase shift
+        time_window_params = [1,0.25]; % [time window, time step] in seconds
+        df = 0.5;
+        disp('Draft mode provides reasonable SO-power Histogram estimates but inaccurate SO-phase')
+    otherwise
+        error('spect_settings must be ''paper'', ''fast'', or ''draft''')
+end
+
 freq_range = [0,30]; % frequency range to compute spectrum over (Hz)
 taper_params = [2,3]; % [time halfbandwidth product, number of tapers]
 nfft = 2^(nextpow2(Fs/df)); % zero pad data to this minimum value for fft
@@ -126,6 +123,8 @@ if verbose
         warning(sprintf('Unable to use mex version of multitaper_spectrogram. Using compiled multitaper spectrogram function will greatly increase the speed of this computaton. \n\nFind mex code at:\n    https://github.com/preraulab/multitaper_toolbox'));
     end
 end
+
+spect = medfilt2(spect, [5,5]);
 
 %% Compute baseline spectrum used to flatten data spectrum
 if verbose
@@ -163,7 +162,7 @@ if verbose
     tfp = tic;
 end
 
-[matr_names, matr_fields, peaks_matr,~,~, pixel_values,~,boundaries] = extract_TFpeaks(spect_in, stimes_in, sfreqs, baseline, [], downsample_spect);
+[matr_names, matr_fields, peaks_matr,~,~, pixel_values,~,boundaries] = extract_TFpeaks(spect_in, stimes_in, sfreqs, baseline);
 
 if verbose
     disp(['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS')]);
