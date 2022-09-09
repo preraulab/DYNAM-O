@@ -1,5 +1,5 @@
 function  [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues,...
-    rgn,bndry,segs_minmax, segs_xyminmax, segs_time, bad_segs,seg_error] = peaksWShedStatsWrapper(data,x,y,seg_time,conn_wshed,merge_thresh,max_merges,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
+    rgn,bndry,segs_minmax, segs_xyminmax, segs_time, bad_segs,seg_error] = peaksWShedStatsWrapper(data,x,y,seg_time,conn_wshed,merge_thresh,max_merges,downsample_spect,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
 %peaksWShedStatsWrapper determines the peak regions of a 2D image and
 % extracts a set of features for each. It initially divides the data into
 % segs to allow parallel computation of peaks and processing of larger images.
@@ -63,124 +63,93 @@ function  [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValue
 %*************************
 % Handle variable inputs *
 %*************************
-if nargin < 1
-    data = [];
-end
-if nargin < 2
-    x = [];
-end
-if nargin < 3
-    y = [];
-end
-if nargin < 4
-    seg_time = [];
-end
-if nargin < 5
-    conn_wshed = [];
-end
-if nargin < 6
-    merge_thresh = [];
-end
-if nargin < 7
-    max_merges = [];
-end
-if nargin < 8
-    trim_vol = [];
-end
-if nargin < 9
-    trim_shift = [];
-end
-if nargin < 10
-    conn_trim = [];
-end
-if nargin < 11
-    conn_stats = [];
-end
-if nargin <12
-    bl_thresh = [];
-end
-if nargin < 13
-    merge_rule = [];
-end
-if nargin < 14
-    f_verb = [];
-end
-if nargin < 15
-    verb_pref = [];
-end
-if nargin < 16
-    f_disp = [];
-end
-
-%************************
-% Set default arguments *
-%************************
-% The 2d matrix to be analyzed
-if isempty(data)
+if nargin < 1 || isempty(data)
+    % The 2d matrix to be analyzed
     data = abs(peaks(100))+randn(100)*.5;
-    % data = [data data];
     f_verb = 0;
     f_disp = 1;
     merge_thresh = 2;
 end
-% x-axis
-if isempty(x)
+
+if nargin < 2 || isempty(x)
+    % x-axis
     x = 1:size(data,2);
 end
-% y-axis
-if isempty(y)
+
+if nargin < 3 || isempty(y)
+    % y axis
     y = 1:size(data,1);
 end
-% maximum segment duration in seconds
-if isempty(seg_time)
+
+if nargin < 4 || isempty(seg_time)
+    % maximum segment duration in seconds
     seg_time = 15; 
 end
-% connection parameter in labeling watershed boundaries
-if isempty(conn_wshed)
+
+if nargin < 5 || isempty(conn_wshed)
+    % connection parameter in labeling watershed boundaries
     conn_wshed = 8;
 end
-% threshold parameter for stopping merge
-if isempty(merge_thresh)
+
+if nargin < 6 || isempty(merge_thresh)
+    % threshold parameter for stopping merge
     merge_thresh = 8;
 end
-% maximum number of merges
-if isempty(max_merges)
+
+if nargin < 7 || isempty(max_merges)
+    % maximum number of merges
     max_merges = inf;
 end
-% volume to which regions are trimmed
-if isempty(trim_vol)
+
+if nargin < 8
+    % how much to downsample high res image
+    downsample_spect = [];
+end
+
+if nargin < 9 || isempty(trim_vol)
+    % volume to which regions are trimmed
     trim_vol = 0.8;
 end
-% floor level from which trim volume is evaluated
-if isempty(trim_shift)
+
+if nargin < 10 || isempty(trim_shift)
+    % floor level from which trim volume is evaluated
     trim_shift = min(min(data));
 end
-% connection parameter used in trimming regions
-if isempty(conn_trim)
+
+if nargin < 11 || isempty(conn_trim)
+    % connection parameter used in trimming regions
     conn_trim = 8;
 end
-% connection parameter used in peak stats evaluation
-if isempty(conn_stats)
+
+if nargin < 12 || isempty(conn_stats)
+    % connection parameter used in peak stats evaluation
     conn_stats = 8;
 end
-if isempty(bl_thresh)
+
+if nargin < 13 
     bl_thresh = [];
 end
-if isempty(merge_rule)
+
+if nargin < 14 || isempty(merge_rule)
+    % Which rule to use to merge peaks
     merge_rule = 'absolute';
 end
-% indicator for level of output verbosity
-if isempty(f_verb)
+
+if nargin < 15 || isempty(f_verb)
+    % indicator for level of output verbosity
     f_verb = 0;
 end
-% prefix string for verbose outputs
-if isempty(verb_pref)
+
+if nargin < 16 || isempty(verb_pref)
+    % prefix string for verbose outputs
     verb_pref = '';
 end
-% flag for displaying outputs
-if isempty(f_disp)
+
+if nargin < 17 || isempty(f_disp)
+    % flag for displaying outputs
     f_disp = 0;
 end
+
 
 %************************
 % Determine data segs *
@@ -251,13 +220,13 @@ if n_segs > 1
     if f_verb > 0
         disp([verb_pref 'Processing segments...']);
     end
-    parfor ii = 1:n_segs
+    for ii = 1:n_segs
         %         if f_verb > 0
         %             disp([verb_pref 'Starting Segment ' num2str(ii) '...']);
         %         end
         [segs_peaks_matr{ii}, segs_matr_names{ii}, segs_matr_fields{ii}, ...
             segs_PixelIdxList{ii},segs_PixelList{ii},segs_PixelValues{ii}, ...
-            segs_rgn{ii},segs_bndry{ii},segs_time(ii)] = peaksWShedStatsSequence(data_segs{ii},x_segs{ii},y,ii,conn_wshed,merge_thresh,max_merges,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
+            segs_rgn{ii},segs_bndry{ii},segs_time(ii)] = peaksWShedStatsSequence(data_segs{ii},x_segs{ii},y,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
         if f_verb > 0
             disp([verb_pref '  Segment ' num2str(ii) ' took ' num2str(segs_time(ii)) ' seconds.']);
         end

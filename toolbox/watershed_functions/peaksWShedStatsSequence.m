@@ -1,5 +1,5 @@
 function [trim_matr, matr_names, matr_fields, trim_PixelIdxList,trim_PixelList, ... 
-    trim_PixelValues, trim_rgn,trim_bndry,seq_time] = peaksWShedStatsSequence(img_data,x,y,num_segment,conn_wshed,merge_thresh,max_merges,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
+    trim_PixelValues, trim_rgn,trim_bndry,seq_time] = peaksWShedStatsSequence(img_data,x,y,num_segment,conn_wshed,merge_thresh,max_merges,downsample_spect,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
 %peaksWShedStatsSequence determines the peak regions of a 2D image and 
 % extracts a set of features for each. It uses peaksWShed, regionMergeByWeight, 
 % trimRegionsWShed, and peaksWShedStats_LData.
@@ -75,30 +75,33 @@ if nargin < 7
     max_merges = [];
 end
 if nargin < 8
-    trim_vol = [];
+    downsample_spect = [];
 end
 if nargin < 9
+    trim_vol = [];
+end
+if nargin < 10
     trim_shift = [];
 end
-if nargin < 10 
+if nargin < 11 
     conn_trim = [];
 end
-if nargin < 11
+if nargin < 12
     conn_stats = [];
 end
-if nargin < 12
+if nargin < 13
     bl_thresh = [];
 end
-if nargin < 13
+if nargin < 14
     merge_rule = [];
 end
-if nargin < 14
+if nargin < 15
     f_verb = [];
 end
-if nargin < 15
+if nargin < 16
     verb_pref = [];
 end
-if nargin < 16
+if nargin < 17
     f_disp = [];
 end
 
@@ -182,6 +185,17 @@ end
 % title('Chunk Data Image Below Threshold');
 
 %*************************************
+% Get low-res version of image       *
+%*************************************
+if ~isempty(downsample_spect)
+    img_data_lowres = imresize(img_data, [length(y)/downsample_spect(2), length(x)/downsample_spect(1)]);
+    x_lowres = x(1:downsample_spect(1):end);
+    y_lowres = y(1:downsample_spect(2):end);
+else
+    img_data_lowres = img_data;
+end
+
+%*************************************
 % Watershed-segment input data image *
 %*************************************
 t_start = now;
@@ -190,7 +204,7 @@ if f_verb > 0
     disp([verb_pref '  Starting wshed...']);
     ttic = tic;
 end
-[rgn, rgn_lbls, Lborders, amatr] = peaksWShed(img_data,conn_wshed,bl_thresh,f_verb-1,['    ' verb_pref],f_disp); 
+[rgn, rgn_lbls, Lborders, amatr] = peaksWShed(img_data_lowres,conn_wshed,bl_thresh,f_verb-1,['    ' verb_pref],f_disp); 
 if f_verb > 0 
     disp([verb_pref '    wshed took: ' num2str(toc(ttic)) ' seconds.']);
 end
@@ -202,9 +216,46 @@ if f_verb > 0
     disp([verb_pref '  Starting merge...']);
     ttic = tic;
 end
-[rgn, bndry] = regionMergeByWeight(img_data,rgn,rgn_lbls,Lborders,amatr,merge_thresh,max_merges,merge_rule,f_verb-1,['     ' verb_pref],f_disp);
+[rgn, bndry] = regionMergeByWeight(img_data_lowres,rgn,rgn_lbls,Lborders,amatr,merge_thresh,max_merges,merge_rule,f_verb-1,['     ' verb_pref],f_disp);
 if f_verb > 0 
     disp([verb_pref '    merge took: ' num2str(toc(ttic)) ' seconds.']);
+end
+
+%*********************************************************************
+% Interpolate peak regions to high-resolution and reject small peaks *
+%*********************************************************************
+if ~isempty(downsample_spect)
+    % Make binary image of each region
+    rgns_ingrid = cellfun(@(x) binary_gridfill(x, [length(y_lowres), length(x_lowres)]), rgn, 'UniformOutput',false);
+    % Concatenate regions together
+    rgns_ingrid_cat = cat(3, rgns_ingrid{:});
+    % Interpolate each region to higher resolution
+    F = griddedInterpolant({y_lowres, x_lowres}, rgns_ingrid_cat, 'nearest');
+    rgn_interp_ingrid = F({y,x});
+    % Linearize pixel indices of high-res regions and pack into cell array
+    for r = 1:size(rgn_interp_ingrid,3)
+        
+        curr_rgn = rgn_interp_ingrid(:,:,r);
+        if true % put thresholds for dur, bw here
+            rgn_highres{r} = find(curr_rgn);
+        end
+    
+    end
+
+    %     %UPSCALE THE LABELED IMAGE
+    % Ldata = zeros(size(img_lowres));
+    % for ii = 1:length(rgn)
+    %     ii_pixels = rgn{ii};
+    %     Ldata(ii_pixels)=ii;
+    % end
+    % LdataHR = imresize(Ldata,size(img),'nearest');
+    % %COMPUTE NEW REGIONS
+    % rng_new = cell(size(rng));
+    % for ii = 1:length(rgn)
+    %     rng_new{ii} = find(LdataHR == ii);
+    % end
+else
+    rgn_highres = img_data_lowres;
 end
 
 %***********************************************************
@@ -215,7 +266,7 @@ if trim_vol < 1 && trim_vol > 0
         disp([verb_pref '  Starting trim to ' num2str(100*trim_vol) ' percent volume...']);
         ttic = tic;
     end
-    [trim_rgn, trim_bndry] = trimRegionsWShed(img_data,rgn,trim_vol,trim_shift,conn_trim,f_verb-1,['    ' verb_pref],f_disp); 
+    [trim_rgn, trim_bndry] = trimRegionsWShed(img_data,rgn_highres,trim_vol,trim_shift,conn_trim,f_verb-1,['    ' verb_pref],f_disp); 
     if f_verb > 0 
         disp([verb_pref '    trim took: ' num2str(toc(ttic)) ' seconds.']);
     end   
