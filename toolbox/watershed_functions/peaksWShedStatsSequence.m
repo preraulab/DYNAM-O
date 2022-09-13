@@ -1,7 +1,7 @@
-function [trim_matr, matr_names, matr_fields, trim_PixelIdxList,trim_PixelList, ... 
-    trim_PixelValues, trim_rgn,trim_bndry,seq_time] = peaksWShedStatsSequence(img_data,x,y,num_segment,conn_wshed,merge_thresh,max_merges,downsample_spect,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
-%peaksWShedStatsSequence determines the peak regions of a 2D image and 
-% extracts a set of features for each. It uses peaksWShed, regionMergeByWeight, 
+function [trim_matr, matr_names, matr_fields, trim_PixelIdxList,trim_PixelList, ...
+    trim_PixelValues, trim_rgn,trim_bndry,seq_time] = peaksWShedStatsSequence(img_LR,x_LR,y_LR,img_HR,x_HR,y_HR,num_segment,conn_wshed,merge_thresh,max_merges,downsample_spect,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
+%peaksWShedStatsSequence determines the peak regions of a 2D image and
+% extracts a set of features for each. It uses peaksWShed, regionMergeByWeight,
 % trimRegionsWShed, and peaksWShedStats_LData.
 %
 % INPUTS:
@@ -9,41 +9,41 @@ function [trim_matr, matr_names, matr_fields, trim_PixelIdxList,trim_PixelList, 
 %   x            -- x axis of image data. default 1:size(data,2).
 %   y            -- y axis of image data. default 1:size(data,1).
 %   num_segment  -- segment number if data comes from larger image. default 1.
-%   conn_wshed   -- pixel connection to be used by peaksWShed. default 8. 
-%   merge_thresh -- threshold weight value for when to stop merge rule. default 8. 
-%   max_merges   -- maximum number of merges to perform. default inf. 
-%   trim_vol     -- fraction maximum trimmed volume (from 0 to 1), 
-%                   i.e. 1 means no trim. default 0.8. 
-%   trim_shift   -- value to be subtracted from image prior to evaulation of trim volume. 
+%   conn_wshed   -- pixel connection to be used by peaksWShed. default 8.
+%   merge_thresh -- threshold weight value for when to stop merge rule. default 8.
+%   max_merges   -- maximum number of merges to perform. default inf.
+%   trim_vol     -- fraction maximum trimmed volume (from 0 to 1),
+%                   i.e. 1 means no trim. default 0.8.
+%   trim_shift   -- value to be subtracted from image prior to evaulation of trim volume.
 %                   default min(min(img_data)).
-%   conn_trim    -- pixel connection to be used by trimRegionsWShed. default 8. 
-%   conn_stats   -- pixel connection to be used by peaksWShedStats_LData. default 8. 
+%   conn_trim    -- pixel connection to be used by trimRegionsWShed. default 8.
+%   conn_stats   -- pixel connection to be used by peaksWShedStats_LData. default 8.
 %   bl_thresh    -- power threshold used to cut off low power data to speed
 %                   up computation. Default = [];
 %   merge_rule   --
 %   f_verb       -- number indicating depth of output text statements of progress.
-%                   0 - no output. 
+%                   0 - no output.
 %                   1 - output current function level.
-%                   2 - output within sequence functions. 
+%                   2 - output within sequence functions.
 %                   3 - output internal progress of merge and trim.
-%                   defaults to 0, unless using default data. 
+%                   defaults to 0, unless using default data.
 %   verb_pref    -- prefix string for verbose output. defaults to ''.
-%   f_disp       -- flag indicator of whether to plot. 
+%   f_disp       -- flag indicator of whether to plot.
 %                   defaults to 0, unless using default data.
 % OUTPUTS:
 %   peaks_matr   -- matrix of peak features. each row is a peak.
 %   matr_names   -- 1D cell array of names for each feature.
-%   matr_fields  -- vector indicating number of matrix columns occupied by each feature. 
+%   matr_fields  -- vector indicating number of matrix columns occupied by each feature.
 %   PixelIdxList -- 1D cell array of vector lists of linear idx of all pixels for each region.
 %   PixelList    -- 1D cell array of vector lists of row-col idx of all pixels for each region.
 %   PixelValues  -- 1D cell array of vector lists of all pixel values for each region.
 %   rgn          -- same as PixelIdxList.
-%   bndry        -- 1D cell array of vector lists of linear idx of border pixels for each region. 
+%   bndry        -- 1D cell array of vector lists of linear idx of border pixels for each region.
 %
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
-%      
+%
 %   Authors: Patrick Stokes
 %
 % Created on: 20190214 -- extracted from peaksWShedStatsWrapper.
@@ -54,54 +54,63 @@ function [trim_matr, matr_names, matr_fields, trim_PixelIdxList,trim_PixelList, 
 % Handle variable inputs *
 %*************************
 if nargin < 1
-    img_data = [];
+    img_LR = [];
 end
 if nargin < 2
-    x = [];
+    x_LR = [];
 end
 if nargin < 3
-    y = [];
+    y_LR = [];
 end
 if nargin < 4
-    num_segment = [];
+    img_HR = [];
 end
 if nargin < 5
-    conn_wshed = [];
+    x_HR = [];
 end
 if nargin < 6
-    merge_thresh = [];
+    y_HR = [];
 end
 if nargin < 7
-    max_merges = [];
+    num_segment = [];
 end
 if nargin < 8
-    downsample_spect = [];
+    conn_wshed = [];
 end
 if nargin < 9
-    trim_vol = [];
+    merge_thresh = [];
 end
 if nargin < 10
-    trim_shift = [];
+    max_merges = [];
 end
-if nargin < 11 
-    conn_trim = [];
+if nargin < 11
+    downsample_spect = [];
 end
 if nargin < 12
-    conn_stats = [];
+    trim_vol = [];
 end
 if nargin < 13
-    bl_thresh = [];
+    trim_shift = [];
 end
 if nargin < 14
-    merge_rule = [];
+    conn_trim = [];
 end
 if nargin < 15
-    f_verb = [];
+    conn_stats = [];
 end
 if nargin < 16
-    verb_pref = [];
+    bl_thresh = [];
 end
 if nargin < 17
+    merge_rule = [];
+end
+if nargin < 18
+    f_verb = [];
+end
+if nargin < 19
+    verb_pref = [];
+end
+if nargin < 20
     f_disp = [];
 end
 
@@ -109,21 +118,36 @@ end
 % Set default arguments *
 %************************
 % The 2d matrix to be analyzed
-if isempty(img_data)
-    img_data = abs(peaks(100))+randn(100)*.5;
+if isempty(img_LR)
+    img_LR = abs(peaks(100))+randn(100)*.5;
     f_verb = 3;
     f_disp = 1;
     merge_thresh = 2;
 end
 % x-axis
-if isempty(x)
-    x = 1:size(img_data,2);
+if isempty(x_LR)
+    x_LR = 1:size(img_LR,2);
 end
 % y-axis
-if isempty(y)
-    y = 1:size(img_data,1);
+if isempty(y_LR)
+    y_LR = 1:size(img_LR,1);
 end
-% segment number of image data in larger image 
+% The 2d matrix to be analyzed
+if isempty(img_HR)
+    img_HR = abs(peaks(100))+randn(100)*.5;
+    f_verb = 3;
+    f_disp = 1;
+    merge_thresh = 2;
+end
+% x-axis
+if isempty(x_HR)
+    x_HR = 1:size(img_HR,2);
+end
+% y-axis
+if isempty(y_HR)
+    y_HR = 1:size(img_HR,1);
+end
+% segment number of image data in larger image
 if isempty(num_segment)
     num_segment = 1;
 end
@@ -145,7 +169,7 @@ if isempty(trim_vol)
 end
 % floor level from which trim volume is evaluated
 if isempty(trim_shift)
-    trim_shift = min(min(img_data));
+    trim_shift = min(min(img_LR));
 end
 % connection parameter used in trimming regions
 if isempty(conn_trim)
@@ -170,7 +194,7 @@ if isempty(verb_pref)
     verb_pref = '';
 end
 % flag for displaying outputs
-if isempty(f_disp)
+if isempty(f_disp)a
     f_disp = 0;
 end
 
@@ -188,24 +212,20 @@ end
 % Get low-res version of image       *
 %*************************************
 if ~isempty(downsample_spect)
-    img_data_lowres = imresize(img_data, [length(y)/downsample_spect(2), length(x)/downsample_spect(1)]);
-    x_lowres = x(1:downsample_spect(1):end);
-    y_lowres = y(1:downsample_spect(2):end);
-else
-    img_data_lowres = img_data;
+    img_LR = imresize(img_HR, [length(y_HR)/downsample_spect(2), length(x_HR)/downsample_spect(1)]);
 end
 
 %*************************************
 % Watershed-segment input data image *
 %*************************************
 t_start = now;
-if f_verb > 0 
+if f_verb > 0
     disp([verb_pref 'Starting wshed stats sequence...']);
     disp([verb_pref '  Starting wshed...']);
     ttic = tic;
 end
-[rgn, rgn_lbls, Lborders, amatr] = peaksWShed(img_data_lowres,conn_wshed,bl_thresh,f_verb-1,['    ' verb_pref],f_disp); 
-if f_verb > 0 
+[rgn, rgn_lbls, Lborders, amatr] = peaksWShed(img_LR,conn_wshed,bl_thresh,f_verb-1,['    ' verb_pref],f_disp);
+if f_verb > 0
     disp([verb_pref '    wshed took: ' num2str(toc(ttic)) ' seconds.']);
 end
 
@@ -216,60 +236,41 @@ if f_verb > 0
     disp([verb_pref '  Starting merge...']);
     ttic = tic;
 end
-[rgn, bndry] = regionMergeByWeight(img_data_lowres,rgn,rgn_lbls,Lborders,amatr,merge_thresh,max_merges,merge_rule,f_verb-1,['     ' verb_pref],f_disp);
-if f_verb > 0 
+[rgn, bndry] = regionMergeByWeight(img_LR,rgn,rgn_lbls,Lborders,amatr,merge_thresh,max_merges,merge_rule,f_verb-1,['     ' verb_pref],f_disp);
+if f_verb > 0
     disp([verb_pref '    merge took: ' num2str(toc(ttic)) ' seconds.']);
 end
 
 %*********************************************************************
 % Interpolate peak regions to high-resolution and reject small peaks *
 %*********************************************************************
-if ~isempty(downsample_spect)
-    % Make binary image of each region
-    rgns_ingrid = cellfun(@(x) binary_gridfill(x, [length(y_lowres), length(x_lowres)]), rgn, 'UniformOutput',false);
-    % Concatenate regions together
-    rgns_ingrid_cat = cat(3, rgns_ingrid{:});
-    % Interpolate each region to higher resolution
-    F = griddedInterpolant({y_lowres, x_lowres}, rgns_ingrid_cat, 'nearest');
-    rgn_interp_ingrid = F({y,x});
-    % Linearize pixel indices of high-res regions and pack into cell array
-    for r = 1:size(rgn_interp_ingrid,3)
-        
-        curr_rgn = rgn_interp_ingrid(:,:,r);
-        if true % put thresholds for dur, bw here
-            rgn_highres{r} = find(curr_rgn);
-        end
-    
-    end
-
-    %     %UPSCALE THE LABELED IMAGE
-    % Ldata = zeros(size(img_lowres));
-    % for ii = 1:length(rgn)
-    %     ii_pixels = rgn{ii};
-    %     Ldata(ii_pixels)=ii;
-    % end
-    % LdataHR = imresize(Ldata,size(img),'nearest');
-    % %COMPUTE NEW REGIONS
-    % rng_new = cell(size(rng));
-    % for ii = 1:length(rgn)
-    %     rng_new{ii} = find(LdataHR == ii);
-    % end
-else
-    rgn_highres = img_data_lowres;
+%UPSCALE THE LABELED IMAGE
+Ldata = zeros(size(img_LR));
+for ii = 1:length(rgn)
+    ii_pixels = rgn{ii};
+    Ldata(ii_pixels)=ii;
 end
+LdataHR = imresize(Ldata,size(img_HR),'nearest');
+
+%COMPUTE NEW REGIONS
+rgn_HR = cell(size(rgn));
+for ii = 1:length(rgn)
+    rgn_HR{ii} = find(LdataHR == ii);
+end
+
 
 %***********************************************************
 % Trim merged regions if trim_vol parameter is less than 1 *
 %***********************************************************
 if trim_vol < 1 && trim_vol > 0
-    if f_verb > 0 
+    if f_verb > 0
         disp([verb_pref '  Starting trim to ' num2str(100*trim_vol) ' percent volume...']);
         ttic = tic;
     end
-    [trim_rgn, trim_bndry] = trimRegionsWShed(img_data,rgn_highres,trim_vol,trim_shift,conn_trim,f_verb-1,['    ' verb_pref],f_disp); 
-    if f_verb > 0 
+    [trim_rgn, trim_bndry] = trimRegionsWShed(img_HR,rgn_HR,trim_vol,trim_shift,conn_trim,f_verb-1,['    ' verb_pref],f_disp);
+    if f_verb > 0
         disp([verb_pref '    trim took: ' num2str(toc(ttic)) ' seconds.']);
-    end   
+    end
 else
     if f_verb > 0
         disp([verb_pref '  Trim parameter geq 1 or leq 0. No trimming.']);
@@ -281,16 +282,16 @@ end
 %***********************************
 % Computing stats for peak regions *
 %***********************************
-if f_verb > 0 
+if f_verb > 0
     disp([verb_pref '  Starting stats...']);
     ttic = tic;
 end
 [trim_matr, matr_names, matr_fields, trim_PixelIdxList,trim_PixelList, trim_PixelValues, ...
-    trim_rgn,trim_bndry] = peaksWShedStats_LData(trim_rgn,trim_bndry,img_data,x,y,num_segment,conn_stats,f_verb-1,['    ' verb_pref]);
+    trim_rgn,trim_bndry] = peaksWShedStats_LData(trim_rgn,trim_bndry,img_HR,x_HR,y_HR,num_segment,conn_stats,f_verb-1,['    ' verb_pref]);
 seq_time = (now-t_start)/datenum([0 0 0 0 0 1]);
-if f_verb > 0 
+if f_verb > 0
     disp([verb_pref '    stats took: ' num2str(toc(ttic)) ' seconds.']);
-    disp([verb_pref 'Sequence took ' num2str(seq_time/60) ' minutes.']); 
+    disp([verb_pref 'Sequence took ' num2str(seq_time/60) ' minutes.']);
 end
 
 %     catch tmp_error

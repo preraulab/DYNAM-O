@@ -61,7 +61,7 @@ addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'isstruct'},{}
 addOptional(p, 'stages_include', [1,2,3,4], @(x) validateattributes(x,{'numeric', 'vector'}, {'real', 'nonempty'}))
 addOptional(p, 'lightsonoff_mins', 5, @(x) validateattributes(x,{'numeric'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
-%addOptional(p, 'spect_settings', 'fast', @(x) validateattributes(x,{'string'},{}));
+addOptional(p, 'spect_settings', 'fast', @(x) validateattributes(x,{'string'},{}));
 
 
 parse(p,varargin{:});
@@ -90,24 +90,22 @@ ttotal = tic;
 %% Compute spectrogram
 % For more information on the multitaper spectrogram parameters and
 % implementation visit: https://github.com/preraulab/multitaper
-% 
-% switch lower(spect_settings)
-%     case {'paper', 'precision'} %Matches SLEEP paper settings
-%         time_window_params = [1,0.05]; % [time window, time step] in seconds
-%         df = 0.1; % For consistency with our results we expect a df of 0.1 Hz or less
-%     case 'fast' %~3x speed improvement with little accuracy reduction
-%         time_window_params = [1,0.1]; % [time window, time step] in seconds
-%         df = 0.2;
-%     case 'draft' %10x speed improvement with but phase shift
-%         time_window_params = [1,0.25]; % [time window, time step] in seconds
-%         df = 0.5;
-%         disp('Draft mode provides reasonable SO-power Histogram estimates but inaccurate SO-phase')
-%     otherwise
-%         error('spect_settings must be ''paper'', ''fast'', or ''draft''')
-% end
 
-time_window_params = [1,0.05]; % [time window, time step] in seconds
-df = 0.1; % For consistency with our results we expect a df of 0.1 Hz or less
+switch lower(spect_settings)
+    case {'paper', 'precision'} %Matches SLEEP paper settings
+        time_window_params = [1,0.05]; % [time window, time step] in seconds
+        df = 0.1; % For consistency with our results we expect a df of 0.1 Hz or less
+    case 'fast' %~3x speed improvement with little accuracy reduction
+        time_window_params = [1,0.1]; % [time window, time step] in seconds
+        df = 0.2;
+    case 'draft' %10x speed improvement with but phase shift
+        time_window_params = [1,0.25]; % [time window, time step] in seconds
+        df = 0.5;
+        disp('Draft mode provides reasonable SO-power Histogram estimates but inaccurate SO-phase')
+    otherwise
+        error('spect_settings must be ''paper'', ''fast'', or ''draft''')
+end
+
 freq_range = [0,30]; % frequency range to compute spectrum over (Hz)
 taper_params = [2,3]; % [time halfbandwidth product, number of tapers]
 nfft = 2^(nextpow2(Fs/df)); % zero pad data to this minimum value for fft
@@ -120,9 +118,11 @@ if verbose
     disp('Computing TF-peak spectrogram...')
 
     try
-        [spect,stimes,sfreqs] = multitaper_spectrogram_mex(data, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
+        [spect_LR,stimes_LR,sfreqs_LR] = multitaper_spectrogram_mex(data, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
+        [spect_HR,stimes_HR,sfreqs_HR] = multitaper_spectrogram_mex(data, Fs, freq_range, taper_params, [1,0.05], 2^10, detrend, weight, ploton, mts_verbose);
     catch
-        [spect,stimes,sfreqs] = multitaper_spectrogram(data, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
+        [spect_LR,stimes_LR,sfreqs_LR] = multitaper_spectrogram(data, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
+        [spect_HR,stimes_HR,sfreqs_HR] = multitaper_spectrogram(data, Fs, freq_range, taper_params, [1,0.05], 2^10, detrend, weight, ploton, mts_verbose);
         warning(sprintf('Unable to use mex version of multitaper_spectrogram. Using compiled multitaper spectrogram function will greatly increase the speed of this computaton. \n\nFind mex code at:\n    https://github.com/preraulab/multitaper_toolbox'));
     end
 end
@@ -134,16 +134,16 @@ end
 
 artifacts = detect_artifacts(data, Fs, [],[],[],[],[],[],[],[],[], ... % detect artifacts in EEG
     artifact_filters.hpFilt_high, artifact_filters.hpFilt_broad, artifact_filters.detrend_filt);
-artifacts_stimes = logical(interp1(t, double(artifacts), stimes, 'nearest')); % get artifacts occuring at spectrogram times
+artifacts_stimes = logical(interp1(t, double(artifacts), stimes_LR, 'nearest')); % get artifacts occuring at spectrogram times
 
 % Get lights off and lights on times
 lightsoff_time = max( min(t(~ismember(stage_vals,[5,0])))-lightsonoff_mins*60, 0); % 5 min before first non-wake stage
 lightson_time = min( max(t(~ismember(stage_vals,[5,0])))+lightsonoff_mins*60, max(stage_times)); % 5 min after last non-wake stage
 
 % Get invalid times for baseline computation
-invalid_times = (stimes > lightson_time & stimes < lightsoff_time) & artifacts_stimes;
+invalid_times = (stimes_LR > lightson_time & stimes_LR < lightsoff_time) & artifacts_stimes;
 
-spect_bl = spect; % copy spectogram
+spect_bl = spect_LR; % copy spectogram
 spect_bl(:,invalid_times) = NaN; % turn artifact times into NaNs for percentile computation
 spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
 
@@ -152,10 +152,15 @@ baseline = prctile(spect_bl, baseline_ptile, 2); % Get baseline
 
 %% Pick a segment of the spectrogram to extract peaks from
 % Use only a the specified segment of the spectrogram
-[~,start] = min(abs(time_range(1) - stimes));
-[~,last] = min(abs(time_range(2) - stimes));
-spect_in = spect(:, start:last);
-stimes_in = stimes(start:last);
+[~,start] = min(abs(time_range(1) - stimes_LR));
+[~,last] = min(abs(time_range(2) - stimes_LR));
+spect_in_LR = spect_LR(:, start:last);
+stimes_in_LR = stimes_LR(start:last);
+
+[~,start] = min(abs(time_range(1) - stimes_HR));
+[~,last] = min(abs(time_range(2) - stimes_HR));
+spect_in_HR = spect_HR(:, start:last);
+stimes_in_HR = stimes_HR(start:last);
 
 %% Compute time-frequency peaks
 if verbose
@@ -163,7 +168,7 @@ if verbose
     tfp = tic;
 end
 
-[matr_names, matr_fields, peaks_matr,~,~, pixel_values,~,boundaries] = extract_TFpeaks(spect_in, stimes_in, sfreqs, baseline, [], downsample_spect);
+[matr_names, matr_fields, peaks_matr,~,~, pixel_values,~,boundaries] = extract_TFpeaks(spect_in_LR, stimes_in_LR, sfreqs_LR, spect_in_HR, stimes_in_HR, sfreqs_HR, baseline, [], downsample_spect);
 
 if verbose
     disp(['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS')]);
@@ -196,6 +201,9 @@ stage_exclude = ~ismember(stages_t, stages_include);
 peak_times = xywcntrd(:,1);
 peak_freqs = xywcntrd(:,2);
 peak_height = feature_matrix(:,strcmp(feature_names, 'Height'));
+peak_bw = feature_matrix(:,strcmp(feature_names, 'Bandwidth'));
+peak_dur = feature_matrix(:,strcmp(feature_names, 'Duration'));
+
 
 %% Compute SO power
 if verbose
@@ -226,8 +234,8 @@ if verbose
 end
 
 peak_props = table(peak_times(peak_inds), peak_freqs(peak_inds), peak_height(peak_inds), ...
-    peak_SOpow(peak_inds), peak_SOphase(peak_inds), 'VariableNames', {'peak_times', 'peak_freqs', 'peak_height', ...
-    'peak_SOpow', 'peak_SOphase'});
+    peak_SOpow(peak_inds), peak_SOphase(peak_inds), peak_bw(peak_inds), peak_dur(peak_inds), 'VariableNames', {'peak_times', 'peak_freqs', 'peak_height', ...
+    'peak_SOpow', 'peak_SOphase', 'peak_bw', 'peak_dur'});
 
 boundaries = boundaries(peak_inds,:);
 
