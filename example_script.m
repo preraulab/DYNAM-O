@@ -1,7 +1,7 @@
 %%%% Example script showing how to compute time-frequency peaks and SO-power/phase histograms
 %% PREPARE DATA
 %Clear workspace and close plots
-%clear; close all; clc;
+clear; close all; clc;
 
 %% SETTINGS
 %Select 'segment' or 'night' for example data range
@@ -12,18 +12,18 @@ data_range = 'segment';
 % 'fast': ~3x speed up with minimal impact on results *suggested*
 % 'draft': ~10x speed-up, good for SO-power histograms, biased SO-phase
 %          Do not use for SO-phase analyses
-%WS_settings = "draft"; 
+spect_settings = "fast"; 
 
 % Downsample settings
-downsample_spect = [5,5];
+downsample_spect = [];
 
 %% PREPARE DATA
 %Check for parallel toolbox
 v = ver;
 haspar = any(strcmp({v.Name}, 'Parallel Computing Toolbox'));
-if haspar
-    gcp;
-end
+% if haspar
+%     gcp;
+% end
 
 %Load example EEG data
 load('example_data/example_data.mat', 'EEG', 'stage_vals', 'stage_times', 'Fs');
@@ -53,7 +53,7 @@ switch data_range
 end
 
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
-[peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, boundaries] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range, 'downsample_spect', downsample_spect);
+[peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, boundaries] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range, 'downsample_spect', downsample_spect, 'spect_settings', spect_settings);
 
 %% COMPUTE SPECTROGRAM FOR DISPLAY
 [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(EEG, Fs, [4,25],[15 29], [30 15],[],'linear',[],false, false);

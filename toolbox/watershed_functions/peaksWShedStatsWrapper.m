@@ -1,5 +1,5 @@
 function  [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues,...
-    rgn,bndry,segs_minmax, segs_xyminmax, segs_time, bad_segs,seg_error] = peaksWShedStatsWrapper(data,x,y,seg_time,conn_wshed,merge_thresh,max_merges,downsample_spect,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
+    rgn,bndry,segs_minmax, segs_xyminmax, segs_time, bad_segs,seg_error] = peaksWShedStatsWrapper(spect_LR,stimes_LR,sfreqs_LR,spect_HR,stimes_HR,sfreqs_HR,seg_time,conn_wshed,merge_thresh,max_merges,downsample_spect,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
 %peaksWShedStatsWrapper determines the peak regions of a 2D image and
 % extracts a set of features for each. It initially divides the data into
 % segs to allow parallel computation of peaks and processing of larger images.
@@ -63,89 +63,107 @@ function  [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValue
 %*************************
 % Handle variable inputs *
 %*************************
-if nargin < 1 || isempty(data)
+if nargin < 1 || isempty(spect_LR)
     % The 2d matrix to be analyzed
-    data = abs(peaks(100))+randn(100)*.5;
+    spect_LR = abs(peaks(100))+randn(100)*.5;
     f_verb = 0;
     f_disp = 1;
     merge_thresh = 2;
 end
 
-if nargin < 2 || isempty(x)
+if nargin < 2 || isempty(stimes_LR)
     % x-axis
-    x = 1:size(data,2);
+    stimes_LR = 1:size(spect_LR,2);
 end
 
-if nargin < 3 || isempty(y)
+if nargin < 3 || isempty(sfreqs_LR)
     % y axis
-    y = 1:size(data,1);
+    sfreqs_LR = 1:size(spect_LR,1);
 end
 
-if nargin < 4 || isempty(seg_time)
+if nargin < 4 || isempty(spect_HR)
+    % The 2d matrix to be analyzed
+    spect_HR = abs(peaks(100))+randn(100)*.5;
+    f_verb = 0;
+    f_disp = 1;
+    merge_thresh = 2;
+end
+
+if nargin < 5 || isempty(stimes_HR)
+    % x-axis
+    stimes_HR = 1:size(spect_HR,2);
+end
+
+if nargin < 6 || isempty(sfreqs_HR)
+    % y axis
+    sfreqs_HR = 1:size(spect_HR,1);
+end
+
+if nargin < 7 || isempty(seg_time)
     % maximum segment duration in seconds
     seg_time = 15; 
 end
 
-if nargin < 5 || isempty(conn_wshed)
+if nargin < 8 || isempty(conn_wshed)
     % connection parameter in labeling watershed boundaries
     conn_wshed = 8;
 end
 
-if nargin < 6 || isempty(merge_thresh)
+if nargin < 9 || isempty(merge_thresh)
     % threshold parameter for stopping merge
     merge_thresh = 8;
 end
 
-if nargin < 7 || isempty(max_merges)
+if nargin < 10 || isempty(max_merges)
     % maximum number of merges
     max_merges = inf;
 end
 
-if nargin < 8
+if nargin < 11
     % how much to downsample high res image
     downsample_spect = [];
 end
 
-if nargin < 9 || isempty(trim_vol)
+if nargin < 12 || isempty(trim_vol)
     % volume to which regions are trimmed
     trim_vol = 0.8;
 end
 
-if nargin < 10 || isempty(trim_shift)
+if nargin < 13 || isempty(trim_shift)
     % floor level from which trim volume is evaluated
-    trim_shift = min(min(data));
+    trim_shift = min(min(spect_LR));
 end
 
-if nargin < 11 || isempty(conn_trim)
+if nargin < 14 || isempty(conn_trim)
     % connection parameter used in trimming regions
     conn_trim = 8;
 end
 
-if nargin < 12 || isempty(conn_stats)
+if nargin < 15 || isempty(conn_stats)
     % connection parameter used in peak stats evaluation
     conn_stats = 8;
 end
 
-if nargin < 13 
+if nargin < 16 
     bl_thresh = [];
 end
 
-if nargin < 14 || isempty(merge_rule)
+if nargin < 17 || isempty(merge_rule)
     % Which rule to use to merge peaks
     merge_rule = 'absolute';
 end
 
-if nargin < 15 || isempty(f_verb)
+if nargin < 18 || isempty(f_verb)
     % indicator for level of output verbosity
     f_verb = 0;
 end
 
-if nargin < 16 || isempty(verb_pref)
+if nargin < 19 || isempty(verb_pref)
     % prefix string for verbose outputs
     verb_pref = '';
 end
 
-if nargin < 17 || isempty(f_disp)
+if nargin < 20 || isempty(f_disp)
     % flag for displaying outputs
     f_disp = 0;
 end
@@ -155,34 +173,38 @@ end
 % Determine data segs *
 %************************
 % This seging prevents having a small segment at the end.
-len_y = length(y);
-len_x = length(x);
-dt = x(2) - x(1);
+len_y = length(sfreqs_LR);
+len_x = length(stimes_LR);
+dt = stimes_LR(2) - stimes_LR(1);
 max_area = floor((seg_time/dt) * len_y);
 max_dx = floor(max_area/len_y);
 n_segs = ceil(len_x/max_dx);
 new_dx = ceil(len_x/n_segs);
-data_segs = cell(n_segs,1);
-x_segs = cell(n_segs,1);
+data_segs_LR = cell(n_segs,1);
+x_segs_LR = cell(n_segs,1);
+data_segs_HR = cell(n_segs,1);
+x_segs_HR = cell(n_segs,1);
 
 if f_verb > 0
     disp([verb_pref num2str(n_segs) ' total segments.']);
     disp([verb_pref 'Segmenting data...']);
 end
-segs_xyminmax = zeros(n_segs,4);
-segs_minmax = zeros(n_segs,4);
+
 for ii = 1:n_segs
     idx1 = (ii-1)*new_dx+1;
     idx2 = min([ii*new_dx,len_x]);
 
     % disp(['seg ' num2str(ii) ' of ' num2str(n_segs) ': ' num2str(diff(x([idx1 idx2]))/60) ' minutes']);
 
-    % l_segs(ii) = length(idx1:idx2);
-    data_segs{ii} = data(:,idx1:idx2); % data_segs(:,1:l_segs(ii),ii) = data(:,idx1:idx2);
-    x_segs{ii} = x(idx1:idx2); % x_segs(ii,1:l_segs(ii)) = x(idx1:idx2);
-    segs_xyminmax(ii,:) = [min(x_segs{ii}) min(y) max(x_segs{ii}) max(y)];
-    segs_minmax(ii,:) = [idx1 1 idx2 length(y)];
+    data_segs_LR{ii} = spect_LR(:,idx1:idx2); % data_segs(:,1:l_segs(ii),ii) = data(:,idx1:idx2);
+    x_segs_LR{ii} = stimes_LR(idx1:idx2); % x_segs(ii,1:l_segs(ii)) = x(idx1:idx2);
 
+    idx1_HR = find(stimes_HR == stimes_LR(idx1));
+    idx2_HR = find(stimes_HR == stimes_LR(idx2));
+    assert(length(idx1_HR)==1 & length(idx2_HR)==1, 'Error segmenting high resolution spectrogram');
+
+    data_segs_HR{ii} = spect_HR(:,idx1_HR:idx2_HR); 
+    x_segs_HR{ii} = stimes_HR(idx1_HR:idx2_HR);
 end
 
 %*************************************************************
@@ -226,7 +248,7 @@ if n_segs > 1
         %         end
         [segs_peaks_matr{ii}, segs_matr_names{ii}, segs_matr_fields{ii}, ...
             segs_PixelIdxList{ii},segs_PixelList{ii},segs_PixelValues{ii}, ...
-            segs_rgn{ii},segs_bndry{ii},segs_time(ii)] = peaksWShedStatsSequence(data_segs{ii},x_segs{ii},y,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
+            segs_rgn{ii},segs_bndry{ii},segs_time(ii)] = peaksWShedStatsSequence(data_segs_LR{ii},x_segs_LR{ii},sfreqs_LR,data_segs_HR{ii},x_segs_HR{ii},sfreqs_HR,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
         if f_verb > 0
             disp([verb_pref '  Segment ' num2str(ii) ' took ' num2str(segs_time(ii)) ' seconds.']);
         end
@@ -246,7 +268,7 @@ else
         end
         [segs_peaks_matr{ii}, segs_matr_names{ii}, segs_matr_fields{ii}, ...
             segs_PixelIdxList{ii},segs_PixelList{ii},segs_PixelValues{ii}, ...
-            segs_rgn{ii},segs_bndry{ii},segs_time(ii)] = peaksWShedStatsSequence(data_segs{ii},x_segs{ii},y,ii,conn_wshed,merge_thresh,max_merges,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
+            segs_rgn{ii},segs_bndry{ii},segs_time(ii)] = peaksWShedStatsSequence(data_segs_LR{ii},x_segs_LR{ii},sfreqs_LR,ii,conn_wshed,merge_thresh,max_merges,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
         if f_verb > 0
             disp([verb_pref '  seg ' num2str(ii) ' took ' num2str(segs_time(ii)) ' seconds.']);
         end
