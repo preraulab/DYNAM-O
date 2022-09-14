@@ -212,7 +212,7 @@ end
 % Get low-res version of image       *
 %*************************************
 if ~isempty(downsample_spect)
-    img_LR = imresize(img_HR, [length(y_HR)/downsample_spect(2), length(x_HR)/downsample_spect(1)]);
+    img_LR = imresize(img_HR, [length(y_HR)/downsample_spect(2), length(x_HR)/downsample_spect(1)], 'bilinear');
 end
 
 %*************************************

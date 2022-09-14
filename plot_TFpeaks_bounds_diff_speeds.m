@@ -17,12 +17,15 @@ stimes_in = stimes(start:last);
 
 %% Load boundary data
 
-load('boundaries_noupdates_papersettings.mat', 'boundaries');
+load('./results/boundaries_noupdates_papersettings.mat', 'boundaries');
 bounds_paper = boundaries;
-load('boundaries_noupdates_fastsettings.mat', 'boundaries');
+load('./results/boundaries_fast_2spects.mat', 'boundaries');
+bounds_fast2 = boundaries;
+load('./results/boundaries_noupdates_fastsettings.mat', 'boundaries');
 bounds_fast = boundaries;
-load('boundaries_noupdates_draftsettings.mat', 'boundaries');
-bounds_draft = boundaries;
+% load('./results/boundaries_noupdates_draftsettings.mat', 'boundaries');
+% bounds_draft = boundaries;
+
 
 
 
@@ -44,17 +47,25 @@ hold on;
 for ii = 1:length(bounds_fast)
     bounds_fast{ii}(:,2) = bounds_fast{ii}(:,2);
     if all((bounds_fast{ii}(:,2) <= time_range(2)) & (bounds_fast{ii}(:,2) >= time_range(1)))
-        plot(bounds_fast{ii}(:,2), bounds_fast{ii}(:,1), 'color', 'm', 'linewidth',1);
+        plot(bounds_fast{ii}(:,2), bounds_fast{ii}(:,1), 'color', 'k', 'linewidth',1);
     end
 end
 
 hold on;
-for ii = 1:length(bounds_draft)
-    bounds_draft{ii}(:,2) = bounds_draft{ii}(:,2);
-    if all((bounds_draft{ii}(:,2) <= time_range(2)) & (bounds_draft{ii}(:,2) >= time_range(1)))
-        plot(bounds_draft{ii}(:,2), bounds_draft{ii}(:,1), 'color', 'k', 'linewidth',1);
+for ii = 1:length(bounds_fast2)
+    bounds_fast2{ii}(:,2) = bounds_fast2{ii}(:,2);
+    if all((bounds_fast2{ii}(:,2) <= time_range(2)) & (bounds_fast2{ii}(:,2) >= time_range(1)))
+        plot(bounds_fast2{ii}(:,2), bounds_fast2{ii}(:,1), 'color', 'm', 'linewidth',1);
     end
 end
+% 
+% hold on;
+% for ii = 1:length(bounds_draft)
+%     bounds_draft{ii}(:,2) = bounds_draft{ii}(:,2);
+%     if all((bounds_draft{ii}(:,2) <= time_range(2)) & (bounds_draft{ii}(:,2) >= time_range(1)))
+%         plot(bounds_draft{ii}(:,2), bounds_draft{ii}(:,1), 'color', 'k', 'linewidth',1);
+%     end
+% end
 
 
 
