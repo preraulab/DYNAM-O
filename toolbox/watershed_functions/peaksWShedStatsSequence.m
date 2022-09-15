@@ -1,11 +1,11 @@
 function [trim_matr, matr_names, matr_fields, trim_PixelIdxList,trim_PixelList, ...
-    trim_PixelValues, trim_rgn,trim_bndry,seq_time] = peaksWShedStatsSequence(img_LR,x_LR,y_LR,img_HR,x_HR,y_HR,num_segment,conn_wshed,merge_thresh,max_merges,downsample_spect,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
+    trim_PixelValues, trim_rgn,trim_bndry,seq_time] = peaksWShedStatsSequence(img,x,y,num_segment,conn_wshed,merge_thresh,max_merges,downsample_spect,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
 %peaksWShedStatsSequence determines the peak regions of a 2D image and
 % extracts a set of features for each. It uses peaksWShed, regionMergeByWeight,
 % trimRegionsWShed, and peaksWShedStats_LData.
 %
 % INPUTS:
-%   data         -- 2D matrix of image data. defaults to peaks(100).
+%   img         -- 2D matrix of image data. defaults to peaks(100).
 %   x            -- x axis of image data. default 1:size(data,2).
 %   y            -- y axis of image data. default 1:size(data,1).
 %   num_segment  -- segment number if data comes from larger image. default 1.
@@ -54,63 +54,54 @@ function [trim_matr, matr_names, matr_fields, trim_PixelIdxList,trim_PixelList, 
 % Handle variable inputs *
 %*************************
 if nargin < 1
-    img_LR = [];
+    img = [];
 end
 if nargin < 2
-    x_LR = [];
+    x = [];
 end
 if nargin < 3
-    y_LR = [];
+    y = [];
 end
 if nargin < 4
-    img_HR = [];
-end
-if nargin < 5
-    x_HR = [];
-end
-if nargin < 6
-    y_HR = [];
-end
-if nargin < 7
     num_segment = [];
 end
-if nargin < 8
+if nargin < 5
     conn_wshed = [];
 end
-if nargin < 9
+if nargin < 6
     merge_thresh = [];
 end
-if nargin < 10
+if nargin < 7
     max_merges = [];
 end
-if nargin < 11
+if nargin < 8
     downsample_spect = [];
 end
-if nargin < 12
+if nargin < 9
     trim_vol = [];
 end
-if nargin < 13
+if nargin < 10
     trim_shift = [];
 end
-if nargin < 14
+if nargin < 11
     conn_trim = [];
 end
-if nargin < 15
+if nargin < 12
     conn_stats = [];
 end
-if nargin < 16
+if nargin < 13
     bl_thresh = [];
 end
-if nargin < 17
+if nargin < 14
     merge_rule = [];
 end
-if nargin < 18
+if nargin < 15
     f_verb = [];
 end
-if nargin < 19
+if nargin < 16
     verb_pref = [];
 end
-if nargin < 20
+if nargin < 17
     f_disp = [];
 end
 
@@ -118,34 +109,19 @@ end
 % Set default arguments *
 %************************
 % The 2d matrix to be analyzed
-if isempty(img_LR)
-    img_LR = abs(peaks(100))+randn(100)*.5;
+if isempty(img)
+    img = abs(peaks(100))+randn(100)*.5;
     f_verb = 3;
     f_disp = 1;
     merge_thresh = 2;
 end
 % x-axis
-if isempty(x_LR)
-    x_LR = 1:size(img_LR,2);
+if isempty(x)
+    x = 1:size(img,2);
 end
 % y-axis
-if isempty(y_LR)
-    y_LR = 1:size(img_LR,1);
-end
-% The 2d matrix to be analyzed
-if isempty(img_HR)
-    img_HR = abs(peaks(100))+randn(100)*.5;
-    f_verb = 3;
-    f_disp = 1;
-    merge_thresh = 2;
-end
-% x-axis
-if isempty(x_HR)
-    x_HR = 1:size(img_HR,2);
-end
-% y-axis
-if isempty(y_HR)
-    y_HR = 1:size(img_HR,1);
+if isempty(y)
+    y = 1:size(img,1);
 end
 % segment number of image data in larger image
 if isempty(num_segment)
@@ -212,7 +188,10 @@ end
 % Get low-res version of image       *
 %*************************************
 if ~isempty(downsample_spect)
-    img_LR = imresize(img_HR, [length(y_HR)/downsample_spect(2), length(x_HR)/downsample_spect(1)], 'bilinear');
+    img_LR = img(1:downsample_spect(2):end, 1:downsample_spect(1):end);
+    %img_LR = imresize(img_HR, [length(y_HR)/downsample_spect(2), length(x_HR)/downsample_spect(1)], 'bilinear');
+else
+    img_LR = img;
 end
 
 %*************************************
@@ -244,18 +223,22 @@ end
 %*********************************************************************
 % Interpolate peak regions to high-resolution and reject small peaks *
 %*********************************************************************
-%UPSCALE THE LABELED IMAGE
-Ldata = zeros(size(img_LR));
-for ii = 1:length(rgn)
-    ii_pixels = rgn{ii};
-    Ldata(ii_pixels)=ii;
-end
-LdataHR = imresize(Ldata,size(img_HR),'nearest');
-
-%COMPUTE NEW REGIONS
-rgn_HR = cell(size(rgn));
-for ii = 1:length(rgn)
-    rgn_HR{ii} = find(LdataHR == ii);
+if ~isempty(downsample_spect)
+    %UPSCALE THE LABELED IMAGE
+    Ldata = zeros(size(img_LR));
+    for ii = 1:length(rgn)
+        ii_pixels = rgn{ii};
+        Ldata(ii_pixels)=ii;
+    end
+    LdataHR = imresize(Ldata,size(img),'nearest');
+    
+    %COMPUTE NEW REGIONS
+    rgn_HR = cell(size(rgn));
+    for ii = 1:length(rgn)
+        rgn_HR{ii} = find(LdataHR == ii);
+    end
+else
+    rgn_HR = rgn;
 end
 
 
@@ -267,7 +250,7 @@ if trim_vol < 1 && trim_vol > 0
         disp([verb_pref '  Starting trim to ' num2str(100*trim_vol) ' percent volume...']);
         ttic = tic;
     end
-    [trim_rgn, trim_bndry] = trimRegionsWShed(img_HR,rgn_HR,trim_vol,trim_shift,conn_trim,f_verb-1,['    ' verb_pref],f_disp);
+    [trim_rgn, trim_bndry] = trimRegionsWShed(img,rgn_HR,trim_vol,trim_shift,conn_trim,f_verb-1,['    ' verb_pref],f_disp);
     if f_verb > 0
         disp([verb_pref '    trim took: ' num2str(toc(ttic)) ' seconds.']);
     end
@@ -287,7 +270,7 @@ if f_verb > 0
     ttic = tic;
 end
 [trim_matr, matr_names, matr_fields, trim_PixelIdxList,trim_PixelList, trim_PixelValues, ...
-    trim_rgn,trim_bndry] = peaksWShedStats_LData(trim_rgn,trim_bndry,img_HR,x_HR,y_HR,num_segment,conn_stats,f_verb-1,['    ' verb_pref]);
+    trim_rgn,trim_bndry] = peaksWShedStats_LData(trim_rgn,trim_bndry,img,x,y,num_segment,conn_stats,f_verb-1,['    ' verb_pref]);
 seq_time = (now-t_start)/datenum([0 0 0 0 0 1]);
 if f_verb > 0
     disp([verb_pref '    stats took: ' num2str(toc(ttic)) ' seconds.']);

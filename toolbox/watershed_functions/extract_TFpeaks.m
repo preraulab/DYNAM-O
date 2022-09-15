@@ -1,5 +1,5 @@
 function [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues, ...
-    rgn,bndry, chunks_time, bad_chunks,chunk_error] = extract_TFpeaks(spect_LR, stimes_LR, sfreqs_LR, spect_HR, stimes_HR, sfreqs_HR , baseline_LR, baseline_HR,...
+    rgn,bndry, chunks_time, bad_chunks,chunk_error] = extract_TFpeaks(spect, stimes, sfreqs, baseline,...
     chunk_time, downsample_spect, conn_wshed, merge_thresh, max_merges, trim_vol, trim_shift, conn_trim, conn_stats, bl_thresh, CI_upper_bl, merge_rule,...
     f_verb, verb_pref, f_disp, f_save, ofile_pref, SD)
 % extract_TFpeaks computes the time-frequency peaks and their
@@ -80,17 +80,13 @@ function [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues
 %*************************
 % Handle variable inputs *
 %*************************
-assert(nargin >= 6 || isempty(spect_LR), '3 input required: spect, stimes, sfreqs');
+assert(nargin >= 3 || isempty(spect), '3 input required: spect, stimes, sfreqs');
 
-if nargin < 7 || isempty(baseline_LR)
+if nargin < 4 || isempty(baseline)
     baseline_LR = [];
 end
 
-if nargin < 8 || isempty(baseline_HR)
-    baseline_HR = [];
-end
-
-if nargin < 9 || isempty(chunk_time)
+if nargin < 5 || isempty(chunk_time)
     % chunk size should be number of pixels in 1 min of data
     %     dt = stimes(2) - stimes(1);
     %     desired_chunk_time = 15; % seconds
@@ -99,87 +95,85 @@ if nargin < 9 || isempty(chunk_time)
     chunk_time = 30; % seconds
 end
 
-if nargin < 10 || isempty(downsample_spect)
+if nargin < 6 || isempty(downsample_spect)
     downsample_spect = [];
 end
 
-if nargin < 11 || isempty(conn_wshed)
+if nargin < 7 || isempty(conn_wshed)
     conn_wshed = 8;
 end
 
-if nargin < 12 || isempty(merge_thresh)
+if nargin < 8 || isempty(merge_thresh)
     merge_thresh = 8;
 end
 
-if nargin < 13 || isempty(max_merges)
+if nargin < 9 || isempty(max_merges)
     max_merges = inf;
 end
 
-if nargin < 14 || isempty(trim_vol)
+if nargin < 10 || isempty(trim_vol)
     trim_vol = 0.8;
 end
 
-if nargin < 15 || isempty(trim_shift)
+if nargin < 11 || isempty(trim_shift)
     trim_shift = [];
 end
 
-if nargin < 16 || isempty(conn_trim)
+if nargin < 12 || isempty(conn_trim)
     conn_trim = 8;
 end
 
-if nargin < 17 || isempty(conn_stats)
+if nargin < 13 || isempty(conn_stats)
     conn_stats = 8;
 end
 
-if nargin < 18 || isempty(bl_thresh)
+if nargin < 14 || isempty(bl_thresh)
     bl_thresh = false;
 end
 
-if nargin < 19 || isempty(CI_upper_bl)
+if nargin < 15 || isempty(CI_upper_bl)
     CI_upper_bl = [];
 end
 
-if nargin < 20 || isempty(merge_rule)
+if nargin < 16 || isempty(merge_rule)
     merge_rule = 'default';
 end
 
-if nargin < 21 || isempty(f_verb)
+if nargin < 17 || isempty(f_verb)
     f_verb = 2;
 end
 
-if nargin < 22 || isempty(verb_pref)
+if nargin < 18 || isempty(verb_pref)
     verb_pref = '';
 end
 
-if nargin < 23 || isempty(f_disp)
+if nargin < 19 || isempty(f_disp)
     f_disp = 0;
 end
 
-if nargin < 24 || isempty(f_save)
+if nargin < 20 || isempty(f_save)
     f_save = 0;
 end
 
-if nargin < 25 || isempty(ofile_pref)
+if nargin < 21 || isempty(ofile_pref)
     ofile_pref = 'tmp/';
 end
 
-if nargin < 26 || isempty(SD)
+if nargin < 22 || isempty(SD)
     SD = 1;
 end
 
 %******************
 % Remove baseline *
 %******************
-if ~isempty(baseline_LR)
+if ~isempty(baseline)
 
     if f_verb > 0
         disp([verb_pref 'Removing baseline...']);
     end
 
     % Remove baseline. Subtraction in dB equivalent to subtraction in non-dB.
-    spect_LR = spect_LR./repmat(baseline_LR,1,size(spect_LR,2));
-    spect_HR = spect_HR./repmat(baseline_HR,1,size(spect_HR,2));
-
+    spect = spect./repmat(baseline,1,size(spect,2));
 
     if bl_thresh == true  % Get threshold used to remove low pow data
         if isempty(CI_upper_bl)
@@ -194,15 +188,14 @@ if ~isempty(baseline_LR)
 end
 % Set default trim_shift
 if isempty(trim_shift)
-    trim_shift = min(spect_HR,[],'all');
+    trim_shift = min(spect,[],'all');
 end
 
 %*********
 % Z-Score *
 %*********
 
-spect_LR = (spect_LR) ./ SD;
-spect_HR = (spect_HR) ./ SD;
+spect = (spect) ./ SD;
 
 %*********************
 % Compute peak stats *
@@ -212,7 +205,7 @@ if f_verb > 0
     computetime = tic;
 end
 [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues, ...
-    rgn,bndry, chunks_time, bad_chunks,chunk_error] = peaksWShedStatsWrapper(spect_LR,stimes_LR,sfreqs_LR,spect_HR,stimes_HR,sfreqs_HR,chunk_time,conn_wshed,...
+    rgn,bndry, chunks_time, bad_chunks,chunk_error] = peaksWShedStatsWrapper(spect,stimes,sfreqs,chunk_time,conn_wshed,...
     merge_thresh,max_merges,downsample_spect,trim_vol,trim_shift,conn_trim,...
     conn_stats,wshed_threshold,merge_rule,f_verb-1,['  ' verb_pref],...
     f_disp);
