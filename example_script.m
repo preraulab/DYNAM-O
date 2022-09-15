@@ -1,7 +1,7 @@
 %%%% Example script showing how to compute time-frequency peaks and SO-power/phase histograms
 %% PREPARE DATA
 %Clear workspace and close plots
-clear; close all; clc;
+clear; %close all; clc;
 
 %% SETTINGS
 %Select 'segment' or 'night' for example data range
@@ -12,10 +12,10 @@ data_range = 'night';
 % 'fast': ~3x speed up with minimal impact on results *suggested*
 % 'draft': ~10x speed-up, good for SO-power histograms, biased SO-phase
 %          Do not use for SO-phase analyses
-spect_settings = "paper"; 
+spect_settings = "draft"; 
 
 % Downsample settings
-downsample_spect = [2,2];
+downsample_spect = [];
 
 %% PREPARE DATA
 %Check for parallel toolbox

@@ -6,9 +6,7 @@ clear; close all; clc;
 %% SETTINGS
 %Select 'segment' or 'night' for example data range
 data_range = 'night'; 
-
-% Downsample settings
-downsample_spect = [];
+HR_spect_settings = "paper"; 
 
 %% PREPARE DATA
 %Check for parallel toolbox
@@ -45,35 +43,39 @@ switch data_range
         disp('Running full night')
 end
 
-time_window_param2 = [0.05, 0.1, 0.2, 0.25]; % [0.05, 0.1, 0.15, 0.2, 0.25]
-dfs = [0.1, 0.2, 0.3, 0.4, 0.5]; %[0.1, 0.2, 0.3, 0.4, 0.5]
-num_iters = length(time_window_param2) * length(dfs);
+% Downsample settings
+downsample_spect1 = [1,2,3,4,5];
+downsample_spect2 = [1,2,3,4,5];
+num_iters = length(downsample_spect1) * length(downsample_spect2);
 
-load('papersettings_peakprops_fullnight.mat');
+load('./archive/papersettings_peakprops_fullnight.mat');
 SOpowhist_paper = SOpow_mat;
 SOphasehist_paper = SOphase_mat;
 
 RMSE_pow = nan(num_iters, 1);
 RMSE_phase = nan(num_iters,1);
 timetaken = nan(num_iters, 1);
-spect_settings_all = nan(num_iters, 3);
+npeaks = nan(num_iters, 1);
+LR_spect_settings_all = nan(num_iters, 3);
 
 count = 0;
-for w = 1:length(time_window_param2)
-    for d = 1:length(dfs)
+for w = 1:length(downsample_spect1)
+    for d = 1:length(downsample_spect2)
         count = count + 1;
 
         %Spectral settings for computing watershed
-        spect_settings = [1, time_window_param2(w), dfs(d)]; 
+        LR_spect_settings = [1, 0.05*downsample_spect1(w), 0.1*downsample_spect2(d)]; 
         
         %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
         tic;
-        [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, boundaries] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range, 'downsample_spect', downsample_spect, 'spect_settings', spect_settings);
+        [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, boundaries] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range, 'downsample_spect', [downsample_spect1(w), downsample_spect2(d)], 'spect_settings', HR_spect_settings);
         timetaken(count) = toc;
         RMSE_pow(count) = sqrt(mean( (SOpowhist_paper-SOpow_mat).^2 , 'all', 'omitnan'));
         RMSE_phase(count) = sqrt(mean( (SOphasehist_paper-SOphase_mat).^2 , 'all', 'omitnan'));
+        npeaks(count) = height(peak_props);
+        LR_spect_settings_all(count,:) = LR_spect_settings;
     end
-    save('RMSE_time_outdata.mat', 'RMSE_pow', 'RMSE_phase', 'timetaken', 'spect_settings_all');
+    save('RMSE_time_outdata.mat', 'RMSE_pow', 'RMSE_phase', 'timetaken', 'LR_spect_settings_all');
 end
 
 

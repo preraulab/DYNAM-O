@@ -1,4 +1,4 @@
-function [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect_HR, stimes_HR, sfreqs_HR, SOpower_norm, SOpow_times, boundaries] = ...
+function [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, boundaries] = ...
     run_watershed_SOpowphase(varargin)
 % Run watershed algorithm to extract time-frequency peaks from spectrogram
 % of data, then compute Slow-Oscillation power and phase histograms
@@ -123,11 +123,9 @@ if verbose
     disp('Computing TF-peak spectrogram...')
 
     try
-        [spect_LR,stimes_LR,sfreqs_LR] = multitaper_spectrogram_mex(data, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
-        [spect_HR,stimes_HR,sfreqs_HR] = multitaper_spectrogram_mex(data, Fs, freq_range, taper_params, [1,0.05], 2^10, detrend, weight, ploton, mts_verbose);
+        [spect,stimes,sfreqs] = multitaper_spectrogram_mex(data, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
     catch
-        [spect_LR,stimes_LR,sfreqs_LR] = multitaper_spectrogram(data, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
-        [spect_HR,stimes_HR,sfreqs_HR] = multitaper_spectrogram(data, Fs, freq_range, taper_params, [1,0.05], 2^10, detrend, weight, ploton, mts_verbose);
+        [spect,stimes,sfreqs] = multitaper_spectrogram(data, Fs, freq_range, taper_params, time_window_params, NFFT, detrend, weight, ploton, mts_verbose);
         warning(sprintf('Unable to use mex version of multitaper_spectrogram. Using compiled multitaper spectrogram function will greatly increase the speed of this computaton. \n\nFind mex code at:\n    https://github.com/preraulab/multitaper_toolbox'));
     end
 end
@@ -139,39 +137,28 @@ end
 
 artifacts = detect_artifacts(data, Fs, [],[],[],[],[],[],[],[],[], ... % detect artifacts in EEG
     artifact_filters.hpFilt_high, artifact_filters.hpFilt_broad, artifact_filters.detrend_filt);
-artifacts_stimes_LR = logical(interp1(t, double(artifacts), stimes_LR, 'nearest')); % get artifacts occuring at spectrogram times
-artifacts_stimes_HR = logical(interp1(t, double(artifacts), stimes_HR, 'nearest')); % get artifacts occuring at spectrogram times
+artifacts_stimes = logical(interp1(t, double(artifacts), stimes, 'nearest')); % get artifacts occuring at spectrogram times
 
 % Get lights off and lights on times
 lightsoff_time = max( min(t(~ismember(stage_vals,[5,0])))-lightsonoff_mins*60, 0); % 5 min before first non-wake stage
 lightson_time = min( max(t(~ismember(stage_vals,[5,0])))+lightsonoff_mins*60, max(stage_times)); % 5 min after last non-wake stage
 
 % Get invalid times for baseline computation
-invalid_times_LR = (stimes_LR > lightson_time & stimes_LR < lightsoff_time) & artifacts_stimes_LR;
-invalid_times_HR = (stimes_HR > lightson_time & stimes_HR < lightsoff_time) & artifacts_stimes_HR;
+invalid_times = (stimes > lightson_time & stimes < lightsoff_time) & artifacts_stimes;
 
-spect_bl_LR = spect_LR; % copy spectogram
-spect_bl_HR = spect_HR;
-spect_bl_LR(:,invalid_times_LR) = NaN; % turn artifact times into NaNs for percentile computation
-spect_bl_HR(:,invalid_times_HR) = NaN; 
-spect_bl_LR(spect_bl_LR==0) = NaN; % Turn 0s to NaNs for percentile computation
-spect_bl_HR(spect_bl_HR==0) = NaN; 
+spect_bl = spect;
+spect_bl(:,invalid_times) = NaN; % turn artifact times into NaNs for percentile computation
+spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
 
 baseline_ptile = 2; % using 2nd percentile of spectrogram as baseline
-baseline_LR = prctile(spect_bl_LR, baseline_ptile, 2); % Get baseline
-baseline_HR = prctile(spect_bl_HR, baseline_ptile, 2); 
+baseline = prctile(spect_bl, baseline_ptile, 2);  % Get baseline
 
 %% Pick a segment of the spectrogram to extract peaks from
 % Use only a the specified segment of the spectrogram
-[~,start] = min(abs(time_range(1) - stimes_LR));
-[~,last] = min(abs(time_range(2) - stimes_LR));
-spect_in_LR = spect_LR(:, start:last);
-stimes_in_LR = stimes_LR(start:last);
-
-[~,start] = min(abs(time_range(1) - stimes_HR));
-[~,last] = min(abs(time_range(2) - stimes_HR));
-spect_in_HR = spect_HR(:, start:last);
-stimes_in_HR = stimes_HR(start:last);
+[~,start] = min(abs(time_range(1) - stimes));
+[~,last] = min(abs(time_range(2) - stimes));
+spect_in = spect(:, start:last);
+stimes_in = stimes(start:last);
 
 %% Compute time-frequency peaks
 if verbose
@@ -179,7 +166,7 @@ if verbose
     tfp = tic;
 end
 
-[matr_names, matr_fields, peaks_matr,~,~, pixel_values,~,boundaries] = extract_TFpeaks(spect_in_LR, stimes_in_LR, sfreqs_LR, spect_in_HR, stimes_in_HR, sfreqs_HR, baseline_LR, baseline_HR, [], downsample_spect);
+[matr_names, matr_fields, peaks_matr,~,~, pixel_values,~,boundaries] = extract_TFpeaks(spect_in, stimes_in, sfreqs, baseline, [], downsample_spect);
 
 if verbose
     disp(['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS')]);
