@@ -44,7 +44,7 @@ An [example script](https://github.com/preraulab/watershed_TFpeaks_toolbox/blob/
 
 <br/>
 <p align="center">
-<img src="https://prerau.bwh.harvard.edu/images/TFpeak_toolbox_example.png" width="600" />
+<img src="https://prerau.bwh.harvard.edu/images/toolbox_example_segment.png" width="600" />
 </p>
 
 <br/>
