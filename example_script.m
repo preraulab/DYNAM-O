@@ -5,14 +5,17 @@ clear; close all; clc;
 
 %% SETTINGS
 %Select 'segment' or 'night' for example data range
-data_range = 'night'; 
+data_range = 'segment'; 
 
 %Spectral settings for computing watershed
 % 'paper' or 'precision': high res analysis used for SLEEP paper
 % 'fast': ~3x speed up with minimal impact on results *suggested*
 % 'draft': ~10x speed-up, good for SO-power histograms, biased SO-phase
 %          Do not use for SO-phase analyses
-WS_settings = "paper"; 
+spect_settings = "paper"; 
+
+% Downsample settings
+downsample_spect = [];
 
 %% PREPARE DATA
 %Check for parallel toolbox
@@ -35,7 +38,7 @@ switch data_range
     case 'segment'
         % Pick a segment of the spectrogram to extract peaks from
         % Choose an example segment from the data
-        time_range = [8420 13446];
+        time_range = [8420 13446]; %[10000, 10100]; 
         output_fname = 'toolbox_example_segment.png';
         disp('Running example segment')
     case 'night'
@@ -50,15 +53,13 @@ switch data_range
 end
 
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
-tic;
-[peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range,'spect_settings',WS_settings);
-toc;
+[peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, boundaries] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range, 'downsample_spect', downsample_spect, 'spect_settings', spect_settings);
+%save('boundaries_fast_2spects.mat', 'boundaries', 'time_range');
 
 %% COMPUTE SPECTROGRAM FOR DISPLAY
 [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(EEG, Fs, [4,25],[15 29], [30 15],[],'linear',[],false, false);
 
-%% PLOT RESULTS FIGURE
-close all;
+% PLOT RESULTS FIGURE
 % Create figure
 fh = figure('Color',[1 1 1],'units','inches','position',[0 0 8.5 11]);
 orient portrait;
@@ -180,6 +181,7 @@ set([ax hypn_spect_ax],'fontsize',10)
 set(th,'fontsize',15)
 
 %% PRINT OUTPUT
+set(gcf,'units','normalized','paperunits','normalized','papertype','usletter','paperposition',[0 0 1.2 1],'position',[0 0 1.2 1]);
 print(gcf,'-dpng','-r200',output_fname);
 
 

@@ -1,7 +1,7 @@
 function [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues, ...
-    rgn,bndry,chunks_minmax, chunks_xyminmax, chunks_time, bad_chunks,chunk_error] = extract_TFpeaks(spect, stimes, sfreqs, baseline,...
-    chunk_time, conn_wshed, merge_thresh, max_merges, trim_vol, trim_shift, conn_trim, conn_stats, bl_thresh, CI_upper_bl, merge_rule,...
-    f_verb, verb_pref, f_disp, f_save, ofile_pref, mu, SD)
+    rgn,bndry, chunks_time, bad_chunks,chunk_error] = extract_TFpeaks(spect, stimes, sfreqs, baseline,...
+    chunk_time, downsample_spect, conn_wshed, merge_thresh, max_merges, trim_vol, trim_shift, conn_trim, conn_stats, bl_thresh, CI_upper_bl, merge_rule,...
+    f_verb, verb_pref, f_disp, f_save, ofile_pref, SD)
 % extract_TFpeaks computes the time-frequency peaks and their
 % features from a time-series signal. It uses peaksWShedStatsWrapper to find the peaks and
 % determine their features. A baseline can be removed prior to peak
@@ -17,6 +17,8 @@ function [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues
 %                    at a time (in seconds). Default = 30. Note that a 60s chunk time is
 %                    used in the paper accompanying this code, but using 30s offers large
 %                    speedup and should not greatly affect results
+%   downsample_spect   --  2x1 double indicating number of rows and columns to downsize spect to. 
+%                    Default = []
 %   conn_wshed   -- pixel connection to be used by peaksWShed. default 8.
 %   merge_thresh -- threshold weight value for when to stop merge rule. default 8.
 %   max_merges   -- maximum number of merges to perform. default inf.
@@ -46,8 +48,7 @@ function [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues
 %                   information to save. [0 = no saving, 1 = save fewer peak stats,
 %                   2 = save all peak stats]. Default 0.
 %   ofile_pref   -- string of path and data name for outputs. default 'tmp'.
-%   mu           -- mean of spect to be subracted in z-score computation
-%   SD           -- standard deviation of spect to be divided in z-score computation
+%   SD           -- standard deviation of spect to be divided in z-score computation. Default = 1
 %
 % OUTPUTS:
 %   peaks_matr      -- matrix of peak features. each row is a peak.
@@ -82,7 +83,7 @@ function [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues
 assert(nargin >= 3 || isempty(spect), '3 input required: spect, stimes, sfreqs');
 
 if nargin < 4 || isempty(baseline)
-    baseline = [];
+    baseline_LR = [];
 end
 
 if nargin < 5 || isempty(chunk_time)
@@ -94,74 +95,73 @@ if nargin < 5 || isempty(chunk_time)
     chunk_time = 30; % seconds
 end
 
-if nargin < 6 || isempty(conn_wshed)
+if nargin < 6 || isempty(downsample_spect)
+    downsample_spect = [];
+end
+
+if nargin < 7 || isempty(conn_wshed)
     conn_wshed = 8;
 end
 
-if nargin < 7 || isempty(merge_thresh)
+if nargin < 8 || isempty(merge_thresh)
     merge_thresh = 8;
 end
 
-if nargin < 8 || isempty(max_merges)
+if nargin < 9 || isempty(max_merges)
     max_merges = inf;
 end
 
-if nargin < 9 || isempty(trim_vol)
+if nargin < 10 || isempty(trim_vol)
     trim_vol = 0.8;
 end
 
-if nargin < 10 || isempty(trim_shift)
+if nargin < 11 || isempty(trim_shift)
     trim_shift = [];
 end
 
-if nargin < 11 || isempty(conn_trim)
+if nargin < 12 || isempty(conn_trim)
     conn_trim = 8;
 end
 
-if nargin < 12 || isempty(conn_stats)
+if nargin < 13 || isempty(conn_stats)
     conn_stats = 8;
 end
 
-if nargin < 13 || isempty(bl_thresh)
+if nargin < 14 || isempty(bl_thresh)
     bl_thresh = false;
 end
 
-if nargin < 14 || isempty(CI_upper_bl)
+if nargin < 15 || isempty(CI_upper_bl)
     CI_upper_bl = [];
 end
 
-if nargin < 15 || isempty(merge_rule)
+if nargin < 16 || isempty(merge_rule)
     merge_rule = 'default';
 end
 
-if nargin < 16 || isempty(f_verb)
+if nargin < 17 || isempty(f_verb)
     f_verb = 2;
 end
 
-if nargin < 17 || isempty(verb_pref)
+if nargin < 18 || isempty(verb_pref)
     verb_pref = '';
 end
 
-if nargin < 18 || isempty(f_disp)
+if nargin < 19 || isempty(f_disp)
     f_disp = 0;
 end
 
-if nargin < 19 || isempty(f_save)
+if nargin < 20 || isempty(f_save)
     f_save = 0;
 end
 
-if nargin < 20 || isempty(ofile_pref)
+if nargin < 21 || isempty(ofile_pref)
     ofile_pref = 'tmp/';
-end
-
-if nargin < 21 || isempty(mu)
-    mu = 0;
 end
 
 if nargin < 22 || isempty(SD)
     SD = 1;
 end
-
 
 %******************
 % Remove baseline *
@@ -179,7 +179,7 @@ if ~isempty(baseline)
         if isempty(CI_upper_bl)
             error('If bl_thresh is true, input CI_upper_bl must be provided')
         else
-            wshed_threshold = CI_upper_bl./baseline';
+            wshed_threshold = CI_upper_bl./baseline_LR';
         end
     else
         wshed_threshold = [];
@@ -197,7 +197,6 @@ end
 
 spect = (spect) ./ SD;
 
-
 %*********************
 % Compute peak stats *
 %*********************
@@ -206,8 +205,8 @@ if f_verb > 0
     computetime = tic;
 end
 [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues, ...
-    rgn,bndry,chunks_minmax, chunks_xyminmax, chunks_time, bad_chunks,chunk_error] = peaksWShedStatsWrapper(spect,stimes,sfreqs,chunk_time,conn_wshed,...
-    merge_thresh,max_merges,trim_vol,trim_shift,conn_trim,...
+    rgn,bndry, chunks_time, bad_chunks,chunk_error] = peaksWShedStatsWrapper(spect,stimes,sfreqs,chunk_time,conn_wshed,...
+    merge_thresh,max_merges,downsample_spect,trim_vol,trim_shift,conn_trim,...
     conn_stats,wshed_threshold,merge_rule,f_verb-1,['  ' verb_pref],...
     f_disp);
 if f_verb > 0
