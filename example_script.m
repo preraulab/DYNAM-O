@@ -11,7 +11,7 @@ data_range = 'segment';
 % 'paper' or 'precision': high res analysis used for SLEEP paper
 % 'fast': ~4x speed up with minimal impact on results *suggested*
 % 'draft': ~8x speed-up, good for SO-power histograms, biased SO-phase
-spect_settings = "paper"; 
+spect_settings = "fast"; 
 
 %% PREPARE DATA
 %Check for parallel toolbox
