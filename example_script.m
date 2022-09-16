@@ -9,13 +9,10 @@ data_range = 'segment';
 
 %Spectral settings for computing watershed
 % 'paper' or 'precision': high res analysis used for SLEEP paper
-% 'fast': ~3x speed up with minimal impact on results *suggested*
-% 'draft': ~10x speed-up, good for SO-power histograms, biased SO-phase
+% 'fast': ~4x speed up with minimal impact on results *suggested*
+% 'draft': ~8x speed-up, good for SO-power histograms, biased SO-phase
 %          Do not use for SO-phase analyses
 spect_settings = "paper"; 
-
-% Downsample settings
-downsample_spect = [];
 
 %% PREPARE DATA
 %Check for parallel toolbox

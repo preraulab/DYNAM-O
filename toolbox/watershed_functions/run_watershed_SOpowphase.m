@@ -97,20 +97,18 @@ if isnumeric(spect_settings)
 else
     switch spect_settings
         case {'paper', 'precision'} %Matches SLEEP paper settings
-            time_window_params = [1,0.05]; % [time window, time step] in seconds
-            df = 0.1; % For consistency with our results we expect a df of 0.1 Hz or less
+            downsample_spect = [];
         case 'fast' %~3x speed improvement with little accuracy reduction
-            time_window_params = [1,0.1]; % [time window, time step] in seconds
-            df = 0.2;
+            downsample_spect = [3,3];
         case 'draft' %10x speed improvement with but phase shift
-            time_window_params = [1,0.25]; % [time window, time step] in seconds
-            df = 0.5;
-            disp('Draft mode provides reasonable SO-power Histogram estimates but inaccurate SO-phase')
+            downsample_spect = [5,2];
         otherwise
             error('spect_settings must be ''paper'', ''fast'', or ''draft''')
     end
 end
 
+time_window_params = [1,0.05]; % [time window, time step] in seconds
+df = 0.1; % For consistency with our results we expect a df of 0.1 Hz or less
 freq_range = [0,30]; % frequency range to compute spectrum over (Hz)
 taper_params = [2,3]; % [time halfbandwidth product, number of tapers]
 nfft = 2^(nextpow2(Fs/df)); % zero pad data to this minimum value for fft
