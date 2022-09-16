@@ -1,7 +1,7 @@
 # Toolbox - Watershed TFpeaks and SO-power/phase Histograms
 
 ### This is the repository for the updated and optimized toolbox code used to identify time-frequency peaks in EEG data and create slow-oscillation power and phase histograms from the extracted TF-peak data. The code here is updated and optimized off of the code used in the following publication: 
-> 
+> Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach, Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis for Electroencephalographic Phenotyping and Biomarker Identification, Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
 --- 
 
 ## Table of Contents
@@ -46,7 +46,7 @@ An [example script](https://github.com/preraulab/watershed_TFpeaks_toolbox/blob/
 
 <br/>
 <p align="center">
-<img src="https://prerau.bwh.harvard.edu/images/TFpeak_toolbox_example.png" width="600" />
+<img src="https://prerau.bwh.harvard.edu/images/toolbox_example_segment.png" width="600" />
 </p>
 
 <br/>
@@ -77,7 +77,7 @@ Input and output parameter descriptions and function descriptions for each funct
 
 ## Citations
 The code contained in this repository is companion to the paper:  
-> 
+> Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach, Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis for Electroencephalographic Phenotyping and Biomarker Identification, Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
 
 which should be cited for academic use of this code.  
 
