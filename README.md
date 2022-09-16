@@ -1,6 +1,6 @@
 # Transient Oscillations Paper - 
 
-### This is the repository for the code used to identify time-frequency peaks in EEG data and create slow-oscillation power and phase histograms from the extracted TF-peak data. The code here is from the following publication: 
+### The code here was used for to generate all data, analyses, and figures from the following publication: 
 > Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach, Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis for Electroencephalographic Phenotyping and Biomarker Identification, Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
 --- 
 
