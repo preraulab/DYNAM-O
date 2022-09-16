@@ -49,7 +49,7 @@ switch data_range
 end
 
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
-[peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, boundaries] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range, 'downsample_spect', downsample_spect, 'spect_settings', spect_settings);
+[peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, boundaries] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range, 'spect_settings', spect_settings);
 %save('boundaries_fast_2spects.mat', 'boundaries', 'time_range');
 
 %% COMPUTE SPECTROGRAM FOR DISPLAY
