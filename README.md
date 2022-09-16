@@ -14,8 +14,6 @@
 * [References](#references)
 
 ## General Information
-The code in this repository is companion to the paper:
-> 
 
 This repository contains code to detect time-frequency peaks (TF-peaks) in a spectrogram of EEG data using the watershed image segmentation algorithm. TF-peaks represent transient oscillatory neural activity at specific frequencies with sleep spindles (a key neural biomarker) comprising a subset of TF-peaks<sup>1</sup>. An explanation of the method used to compute the multitaper spectrogram of EEG data can be found [here](https://github.com/preraulab/multitaper_toolbox). The watershed method treats the spectrogram image as a topography and identifies the catchment basins (troughs), into which water falling on the terrain would collect, thus identifying local maxima. To reduce over-segmentation, neighboring regions are merged based on a novel merge rule designed to form complete, distinct TF-peaks in the spectrogram topography. 
 
