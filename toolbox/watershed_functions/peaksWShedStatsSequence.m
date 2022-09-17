@@ -1,5 +1,5 @@
 function [trim_matr, matr_names, matr_fields, trim_PixelIdxList,trim_PixelList, ...
-    trim_PixelValues, trim_rgn,trim_bndry,seq_time] = peaksWShedStatsSequence(img,x,y,num_segment,conn_wshed,merge_thresh,max_merges,downsample_spect,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
+    trim_PixelValues, trim_rgn,trim_bndry,seq_time] = peaksWShedStatsSequence(img,x,y,num_segment,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
 %peaksWShedStatsSequence determines the peak regions of a 2D image and
 % extracts a set of features for each. It uses peaksWShed, regionMergeByWeight,
 % trimRegionsWShed, and peaksWShedStats_LData.
@@ -12,6 +12,9 @@ function [trim_matr, matr_names, matr_fields, trim_PixelIdxList,trim_PixelList, 
 %   conn_wshed   -- pixel connection to be used by peaksWShed. default 8.
 %   merge_thresh -- threshold weight value for when to stop merge rule. default 8.
 %   max_merges   -- maximum number of merges to perform. default inf.
+%   downsample_spect   --  2x1 double indicating number of rows and columns to downsize spect to. Default = []
+%   dur_min      -- minimum duration allowed
+%   bw_min       -- minimum bandwidth allowed
 %   trim_vol     -- fraction maximum trimmed volume (from 0 to 1),
 %                   i.e. 1 means no trim. default 0.8.
 %   trim_shift   -- value to be subtracted from image prior to evaulation of trim volume.
@@ -44,10 +47,7 @@ function [trim_matr, matr_names, matr_fields, trim_PixelIdxList,trim_PixelList, 
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %
-%   Authors: Patrick Stokes
-%
-% Created on: 20190214 -- extracted from peaksWShedStatsWrapper.
-% Modified: 20190410 -- commented and cleaned up for toolbox.
+%   Authors: Patrick Stokes, Thomas Possidente, Michael Prerau
 %
 
 %*************************
@@ -77,31 +77,42 @@ end
 if nargin < 8
     downsample_spect = [];
 end
-if nargin < 9
+
+if nargin < 9 || isempty(dur_min)
+    %Min TF-peak duration
+    dur_min = 0;
+end
+
+if nargin < 10 || isempty(bw_min)
+    %Min TF-peak bandwidth
+    bw_min = 0;
+end
+
+if nargin < 11
     trim_vol = [];
 end
-if nargin < 10
+if nargin < 12
     trim_shift = [];
 end
-if nargin < 11
+if nargin < 13
     conn_trim = [];
 end
-if nargin < 12
+if nargin < 14
     conn_stats = [];
 end
-if nargin < 13
+if nargin < 15
     bl_thresh = [];
 end
-if nargin < 14
+if nargin < 16
     merge_rule = [];
 end
-if nargin < 15
+if nargin < 17
     f_verb = [];
 end
-if nargin < 16
+if nargin < 18
     verb_pref = [];
 end
-if nargin < 17
+if nargin < 19
     f_disp = [];
 end
 
@@ -174,16 +185,6 @@ if isempty(f_disp)a
     f_disp = 0;
 end
 
-% Plot data image with thresholded data shown
-% figure;
-% image_data_show = img_data;
-% image_data_show(below_thresh_inds) = 500;
-% imagesc(image_data_show);
-% axis xy;
-% climscale([],[],false);
-% colormap jet;
-% title('Chunk Data Image Below Threshold');
-
 %*************************************
 % Get low-res version of image       *
 %*************************************
@@ -226,31 +227,55 @@ end
 if ~isempty(downsample_spect)
     %UPSCALE THE LABELED IMAGE
     Ldata = zeros(size(img_LR));
+    
+    %Create the labeled image and skip empty regions
+    num_regions = 1;
     for ii = 1:length(rgn)
         ii_pixels = rgn{ii};
-        Ldata(ii_pixels)=ii;
+        if ~isempty(ii_pixels)
+            Ldata(ii_pixels)=num_regions;
+            num_regions=num_regions+1;
+        end
     end
+    %Account for the last + 1
+    num_regions = num_regions-1;
+
+    %Resize image
     LdataHR = imresize(Ldata,size(img),'nearest');
-    
+
     %COMPUTE NEW REGIONS
-    rgn_HR = cell(size(rgn));
-    for ii = 1:length(rgn)
+    rgn_HR = cell(1,num_regions);
+    for ii = 1:num_regions
         rgn_HR{ii} = find(LdataHR == ii);
     end
 else
-    rgn_HR = rgn;
+    rgn_HR = rgn;%(cellfun(@(x)~isempty(x),rgn));
 end
 
+%%
+%***********************************************************
+% Do not trim regions already below the removal criteria  *
+%***********************************************************
+if dur_min>0 || bw_min>0
 
+    df = y(2)-y(1);
+    dt = x(2)-x(1);
+
+    [f_inds,t_inds]=cellfun(@(x)ind2sub(size(img),x),rgn_HR,'UniformOutput',false);
+    good_inds = cellfun(@(x)(max(x)-min(x))*dt>dur_min,t_inds) & cellfun(@(x)(max(x)-min(x))*df>bw_min,f_inds);
+    rgn_HR = rgn_HR(good_inds);
+end
+
+%%
 %***********************************************************
 % Trim merged regions if trim_vol parameter is less than 1 *
 %***********************************************************
-if trim_vol < 1 && trim_vol > 0
+if trim_vol < 1 && trim_vol > 0 
     if f_verb > 0
         disp([verb_pref '  Starting trim to ' num2str(100*trim_vol) ' percent volume...']);
         ttic = tic;
     end
-    [trim_rgn, trim_bndry] = trimRegionsWShed(img,rgn_HR,trim_vol,trim_shift,conn_trim,f_verb-1,['    ' verb_pref],f_disp);
+    [trim_rgn, trim_bndry] = trimRegionsWShed(img,rgn_HR,trim_vol,trim_shift,conn_trim,dur_min,bw_min,f_verb-1,['    ' verb_pref],f_disp);
     if f_verb > 0
         disp([verb_pref '    trim took: ' num2str(toc(ttic)) ' seconds.']);
     end

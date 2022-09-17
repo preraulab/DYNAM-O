@@ -1,4 +1,4 @@
-function [trimmed_regions, trimmed_borders] = trimRegionsWShed(data,regions,vol_thresh,shift_val,conn,f_verb,verb_pref,f_disp)
+function [trimmed_regions, trimmed_borders] = trimRegionsWShed(data,regions,vol_thresh,shift_val,conn,dur_min,bw_min,f_verb,verb_pref,f_disp)
 %trimRegionsWShed takes data and regions from peaksWShed and regionsMergeByWeight
 % and trims the regions to a certain fraction of volume.
 %    
@@ -40,30 +40,47 @@ function [trimmed_regions, trimmed_borders] = trimRegionsWShed(data,regions,vol_
 %*******************************
 % Set variable inputs to empty *
 %*******************************
-if nargin < 8
-    f_disp = [];
-end
-if nargin < 7
-    verb_pref = [];
-end
-if nargin < 6
-    f_verb = [];
-end
-if nargin < 5
-    conn = [];
-end
-if nargin < 4
-    shift_val = [];
-end
-if nargin < 3
-    vol_thresh = [];
-end
-if nargin < 2 
-    regions = [];
-end
 if nargin < 1
     data = [];
 end
+
+if nargin < 2 
+    regions = [];
+end
+
+if nargin < 3
+    vol_thresh = [];
+end
+
+if nargin < 4
+    shift_val = [];
+end
+
+if nargin < 5
+    conn = [];
+end
+
+if nargin < 6 || isempty(dur_min)
+    %Min TF-peak duration
+    dur_min = 0;
+end
+
+if nargin < 7 || isempty(bw_min)
+    %Min TF-peak bandwidth
+    bw_min = 0;
+end
+if nargin < 8
+    f_verb = [];
+end
+if nargin < 9
+    verb_pref = [];
+end
+if nargin < 10
+    f_disp = [];
+end
+
+
+
 
 %*************************
 % Set default parameters *

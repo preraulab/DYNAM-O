@@ -1,5 +1,5 @@
 function  [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues,...
-    rgn,bndry, segs_time, bad_segs,seg_error] = peaksWShedStatsWrapper(spect,stimes,sfreqs,seg_time,conn_wshed,merge_thresh,max_merges,downsample_spect,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
+    rgn,bndry, segs_time, bad_segs,seg_error] = peaksWShedStatsWrapper(spect,stimes,sfreqs,seg_time,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
 %peaksWShedStatsWrapper determines the peak regions of a 2D image and
 % extracts a set of features for each. It initially divides the data into
 % segs to allow parallel computation of peaks and processing of larger images.
@@ -13,6 +13,9 @@ function  [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValue
 %   conn_wshed   -- pixel connection to be used by peaksWShed. default 8.
 %   merge_thresh -- threshold weight value for when to stop merge rule. default 8.
 %   max_merges   -- maximum number of merges to perform. default inf.
+%   downsample_spect   --  2x1 double indicating number of rows and columns to downsize spect to. Default = []
+%   dur_min      -- minimum duration allowed
+%   bw_min       -- minimum bandwidth allowed
 %   trim_vol     -- fraction maximum trimmed volume (from 0 to 1),
 %                   i.e. 1 means no trim. default 0.8.
 %   trim_shift   -- value to be subtracted from image prior to evaulation of trim volume.
@@ -51,13 +54,7 @@ function  [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValue
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %
-%   Authors: Patrick Stokes
-%
-% Created on: 20171015 -- forked from version in wshed1
-% Modified: 20190410 -- commented and cleaned up for toolbox.
-%           20190214 -- spectrogram moved up to peaksWShedFromData, and
-%                       other functions moved into peaksWShedStatsSequence.
-%
+%   Authors: Patrick Stokes, Thomas Possidente, Michael Prerau
 %*******************************************
 
 %*************************
@@ -83,7 +80,7 @@ end
 
 if nargin < 4 || isempty(seg_time)
     % maximum segment duration in seconds
-    seg_time = 15; 
+    seg_time = 15;
 end
 
 if nargin < 5 || isempty(conn_wshed)
@@ -106,46 +103,57 @@ if nargin < 8
     downsample_spect = [];
 end
 
-if nargin < 9 || isempty(trim_vol)
+if nargin < 9 || isempty(dur_min)
+    %Min TF-peak duration
+    dur_min = 0;
+end
+
+if nargin < 10 || isempty(bw_min)
+    %Min TF-peak bandwidth
+    bw_min = 0;
+end
+
+
+if nargin < 11 || isempty(trim_vol)
     % volume to which regions are trimmed
     trim_vol = 0.8;
 end
 
-if nargin < 10 || isempty(trim_shift)
+if nargin < 12 || isempty(trim_shift)
     % floor level from which trim volume is evaluated
     trim_shift = min(min(spect_LR));
 end
 
-if nargin < 11 || isempty(conn_trim)
+if nargin < 13 || isempty(conn_trim)
     % connection parameter used in trimming regions
     conn_trim = 8;
 end
 
-if nargin < 12 || isempty(conn_stats)
+if nargin < 14 || isempty(conn_stats)
     % connection parameter used in peak stats evaluation
     conn_stats = 8;
 end
 
-if nargin < 13 
+if nargin < 15
     bl_thresh = [];
 end
 
-if nargin < 14 || isempty(merge_rule)
+if nargin < 16 || isempty(merge_rule)
     % Which rule to use to merge peaks
     merge_rule = 'absolute';
 end
 
-if nargin < 15 || isempty(f_verb)
+if nargin < 17 || isempty(f_verb)
     % indicator for level of output verbosity
     f_verb = 0;
 end
 
-if nargin < 16 || isempty(verb_pref)
+if nargin < 18 || isempty(verb_pref)
     % prefix string for verbose outputs
     verb_pref = '';
 end
 
-if nargin < 17 || isempty(f_disp)
+if nargin < 19 || isempty(f_disp)
     % flag for displaying outputs
     f_disp = 0;
 end
@@ -166,8 +174,7 @@ data_segs = cell(n_segs,1);
 x_segs = cell(n_segs,1);
 
 if f_verb > 0
-    disp([verb_pref num2str(n_segs) ' total segments.']);
-    disp([verb_pref 'Segmenting data...']);
+    disp([verb_pref 'Segmenting data into ' num2str(n_segs) ' ' num2str(seg_time) 's intervals...']);
 end
 
 for ii = 1:n_segs
@@ -175,7 +182,7 @@ for ii = 1:n_segs
     idx2 = min([ii*new_dx,len_x]);
 
     % disp(['seg ' num2str(ii) ' of ' num2str(n_segs) ': ' num2str(diff(x([idx1 idx2]))/60) ' minutes']);
-    data_segs{ii} = spect(:,idx1:idx2); 
+    data_segs{ii} = spect(:,idx1:idx2);
     x_segs{ii} = stimes(idx1:idx2);
 end
 
@@ -214,15 +221,16 @@ if n_segs > 1
     if f_verb > 0
         disp([verb_pref 'Processing segments...']);
     end
+
+    %MAIN LOOP ACROSS SEGMENTS
     parfor ii = 1:n_segs
-        %         if f_verb > 0
-        %             disp([verb_pref 'Starting Segment ' num2str(ii) '...']);
-        %         end
-        [segs_peaks_matr{ii}, segs_matr_names{ii}, segs_matr_fields{ii}, ...
-            segs_PixelIdxList{ii},segs_PixelList{ii},segs_PixelValues{ii}, ...
-            segs_rgn{ii},segs_bndry{ii},segs_time(ii)] = peaksWShedStatsSequence(data_segs{ii},x_segs{ii},sfreqs,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
-        if f_verb > 0
-            disp([verb_pref '  Segment ' num2str(ii) ' took ' num2str(segs_time(ii)) ' seconds.']);
+        if length(x_segs{ii})>1
+            [segs_peaks_matr{ii}, segs_matr_names{ii}, segs_matr_fields{ii}, ...
+                segs_PixelIdxList{ii},segs_PixelList{ii},segs_PixelValues{ii}, ...
+                segs_rgn{ii},segs_bndry{ii},segs_time(ii)] = peaksWShedStatsSequence(data_segs{ii},x_segs{ii},sfreqs,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
+            if f_verb > 0
+                disp([verb_pref '  Segment ' num2str(ii) ' took ' num2str(segs_time(ii)) ' seconds.']);
+            end
         end
 
         % Update loading bar

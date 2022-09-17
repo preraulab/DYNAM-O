@@ -5,14 +5,20 @@ clear; close all; clc;
 
 %% SETTINGS
 %Select 'segment' or 'night' for example data range
-data_range = 'segment'; 
+data_range = 'night';
 
-%Spectral settings for computing watershed
-% 'paper' or 'precision': high res analysis used for SLEEP paper
-% 'fast': ~4x speed up with minimal impact on results *suggested*
-% 'draft': ~8x speed-up, good for SO-power histograms, biased SO-phase
-spect_settings = "draft"; 
+%Settings for computing watershed
+% 'precision': high res settings
+% 'fast': ~2x speed-up with minimal impact on results *suggested*
+% 'draft': ~5x speed-up speed-up, increased high frequency TF-peaks
+%
+% 'paper': *not recommended* exact settings from SLEEP 2022 paper.
+%         Nearly exact same results as 'precision' but ~2x slower
 
+spect_settings = 'draft';
+
+%Save figure image
+save_output_image = false;
 
 %% PREPARE DATA
 %Check for parallel toolbox
@@ -35,8 +41,7 @@ switch data_range
     case 'segment'
         % Pick a segment of the spectrogram to extract peaks from
         % Choose an example segment from the data
-        time_range = [8420 13446]; %[10000, 10100]; 
-        output_fname = 'toolbox_example_segment.png';
+        time_range = [8420 13446]; %[10000, 10100];
         disp('Running example segment')
     case 'night'
         wake_buffer = 5*60; %5 minute buffer before/after first/last wake
@@ -44,8 +49,6 @@ switch data_range
         end_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'last')+1) + wake_buffer;
 
         time_range = [start_time end_time];
-
-        output_fname = 'toolbox_example_fullnight.png';
         disp('Running full night')
 end
 
@@ -142,7 +145,16 @@ axes(ax(2))
 imagesc(SOpow_bins*100, freq_bins, SOpow_mat');
 axis xy;
 colormap(ax(2), 'parula');
-climscale([],[],false);
+
+%Keep color scales consistent across different settings
+%Run the climscale for different data
+if strcmpi(data_range,'night')
+    caxis([0 8.5]);
+elseif strcmpi(data_range,'segment')
+    caxis([0 2.4]);
+else
+    climscale([],[],false);
+end
 
 c = colorbar_noresize;
 c.Label.String = {'Density', '(peaks/min in bin)'};
@@ -172,15 +184,27 @@ xticklabels({'-\pi', '-\pi/2', '0', '\pi/2', '\pi'});
 
 ylim(ylimits);
 
+%Keep color scales consistent across different settings
+%Run the climscale for different data
+if strcmpi(data_range,'night')
+    caxis([ 0.0085    0.0118]);
+elseif strcmpi(data_range,'segment')
+    caxis([0.0070    0.0144]);
+else
+    climscale([],[],false);
+end
+
 th(4) = title('SO-Phase Histogram');
 
 set([ax hypn_spect_ax],'fontsize',10)
 set(th,'fontsize',15)
 
 %% PRINT OUTPUT
-set(gcf,'units','normalized','paperunits','normalized','papertype','usletter','paperposition',[0 0 1.2 1],'position',[0 0 1.2 1]);
-print(gcf,'-dpng','-r200',output_fname);
-
+if save_output_image
+    %Output filename
+    output_fname = ['toolbox_example_' data_range '_' spect_settings '.png'];
+    print(gcf,'-dpng','-r200',output_fname);
+end
 
 
 
