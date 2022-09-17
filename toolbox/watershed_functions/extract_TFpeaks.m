@@ -1,6 +1,6 @@
 function [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues, ...
     rgn,bndry, chunks_time, bad_chunks,chunk_error] = extract_TFpeaks(spect, stimes, sfreqs, baseline,...
-    chunk_time, downsample_spect, conn_wshed, merge_thresh, max_merges, trim_vol, trim_shift, conn_trim, conn_stats, bl_thresh, CI_upper_bl, merge_rule,...
+    seg_time, downsample_spect, dur_min, bw_min, conn_wshed, merge_thresh, max_merges, trim_vol, trim_shift, conn_trim, conn_stats, bl_thresh, CI_upper_bl, merge_rule,...
     f_verb, verb_pref, f_disp, f_save, ofile_pref, SD)
 % extract_TFpeaks computes the time-frequency peaks and their
 % features from a time-series signal. It uses peaksWShedStatsWrapper to find the peaks and
@@ -13,12 +13,13 @@ function [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues
 %   stimes       --  1D timestamps corresponding to the 2nd dim of spect (seconds) --required
 %   sfreqs       --  1D frequencies corresponding to the 1st dim of spect (Hertz) --required
 %   baseline     --  1D baseline spectrum used to normalize the spectrogram. default []
-%   chunk_time   --  length of each segment/chunk of spectrogram to process
-%                    at a time (in seconds). Default = 30. Note that a 60s chunk time is
-%                    used in the paper accompanying this code, but using 30s offers large
+%   seg_time   --  length of each segment of spectrogram to process
+%                    at a time (in seconds). Default = 15. Note that a 60s segment time is
+%                    used in the paper accompanying this code, but using 15s offers large
 %                    speedup and should not greatly affect results
 %   downsample_spect   --  2x1 double indicating number of rows and columns to downsize spect to. 
-%                    Default = []
+%   dur_min      -- minimum duration allowed
+%   bw_min       -- minimum bandwidth allowed
 %   conn_wshed   -- pixel connection to be used by peaksWShed. default 8.
 %   merge_thresh -- threshold weight value for when to stop merge rule. default 8.
 %   max_merges   -- maximum number of merges to perform. default inf.
@@ -71,12 +72,6 @@ function [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues
 %
 %   Authors: Patrick Stokes, Thomas Possidente, Michael Prerau
 %
-% Created on: 20190228
-% Modified: 4/21/2021 - Tom P - fixed multitaper arguments to be compatable with new multitaper function
-% Modified: 11/24/2021 - Tom P - multitaper spectrogram and baseline now are inputs (not internally
-%           computed) and function name changed to extract_TFpeaks
-%
-
 %*************************
 % Handle variable inputs *
 %*************************
@@ -86,80 +81,88 @@ if nargin < 4 || isempty(baseline)
     baseline_LR = [];
 end
 
-if nargin < 5 || isempty(chunk_time)
+if nargin < 5 || isempty(seg_time)
     % chunk size should be number of pixels in 1 min of data
     %     dt = stimes(2) - stimes(1);
     %     desired_chunk_time = 15; % seconds
     %     num_stimes = desired_chunk_time/dt;
     %     max_area = num_stimes*length(sfreqs); %487900
-    chunk_time = 30; % seconds
+    seg_time = 15; % seconds
 end
 
 if nargin < 6 || isempty(downsample_spect)
     downsample_spect = [];
 end
 
-if nargin < 7 || isempty(conn_wshed)
+if nargin < 7 || isempty(dur_min)
+    dur_min = 0;
+end
+
+if nargin < 8 || isempty(bw_min)
+    bw_min = 0;
+end
+
+if nargin < 9 || isempty(conn_wshed)
     conn_wshed = 8;
 end
 
-if nargin < 8 || isempty(merge_thresh)
+if nargin < 10 || isempty(merge_thresh)
     merge_thresh = 8;
 end
 
-if nargin < 9 || isempty(max_merges)
+if nargin < 11 || isempty(max_merges)
     max_merges = inf;
 end
 
-if nargin < 10 || isempty(trim_vol)
+if nargin < 12 || isempty(trim_vol)
     trim_vol = 0.8;
 end
 
-if nargin < 11 || isempty(trim_shift)
+if nargin < 13 || isempty(trim_shift)
     trim_shift = [];
 end
 
-if nargin < 12 || isempty(conn_trim)
+if nargin < 14 || isempty(conn_trim)
     conn_trim = 8;
 end
 
-if nargin < 13 || isempty(conn_stats)
+if nargin < 15 || isempty(conn_stats)
     conn_stats = 8;
 end
 
-if nargin < 14 || isempty(bl_thresh)
+if nargin < 16 || isempty(bl_thresh)
     bl_thresh = false;
 end
 
-if nargin < 15 || isempty(CI_upper_bl)
+if nargin < 17 || isempty(CI_upper_bl)
     CI_upper_bl = [];
 end
 
-if nargin < 16 || isempty(merge_rule)
+if nargin < 18 || isempty(merge_rule)
     merge_rule = 'default';
 end
 
-if nargin < 17 || isempty(f_verb)
+if nargin < 19 || isempty(f_verb)
     f_verb = 2;
 end
 
-if nargin < 18 || isempty(verb_pref)
+if nargin < 20 || isempty(verb_pref)
     verb_pref = '';
 end
 
-if nargin < 19 || isempty(f_disp)
+if nargin < 21 || isempty(f_disp)
     f_disp = 0;
 end
 
-if nargin < 20 || isempty(f_save)
+if nargin < 22 || isempty(f_save)
     f_save = 0;
 end
 
-if nargin < 21 || isempty(ofile_pref)
+if nargin < 23 || isempty(ofile_pref)
     ofile_pref = 'tmp/';
 end
 
-if nargin < 22 || isempty(SD)
+if nargin < 24 || isempty(SD)
     SD = 1;
 end
 
@@ -205,8 +208,8 @@ if f_verb > 0
     computetime = tic;
 end
 [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues, ...
-    rgn,bndry, chunks_time, bad_chunks,chunk_error] = peaksWShedStatsWrapper(spect,stimes,sfreqs,chunk_time,conn_wshed,...
-    merge_thresh,max_merges,downsample_spect,trim_vol,trim_shift,conn_trim,...
+    rgn,bndry, chunks_time, bad_chunks,chunk_error] = peaksWShedStatsWrapper(spect,stimes,sfreqs,seg_time,conn_wshed,...
+    merge_thresh,max_merges,downsample_spect,dur_min, bw_min, trim_vol,trim_shift,conn_trim,...
     conn_stats,wshed_threshold,merge_rule,f_verb-1,['  ' verb_pref],...
     f_disp);
 if f_verb > 0
