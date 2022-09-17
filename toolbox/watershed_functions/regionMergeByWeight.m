@@ -273,5 +273,8 @@ if f_valid_inputs
     
 end
 
+%Remove dead regions
+rgn = rgn(cellfun(@(x)~isempty(x),rgn));
+
 end
 
