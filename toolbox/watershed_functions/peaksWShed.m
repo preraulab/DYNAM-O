@@ -27,11 +27,7 @@ function [rgn, rgn_lbls, Lborders, amatr, data] = peaksWShed( data , conn, bl_th
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %      
-%   Authors: Patrick Stokes
-%
-% Created on: 20171015
-% Modified: 20190214 -- cleaned up for toolbox.
-%           20171016 -- changed b/c rgn now returned by labelWShedBorders_imdilate 
+%   Authors: Patrick Stokes, Thomas Possidente, Michael Prerau
 %
 
 %*************************
@@ -109,6 +105,7 @@ if ~isempty(bl_thresh)
     end
 
 else
+    % Run watershed
     exclusion_val = [];
     Ldata = watershed(-data , conn);
 end
@@ -137,6 +134,7 @@ if f_verb > 0
     disp([verb_pref 'Labeling watershed borders...']);
 end
 
+%Get all the neighbors of each region by dialating the borders
 [rgn,rgn_lbls,Lborders,amatr] = labelWShedBorders_imdilate(Ldata, exclusion_val, f_disp-1);
 
 end

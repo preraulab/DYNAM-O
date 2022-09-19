@@ -169,8 +169,9 @@ end
 if isempty(bl_thresh)
     bl_thresh = [];
 end
+%NOT USED
 if isempty(merge_rule)
-    merge_rule = 'absolute';
+    merge_rule = 'default';
 end
 % indicator for level of output verbosity
 if isempty(f_verb)
@@ -181,7 +182,7 @@ if isempty(verb_pref)
     verb_pref = '';
 end
 % flag for displaying outputs
-if isempty(f_disp)a
+if isempty(f_disp)
     f_disp = 0;
 end
 
@@ -190,7 +191,6 @@ end
 %*************************************
 if ~isempty(downsample_spect)
     img_LR = img(1:downsample_spect(2):end, 1:downsample_spect(1):end);
-    %img_LR = imresize(img_HR, [length(y_HR)/downsample_spect(2), length(x_HR)/downsample_spect(1)], 'bilinear');
 else
     img_LR = img;
 end
