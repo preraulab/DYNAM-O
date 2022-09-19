@@ -1,31 +1,31 @@
 function e_wts = regionWeightedEdges(rgn,data,rgn_lbls,rgn_bnds,amatr,merge_rule,f_verb,verb_pref)
-% regionWeightedEdges determines the weights of directed adjacencies between regions 
+% regionWeightedEdges determines the weights of directed adjacencies between regions
 % in a segmented 2D image. The weights are computed by edgeWeight, which is
 % internalized for speed.
 %
-% INPUTS: 
-%   rgn      -- a 1D cell array with each cell containing a vector of linear 
+% INPUTS:
+%   rgn      -- a 1D cell array with each cell containing a vector of linear
 %               indices of the pixels in the region.
 %   data     -- the 2D image matrix from which the regions were identified.
 %   rgn_lbls -- a vector, of same dimension as rgn, with labels for
 %               corresponding regions.
 %   rgn_bnds -- a 1D cell array, of same size as rgn, with each cell
-%               containing the vector of linear indices of the boundary 
+%               containing the vector of linear indices of the boundary
 %               pixels of the corresponding region.
-%   amatr    -- a two-column matrix of directed region adjacencies. 
+%   amatr    -- a two-column matrix of directed region adjacencies.
 %               each row contains region lables of two adjacent regions.
 %               the first column are "to regions", and the second column
 %               are "from regions.
 %   merge_rule --
 %
-% OUTPUTS: 
-%   e_wts -- a vector storing the edge weights, one for each row of directed 
+% OUTPUTS:
+%   e_wts -- a vector storing the edge weights, one for each row of directed
 %            adjacency in amatr.
 %
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
-%      
+%
 %   Authors: Patrick Stokes, Thomas Possidente, Michael Prerau
 %
 % Created:  20171015 -- forked from version in wshed1
@@ -81,11 +81,11 @@ else
             % Get "to region" of current adjacency
             rgn_lbl_ii = rgn_lbls==amatr(ii,1); % logical indicating label index of "to region"
             rgn_ii = rgn{rgn_lbl_ii}; % linear indices of pixels of "to region"
-            
+
             % Get "from region" of current adjacency
             rgn_lbl_jj = rgn_lbls==amatr(ii,2); % logical indicating label index of "from region"
             rgn_jj = rgn{rgn_lbl_jj}; % linear indices of pixels of "from region"
-            
+
             % Get boundaries of current regions
             if isempty(rgn_bnds)
                 % Use data if boundaries not provided
@@ -107,9 +107,11 @@ else
                 bnds_ii = rgn_bnds{rgn_lbl_ii};
                 bnds_jj = rgn_bnds{rgn_lbl_jj};
             end
-            
+
             % Compute current edge weight
-            e_wts(ii) = edgeWeight(rgn_ii,bnds_ii,rgn_jj,bnds_jj,data,merge_rule);
+            e_wts(ii) = edgeWeight(bnds_ii,rgn_jj,data);
+            %             e_wts(ii) = edgeWeight(bnds_ii,rgn_jj,data);
+            %             e_wts(ii) = edgeWeight(rgn_ii,bnds_ii,rgn_jj,bnds_jj,data,merge_rule);
         end
     else
         if f_verb>0
@@ -119,9 +121,10 @@ else
 end
 end
 
-function e = edgeWeight(rgn_ii,bnds_ii,rgn_jj,bnds_jj,data,merge_rule)
+function e = edgeWeight(bnds_ii,rgn_jj,data)
+% function e = edgeWeight(rgn_ii,bnds_ii,rgn_jj,bnds_jj,data,merge_rule)
 % edgeWeight computes the directed edge weight from region jj to region ii.
-% The weight is (the difference between the maximum of the adjacency boundary 
+% The weight is (the difference between the maximum of the adjacency boundary
 % and the minimum of the ii boundary) minus (the difference between the
 % maximum of the jj region and the maximum of the adjacency boundary).
 %
@@ -136,19 +139,16 @@ function e = edgeWeight(rgn_ii,bnds_ii,rgn_jj,bnds_jj,data,merge_rule)
 % OUTPUTS:
 %   e       -- edge weight
 
-% fastest version to get intersection of "to region" boundary with "from region" 
+% fastest version to get intersection of "to region" boundary with "from region"
 adj_bnd = bnds_ii(ismembc(bnds_ii,sort(rgn_jj)));
 
-%Add switch case to add new merge rules
-% switch merge_rule
-%     case 'default'
+% %Add switch case to add new merge rules
+% % switch merge_rule
+% %     case 'default'
 
 % c = max(data(adj_bnd)) - min(data(bnds_ii));
 % d = max(data(rgn_jj)) - max(data(adj_bnd));
 % e = c - d;
 e = 2*max(data(adj_bnd)) - min(data(bnds_ii)) - max(data(rgn_jj)); % equivalent to above lines
-
-
-
 end
 

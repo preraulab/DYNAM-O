@@ -30,7 +30,7 @@ if nargin < 7 || isempty(freq_minmax)
 end
 
 %% Extract features from peaks matrix
-[feature_matrix, feature_names, ~, ~, ~, ~, xywcntrd] = extract_params_lunesta(peaks_matr, matr_fields, matr_names, pixel_values);
+[feature_matrix, feature_names, ~, ~, ~, ~, xywcntrd] = extract_params_watershed(peaks_matr, matr_fields, matr_names, pixel_values);
 
 disp(['Total peaks: ', num2str(size(feature_matrix,1))])
 

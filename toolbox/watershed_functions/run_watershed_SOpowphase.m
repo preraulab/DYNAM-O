@@ -61,8 +61,7 @@ addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'isstruct'},{}
 addOptional(p, 'stages_include', [1,2,3,4], @(x) validateattributes(x,{'numeric', 'vector'}, {'real', 'nonempty'}))
 addOptional(p, 'lightsonoff_mins', 5, @(x) validateattributes(x,{'numeric'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
-addOptional(p, 'spect_settings', 'fast', @(x) validateattributes(x,{'string','numeric'},{}));
-
+addOptional(p, 'spect_settings', 'fast', @(x) validateattributes(x,{'char','numeric'},{}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results);
@@ -85,39 +84,54 @@ if isempty(artifact_filters)
     artifact_filters.detrend_filt = [];
 end
 
+
 ttotal = tic;
 
 %% Compute spectrogram
 % For more information on the multitaper spectrogram parameters and
 % implementation visit: https://github.com/preraulab/multitaper
 
+time_window_params = [1,0.05]; % [time window, time step] in seconds
+dsfreqs = 0.1; % For consistency with our results we expect a df of 0.1 Hz or less
+
+
+
 if isnumeric(spect_settings)
     time_window_params = spect_settings(1:2);
-    df = spect_settings(3);
+    dsfreqs = spect_settings(3);
 else
-    switch spect_settings
-        case {'paper', 'precision'} %Matches SLEEP paper settings
-            time_window_params = [1,0.05]; % [time window, time step] in seconds
-            df = 0.1; % For consistency with our results we expect a df of 0.1 Hz or less
+    switch lower(spect_settings)
+        case {'paper'} %Matches SLEEP paper settings exactly
+               downsample_spect = [];
+                seg_time = 60;
+        case {'precision'} %Matches SLEEP paper settings but smaller segments for speed
+               downsample_spect = [];
+                seg_time = 30;
         case 'fast' %~3x speed improvement with little accuracy reduction
-            time_window_params = [1,0.1]; % [time window, time step] in seconds
-            df = 0.2;
+              downsample_spect = [2 2];
+              seg_time = 30;
         case 'draft' %10x speed improvement with but phase shift
-            time_window_params = [1,0.25]; % [time window, time step] in seconds
-            df = 0.5;
-            disp('Draft mode provides reasonable SO-power Histogram estimates but inaccurate SO-phase')
+            downsample_spect = [5 1];
+            seg_time = 30;
         otherwise
-            error('spect_settings must be ''paper'', ''fast'', or ''draft''')
+            error('spect_settings must be ''precision'', ''fast'', ''draft'', or ''paper''')
     end
 end
 
 freq_range = [0,30]; % frequency range to compute spectrum over (Hz)
 taper_params = [2,3]; % [time halfbandwidth product, number of tapers]
-nfft = 2^(nextpow2(Fs/df)); % zero pad data to this minimum value for fft
+nfft = 2^(nextpow2(Fs/dsfreqs)); % zero pad data to this minimum value for fft
 detrend = 'off'; % do not detrend
 weight = 'unity'; % each taper is weighted the same
 ploton = false; % do not plot out
 mts_verbose = false;
+
+%MST frequency resolution
+df = taper_params(1)/time_window_params(1)*2;
+
+%Set min bandwidth and duration based on spectral parameters
+bw_min = df/2;
+dur_min = time_window_params(1)/2;
 
 if verbose
     disp('Computing TF-peak spectrogram...')
@@ -166,7 +180,7 @@ if verbose
     tfp = tic;
 end
 
-[matr_names, matr_fields, peaks_matr,~,~, pixel_values,~,boundaries] = extract_TFpeaks(spect_in, stimes_in, sfreqs, baseline, [], downsample_spect);
+[matr_names, matr_fields, peaks_matr,~,~, pixel_values,~,boundaries] = extract_TFpeaks(spect_in, stimes_in, sfreqs, baseline, seg_time, downsample_spect, dur_min, bw_min);
 
 if verbose
     disp(['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS')]);

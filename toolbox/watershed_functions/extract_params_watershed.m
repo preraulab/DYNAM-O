@@ -1,4 +1,4 @@
-function[feature_matrix,feature_names,chunk_nums,dx,dy,loc,xywcntrd] = extract_params_lunesta(peaks_matr,matr_fields,matr_names, pixel_values)
+function[feature_matrix,feature_names,chunk_nums,dx,dy,loc,xywcntrd] = extract_params_watershed(peaks_matr,matr_fields,matr_names, pixel_values)
 % i/p: peaks_matr : num_peaksx(num_featuresxnum_columns of each feature) matrix containing all peaks data
 %      matr_names : 1xnum_features array containing names of each feature
 %      matr_fields: 1xnum_features array containing number of columns in peaks_matr of each feature
