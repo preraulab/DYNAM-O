@@ -15,6 +15,14 @@
 
 ## General Information
 
+<br/>
+<p align="center">
+<img src="https://prerau.bwh.harvard.edu/images/Transient%20Oscillation%20Graphical%20Abstract.png" width="600" />
+</p>
+<p align="center">
+  <sup><sub>Stokes et. al., 2022</sup></sub>
+</p>
+
 This repository contains code to detect time-frequency peaks (TF-peaks) in a spectrogram of EEG data using the watershed image segmentation algorithm. TF-peaks represent transient oscillatory neural activity at specific frequencies with sleep spindles (a key neural biomarker) comprising a subset of TF-peaks<sup>1</sup>. An explanation of the method used to compute the multitaper spectrogram of EEG data can be found [here](https://github.com/preraulab/multitaper_toolbox). The watershed method treats the spectrogram image as a topography and identifies the catchment basins (troughs), into which water falling on the terrain would collect, thus identifying local maxima. To reduce over-segmentation, neighboring regions are merged based on a novel merge rule designed to form complete, distinct TF-peaks in the spectrogram topography. 
 
 <br/>
@@ -22,7 +30,7 @@ This repository contains code to detect time-frequency peaks (TF-peaks) in a spe
 <img src="https://prerau.bwh.harvard.edu/images/watershed_summary_graphic.png" width="400" />
 </p>
 <p align="center">
-  <sup><sub>paper reference</sup></sub>
+  <sup><sub>Stokes et. al., 2022</sup></sub>
 </p>
 
 This repository also contains code to create slow-oscillation power (SO-power) and phase (SO-phase) histograms from the extracted TF-peak data. These histograms characterize the distribution of TF-peak rate (density) as function of oscillation frequency and SO-power or SO-phase. This creates a comprehensive representation of transient oscillation dynamics at different time scales, providing a highly informative new visualization technique and powerful basis for EEG phenotyping and biomarker identification in pathological states. To form the SO-power histogram, the central frequency of the TF-peak and SO-power at which the peak occured are computed. Each TF-peak is then sorted into its corresponding 2D frequency x SO-power bin and the count in each bin is normalized by the total sleep time in that SO-power bin to obtain TF-peak density in each grid bin. The same process is used to form the SO-phase histograms except the SO-phase at the time of the TF-peak is used in place of SO-power, and each row is normalized by the total peak count in the row to create probability densities.
@@ -33,7 +41,7 @@ This repository also contains code to create slow-oscillation power (SO-power) a
 <img src="https://prerau.bwh.harvard.edu/images/power_phase_histogram_schematic.png" width="400" />
 </p>
 <p align="center">
-  <sup><sub>paper reference</sup></sub>
+  <sup><sub>Stokes et. al., 2022</sup></sub>
 </p>
 
 <br/>
