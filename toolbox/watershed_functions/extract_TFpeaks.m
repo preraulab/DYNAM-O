@@ -3,7 +3,7 @@ function [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues
     seg_time, downsample_spect, dur_min, bw_min, conn_wshed, merge_thresh, max_merges, trim_vol, trim_shift, conn_trim, conn_stats, bl_thresh, CI_upper_bl, merge_rule,...
     f_verb, verb_pref, f_disp, f_save, ofile_pref)
 % extract_TFpeaks computes the time-frequency peaks and their
-% features from a time-series signal. It uses peaksWShedStatsWrapper to find the peaks and
+% features from a time-series signal. Uses peaksWShedStatsWrapper to find the peaks and
 % determine their features. A baseline can be removed prior to peak
 % identification. The matrix and cell arrays of peak features can be saved
 % to output files.
@@ -81,11 +81,6 @@ if nargin < 4 || isempty(baseline)
 end
 
 if nargin < 5 || isempty(seg_time)
-    % chunk size should be number of pixels in 1 min of data
-    %     dt = stimes(2) - stimes(1);
-    %     desired_chunk_time = 15; % seconds
-    %     num_stimes = desired_chunk_time/dt;
-    %     max_area = num_stimes*length(sfreqs); %487900
     seg_time = 15; % seconds
 end
 

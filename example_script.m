@@ -1,4 +1,5 @@
-%%%% Example script showing how to compute time-frequency peaks and SO-power/phase histograms
+%%%% Example script showing how to compute time-frequency peaks and SO-power/phase histograms for an example 
+%    night or segment of data
 %% PREPARE DATA
 %Clear workspace and close plots
 clear; close all; clc;
@@ -8,9 +9,10 @@ clear; close all; clc;
 data_range = 'night';
 
 %Settings for computing watershed
-% 'precision': high res settings
+% 'precision': high resolution settings
 % 'fast': ~2x speed-up with minimal impact on results *suggested*
-% 'draft': ~5x speed-up speed-up, increased high frequency TF-peaks
+% 'draft': ~5x speed-up, increased high frequency TF-peaks compared to
+%          other settings
 %
 % 'paper': *not recommended* exact settings from SLEEP 2022 paper.
 %         Nearly exact same results as 'precision' but ~2x slower
@@ -39,9 +41,8 @@ addpath(genpath('./toolbox'))
 
 switch data_range
     case 'segment'
-        % Pick a segment of the spectrogram to extract peaks from
         % Choose an example segment from the data
-        time_range = [8420 13446]; %[10000, 10100];
+        time_range = [8420 13446];
         disp('Running example segment')
     case 'night'
         wake_buffer = 5*60; %5 minute buffer before/after first/last wake
@@ -54,12 +55,11 @@ end
 
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
 [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, boundaries] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range, 'spect_settings', spect_settings);
-%save('boundaries_fast_2spects.mat', 'boundaries', 'time_range');
 
-%% COMPUTE SPECTROGRAM FOR DISPLAY
+%% PLOT RESULTS FIGURE
+% Comptue spectrogram for display
 [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(EEG, Fs, [4,25],[15 29], [30 15],[],'linear',[],false, false);
 
-% PLOT RESULTS FIGURE
 % Create figure
 fh = figure('Color',[1 1 1],'units','inches','position',[0 0 8.5 11]);
 orient portrait;

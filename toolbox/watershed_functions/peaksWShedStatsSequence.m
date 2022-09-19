@@ -302,10 +302,4 @@ if f_verb > 0
     disp([verb_pref 'Sequence took ' num2str(seq_time/60) ' minutes.']);
 end
 
-%     catch tmp_error
-%         disp(['Chunk ' num2str(ii) ' hit an error: ']);
-%         bad_chunks(ii) = true;
-%         chunk_error{ii} = tmp_error;
-%         disp( tmp_error.identifier);
-%     end
-%     % end
+

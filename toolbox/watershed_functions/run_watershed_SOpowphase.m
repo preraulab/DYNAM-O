@@ -94,22 +94,21 @@ ttotal = tic;
 time_window_params = [1,0.05]; % [time window, time step] in seconds
 dsfreqs = 0.1; % For consistency with our results we expect a df of 0.1 Hz or less
 
-
-
-if isnumeric(spect_settings)
+if isnumeric(spect_settings) % if spect settings are numeric, use them and do not downsample
     time_window_params = spect_settings(1:2);
     dsfreqs = spect_settings(3);
+    downsample_spect = [];
 else
     switch lower(spect_settings)
         case {'paper'} %Matches SLEEP paper settings exactly
-               downsample_spect = [];
-                seg_time = 60;
+            downsample_spect = [];
+            seg_time = 60;
         case {'precision'} %Matches SLEEP paper settings but smaller segments for speed
-               downsample_spect = [];
-                seg_time = 30;
+            downsample_spect = [];
+            seg_time = 30;
         case 'fast' %~3x speed improvement with little accuracy reduction
-              downsample_spect = [2 2];
-              seg_time = 30;
+            downsample_spect = [2 2];
+            seg_time = 30;
         case 'draft' %10x speed improvement with but phase shift
             downsample_spect = [5 1];
             seg_time = 30;
@@ -124,12 +123,12 @@ nfft = 2^(nextpow2(Fs/dsfreqs)); % zero pad data to this minimum value for fft
 detrend = 'off'; % do not detrend
 weight = 'unity'; % each taper is weighted the same
 ploton = false; % do not plot out
-mts_verbose = false;
+mts_verbose = false; % do not display extra info
 
 %MST frequency resolution
 df = taper_params(1)/time_window_params(1)*2;
 
-%Set min bandwidth and duration based on spectral parameters
+%Set min bandwidth and duration of TFpeaks based on spectral parameters
 bw_min = df/2;
 dur_min = time_window_params(1)/2;
 
@@ -149,7 +148,8 @@ if verbose
     disp('Performing artifact rejection...')
 end
 
-artifacts = detect_artifacts(data, Fs, [],[],[],[],[],[],[],[],[], ... % detect artifacts in EEG
+% detect artifacts in EEG
+artifacts = detect_artifacts(data, Fs, [],[],[],[],[],[],[],[],[], ... 
     artifact_filters.hpFilt_high, artifact_filters.hpFilt_broad, artifact_filters.detrend_filt);
 artifacts_stimes = logical(interp1(t, double(artifacts), stimes, 'nearest')); % get artifacts occuring at spectrogram times
 
@@ -160,7 +160,7 @@ lightson_time = min( max(t(~ismember(stage_vals,[5,0])))+lightsonoff_mins*60, ma
 % Get invalid times for baseline computation
 invalid_times = (stimes > lightson_time & stimes < lightsoff_time) & artifacts_stimes;
 
-spect_bl = spect;
+spect_bl = spect; 
 spect_bl(:,invalid_times) = NaN; % turn artifact times into NaNs for percentile computation
 spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
 
@@ -195,7 +195,7 @@ end
 
 [feature_matrix, feature_names, xywcntrd, peak_mask] = filterpeaks_watershed(peaks_matr, matr_fields, matr_names, pixel_values);
 
-boundaries = boundaries(peak_mask,:);
+boundaries = boundaries(peak_mask,:); % Get pixel boundaries of all TFpeaks
 
 %% Compute SO power and SO phase
 % Exclude WAKE stages from analyses
