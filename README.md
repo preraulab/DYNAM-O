@@ -8,6 +8,7 @@
 ## Table of Contents
 * [General Information](#general-information)
 * [Example](#example)
+* [Optimizations](#example)
 * [Repository Structure](#repository-structure)
 * [Parameters](#parameters)
 * [Citations](#citations)
@@ -52,6 +53,12 @@ An [example script](https://github.com/preraulab/watershed_TFpeaks_toolbox/blob/
 
 <br/>
 <br/>
+
+## Optimizations 
+This code is an optimized version of what was used in Stokes et. al., 2022. The following is a list of the changes made during optimization. The original unoptimized paper code can be found [here](https://github.com/preraulab/watershed_TFpeaks_toolbox/tree/transient_oscillation_paper).
+* Candidate TF-Peak regions that are below the duration and bandwidth cutoffs are now removed prior to trimming and peak property calculations
+* Empty (NaN) regions that come out of the merge procedure are now removed prior to trimming and peak property calculations
+* Watershed and the merging procedure now run on a lower resolution spectrogram (downsampled from the input spectrogram using decimation) to get the rough watershed regions,w hich are then mapped back onto the high-resolution spectrogram, from which trimming and peak property calculations are done.
 
 ## Repository Structure
 The contents of the "toolbox" folder is organized as follows:
