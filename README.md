@@ -7,7 +7,7 @@
 ## Table of Contents
 * [General Information](#general-information)
 * [Example](#example)
-* [Optimizations] (#optimizations)
+* [Optimizations](#optimizations)
 * [Repository Structure](#repository-structure)
 * [Parameters](#parameters)
 * [Citations](#citations)
