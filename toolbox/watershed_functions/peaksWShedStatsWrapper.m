@@ -223,15 +223,15 @@ if n_segs > 1
     end
 
     %MAIN LOOP ACROSS SEGMENTS
-    for ii = 1:n_segs
+    parfor ii = 1:n_segs
         if length(x_segs{ii})>1
             [segs_peaks_matr{ii}, segs_matr_names{ii}, segs_matr_fields{ii}, ...
                 segs_PixelIdxList{ii},segs_PixelList{ii},segs_PixelValues{ii}, ...
                 segs_rgn{ii},segs_bndry{ii},segs_time(ii)] = peaksWShedStatsSequence(data_segs{ii},x_segs{ii},sfreqs,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
             
-            if f_verb > 0
-                disp([verb_pref '  Segment ' num2str(ii) ' took ' num2str(segs_time(ii)) ' seconds.']);
-            end
+%             if f_verb > 0
+%                 disp([verb_pref '  Segment ' num2str(ii) ' took ' num2str(segs_time(ii)) ' seconds.']);
+%             end
         end
 
         % Update loading bar

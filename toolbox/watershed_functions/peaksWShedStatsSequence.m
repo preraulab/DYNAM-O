@@ -226,7 +226,7 @@ end
 %*********************************************************************
 if ~isempty(downsample_spect)
     %UPSCALE THE LABELED IMAGE
-    Ldata = zeros(size(img_LR));
+    Ldata = zeros(size(img_LR),"uint16");
     
     %Create the labeled image and skip empty regions
     num_regions = 1;
