@@ -59,17 +59,23 @@ An [example script](https://github.com/preraulab/watershed_TFpeaks_toolbox/blob/
 <br/>
 
 ## Repository Structure
-The contents of the "toolbox" folder is organized as follows:
 * SOphase_filters:
   - SOphase_filters.mat: File containing precomputed digital filters used in the SO-Phase calculation. If a filter is not provided as an argument to compute_SOPhase(), it will look for a suitable filter in this .mat file. Using precomputed filters saves computing time.
-* SOpowphase_functions: Functions used to compute the SO Power and Phase histograms
-  - Key Functions:
-    - SOpower_histogram: Top level function to compute SO Power histogram from EEG data and TF-peak times and frequencies.
-    - SOphase_histogram: Top level function to compute SO Phase histogram from EEG data and TF-peak times and frequencies. 
-* helper_functions: Utility functions used for plotting figures and performing generic small computations, plus the multitaper spectrogram function. 
-* watershed_functions: Functions involved in carrying out the watershed image segmentation algorithm on EEG spectrograms
-  - Key Functions:
-    - extract_TFpeaks: Top level function to run the watershed pipeline on a given spectrogram, including baseline removal, data chunking, image segmentation, peak merging, peak trimming, and calculating and saving out the TF-peak statistics.  
+* datagen_code: 
+  - Code used to run the watershed procedure and SO-Power/SO-Phase histogram analyses on the participant data.
+* figure_code:
+  - Code used to generate every paper figure, supplemental figure, and table data in the paper.
+* example_script:
+  - Runs the full TFpeak finding algorithm, computes the SO-Power and SO-Phase histograms, and plots a summary figure. Uses example data contained in example_data folder.
+* toolbox_paper
+  * SOpowphase_functions: Functions used to compute the SO Power and Phase histograms
+    - Key Functions:
+      - SOpower_histogram: Top level function to compute SO Power histogram from EEG data and TF-peak times and frequencies.
+      - SOphase_histogram: Top level function to compute SO Phase histogram from EEG data and TF-peak times and frequencies. 
+  * helper_functions: Utility functions used for plotting figures and performing generic small computations, plus the multitaper spectrogram function. 
+  * watershed_functions: Functions involved in carrying out the watershed image segmentation algorithm on EEG spectrograms
+    - Key Functions:
+     - extract_TFpeaks: Top level function to run the watershed pipeline on a given spectrogram, including baseline removal, data chunking, image segmentation, peak merging, peak trimming, and calculating and saving out the TF-peak statistics.  
   
 
 <br/>
@@ -92,7 +98,7 @@ which should be cited for academic use of this code.
 
 
 ## Status 
-All implementations are complete and functional, but are subject to change.
+All implementations are complete and functional.
 
 <br/>
 <br/>
