@@ -1,7 +1,7 @@
 function [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues, ...
     rgn,bndry, chunks_time, bad_chunks,chunk_error] = extract_TFpeaks(spect, stimes, sfreqs, baseline,...
     seg_time, downsample_spect, dur_min, bw_min, conn_wshed, merge_thresh, max_merges, trim_vol, trim_shift, conn_trim, conn_stats, bl_thresh, CI_upper_bl, merge_rule,...
-    f_verb, verb_pref, f_disp, f_save, ofile_pref, SD)
+    f_verb, verb_pref, f_disp, f_save, ofile_pref)
 % extract_TFpeaks computes the time-frequency peaks and their
 % features from a time-series signal. It uses peaksWShedStatsWrapper to find the peaks and
 % determine their features. A baseline can be removed prior to peak
@@ -49,7 +49,6 @@ function [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues
 %                   information to save. [0 = no saving, 1 = save fewer peak stats,
 %                   2 = save all peak stats]. Default 0.
 %   ofile_pref   -- string of path and data name for outputs. default 'tmp'.
-%   SD           -- standard deviation of spect to be divided in z-score computation. Default = 1
 %
 % OUTPUTS:
 %   peaks_matr      -- matrix of peak features. each row is a peak.
@@ -194,11 +193,6 @@ if isempty(trim_shift)
     trim_shift = min(spect,[],'all');
 end
 
-%*********
-% Z-Score *
-%*********
-
-spect = (spect) ./ SD;
 
 %*********************
 % Compute peak stats *
