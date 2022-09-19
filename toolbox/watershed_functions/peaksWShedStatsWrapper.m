@@ -223,11 +223,12 @@ if n_segs > 1
     end
 
     %MAIN LOOP ACROSS SEGMENTS
-    parfor ii = 1:n_segs
+    for ii = 1:n_segs
         if length(x_segs{ii})>1
             [segs_peaks_matr{ii}, segs_matr_names{ii}, segs_matr_fields{ii}, ...
                 segs_PixelIdxList{ii},segs_PixelList{ii},segs_PixelValues{ii}, ...
                 segs_rgn{ii},segs_bndry{ii},segs_time(ii)] = peaksWShedStatsSequence(data_segs{ii},x_segs{ii},sfreqs,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
+            
             if f_verb > 0
                 disp([verb_pref '  Segment ' num2str(ii) ' took ' num2str(segs_time(ii)) ' seconds.']);
             end
@@ -246,15 +247,18 @@ else
         if f_verb > 0
             disp([verb_pref 'Starting seg ' num2str(ii) '...']);
         end
+
         [segs_peaks_matr{ii}, segs_matr_names{ii}, segs_matr_fields{ii}, ...
             segs_PixelIdxList{ii},segs_PixelList{ii},segs_PixelValues{ii}, ...
             segs_rgn{ii},segs_bndry{ii},segs_time(ii)] = peaksWShedStatsSequence(data_segs{ii},x_segs{ii},sfreqs,ii,conn_wshed,merge_thresh,max_merges,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
+        
         if f_verb > 0
             disp([verb_pref '  seg ' num2str(ii) ' took ' num2str(segs_time(ii)) ' seconds.']);
         end
     end
 end
 
+    %Add a parallel friendly waitbar
     function nUpdateWaitbar(~)
         waitbar(segments_processed/n_segs, h, [num2str(segments_processed) ' out of ' num2str(n_segs) ' (' num2str((segments_processed/n_segs*100),'%.2f') '%) segments processed...']);
         segments_processed = segments_processed + 1;
@@ -267,6 +271,7 @@ end
 if f_verb > 0
     disp([verb_pref 'Assembling peak statistics from segments...']);
 end
+
 % Determine number of non-empty peaks
 num_peaks = 0;
 first_nonempty = 0;
@@ -276,6 +281,7 @@ for ii = 1:n_segs
         first_nonempty = ii;
     end
 end
+
 % Allocate storage
 matr_names = segs_matr_names{first_nonempty};
 matr_fields = segs_matr_fields{first_nonempty};
@@ -285,6 +291,7 @@ PixelList = cell(num_peaks,1);
 PixelValues = cell(num_peaks,1);
 rgn = cell(num_peaks,1);
 bndry = cell(num_peaks,1);
+
 % Extract from cell arrays
 cnt_peaks = 0;
 for ii = 1:n_segs

@@ -109,9 +109,10 @@ else
             end
 
             % Compute current edge weight
-            e_wts(ii) = edgeWeight(bnds_ii,rgn_jj,data);
-            %             e_wts(ii) = edgeWeight(bnds_ii,rgn_jj,data);
-            %             e_wts(ii) = edgeWeight(rgn_ii,bnds_ii,rgn_jj,bnds_jj,data,merge_rule);
+            e_wts(ii)  = edgeWeightEqual(rgn_ii,bnds_ii,rgn_jj,bnds_jj,data);
+            
+            %Old directed edge weight where weight(a,b) ~= weight(b,a)
+            %e = edgeWeight(bnds_ii,bnds_jj,rgn_jj,data)
         end
     else
         if f_verb>0
@@ -121,34 +122,67 @@ else
 end
 end
 
-function e = edgeWeight(bnds_ii,rgn_jj,data)
-% function e = edgeWeight(rgn_ii,bnds_ii,rgn_jj,bnds_jj,data,merge_rule)
-% edgeWeight computes the directed edge weight from region jj to region ii.
-% The weight is (the difference between the maximum of the adjacency boundary
-% and the minimum of the ii boundary) minus (the difference between the
-% maximum of the jj region and the maximum of the adjacency boundary).
-%
-% INPUTS:
-%   merge_rule --
-%   rgn_ii  -- vector of linear indices of pixels of "to region"
-%   bnds_ii -- vector of linear indices of boundary of "to region"
-%   rgn_jj  -- vector of linear indices of pixels of "from region"
-%   bnds_jj -- vector of linear indices of boundary of "from region"
-%   data    -- 2D image data from which regions were defined
-%
-% OUTPUTS:
-%   e       -- edge weight
-
-% fastest version to get intersection of "to region" boundary with "from region"
-adj_bnd = bnds_ii(ismembc(bnds_ii,sort(rgn_jj)));
-
+%Compute non-directed weight
+function e = edgeWeightEqual(rgn_ii,bnds_ii,rgn_jj,bnds_jj,data)
 % %Add switch case to add new merge rules
-% % switch merge_rule
-% %     case 'default'
-
 % c = max(data(adj_bnd)) - min(data(bnds_ii));
 % d = max(data(rgn_jj)) - max(data(adj_bnd));
 % e = c - d;
-e = 2*max(data(adj_bnd)) - min(data(bnds_ii)) - max(data(rgn_jj)); % equivalent to above lines
+%
+% Take max of weight(ii,jj) and weight(jj,ii)
+
+% fastest version to get intersection of "to region" boundary with "from region"
+adj_bnds = bnds_ii(ismembc(bnds_ii,sort(bnds_jj)));
+
+%Max data value of the adjacent boundary pixels
+max_adj = max(data(adj_bnds));
+
+%Get the min boundary values
+min_bnds_ii = min(data(bnds_ii));
+min_bnds_jj = min(data(bnds_jj));
+
+%Get the max data values
+max_rgn_ii = max(data(rgn_jj));
+max_rgn_jj = max(data(rgn_ii));
+
+%Compute the weights for each
+eii = 2*max_adj - min_bnds_ii - max_rgn_jj;
+ejj = 2*max_adj - min_bnds_jj - max_rgn_ii;
+
+%Take the max weight
+e = max(eii,ejj);
 end
 
+
+%OLD EDGE WEIGHT
+% function e = edgeWeight(bnds_ii,bnds_jj,rgn_jj,data)
+% % function e = edgeWeight(rgn_ii,bnds_ii,rgn_jj,bnds_jj,data,merge_rule)
+% % edgeWeight computes the directed edge weight from region jj to region ii.
+% % The weight is (the difference between the maximum of the adjacency boundary
+% % and the minimum of the ii boundary) minus (the difference between the
+% % maximum of the jj region and the maximum of the adjacency boundary).
+% %
+% % INPUTS:
+% %   merge_rule --
+% %   rgn_ii  -- vector of linear indices of pixels of "to region"
+% %   bnds_ii -- vector of linear indices of boundary of "to region"
+% %   rgn_jj  -- vector of linear indices of pixels of "from region"
+% %   bnds_jj -- vector of linear indices of boundary of "from region"
+% %   data    -- 2D image data from which regions were defined
+% %
+% % OUTPUTS:
+% %   e       -- edge weight
+% 
+% % fastest version to get intersection of "to region" boundary with "from region"
+% adj_bnd = bnds_ii(ismembc(bnds_ii,sort(bnds_jj)));
+% 
+% % %Add switch case to add new merge rules
+% % % switch merge_rule
+% % %     case 'default'
+% 
+% % c = max(data(adj_bnd)) - min(data(bnds_ii));
+% % d = max(data(rgn_jj)) - max(data(adj_bnd));
+% % e = c - d;
+% e = 2*max(data(adj_bnd)) - min(data(bnds_ii)) - max(data(rgn_jj)); % equivalent to above lines
+% end
+% 
