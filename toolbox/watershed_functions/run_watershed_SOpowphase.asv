@@ -114,7 +114,7 @@ else
             downsample_spect = [5 1];
             seg_time = 30;
         otherwise
-            error('spect_settings must be ''precision'', ''fast'', ''draft'', or ''paper''')
+            error('spect_settings must be ''precision'', ''fast'', ''draft''')
     end
 end
 
