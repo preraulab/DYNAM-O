@@ -27,14 +27,8 @@ function [rgn, Lborders] = regionMergeByWeight(data,rgn,rgn_lbls,Lborders,amatr,
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
-%      
-%   Authors: Patrick Stokes
 %
-% Created on: 20170907 -- forked from version in wshed1, the code of this
-%                         function was consolidated from peaks_wshed_excerpt.m
-% Modified: 20190215 -- cleaned up for toolbox
-%           20170930 -- To handle case of single region
-%
+%   Authors: Patrick Stokes, Thomas Possidente, Michael Prerau
 
 %*************************
 % Handle variable inputs *
@@ -85,9 +79,12 @@ end
 if isempty(f_verb)
     f_verb = 0;
 end
+
+%NOT USED
 if isempty(merge_rule)
-    merge_rule = 'absolute';
+    merge_rule = 'default';
 end
+
 if isempty(max_merges)
     max_merges = inf;
 end
@@ -121,8 +118,6 @@ if f_valid_inputs
             disp([verb_pref 'Adjacency matrix already has edge weights. Extracting initial weights...']);
         end
         ematr = amatr;
-        % e_wts = amatr(:,3);
-        % amatr = amatr(:,1:2);
     elseif size(amatr,2)==2
         % Compute initial weights if not provided
         if f_verb > 0
@@ -140,7 +135,7 @@ if f_valid_inputs
         f_valid_inputs = false;
         disp(['WARNING: adjacency matrix (' num2str(size(amatr,1)) ' x ' ...
             num2str(size(amatr,2)) ') has too few or too many columns. Returning original regions.' ]);
-        
+
     end
 end
 
@@ -164,15 +159,11 @@ if f_valid_inputs
         colormap(ax(1),jet);
         title(ax(1),'Original Data Image');
     end
-    
+
     % Determine number of regions and maximum edge weight
-    num_rgns = 0;
-    for ii = 1:length(rgn)
-        if ~isempty(rgn{ii})
-            num_rgns = num_rgns + 1;
-        end
-    end
+    num_rgns = length(rgn);
     [max_wt,max_idx] = max(ematr(:,3));
+
     num_merges = 0;
     if f_verb > 0
         disp([verb_pref 'Merging regions...']);
@@ -181,20 +172,24 @@ if f_valid_inputs
             disp([verb_pref '  Size of edge matrix: ' num2str(size(ematr,1)) '. Maximum weight: ' num2str(max_wt) '.']);
         end
     end
+
+    %*************************
+    %    MAIN MERGING LOOP   *
+    %*************************
     while ~isempty(ematr) && max_wt > merge_thresh && num_merges < max_merges && num_rgns > 1
         % Determine regions to merge
         mrg_to = ematr(max_idx(1),1);
         mrg_from = ematr(max_idx(1),2);
-        
+
         % Merge regions
         [rgn, Lborders, ematr, pick_update] = regionMerge(rgn,mrg_to,mrg_from,rgn_lbls,Lborders,ematr);
-        
+
         % Update edge weights
         if ~isempty(find(pick_update,1))
             e_wts = regionWeightedEdges(rgn,data,rgn_lbls,Lborders,ematr(pick_update,1:2),merge_rule,f_verb-1,['  ' verb_pref]);
             ematr(pick_update,3) = e_wts;
         end
-        
+
         % Find new maximum weight and its index
         if ~isempty(ematr)
             [max_wt,max_idx] = max(ematr(:,3));
@@ -203,7 +198,7 @@ if f_valid_inputs
         end
         num_merges = num_merges + 1;
         num_rgns = num_rgns - 1;
-        
+
         % Update region plot
         if f_disp && mod(num_merges,100)==1
             % Plot data with boundaries
@@ -231,20 +226,20 @@ if f_valid_inputs
             title(ax(3),['Current weight merged: ' num2str(max_wt)]);
             drawnow;
         end
-        
+
         if f_verb > 1
             disp([verb_pref '  Size of edge matrix: ' num2str(size(ematr,1)) '. Maximum weight: ' num2str(max_wt) '.']);
         end
-        
+
     end
-    
+
     if f_verb > 0
         disp([verb_pref '  Full merging took ' num2str(toc(ttic)) ' sec, ' num2str(num_merges) ' merges.']);
         if isempty(ematr) || num_rgns <= 1
             disp([verb_pref 'single region encountered in merge']);
         end
     end
-    
+
     if f_disp
         % Plot data with boundaries
         tmp_Ldata = cell2Ldata(rgn,size(data),Lborders);
@@ -270,7 +265,7 @@ if f_valid_inputs
         axis(ax(3),'xy');
         title(ax(3),['Current weight merged: ' num2str(max_wt)]);
     end
-    
+
 end
 
 %Remove dead regions
