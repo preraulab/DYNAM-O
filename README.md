@@ -7,24 +7,29 @@
 ## Table of Contents
 * [General Information](#general-information)
 * [Example](#example)
+* [Optimizations] (#optimizations)
 * [Repository Structure](#repository-structure)
 * [Parameters](#parameters)
 * [Citations](#citations)
 * [Status](#status)
 * [References](#references)
 
-## General Information
-The code in this repository is companion to the paper:
-> 
+## General Information 
+
+<p align="center">
+<img src="https://prerau.bwh.harvard.edu/images/Transient%20Oscillation%20Graphical%20Abstract.png" width="600" />
+</p>
+<p align="center">
+  <sup><sub>Stokes et. al., 2022</sup></sub>
+</p>
 
 This repository contains code to detect time-frequency peaks (TF-peaks) in a spectrogram of EEG data using the watershed image segmentation algorithm. TF-peaks represent transient oscillatory neural activity at specific frequencies with sleep spindles (a key neural biomarker) comprising a subset of TF-peaks<sup>1</sup>. An explanation of the method used to compute the multitaper spectrogram of EEG data can be found [here](https://github.com/preraulab/multitaper_toolbox). The watershed method treats the spectrogram image as a topography and identifies the catchment basins (troughs), into which water falling on the terrain would collect, thus identifying local maxima. To reduce over-segmentation, neighboring regions are merged based on a novel merge rule designed to form complete, distinct TF-peaks in the spectrogram topography. 
 
-<br/>
 <p align="center">
 <img src="https://prerau.bwh.harvard.edu/images/watershed_summary_graphic.png" width="400" />
 </p>
 <p align="center">
-  <sup><sub>paper reference</sup></sub>
+  <sup><sub>Stokes et. al., 2022</sup></sub>
 </p>
 
 This repository also contains code to create slow-oscillation power (SO-power) and phase (SO-phase) histograms from the extracted TF-peak data. These histograms characterize the distribution of TF-peak rate (density) as function of oscillation frequency and SO-power or SO-phase. This creates a comprehensive representation of transient oscillation dynamics at different time scales, providing a highly informative new visualization technique and powerful basis for EEG phenotyping and biomarker identification in pathological states. To form the SO-power histogram, the central frequency of the TF-peak and SO-power at which the peak occured are computed. Each TF-peak is then sorted into its corresponding 2D frequency x SO-power bin and the count in each bin is normalized by the total sleep time in that SO-power bin to obtain TF-peak density in each grid bin. The same process is used to form the SO-phase histograms except the SO-phase at the time of the TF-peak is used in place of SO-power, and each row is normalized by the total peak count in the row to create probability densities.
@@ -35,14 +40,14 @@ This repository also contains code to create slow-oscillation power (SO-power) a
 <img src="https://prerau.bwh.harvard.edu/images/power_phase_histogram_schematic.png" width="400" />
 </p>
 <p align="center">
-  <sup><sub>paper reference</sup></sub>
+  <sup><sub>Stokes et. al., 2022</sup></sub>
 </p>
 
 <br/>
 <br/>
 
 ## Example
-An [example script](https://github.com/preraulab/watershed_TFpeaks_toolbox/blob/master/example_script.m) is provided in the repository that takes an excerpt of a single channel of [example sleep EEG data](https://github.com/preraulab/watershed_TFpeaks_toolbox/blob/master/example_data/example_data.mat) and runs the TF-peak detection watershed algorithm and the SO-power and SO-phase analyses, plotting the resulting hypnogram, spectrogram, TF-peak scatterplot, SO-power histogram, and SO-phase histogram (shown below). It is recommended to use parallel processing to speed up the watershed and merging computation. The extract_TFpeaks function should automatically try to open parallel processing with the default number of cores. To check how many cores your machine has, use the `feature('numcores')` command. To turn on parallel processing with a specific number of cores, use the `parpool(x)` command, where x is the number of cores. 
+An [example script](https://github.com/preraulab/watershed_TFpeaks_toolbox/blob/master/example_script.m) is provided in the repository that takes an excerpt of a single channel of [example sleep EEG data](https://github.com/preraulab/watershed_TFpeaks_toolbox/blob/master/example_data/example_data.mat) and runs the TF-peak detection watershed algorithm and the SO-power and SO-phase analyses, plotting the resulting hypnogram, spectrogram, TF-peak scatterplot, SO-power histogram, and SO-phase histogram (shown below). It is recommended to use parallel processing to speed up the watershed and merging computation. The extract_TFpeaks function may automatically try to open parallel processing with the default number of cores. To check how many cores your machine has, use the `feature('numcores')` command. To turn on parallel processing with a specific number of cores, use the `parpool(x)` command, where x is the number of cores, before running the script. 
 
 <br/>
 <p align="center">
@@ -52,18 +57,30 @@ An [example script](https://github.com/preraulab/watershed_TFpeaks_toolbox/blob/
 <br/>
 <br/>
 
+## Optimizations 
+This code is an optimized version of what was used in Stokes et. al., 2022. The following is a list of the changes made during optimization. The original unoptimized paper code can be found [here](https://github.com/preraulab/watershed_TFpeaks_toolbox/tree/transient_oscillation_paper).
+* Candidate TF-Peak regions that are below the duration and bandwidth cutoffs are now removed prior to trimming and peak property calculations
+* Empty (NaN) regions that come out of the merge procedure are now removed prior to trimming and peak property calculations
+* Watershed and the merging procedure now run on a lower resolution spectrogram (downsampled from the input spectrogram using decimation) to get the rough watershed regions,w hich are then mapped back onto the high-resolution spectrogram, from which trimming and peak property calculations are done.
+
+<br/>
+<br/>
+
 ## Repository Structure
 The contents of the "toolbox" folder is organized as follows:
-* SOphase_filters:
-  - SOphase_filters.mat: File containing precomputed digital filters used in the SO-Phase calculation. If a filter is not provided as an argument to compute_SOPhase(), it will look for a suitable filter in this .mat file. Using precomputed filters saves computing time.
-* SOpowphase_functions: Functions used to compute the SO Power and Phase histograms
-  - Key Functions:
-    - SOpower_histogram: Top level function to compute SO Power histogram from EEG data and TF-peak times and frequencies.
-    - SOphase_histogram: Top level function to compute SO Phase histogram from EEG data and TF-peak times and frequencies. 
-* helper_functions: Utility functions used for plotting figures and performing generic small computations, plus the multitaper spectrogram function. 
-* watershed_functions: Functions involved in carrying out the watershed image segmentation algorithm on EEG spectrograms
-  - Key Functions:
-    - extract_TFpeaks: Top level function to run the watershed pipeline on a given spectrogram, including baseline removal, data chunking, image segmentation, peak merging, peak trimming, and calculating and saving out the TF-peak statistics.  
+* example_script
+  - Runs the full TFpeak finding algorithm, computes the SO-Power and SO-Phase histograms, and plots a summary figure. Uses example data contained in example_data folder.
+* toolbox
+  - SOphase_filters:
+    - SOphase_filters.mat: File containing precomputed digital filters used in the SO-Phase calculation. If a filter is not provided as an argument to compute_SOPhase(), it will look for a suitable filter in this .mat file. Using precomputed filters saves computing time.
+  - SOpowphase_functions: Functions used to compute the SO Power and Phase histograms
+    - Key Functions:
+      - SOpower_histogram: Top level function to compute SO Power histogram from EEG data and TF-peak times and frequencies.
+      - SOphase_histogram: Top level function to compute SO Phase histogram from EEG data and TF-peak times and frequencies. 
+  - helper_functions: Utility functions used for plotting figures and performing generic small computations, plus the multitaper spectrogram function. 
+  - watershed_functions: Functions involved in carrying out the watershed image segmentation algorithm on EEG spectrograms
+    - Key Functions:
+      - extract_TFpeaks: Top level function to run the watershed pipeline on a given spectrogram, including baseline removal, data chunking, image segmentation, peak merging, peak trimming, and calculating and saving out the TF-peak statistics.  
   
 
 <br/>
