@@ -43,7 +43,7 @@ end
 load('example_data/example_data.mat', 'EEG', 'stage_vals', 'stage_times', 'Fs');
 
 %STAGE NOTATION (in order of sleep depth)
-% W = 5, REM = 4, N1 = 3, N2 = 2, N1 = 1, Artifact = 6, Undefined = 0
+% W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
 
 % Add necessary functions to path
 addpath(genpath('./toolbox'))
