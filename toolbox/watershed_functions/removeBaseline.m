@@ -1,5 +1,8 @@
 function [spect, bl_threshold] = removeBaseline(spect, baseline, bl_thresh, CI_upper_bl, f_verb)
-% Subtract percentile baseline from spectrogram 
+% removeBaseline: Subtract percentile baseline from spectrogram 
+%
+%   Usage:
+%       [spect, bl_threshold] = removeBaseline(spect, baseline, bl_thresh, CI_upper_bl, f_verb)
 %
 % INPUTS:
 %   spect        --  2D image data used to extract TFpeaks [freq, time] --required

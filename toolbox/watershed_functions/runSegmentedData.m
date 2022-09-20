@@ -1,12 +1,18 @@
 function [matr_names, matr_fields, peaks_matr, PixelIdxList, PixelList, PixelValues, rgn, bndry, valid_peak_mask] = ...
-    runWatershedMergeTrimWrapper(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, ...
+    runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, ...
     dur_min, bw_min, conn_wshed, merge_thresh, max_merges, trim_vol, trim_shift, conn_trim, ...
     conn_stats, bl_thresh_flag, CI_upper_bl, merge_rule, f_verb, verb_pref, f_disp, f_save, ofile_pref)
-% Wrapper that runs:
+%runSegmentedData: Wrapper that runs:
 %   1. Baseline subtraction
 %   2. Spectrogram segmentation
 %   3. TFpeak extraction (watershed, merging, trimming, stats)
 %   4. TFpeak statistics packaging and saving
+%
+%   Usage:
+%       [matr_names, matr_fields, peaks_matr, PixelIdxList, PixelList, PixelValues, rgn, bndry, valid_peak_mask] = ...
+%       runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, ...
+%       dur_min, bw_min, conn_wshed, merge_thresh, max_merges, trim_vol, trim_shift, conn_trim, ...
+%       conn_stats, bl_thresh_flag, CI_upper_bl, merge_rule, f_verb, verb_pref, f_disp, f_save, ofile_pref)
 %
 % INPUTS:
 %   spect        --  2D image data used to extract TFpeaks [freq, time] --required
@@ -14,8 +20,8 @@ function [matr_names, matr_fields, peaks_matr, PixelIdxList, PixelList, PixelVal
 %   sfreqs       --  1D frequencies corresponding to the 1st dim of spect (Hertz) --required
 %   baseline     --  1D baseline spectrum used to normalize the spectrogram. default []
 %   seg_time   --  length of each segment of spectrogram to process
-%                    at a time (in seconds). Default = 15. Note that a 60s segment time is
-%                    used in the paper accompanying this code, but using 15s offers large
+%                    at a time (in seconds). Default = 30. Note that a 60s segment time is
+%                    used in the paper accompanying this code, but using 30s offers large
 %                    speedup and should not greatly affect results
 %   downsample_spect   --  2x1 double indicating number of rows and columns to downsize spect to. 
 %   dur_min      -- minimum duration allowed

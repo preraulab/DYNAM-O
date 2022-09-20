@@ -4,8 +4,14 @@ function [feature_matrix, feature_names, xywcntrd, combined_mask] = filterpeaks_
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
-%      
-%   Authors: Patrick Stokes, Thomas Possidente
+%
+%   Please provide the following citation for all use:
+%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
+%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification,
+%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%**********************************************************************
+
 
 
 

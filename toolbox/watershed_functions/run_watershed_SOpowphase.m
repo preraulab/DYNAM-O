@@ -1,7 +1,11 @@
 function [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, boundaries] = ...
     run_watershed_SOpowphase(varargin)
-% Run watershed algorithm to extract time-frequency peaks from spectrogram
-% of data, then compute Slow-Oscillation power and phase histograms
+% run_watershed_SOpowphase: run_watershed_SOpowphase: Run watershed algorithm to extract time-frequency peaks from 
+%                           spectrogram of data, then compute Slow-Oscillation power and phase histograms
+%
+% Usage:
+%       [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, 
+%       SOpow_times, boundaries] = run_watershed_SOpowphase(data, Fs, stage_times, stage_vals)
 %
 %   Inputs:
 %       data (req):             [1xn] double - timeseries data to be analyzed
@@ -183,7 +187,7 @@ if verbose
     tfp = tic;
 end
 
-[matr_names, matr_fields, peaks_matr,~,~, pixel_values,~,boundaries,~] = runWatershedMergeTrimWrapper(spect_in, stimes_in, sfreqs, baseline, seg_time, downsample_spect, dur_min, bw_min);
+[matr_names, matr_fields, peaks_matr,~,~, pixel_values,~,boundaries,~] = runSegmentedData(spect_in, stimes_in, sfreqs, baseline, seg_time, downsample_spect, dur_min, bw_min);
 
 if verbose
     disp(['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS')]);
