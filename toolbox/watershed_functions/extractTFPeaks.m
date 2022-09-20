@@ -1,6 +1,8 @@
-function [trim_matr, matr_names, matr_fields, trim_PixelIdxList,trim_PixelList, ...
-    trim_PixelValues, trim_rgn,trim_bndry,seq_time] = peaksWShedStatsSequence(img,x,y,num_segment,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
-%peaksWShedStatsSequence determines the peak regions of a 2D image and
+function [trim_matr, matr_names, matr_fields, trim_PixelIdxList, trim_PixelList, ...
+    trim_PixelValues, trim_rgn, trim_bndry, seq_time] = extractTFPeaks(img,x,y,num_segment,conn_wshed,...
+    merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,conn_stats,...
+    bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
+% determines the peak regions of a 2D image and
 % extracts a set of features for each. It uses peaksWShed, regionMergeByWeight,
 % trimRegionsWShed, and peaksWShedStats_LData.
 %
@@ -46,9 +48,14 @@ function [trim_matr, matr_names, matr_fields, trim_PixelIdxList,trim_PixelList, 
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
+%      
+%   Please provide the following citation for all use:
+%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach, 
+%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis 
+%       for Electroencephalographic Phenotyping and Biomarker Identification, 
+%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
 %
-%   Authors: Patrick Stokes, Thomas Possidente, Michael Prerau
-%
+%**********************************************************************
 
 %*************************
 % Handle variable inputs *
@@ -156,7 +163,7 @@ if isempty(trim_vol)
 end
 % floor level from which trim volume is evaluated
 if isempty(trim_shift)
-    trim_shift = min(min(img_LR));
+    trim_shift = min(img,[],'all');
 end
 % connection parameter used in trimming regions
 if isempty(conn_trim)
@@ -196,17 +203,21 @@ else
 end
 
 %*************************************
-% Watershed-segment input data image *
+%   Run watershed and create graph   *
 %*************************************
 t_start = now;
 if f_verb > 0
-    disp([verb_pref 'Starting wshed stats sequence...']);
-    disp([verb_pref '  Starting wshed...']);
+    disp([verb_pref 'Computing watershed and building graph...']);
     ttic = tic;
 end
-[rgn, rgn_lbls, Lborders, amatr] = peaksWShed(img_LR,conn_wshed,bl_thresh,f_verb-1,['    ' verb_pref],f_disp);
+%Run the watershed
+Ldata = runWatershed(img_LR,conn_wshed,bl_thresh,f_verb-1,['    ' verb_pref],f_disp);
+
+%Convert labeled region to graph
+[rgn, rgn_lbls, Lborders, adj_list] = Ldata2graph(Ldata,[],f_disp);
+
 if f_verb > 0
-    disp([verb_pref '    wshed took: ' num2str(toc(ttic)) ' seconds.']);
+    disp([verb_pref '    watershed took: ' num2str(toc(ttic)) ' seconds.']);
 end
 
 %**************************************************
@@ -216,7 +227,9 @@ if f_verb > 0
     disp([verb_pref '  Starting merge...']);
     ttic = tic;
 end
-[rgn, bndry] = regionMergeByWeight(img_LR,rgn,rgn_lbls,Lborders,amatr,merge_thresh,max_merges,merge_rule,f_verb-1,['     ' verb_pref],f_disp);
+
+[rgn, bndry] = mergeWshedSegment(img_LR,rgn,rgn_lbls,Lborders,adj_list,merge_thresh,max_merges,merge_rule,f_verb-1,['     ' verb_pref],f_disp);
+
 if f_verb > 0
     disp([verb_pref '    merge took: ' num2str(toc(ttic)) ' seconds.']);
 end
@@ -226,7 +239,7 @@ end
 %*********************************************************************
 if ~isempty(downsample_spect)
     %UPSCALE THE LABELED IMAGE
-    Ldata = zeros(size(img_LR));
+    Ldata = zeros(size(img_LR),"uint16");
     
     %Create the labeled image and skip empty regions
     num_regions = 1;
@@ -249,7 +262,7 @@ if ~isempty(downsample_spect)
         rgn_HR{ii} = find(LdataHR == ii);
     end
 else
-    rgn_HR = rgn;%(cellfun(@(x)~isempty(x),rgn));
+    rgn_HR = rgn;
 end
 
 %%
@@ -275,7 +288,7 @@ if trim_vol < 1 && trim_vol > 0
         disp([verb_pref '  Starting trim to ' num2str(100*trim_vol) ' percent volume...']);
         ttic = tic;
     end
-    [trim_rgn, trim_bndry] = trimRegionsWShed(img,rgn_HR,trim_vol,trim_shift,conn_trim,dur_min,bw_min,f_verb-1,['    ' verb_pref],f_disp);
+    [trim_rgn, trim_bndry] = trimWshedRegions(img,rgn_HR,trim_vol,trim_shift,conn_trim,f_verb-1,['    ' verb_pref],f_disp);
     if f_verb > 0
         disp([verb_pref '    trim took: ' num2str(toc(ttic)) ' seconds.']);
     end
@@ -294,18 +307,12 @@ if f_verb > 0
     disp([verb_pref '  Starting stats...']);
     ttic = tic;
 end
-[trim_matr, matr_names, matr_fields, trim_PixelIdxList,trim_PixelList, trim_PixelValues, ...
-    trim_rgn,trim_bndry] = peaksWShedStats_LData(trim_rgn,trim_bndry,img,x,y,num_segment,conn_stats,f_verb-1,['    ' verb_pref]);
+[trim_matr, matr_names, matr_fields, trim_PixelIdxList, trim_PixelList, trim_PixelValues, ...
+    trim_rgn,trim_bndry] = computePeakStats(trim_rgn,trim_bndry,img,x,y,num_segment,conn_stats,f_verb-1,['    ' verb_pref]);
 seq_time = (now-t_start)/datenum([0 0 0 0 0 1]);
 if f_verb > 0
     disp([verb_pref '    stats took: ' num2str(toc(ttic)) ' seconds.']);
     disp([verb_pref 'Sequence took ' num2str(seq_time/60) ' minutes.']);
 end
 
-%     catch tmp_error
-%         disp(['Chunk ' num2str(ii) ' hit an error: ']);
-%         bad_chunks(ii) = true;
-%         chunk_error{ii} = tmp_error;
-%         disp( tmp_error.identifier);
-%     end
-%     % end
+end
