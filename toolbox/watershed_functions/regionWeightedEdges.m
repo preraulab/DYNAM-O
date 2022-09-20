@@ -28,10 +28,6 @@ function e_wts = regionWeightedEdges(rgn,data,rgn_lbls,rgn_bnds,amatr,merge_rule
 %
 %   Authors: Patrick Stokes, Thomas Possidente, Michael Prerau
 %
-% Created:  20171015 -- forked from version in wshed1
-% Modified: 20190219 -- cleaned up for toolbox
-%           20171016 -- to handle cell array form of rgn
-%
 
 if nargin < 8
     verb_pref = [];
@@ -110,9 +106,6 @@ else
 
             % Compute current edge weight
             e_wts(ii)  = edgeWeightEqual(rgn_ii,bnds_ii,rgn_jj,bnds_jj,data);
-            
-            %Old directed edge weight where weight(a,b) ~= weight(b,a)
-            %e = edgeWeight(bnds_ii,bnds_jj,rgn_jj,data)
         end
     else
         if f_verb>0

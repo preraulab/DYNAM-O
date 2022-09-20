@@ -80,7 +80,7 @@ end
 
 if nargin < 4 || isempty(seg_time)
     % maximum segment duration in seconds
-    seg_time = 15;
+    seg_time = 30;
 end
 
 if nargin < 5 || isempty(conn_wshed)
@@ -174,7 +174,7 @@ data_segs = cell(n_segs,1);
 x_segs = cell(n_segs,1);
 
 if f_verb > 0
-    disp([verb_pref 'Segmenting data into ' num2str(n_segs) ' ' num2str(seg_time) 's intervals...']);
+    disp([verb_pref 'Segmenting data into ' num2str(n_segs) ', ' num2str(seg_time) '-second intervals...']);
 end
 
 for ii = 1:n_segs
@@ -228,10 +228,10 @@ if n_segs > 1
             [segs_peaks_matr{ii}, segs_matr_names{ii}, segs_matr_fields{ii}, ...
                 segs_PixelIdxList{ii},segs_PixelList{ii},segs_PixelValues{ii}, ...
                 segs_rgn{ii},segs_bndry{ii},segs_time(ii)] = peaksWShedStatsSequence(data_segs{ii},x_segs{ii},sfreqs,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
-            
-%             if f_verb > 0
-%                 disp([verb_pref '  Segment ' num2str(ii) ' took ' num2str(segs_time(ii)) ' seconds.']);
-%             end
+
+            %if f_verb > 0
+            %    disp([verb_pref '  Segment ' num2str(ii) ' took ' num2str(segs_time(ii)) ' seconds.']);
+            %end
         end
 
         % Update loading bar
@@ -251,14 +251,14 @@ else
         [segs_peaks_matr{ii}, segs_matr_names{ii}, segs_matr_fields{ii}, ...
             segs_PixelIdxList{ii},segs_PixelList{ii},segs_PixelValues{ii}, ...
             segs_rgn{ii},segs_bndry{ii},segs_time(ii)] = peaksWShedStatsSequence(data_segs{ii},x_segs{ii},sfreqs,ii,conn_wshed,merge_thresh,max_merges,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
-        
+
         if f_verb > 0
             disp([verb_pref '  seg ' num2str(ii) ' took ' num2str(segs_time(ii)) ' seconds.']);
         end
     end
 end
 
-    %Add a parallel friendly waitbar
+%Add a parallel friendly waitbar
     function nUpdateWaitbar(~)
         waitbar(segments_processed/n_segs, h, [num2str(segments_processed) ' out of ' num2str(n_segs) ' (' num2str((segments_processed/n_segs*100),'%.2f') '%) segments processed...']);
         segments_processed = segments_processed + 1;

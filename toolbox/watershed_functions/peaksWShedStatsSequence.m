@@ -249,7 +249,7 @@ if ~isempty(downsample_spect)
         rgn_HR{ii} = find(LdataHR == ii);
     end
 else
-    rgn_HR = rgn;%(cellfun(@(x)~isempty(x),rgn));
+    rgn_HR = rgn;
 end
 
 %%
@@ -275,7 +275,7 @@ if trim_vol < 1 && trim_vol > 0
         disp([verb_pref '  Starting trim to ' num2str(100*trim_vol) ' percent volume...']);
         ttic = tic;
     end
-    [trim_rgn, trim_bndry] = trimRegionsWShed(img,rgn_HR,trim_vol,trim_shift,conn_trim,dur_min,bw_min,f_verb-1,['    ' verb_pref],f_disp);
+    [trim_rgn, trim_bndry] = trimRegionsWShed(img,rgn_HR,trim_vol,trim_shift,conn_trim,f_verb-1,['    ' verb_pref],f_disp);
     if f_verb > 0
         disp([verb_pref '    trim took: ' num2str(toc(ttic)) ' seconds.']);
     end
