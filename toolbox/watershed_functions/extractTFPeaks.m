@@ -1,6 +1,8 @@
-function [trim_matr, matr_names, matr_fields, trim_PixelIdxList,trim_PixelList, ...
-    trim_PixelValues, trim_rgn,trim_bndry,seq_time] = extractTFPeaks(img,x,y,num_segment,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
-%peaksWShedStatsSequence determines the peak regions of a 2D image and
+function [trim_matr, matr_names, matr_fields, trim_PixelIdxList, trim_PixelList, ...
+    trim_PixelValues, trim_rgn, trim_bndry, seq_time] = extractTFPeaks(img,x,y,num_segment,conn_wshed,...
+    merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,conn_stats,...
+    bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
+% determines the peak regions of a 2D image and
 % extracts a set of features for each. It uses peaksWShed, regionMergeByWeight,
 % trimRegionsWShed, and peaksWShedStats_LData.
 %
@@ -212,7 +214,7 @@ end
 Ldata = runWatershed(img_LR,conn_wshed,bl_thresh,f_verb-1,['    ' verb_pref],f_disp);
 
 %Convert labeled region to graph
-[rgn, rgn_lbls, Lborders, amatr] = Ldata2graph(Ldata,[],f_disp);
+[rgn, rgn_lbls, Lborders, adj_list] = Ldata2graph(Ldata,[],f_disp);
 
 if f_verb > 0
     disp([verb_pref '    watershed took: ' num2str(toc(ttic)) ' seconds.']);
@@ -226,7 +228,7 @@ if f_verb > 0
     ttic = tic;
 end
 
-[rgn, bndry] = regionMergeByWeight(img_LR,rgn,rgn_lbls,Lborders,amatr,merge_thresh,max_merges,merge_rule,f_verb-1,['     ' verb_pref],f_disp);
+[rgn, bndry] = mergeWshedSegment(img_LR,rgn,rgn_lbls,Lborders,adj_list,merge_thresh,max_merges,merge_rule,f_verb-1,['     ' verb_pref],f_disp);
 
 if f_verb > 0
     disp([verb_pref '    merge took: ' num2str(toc(ttic)) ' seconds.']);
@@ -286,7 +288,7 @@ if trim_vol < 1 && trim_vol > 0
         disp([verb_pref '  Starting trim to ' num2str(100*trim_vol) ' percent volume...']);
         ttic = tic;
     end
-    [trim_rgn, trim_bndry] = trimRegionsWShed(img,rgn_HR,trim_vol,trim_shift,conn_trim,f_verb-1,['    ' verb_pref],f_disp);
+    [trim_rgn, trim_bndry] = trimWshedRegions(img,rgn_HR,trim_vol,trim_shift,conn_trim,f_verb-1,['    ' verb_pref],f_disp);
     if f_verb > 0
         disp([verb_pref '    trim took: ' num2str(toc(ttic)) ' seconds.']);
     end
@@ -305,18 +307,12 @@ if f_verb > 0
     disp([verb_pref '  Starting stats...']);
     ttic = tic;
 end
-[trim_matr, matr_names, matr_fields, trim_PixelIdxList,trim_PixelList, trim_PixelValues, ...
-    trim_rgn,trim_bndry] = peaksWShedStats_LData(trim_rgn,trim_bndry,img,x,y,num_segment,conn_stats,f_verb-1,['    ' verb_pref]);
+[trim_matr, matr_names, matr_fields, trim_PixelIdxList, trim_PixelList, trim_PixelValues, ...
+    trim_rgn,trim_bndry] = computePeakStats(trim_rgn,trim_bndry,img,x,y,num_segment,conn_stats,f_verb-1,['    ' verb_pref]);
 seq_time = (now-t_start)/datenum([0 0 0 0 0 1]);
 if f_verb > 0
     disp([verb_pref '    stats took: ' num2str(toc(ttic)) ' seconds.']);
     disp([verb_pref 'Sequence took ' num2str(seq_time/60) ' minutes.']);
 end
 
-%     catch tmp_error
-%         disp(['Chunk ' num2str(ii) ' hit an error: ']);
-%         bad_chunks(ii) = true;
-%         chunk_error{ii} = tmp_error;
-%         disp( tmp_error.identifier);
-%     end
-%     % end
+end

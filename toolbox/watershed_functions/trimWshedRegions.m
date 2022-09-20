@@ -1,5 +1,5 @@
-function [trimmed_regions, trimmed_borders] = trimRegionsWShed(data,regions,vol_thresh,shift_val,conn,f_verb,verb_pref,f_disp)
-%trimRegionsWShed takes data and regions from peaksWShed and regionsMergeByWeight
+function [trimmed_regions, trimmed_borders] = trimWshedRegions(data,regions,vol_thresh,shift_val,conn,f_verb,verb_pref,f_disp)
+% takes data and regions from peaksWShed and regionsMergeByWeight
 % and trims the regions to a certain fraction of volume.
 %    
 % INPUTS:
@@ -24,7 +24,13 @@ function [trimmed_regions, trimmed_borders] = trimRegionsWShed(data,regions,vol_
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %      
-%   Authors: Patrick Stokes, Thomas Possidente, Michael Prerau
+%   Please provide the following citation for all use:
+%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach, 
+%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis 
+%       for Electroencephalographic Phenotyping and Biomarker Identification, 
+%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%
+%**********************************************************************
 
 
 %*******************************
