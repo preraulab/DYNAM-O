@@ -19,14 +19,14 @@ clear; close all; clc;
 
 %% SETTINGS
 %Select 'segment' or 'night' for example data range
-data_range = 'segment';
+data_range = 'night';
 
 %Settings for computing watershed
 % 'precision': high res settings
 % 'fast': ~2x speed-up with minimal impact on results *suggested*
-% 'draft': ~5x speed-up speed-up, increased high frequency TF-peaks
+% 'draft': ~5x speed-up with increased high frequency TF-peaks
 
-spect_settings = 'draft';
+spect_settings = 'fast';
 
 %Save figure image
 save_output_image = false;
@@ -211,7 +211,7 @@ set(th,'fontsize',15)
 %% PRINT OUTPUT
 if save_output_image
     %Output filename
-    output_fname = ['toolbox_example_' data_range '_' spect_settings '.png'];
+    output_fname = ['toolbox_example_' data_range '_' spect_settings '.png']; %#ok<UNRCH>
     print(gcf,'-dpng','-r200',output_fname);
 end
 
