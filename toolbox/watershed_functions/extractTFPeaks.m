@@ -2,9 +2,15 @@ function [trim_matr, matr_names, matr_fields, trim_PixelIdxList, trim_PixelList,
     trim_PixelValues, trim_rgn, trim_bndry, seq_time] = extractTFPeaks(img,x,y,num_segment,conn_wshed,...
     merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,conn_stats,...
     bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
-% determines the peak regions of a 2D image and
+% extractTFPeaks: determines the peak regions of a 2D image and
 % extracts a set of features for each. It uses peaksWShed, regionMergeByWeight,
 % trimRegionsWShed, and peaksWShedStats_LData.
+%
+%   Usage:
+%       [trim_matr, matr_names, matr_fields, trim_PixelIdxList, trim_PixelList, ...
+%       trim_PixelValues, trim_rgn, trim_bndry, seq_time] = extractTFPeaks(img,x,y,num_segment,conn_wshed,...
+%       merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,conn_stats,...
+%       bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
 %
 % INPUTS:
 %   img         -- 2D matrix of image data. defaults to peaks(100).
