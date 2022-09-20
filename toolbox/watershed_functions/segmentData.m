@@ -1,5 +1,5 @@
 function  [matr_names, matr_fields, peaks_matr,PixelIdxList,PixelList,PixelValues,...
-    rgn,bndry, segs_time, bad_segs,seg_error] = peaksWShedStatsWrapper(spect,stimes,sfreqs,seg_time,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
+    rgn,bndry, segs_time, bad_segs,seg_error] = segmentData(spect,stimes,sfreqs,seg_time,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
 %peaksWShedStatsWrapper determines the peak regions of a 2D image and
 % extracts a set of features for each. It initially divides the data into
 % segs to allow parallel computation of peaks and processing of larger images.

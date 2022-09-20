@@ -1,4 +1,4 @@
-function [rgn, rgn_lbls, Lborders, amatr, data] = peaksWShed( data , conn, bl_thresh, f_verb, verb_pref, f_disp )
+function [rgn, rgn_lbls, Lborders, amatr, data] = runWatershed( data , conn, bl_thresh, f_verb, verb_pref, f_disp )
 %peaksWShed determines peak regions using matlab watershed function.
 % It uses labelWShedBorders_imdilate to label border pixels and determine
 % region adjacencies.
@@ -131,9 +131,6 @@ end
 if f_verb > 0
     disp([verb_pref 'Labeling watershed borders...']);
 end
-
-%Get all the neighbors of each region by dialating the borders
-[rgn,rgn_lbls,Lborders,amatr] = labelWShedBorders_imdilate(Ldata, exclusion_val, f_disp-1);
 
 end
 

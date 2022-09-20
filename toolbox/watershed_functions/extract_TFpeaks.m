@@ -81,12 +81,7 @@ if nargin < 4 || isempty(baseline)
 end
 
 if nargin < 5 || isempty(seg_time)
-    % chunk size should be number of pixels in 1 min of data
-    %     dt = stimes(2) - stimes(1);
-    %     desired_chunk_time = 15; % seconds
-    %     num_stimes = desired_chunk_time/dt;
-    %     max_area = num_stimes*length(sfreqs); %487900
-    seg_time = 15; % seconds
+    seg_time = 30; % seconds
 end
 
 if nargin < 6 || isempty(downsample_spect)
@@ -159,10 +154,6 @@ end
 
 if nargin < 23 || isempty(ofile_pref)
     ofile_pref = 'tmp/';
-end
-
-if nargin < 24 || isempty(SD)
-    SD = 1;
 end
 
 %******************
