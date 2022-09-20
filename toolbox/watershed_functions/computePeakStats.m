@@ -1,6 +1,5 @@
-function [ peaks_matr, matr_names, matr_fields, PixelIdxList, PixelList, PixelValues, rgn, bndry] = peaksWShedStats_LData(regions,boundaries,data,xaxis,yaxis,chunk_num,conn,f_verb,verb_pref)
-% peaksWShedStats_LData gets the region properties for the peaks obtained 
-% from peaksWShed, regionsMergeByWeight, and trimRegionsWShed.
+function [ peaks_matr, matr_names, matr_fields, PixelIdxList, PixelList, PixelValues, rgn, bndry] = computePeakStats(regions,boundaries,data,xaxis,yaxis,chunk_num,conn,f_verb,verb_pref)
+% gets the region properties for the peaks 
 %
 % INPUTS:
 %   regions    -- 1D cell array of vector lists of linear idx of all pixels for each region.
@@ -29,7 +28,13 @@ function [ peaks_matr, matr_names, matr_fields, PixelIdxList, PixelList, PixelVa
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %      
-%   Authors: Patrick Stokes, Thomas Possidente, Michael Prerau
+%   Please provide the following citation for all use:
+%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach, 
+%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis 
+%       for Electroencephalographic Phenotyping and Biomarker Identification, 
+%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%
+%**********************************************************************
 
 %*************************
 % Handle variable inputs *
