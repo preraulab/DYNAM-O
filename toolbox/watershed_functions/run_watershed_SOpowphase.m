@@ -42,10 +42,13 @@ function [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bin
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
-%
-%   Authors: Patrick Stokes, Thomas Possidente, Michael Prerau
-%
-% Created on: 06/24/2022
+%      
+%   Please provide the following citation for all use:
+%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach, 
+%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis 
+%       for Electroencephalographic Phenotyping and Biomarker Identification, 
+%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%**********************************************************************
 
 %% Parse Inputs
 p = inputParser;
@@ -136,9 +139,9 @@ dur_min = time_window_params(1)/2;
 if verbose
     disp('Computing TF-peak spectrogram...')
 
-    try
+    if exist(['multitaper_spectrogram_coder_mex.' mexext],'file')
         [spect,stimes,sfreqs] = multitaper_spectrogram_mex(data, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
-    catch
+    else
         [spect,stimes,sfreqs] = multitaper_spectrogram(data, Fs, freq_range, taper_params, time_window_params, NFFT, detrend, weight, ploton, mts_verbose);
         warning(sprintf('Unable to use mex version of multitaper_spectrogram. Using compiled multitaper spectrogram function will greatly increase the speed of this computaton. \n\nFind mex code at:\n    https://github.com/preraulab/multitaper_toolbox'));
     end
