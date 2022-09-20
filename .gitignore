@@ -2,3 +2,4 @@ results/*
 archive/*
 *.DS_store
 output_images/*
+tests/*

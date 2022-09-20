@@ -43,9 +43,12 @@ function [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bin
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %
-%   Authors: Patrick Stokes, Thomas Possidente, Michael Prerau
-%
-% Created on: 06/24/2022
+%   Please provide the following citation for all use:
+%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
+%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification,
+%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%**********************************************************************
 
 %% Parse Inputs
 p = inputParser;
@@ -94,22 +97,21 @@ ttotal = tic;
 time_window_params = [1,0.05]; % [time window, time step] in seconds
 dsfreqs = 0.1; % For consistency with our results we expect a df of 0.1 Hz or less
 
-
-
-if isnumeric(spect_settings)
+if isnumeric(spect_settings) % If spect_settings is numeric use it, and don't downsample
     time_window_params = spect_settings(1:2);
     dsfreqs = spect_settings(3);
+    downsample_spect = [];
 else
     switch lower(spect_settings)
         case {'paper'} %Matches SLEEP paper settings exactly
-               downsample_spect = [];
-                seg_time = 60;
+            downsample_spect = [];
+            seg_time = 60;
         case {'precision'} %Matches SLEEP paper settings but smaller segments for speed
-               downsample_spect = [];
-                seg_time = 30;
+            downsample_spect = [];
+            seg_time = 30;
         case 'fast' %~3x speed improvement with little accuracy reduction
-              downsample_spect = [2 2];
-              seg_time = 30;
+            downsample_spect = [2 2];
+            seg_time = 30;
         case 'draft' %10x speed improvement with but phase shift
             downsample_spect = [5 1];
             seg_time = 30;
@@ -135,14 +137,15 @@ dur_min = time_window_params(1)/2;
 
 if verbose
     disp('Computing TF-peak spectrogram...')
-
-    try
-        [spect,stimes,sfreqs] = multitaper_spectrogram_mex(data, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
-    catch
-        [spect,stimes,sfreqs] = multitaper_spectrogram(data, Fs, freq_range, taper_params, time_window_params, NFFT, detrend, weight, ploton, mts_verbose);
-        warning(sprintf('Unable to use mex version of multitaper_spectrogram. Using compiled multitaper spectrogram function will greatly increase the speed of this computaton. \n\nFind mex code at:\n    https://github.com/preraulab/multitaper_toolbox'));
-    end
 end
+
+if exist(['multitaper_spectrogram_coder_mex.' mexext],'file')
+    [spect,stimes,sfreqs] = multitaper_spectrogram_mex(data, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
+else
+    [spect,stimes,sfreqs] = multitaper_spectrogram(data, Fs, freq_range, taper_params, time_window_params, NFFT, detrend, weight, ploton, mts_verbose);
+    warning(sprintf('Unable to use mex version of multitaper_spectrogram. Using compiled multitaper spectrogram function will greatly increase the speed of this computaton. \n\nFind mex code at:\n    https://github.com/preraulab/multitaper_toolbox'));
+end
+
 
 %% Compute baseline spectrum used to flatten data spectrum
 if verbose
@@ -180,7 +183,7 @@ if verbose
     tfp = tic;
 end
 
-[matr_names, matr_fields, peaks_matr,~,~, pixel_values,~,boundaries] = extract_TFpeaks(spect_in, stimes_in, sfreqs, baseline, seg_time, downsample_spect, dur_min, bw_min);
+[matr_names, matr_fields, peaks_matr,~,~, pixel_values,~,boundaries,~] = runWatershedMergeTrimWrapper(spect_in, stimes_in, sfreqs, baseline, seg_time, downsample_spect, dur_min, bw_min);
 
 if verbose
     disp(['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS')]);
