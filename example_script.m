@@ -1,5 +1,18 @@
-%%%% Example script showing how to compute time-frequency peaks and SO-power/phase histograms for an example 
-%    night or segment of data
+%Example Script to Run TF-peak Extraction and Create SO-power/phase Histograms
+%
+%   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
+%   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
+%   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
+%      
+%   Please provide the following citation for all use:
+%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach, 
+%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis 
+%       for Electroencephalographic Phenotyping and Biomarker Identification, 
+%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%
+%**********************************************************************
+
+%%%% Example script showing how to compute time-frequency peaks and SO-power/phase histograms
 %% PREPARE DATA
 %Clear workspace and close plots
 clear; close all; clc;
@@ -9,13 +22,9 @@ clear; close all; clc;
 data_range = 'night';
 
 %Settings for computing watershed
-% 'precision': high resolution settings
+% 'precision': high res settings
 % 'fast': ~2x speed-up with minimal impact on results *suggested*
-% 'draft': ~5x speed-up, increased high frequency TF-peaks compared to
-%          other settings
-%
-% 'paper': *not recommended* exact settings from SLEEP 2022 paper.
-%         Nearly exact same results as 'precision' but ~2x slower
+% 'draft': ~5x speed-up speed-up, increased high frequency TF-peaks
 
 spect_settings = 'draft';
 
@@ -56,10 +65,10 @@ end
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
 [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, boundaries] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range, 'spect_settings', spect_settings);
 
-%% PLOT RESULTS FIGURE
-% Comptue spectrogram for display
+%% COMPUTE SPECTROGRAM FOR DISPLAY
 [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(EEG, Fs, [4,25],[15 29], [30 15],[],'linear',[],false, false);
 
+% PLOT RESULTS FIGURE
 % Create figure
 fh = figure('Color',[1 1 1],'units','inches','position',[0 0 8.5 11]);
 orient portrait;

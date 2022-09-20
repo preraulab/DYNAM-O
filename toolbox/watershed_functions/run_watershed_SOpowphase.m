@@ -43,9 +43,12 @@ function [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bin
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %
-%   Authors: Patrick Stokes, Thomas Possidente, Michael Prerau
-%
-% Created on: 06/24/2022
+%   Please provide the following citation for all use:
+%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
+%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification,
+%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%**********************************************************************
 
 %% Parse Inputs
 p = inputParser;
@@ -94,7 +97,7 @@ ttotal = tic;
 time_window_params = [1,0.05]; % [time window, time step] in seconds
 dsfreqs = 0.1; % For consistency with our results we expect a df of 0.1 Hz or less
 
-if isnumeric(spect_settings) % if spect settings are numeric, use them and do not downsample
+if isnumeric(spect_settings) % If spect_settings is numeric use it, and don't downsample
     time_window_params = spect_settings(1:2);
     dsfreqs = spect_settings(3);
     downsample_spect = [];
@@ -123,33 +126,33 @@ nfft = 2^(nextpow2(Fs/dsfreqs)); % zero pad data to this minimum value for fft
 detrend = 'off'; % do not detrend
 weight = 'unity'; % each taper is weighted the same
 ploton = false; % do not plot out
-mts_verbose = false; % do not display extra info
+mts_verbose = false;
 
 %MST frequency resolution
 df = taper_params(1)/time_window_params(1)*2;
 
-%Set min bandwidth and duration of TFpeaks based on spectral parameters
+%Set min bandwidth and duration based on spectral parameters
 bw_min = df/2;
 dur_min = time_window_params(1)/2;
 
 if verbose
     disp('Computing TF-peak spectrogram...')
-
-    try
-        [spect,stimes,sfreqs] = multitaper_spectrogram_mex(data, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
-    catch
-        [spect,stimes,sfreqs] = multitaper_spectrogram(data, Fs, freq_range, taper_params, time_window_params, NFFT, detrend, weight, ploton, mts_verbose);
-        warning(sprintf('Unable to use mex version of multitaper_spectrogram. Using compiled multitaper spectrogram function will greatly increase the speed of this computaton. \n\nFind mex code at:\n    https://github.com/preraulab/multitaper_toolbox'));
-    end
 end
+
+if exist(['multitaper_spectrogram_coder_mex.' mexext],'file')
+    [spect,stimes,sfreqs] = multitaper_spectrogram_mex(data, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
+else
+    [spect,stimes,sfreqs] = multitaper_spectrogram(data, Fs, freq_range, taper_params, time_window_params, NFFT, detrend, weight, ploton, mts_verbose);
+    warning(sprintf('Unable to use mex version of multitaper_spectrogram. Using compiled multitaper spectrogram function will greatly increase the speed of this computaton. \n\nFind mex code at:\n    https://github.com/preraulab/multitaper_toolbox'));
+end
+
 
 %% Compute baseline spectrum used to flatten data spectrum
 if verbose
     disp('Performing artifact rejection...')
 end
 
-% detect artifacts in EEG
-artifacts = detect_artifacts(data, Fs, [],[],[],[],[],[],[],[],[], ... 
+artifacts = detect_artifacts(data, Fs, [],[],[],[],[],[],[],[],[], ... % detect artifacts in EEG
     artifact_filters.hpFilt_high, artifact_filters.hpFilt_broad, artifact_filters.detrend_filt);
 artifacts_stimes = logical(interp1(t, double(artifacts), stimes, 'nearest')); % get artifacts occuring at spectrogram times
 
@@ -160,7 +163,7 @@ lightson_time = min( max(t(~ismember(stage_vals,[5,0])))+lightsonoff_mins*60, ma
 % Get invalid times for baseline computation
 invalid_times = (stimes > lightson_time & stimes < lightsoff_time) & artifacts_stimes;
 
-spect_bl = spect; 
+spect_bl = spect;
 spect_bl(:,invalid_times) = NaN; % turn artifact times into NaNs for percentile computation
 spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
 
@@ -180,7 +183,7 @@ if verbose
     tfp = tic;
 end
 
-[matr_names, matr_fields, peaks_matr,~,~, pixel_values,~,boundaries] = extract_TFpeaks(spect_in, stimes_in, sfreqs, baseline, seg_time, downsample_spect, dur_min, bw_min);
+[matr_names, matr_fields, peaks_matr,~,~, pixel_values,~,boundaries,~] = runWatershedMergeTrimWrapper(spect_in, stimes_in, sfreqs, baseline, seg_time, downsample_spect, dur_min, bw_min);
 
 if verbose
     disp(['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS')]);
@@ -195,7 +198,7 @@ end
 
 [feature_matrix, feature_names, xywcntrd, peak_mask] = filterpeaks_watershed(peaks_matr, matr_fields, matr_names, pixel_values);
 
-boundaries = boundaries(peak_mask,:); % Get pixel boundaries of all TFpeaks
+boundaries = boundaries(peak_mask,:);
 
 %% Compute SO power and SO phase
 % Exclude WAKE stages from analyses
