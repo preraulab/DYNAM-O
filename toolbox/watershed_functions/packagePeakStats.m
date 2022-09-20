@@ -1,8 +1,13 @@
 function [matr_names, matr_fields, peaks_matr, PixelIdxList ,PixelList, PixelValues, rgn, bndry] = ...
     packagePeakStats(segs_rgn, segs_bndry, segs_matr_names, segs_PixelValues, segs_PixelList,...
     segs_PixelIdxList, segs_matr_fields, segs_peaks_matr, verb_pref, f_verb)
-% Packages the TFpeak data (boundaries, pixels, values, statistics) from
+% packagePeakStats: Packages the TFpeak data (boundaries, pixels, values, statistics) from
 % each segment into single matrix and cell arrays
+%
+%   Usage:
+%       [matr_names, matr_fields, peaks_matr, PixelIdxList ,PixelList, PixelValues, rgn, bndry] = ...
+%       packagePeakStats(segs_rgn, segs_bndry, segs_matr_names, segs_PixelValues, segs_PixelList,...
+%       segs_PixelIdxList, segs_matr_fields, segs_peaks_matr, verb_pref, f_verb)
 %
 % INPUTS:
 %   segs_rgn: cell array of pixel indices of each region for each segment
