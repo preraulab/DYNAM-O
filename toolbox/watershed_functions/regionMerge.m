@@ -27,14 +27,13 @@ function [rgn, brdrs, ematr, pick_update] = regionMerge(rgn,a,b,lbls,brdrs,ematr
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %      
-%   Authors: Patrick Stokes
-%
-% Created on: 20171016 -- forked from version in wshed1;
-% Modified: 20190422 -- avoids unique in fill-hole
-%           20190215 -- cleaned up for toolbox
+%   Please provide the following citation for all use:
+%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach, 
+%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis 
+%       for Electroencephalographic Phenotyping and Biomarker Identification, 
+%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
 %
 %**********************************************************************
-
 
 if nargin < 6
     ematr = [];
@@ -55,23 +54,6 @@ if ~isempty(brdrs)
     brdr_a = brdrs{a_lbl_idx};
 end
 
-%***
-% Debug segment to check for prior holes 
-%***
-% nbrs = ematr(ematr(:,1)==a,2);
-% nbrs = [nbrs; ematr(ematr(:,2)==a,1)];
-% nbrs = unique(nbrs);
-% for ii = 1:length(nbrs)
-%     cnx1 = ematr(:,1)==nbrs(ii);
-%     cnx2 = ematr(:,2)==nbrs(ii);
-%     tmp = unique([ematr(cnx1,2); ematr(cnx2,1)]);
-%     if length(tmp)==1 && tmp(1)==a
-%         disp(['found a prior hole ' num2str(nbrs(ii)) ' in ' num2str(a)]);
-%         disp(b);
-%     end
-% end
-
-
 for ii = 1:length(b)
     b_lbl_idx = lbls==b(ii);
     rgn_b_lidx = rgn{b_lbl_idx};
@@ -90,18 +72,7 @@ for ii = 1:length(b)
         cnx_b1 = ematr(:,1)==b(ii);
         cnx_b2 = ematr(:,2)==b(ii);
         ematr(cnx_b1,1) = a;
-        ematr(cnx_b2,2) = a;
-        
-%***
-% Old version that checks all neighbors to fill 
-%***
-%         cnx_a = ematr(:,1)==a | ematr(:,2)==a;
-%         ematr(cnx_a,3) = NaN;
-%         [~,uidx] = unique(ematr(:,1:2),'rows');
-%         ematr = ematr(uidx,:);
-%         ematr = ematr(ematr(:,1)~=ematr(:,2),:);
-%         nbrs = [ematr(ematr(:,1)==a,2); ematr(ematr(:,2)==a,1)];
-%         nbrs = unique(nbrs);
+        ematr(cnx_b2,2) = a;       
 
 %***
 % Second version that looks for single-region holes
@@ -128,17 +99,8 @@ for ii = 1:length(b)
                 ematr(cnx2,2) = a;
             end
             
-        end
-        
-        
+        end 
     end
-    
-%     if ~isempty(chlds)
-%         if isempty(chlds{a_lbl_idx})
-%             chlds{a_lbl_idx} = [];
-%         end
-%         chlds{a_lbl_idx} = unique([chlds{a_lbl_idx} b chlds{b_lbl_idx}]);
-%     end
 end
 
 cnx_a = ematr(:,1)==a | ematr(:,2)==a;

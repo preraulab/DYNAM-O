@@ -29,15 +29,7 @@ function [ peaks_matr, matr_names, matr_fields, PixelIdxList, PixelList, PixelVa
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %      
-%   Authors: Patrick Stokes
-%
-% Created on: 2017-05-19
-% Modified: 20190422 -- improved speed based on profiler: 
-%                         -avoids find of MaxIntensity using index in PixelValues 
-%                         -removes solidity from call to regionprops
-%           20190301 -- input order changed. boundaries now 2nd.
-%
-%
+%   Authors: Patrick Stokes, Thomas Possidente, Michael Prerau
 
 %*************************
 % Handle variable inputs *
@@ -155,26 +147,10 @@ if f_valid_inputs
     cc_props(end).ConvexArea = [];
     cc_props(end).FilledArea = [];
     cc_props(end).Solidity = [];
-    
-    % Determine which regions are not empty
-    %     tic
-    %     num_peaks = 0;
-    %     pick_nonempty = false(length(regions),1);
-    %     for ii = 1:length(regions)
-    %         if ~isempty(find(Ldata==ii,1))
-    %             num_peaks = num_peaks + 1;
-    %             pick_nonempty(ii) = true;
-    %         end
-    %     end
-    %     num_regions = find(pick_nonempty,1,'last');
-    % toc
-    % disp(num_regions)
-    % disp(num_peaks);   
+ 
     pick_nonempty = ismember(1:length(regions),Ldata);
     num_peaks = sum(pick_nonempty);
     num_regions = find(pick_nonempty,1,'last');
-    
-    
     
     % Preallocate storage
     peaks_matr = zeros(num_peaks,79);
@@ -274,7 +250,7 @@ if f_valid_inputs
         end
     end
 else
-    disp(['         Returning empty matrix and cell arrays.']);
+    disp('         Returning empty matrix and cell arrays.');
     num_peaks = 0;
     peaks_matr = zeros(0,79);
     matr_names = {'Area','Centroid','BoundingBox','MajorAxisLength',...
