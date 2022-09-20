@@ -1,6 +1,5 @@
-function [rgn, rgn_lbls, borders, Amatr] = labelWShedBorders_imdilate(Ldata,exclusion_val,f_disp,ax)
-%lableWShedBorders_imdilate determines the pixel linear indices of each region of a labeled image,
-% the pixel linear indices for the borders of each region, and the adjacencies of each region.
+function [rgn, rgn_lbls, Lborders, adj_list] = Ldata2graph(Ldata, exclusion_val, f_disp, ax)
+% label region border pixels and determine region adjacencies.
 %
 % INPUTS:
 %   Ldata  -- 2D matrix of labeled image data. Assumes boundaries are
@@ -13,20 +12,20 @@ function [rgn, rgn_lbls, borders, Amatr] = labelWShedBorders_imdilate(Ldata,excl
 %   rgn         -- 1D cell array of vector lists of linear idx of all pixels for each region.
 %   rgn_lbls    -- vector of region labels.
 %   Lborders    -- 1D cell array of vector lists of linear idx of border pixels for each region.
-%   amatr       -- two-column matrix of region adjacencies.
+%   adj_list       -- two-column matrix of region adjacencies.
 %                  each row contains region lables of two adjacent regions.
 %
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
+%      
+%   Please provide the following citation for all use:
+%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach, 
+%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis 
+%       for Electroencephalographic Phenotyping and Biomarker Identification, 
+%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
 %
-%   Authors: Patrick Stokes
-%
-% Created on: 20171016 -- forked from version in wshed1
-% Modified: 20190422 -- made faster by using regionprops to get pixelIdxList
-%           20190214 -- cleaned up for toolbox
-%           20171016 -- changed to return rgn
-%
+%**********************************************************************
 
 %*************************
 % Handle variable inputs *
@@ -72,9 +71,6 @@ end
 
 % Determine region labels
 Ldata = double(Ldata);
-%rgn_lbls = unique(Ldata);
-%rgn_lbls = setdiff(rgn_lbls,0);
-%rgn_lbls = setdiff(rgn_lbls,[0, exclusion_val]); %
 
 % Convolution matrix to get border
 H_border = [1 1 1; 1 -8 1; 1 1 1];
@@ -106,7 +102,7 @@ num_rgns = length(rgn_lbls);
 
 % Create a cell for the number of regions
 rgn = cell(1,num_rgns);
-borders = cell(1,num_rgns);
+Lborders = cell(1,num_rgns);
 nbr_matrs = cell(1,num_rgns);
 
 for ii = 1:num_rgns
@@ -152,7 +148,7 @@ for ii = 1:num_rgns
     j_full = j_sub+j_min-1;
 
     % Convert to linear indicies
-    borders{ii} = sub2ind([num_rows num_cols],i_full,j_full);
+    Lborders{ii} = sub2ind([num_rows num_cols],i_full,j_full);
 
     %******************************
     % Determine current neighbors *
@@ -176,13 +172,13 @@ end
 %****************************************************
 % Form adjacency matrix by appending neighbor lists *
 %****************************************************
-Amatr = [];
+adj_list = [];
 if num_rgns>1
     %Create 2xN adjacency matrix
-    Amatr = cat(1,nbr_matrs{:});
+    adj_list = cat(1,nbr_matrs{:});
 
     %Reduce to non-digraph
-    Amatr = unique(sort(Amatr,2),'rows');
+    adj_list = unique(sort(adj_list,2),'rows');
     %Amatr = unique(Amatr,'rows'); %keep as digraph
 end
 
@@ -190,7 +186,7 @@ end
 % Include border pixels in region lists *
 %****************************************
 for ii = 1:num_rgns
-    rgn{ii} = unique([rgn{ii}; borders{ii}]);
+    rgn{ii} = unique([rgn{ii}; Lborders{ii}]);
 end
 
 %*******************************************
@@ -198,8 +194,8 @@ end
 %*******************************************
 if f_disp > 0
     hold on;
-    for ii = 1:length(borders)
-        [tmp_row, tmp_col] = ind2sub([num_rows num_cols],borders{ii});
+    for ii = 1:length(Lborders)
+        [tmp_row, tmp_col] = ind2sub([num_rows num_cols],Lborders{ii});
         p = plot(ax,tmp_col,tmp_row,'wo','markerfacecolor','w','markersize',3);
         title(ax,['Border for Region ' num2str(rgn_lbls(ii))]);
         pause(1);

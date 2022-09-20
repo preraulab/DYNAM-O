@@ -1,5 +1,5 @@
-function [trimmed_regions, trimmed_borders] = trimRegionsWShed(data,regions,vol_thresh,shift_val,conn,dur_min,bw_min,f_verb,verb_pref,f_disp)
-%trimRegionsWShed takes data and regions from peaksWShed and regionsMergeByWeight
+function [trimmed_regions, trimmed_borders] = trimWshedRegions(data,regions,vol_thresh,shift_val,conn,f_verb,verb_pref,f_disp)
+% takes data and regions from peaksWShed and regionsMergeByWeight
 % and trims the regions to a certain fraction of volume.
 %    
 % INPUTS:
@@ -24,18 +24,14 @@ function [trimmed_regions, trimmed_borders] = trimRegionsWShed(data,regions,vol_
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %      
-%   Authors: Patrick Stokes
+%   Please provide the following citation for all use:
+%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach, 
+%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis 
+%       for Electroencephalographic Phenotyping and Biomarker Identification, 
+%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
 %
-% Created on: 20171005 
-% Modified: 20190413 -- commented
-%           20190305 -- cleaned up for toolbox
-%
-% 
-% TODO: For later optimization 
-%           - do not trim regions that are already below the bandwidth and
-%             duration thresholds for peak rejection. 
-%           - throw out any regions that are constant/one pixel instead of
-%             doing more computations on them
+%**********************************************************************
+
 
 %*******************************
 % Set variable inputs to empty *
@@ -60,27 +56,15 @@ if nargin < 5
     conn = [];
 end
 
-if nargin < 6 || isempty(dur_min)
-    %Min TF-peak duration
-    dur_min = 0;
-end
-
-if nargin < 7 || isempty(bw_min)
-    %Min TF-peak bandwidth
-    bw_min = 0;
-end
-if nargin < 8
+if nargin < 6
     f_verb = [];
 end
-if nargin < 9
+if nargin < 7
     verb_pref = [];
 end
-if nargin < 10
+if nargin < 8
     f_disp = [];
 end
-
-
-
 
 %*************************
 % Set default parameters *
@@ -121,7 +105,7 @@ if isempty(data)
         f_valid_inputs = true;
     else
         f_valid_inputs = false;
-        disp(['Warning: Image data for corresponding regions not provided to trimRegionsWShed.']);
+        disp('Warning: Image data for corresponding regions not provided to trimRegionsWShed.');
     end
 else
     if isempty(regions)

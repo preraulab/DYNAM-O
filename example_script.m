@@ -1,3 +1,17 @@
+%Example Script to Run TF-peak Extraction and Create SO-power/phase Histograms
+%
+%   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
+%   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
+%   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
+%      
+%   Please provide the following citation for all use:
+%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach, 
+%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis 
+%       for Electroencephalographic Phenotyping and Biomarker Identification, 
+%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%
+%**********************************************************************
+
 %%%% Example script showing how to compute time-frequency peaks and SO-power/phase histograms
 %% PREPARE DATA
 %Clear workspace and close plots
@@ -5,15 +19,12 @@ clear; close all; clc;
 
 %% SETTINGS
 %Select 'segment' or 'night' for example data range
-data_range = 'night';
+data_range = 'segment';
 
 %Settings for computing watershed
 % 'precision': high res settings
 % 'fast': ~2x speed-up with minimal impact on results *suggested*
 % 'draft': ~5x speed-up speed-up, increased high frequency TF-peaks
-%
-% 'paper': *not recommended* exact settings from SLEEP 2022 paper.
-%         Nearly exact same results as 'precision' but ~2x slower
 
 spect_settings = 'draft';
 
@@ -39,9 +50,8 @@ addpath(genpath('./toolbox'))
 
 switch data_range
     case 'segment'
-        % Pick a segment of the spectrogram to extract peaks from
         % Choose an example segment from the data
-        time_range = [8420 13446]; %[10000, 10100];
+        time_range = [8420 13446];
         disp('Running example segment')
     case 'night'
         wake_buffer = 5*60; %5 minute buffer before/after first/last wake
@@ -54,7 +64,6 @@ end
 
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
 [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, boundaries] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range, 'spect_settings', spect_settings);
-%save('boundaries_fast_2spects.mat', 'boundaries', 'time_range');
 
 %% COMPUTE SPECTROGRAM FOR DISPLAY
 [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(EEG, Fs, [4,25],[15 29], [30 15],[],'linear',[],false, false);

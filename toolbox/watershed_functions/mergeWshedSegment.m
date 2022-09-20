@@ -1,15 +1,15 @@
-function [rgn, Lborders] = regionMergeByWeight(data,rgn,rgn_lbls,Lborders,amatr,merge_thresh,max_merges,merge_rule,f_verb,verb_pref,f_disp)
-%regionMergeByWeight takes the labeled image, borders, and adjacencies output
+function [rgn, Lborders] = mergeWshedSegment(data,rgn,rgn_lbls,Lborders,adj_list,merge_thresh,max_merges,merge_rule,f_verb,verb_pref,f_disp)
+% takes the labeled image, borders, and adjacencies output
 % from peaksWShed and merges the regions according to the desired rule. The
 % default rule is designed to form large, complete peaks. It calls
-% regionWeightedEdges and regionMerge.
+% computeMergeWeights and mergeRegion.
 %
 % INPUTS:
 %   data         -- 2D matrix of image data. defaults to peaks(100).
 %   rgn          -- 1D cell array of vector lists of linear idx of all pixels for each region.
 %   rgn_lbls     -- vector of region labels.
 %   Lborders     -- 1D cell array of vector lists of linear idx of border pixels for each region
-%   amatr        -- two-column matrix of region adjacencies.
+%   adj_list        -- two-column matrix of region adjacencies.
 %                   each row contains region labels of two adjacent regions.
 %   merge_thresh -- threshold weight value for when to stop merge rule. default 8.
 %   max_merges   -- maximum number of merges to perform. default inf.
@@ -27,8 +27,14 @@ function [rgn, Lborders] = regionMergeByWeight(data,rgn,rgn_lbls,Lborders,amatr,
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
+%      
+%   Please provide the following citation for all use:
+%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach, 
+%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis 
+%       for Electroencephalographic Phenotyping and Biomarker Identification, 
+%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
 %
-%   Authors: Patrick Stokes, Thomas Possidente, Michael Prerau
+%**********************************************************************
 
 %*************************
 % Handle variable inputs *
@@ -52,7 +58,7 @@ if nargin < 6
     merge_thresh = [];
 end
 if nargin < 5
-    amatr = [];
+    adj_list = [];
 end
 if nargin < 4
     Lborders = [];
@@ -95,12 +101,12 @@ end
 %*************************
 % Check necessary inputs *
 %*************************
-if isempty(data) && isempty(rgn) && isempty(rgn_lbls) && isempty(Lborders) && isempty(amatr)
-    [rgn, rgn_lbls, Lborders, amatr, data] = peaksWShed;
+if isempty(data) && isempty(rgn) && isempty(rgn_lbls) && isempty(Lborders) && isempty(adj_list)
+    [rgn, rgn_lbls, Lborders, adj_list, data] = peaksWShed;
     f_valid_inputs = true;
-elseif ~isempty(data) && ~isempty(rgn) && ~isempty(rgn_lbls) && ~isempty(Lborders) && ~isempty(amatr)
+elseif ~isempty(data) && ~isempty(rgn) && ~isempty(rgn_lbls) && ~isempty(Lborders) && ~isempty(adj_list)
     f_valid_inputs = true;
-elseif isempty(amatr) && ~isempty(data) && ~isempty(rgn) && ~isempty(rgn_lbls) && ~isempty(Lborders)
+elseif isempty(adj_list) && ~isempty(data) && ~isempty(rgn) && ~isempty(rgn_lbls) && ~isempty(Lborders)
     f_valid_inputs = false;
     disp('Caution: amatr is empty, possibly indicative of a single region input to merge.');
 else
@@ -112,29 +118,29 @@ end
 % Check adjacency matrix *
 %*************************
 if f_valid_inputs
-    if size(amatr,2)==3
+    if size(adj_list,2)==3
         % Extract initial weights if provided in amatr
         if f_verb > 0
             disp([verb_pref 'Adjacency matrix already has edge weights. Extracting initial weights...']);
         end
-        ematr = amatr;
-    elseif size(amatr,2)==2
+        ematr = adj_list;
+    elseif size(adj_list,2)==2
         % Compute initial weights if not provided
         if f_verb > 0
             disp([verb_pref 'Computing initial edge weights...']);
             ttic = tic;
         end
-        e_wts = regionWeightedEdges(rgn,data,rgn_lbls,Lborders,amatr,merge_rule,f_verb-1,['  ' verb_pref]);
+        e_wts = computeMergeWeights(rgn,data,rgn_lbls,Lborders,adj_list,merge_rule,f_verb-1,['  ' verb_pref]);
         if f_verb > 0
             disp([verb_pref '  Initial weighting took ' num2str(toc(ttic)) ' sec.']);
         end
-        ematr = [amatr e_wts];
+        ematr = [adj_list e_wts];
     else
         % The adjacency matrix of inappropiate shape. This is an erroneous condition.
         ematr = [];
         f_valid_inputs = false;
-        disp(['WARNING: adjacency matrix (' num2str(size(amatr,1)) ' x ' ...
-            num2str(size(amatr,2)) ') has too few or too many columns. Returning original regions.' ]);
+        disp(['WARNING: adjacency matrix (' num2str(size(adj_list,1)) ' x ' ...
+            num2str(size(adj_list,2)) ') has too few or too many columns. Returning original regions.' ]);
 
     end
 end
@@ -182,11 +188,11 @@ if f_valid_inputs
         mrg_from = ematr(max_idx(1),2);
 
         % Merge regions
-        [rgn, Lborders, ematr, pick_update] = regionMerge(rgn,mrg_to,mrg_from,rgn_lbls,Lborders,ematr);
+        [rgn, Lborders, ematr, pick_update] = mergeRegions(rgn,mrg_to,mrg_from,rgn_lbls,Lborders,ematr);
 
         % Update edge weights
         if ~isempty(find(pick_update,1))
-            e_wts = regionWeightedEdges(rgn,data,rgn_lbls,Lborders,ematr(pick_update,1:2),merge_rule,f_verb-1,['  ' verb_pref]);
+            e_wts = computeMergeWeights(rgn,data,rgn_lbls,Lborders,ematr(pick_update,1:2),merge_rule,f_verb-1,['  ' verb_pref]);
             ematr(pick_update,3) = e_wts;
         end
 
