@@ -12,7 +12,6 @@
 * [Parameters](#parameters)
 * [Citations](#citations)
 * [Status](#status)
-* [References](#references)
 
 ## General Information 
 
@@ -23,7 +22,7 @@
   <sup><sub>Stokes et. al., 2022</sup></sub>
 </p>
 
-This repository contains code to detect time-frequency peaks (TF-peaks) in a spectrogram of EEG data using the watershed image segmentation algorithm. TF-peaks represent transient oscillatory neural activity at specific frequencies with sleep spindles (a key neural biomarker) comprising a subset of TF-peaks<sup>1</sup>. An explanation of the method used to compute the multitaper spectrogram of EEG data can be found [here](https://github.com/preraulab/multitaper_toolbox). The watershed method treats the spectrogram image as a topography and identifies the catchment basins (troughs), into which water falling on the terrain would collect, thus identifying local maxima. To reduce over-segmentation, neighboring regions are merged based on a novel merge rule designed to form complete, distinct TF-peaks in the spectrogram topography. 
+This repository contains code to detect time-frequency peaks (TF-peaks) in a spectrogram of EEG data using the watershed image segmentation algorithm. TF-peaks represent transient oscillatory neural activity at specific frequencies with sleep spindles (a key neural biomarker) comprising a subset of TF-peaks. An explanation of the method used to compute the multitaper spectrogram of EEG data can be found [here](https://github.com/preraulab/multitaper_toolbox). The watershed method treats the spectrogram image as a topography and identifies the catchment basins (troughs), into which water falling on the terrain would collect, thus identifying local maxima. To reduce over-segmentation, neighboring regions are merged based on a novel merge rule designed to form complete, distinct TF-peaks in the spectrogram topography. 
 
 <p align="center">
 <img src="https://prerau.bwh.harvard.edu/images/watershed_summary_graphic.png" width="400" />
@@ -60,7 +59,7 @@ An [example script](https://github.com/preraulab/watershed_TFpeaks_toolbox/blob/
 ## Optimizations 
 This code is an optimized version of what was used in Stokes et. al., 2022. The following is a list of the changes made during optimization. The original unoptimized paper code can be found [here](https://github.com/preraulab/watershed_TFpeaks_toolbox/tree/transient_oscillation_paper).
 * Candidate TF-Peak regions that are below the duration and bandwidth cutoffs are now removed prior to trimming and peak property calculations
-* Empty (NaN) regions that come out of the merge procedure are now removed prior to trimming and peak property calculations
+* Empty regions that come out of the merge procedure are now removed prior to trimming and peak property calculations
 * Watershed and the merging procedure now run on a lower resolution spectrogram (downsampled from the input spectrogram using decimation) to get the rough watershed regions,w hich are then mapped back onto the high-resolution spectrogram, from which trimming and peak property calculations are done.
 
 <br/>
@@ -107,8 +106,4 @@ All implementations are complete and functional, but are subject to change.
 
 <br/>
 <br/>
-
-
-## References
-1. Dimitrov, T., He, M., Stickgold, R. & Prerau, M. J. Sleep spindles comprise a subset of a broader class of electroencephalogram events. Sleep (2021). doi:10.1093/sleep/zsab099
 
