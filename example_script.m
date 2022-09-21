@@ -13,9 +13,6 @@
 %**********************************************************************
 
 %%%% Example script showing how to compute time-frequency peaks and SO-power/phase histograms
-%% PREPARE DATA
-%Clear workspace and close plots
-clear; close all; clc;
 
 %% SETTINGS
 %Select 'segment' or 'night' for example data range
@@ -23,10 +20,15 @@ data_range = 'night';
 
 %Settings for computing watershed
 % 'precision': high res settings
-% 'fast': ~2x speed-up with minimal impact on results *suggested*
-% 'draft': ~5x speed-up speed-up, increased high frequency TF-peaks
+% 'fast': speed-up with minimal impact on results *suggested*
+% 'draft': faster speed-up with increased high frequency TF-peaks, *not recommended for analyzing SOphase*
+spect_settings = 'fast';
 
-spect_settings = 'draft';
+%Normalization setting for computing SO-power histogram
+SOpower_norm_method = 'p5shift'; % aligns at the 5th percentile, important for comparing across subjects
+% SOpower_norm_method = 'percent'; % use percent only if subjects all reach stage 3
+% SOpower_norm_method = 'proportion'; % ratio of SO-power to total power
+% SOpower_norm_method = 'none'; % raw dB power
 
 %Save figure image
 save_output_image = false;
@@ -43,7 +45,7 @@ end
 load('example_data/example_data.mat', 'EEG', 'stage_vals', 'stage_times', 'Fs');
 
 %STAGE NOTATION (in order of sleep depth)
-% W = 5, REM = 4, N1 = 3, N2 = 2, N1 = 1, Artifact = 6, Undefined = 0
+% W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
 
 % Add necessary functions to path
 addpath(genpath('./toolbox'))
@@ -63,10 +65,10 @@ switch data_range
 end
 
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
-[peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, boundaries] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range, 'spect_settings', spect_settings);
+[peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, boundaries] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range, 'spect_settings', spect_settings, 'SOpower_norm_method', SOpower_norm_method);
 
 %% COMPUTE SPECTROGRAM FOR DISPLAY
-[spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(EEG, Fs, [4,25],[15 29], [30 15],[],'linear',[],false, false);
+[spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(EEG, Fs, [4,25], [15 29], [30 15], [],'linear',[],false,false);
 
 % PLOT RESULTS FIGURE
 % Create figure
@@ -87,6 +89,7 @@ ax(3) = axes('Parent',fh,'Position',[0.555 0.07 0.335 0.3]);
 
 % Link axes of appropriate plots
 linkaxes([hypn_spect_ax, ax(1)], 'x');
+linkaxes([hypn_spect_ax(2), ax(1)], 'y');
 
 % Set yaxis limits
 ylimits = [4,25];
@@ -118,10 +121,11 @@ xlim(time_range/3600)
 
 %Plot %SO-Power
 axes(hypn_spect_ax(3))
-plot(SOpow_times/3600,SOpower_norm*100,'linewidth',2)
+plot(SOpow_times/3600,SOpower_norm,'linewidth',2)
 xlim(time_range/3600)
-ylim([0 120])
-set(hypn_spect_ax(3),'YTick',[0 50 100]);
+max_SOP = max(SOpower_norm);
+ylim([0 max_SOP+(0.1*max_SOP)])
+set(hypn_spect_ax(3),'YTick',[0 round(max_SOP/2, 2, 'significant') round(max_SOP, 2, 'significant')]);
 ylabel('%SOP')
 
 % Plot time-frequency peak scatterplot
@@ -151,7 +155,7 @@ xlim(time_range/3600)
 
 % Plot SO-power histogram
 axes(ax(2))
-imagesc(SOpow_bins*100, freq_bins, SOpow_mat');
+imagesc(SOpow_bins, freq_bins, SOpow_mat');
 axis xy;
 colormap(ax(2), 'parula');
 
@@ -170,7 +174,18 @@ c.Label.String = {'Density', '(peaks/min in bin)'};
 c.Label.Rotation = -90;
 c.Label.VerticalAlignment = "bottom";
 
-xlabel('%SO-Power');
+switch SOpower_norm_method
+    case 'p5shift'
+        xlab = 'SO-Power (dB)';
+    case 'percent'
+        xlab = '% SO-Power';
+    case 'none'
+        xlab = 'SO-Power (dB)';
+    case 'proportion'
+        xlab = 'SO-Power Proportion';
+end
+
+xlabel(xlab);
 ylabel('Frequency (Hz)');
 ylim(ylimits);
 th(3) = title('SO-Power Histogram');
@@ -196,7 +211,7 @@ ylim(ylimits);
 %Keep color scales consistent across different settings
 %Run the climscale for different data
 if strcmpi(data_range,'night')
-    caxis([ 0.0085    0.0118]);
+    caxis([0.0085    0.0118]);
 elseif strcmpi(data_range,'segment')
     caxis([0.0070    0.0144]);
 else
@@ -211,9 +226,7 @@ set(th,'fontsize',15)
 %% PRINT OUTPUT
 if save_output_image
     %Output filename
-    output_fname = ['toolbox_example_' data_range '_' spect_settings '.png'];
-    print(gcf,'-dpng','-r200',output_fname);
+    output_fname = ['toolbox_example_' data_range '_' spect_settings '.png']; %#ok<UNRCH>
+    print(fh,'-dpng','-r200',output_fname);
 end
-
-
 
