@@ -14,10 +14,12 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_n
 %                   (Hz). Default = [0,40] 
 %       freq_binsizestep: 1x2 double - [size, step] frequency bin size and bin step for frequency 
 %                         axis of SO phase histograms (Hz). Default = [1, 0.2]
-%       SO_range: 1x2 double - min and max SO phase values (radians) to consider in SO phase analysis. 
-%                 Default = [0, 1]
+%       SO_range: 1x2 double - min and max SO power values to consider in SO phase analysis. 
+%                 Default calculated using min and max of SO power
 %       SO_binsizestep: 1x2 double - [size, step] SO phase bin size and step for SO phase axis 
-%                            of histogram. Units are radians. Default = [0.2, 0.01]
+%                            of histogram. Units are radians. Default
+%                            size is (SO_range(2)-SOrange(1))/5, default step is
+%                            (SO_range(2)-SOrange(1))/100
 %       SO_freqrange: 1x2 double - min and max frequencies (Hz) considered to be "slow oscillation". 
 %                     Default = [0.3, 1.5]
 %       artifacts: 1xN logical - marks each timestep of EEG as artifact or non-artifact. Default = all false. 
@@ -68,8 +70,8 @@ addRequired(p, 'TFpeak_freqs', @(x) validateattributes(x, {'numeric', 'vector'},
 addRequired(p, 'TFpeak_times', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addOptional(p, 'freq_range', [0,40], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'freq_binsizestep', [1, 0.2], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
-addOptional(p, 'SO_range', [0,1], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
-addOptional(p, 'SO_binsizestep', [0.2, 0.01], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
+addOptional(p, 'SO_range', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
+addOptional(p, 'SO_binsizestep', [], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
 addOptional(p, 'SO_freqrange', [0.3, 1.5], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan'}));
 addOptional(p, 'artifacts', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
 addOptional(p, 'stage_exclude', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
@@ -82,7 +84,7 @@ addOptional(p, 'rate_flag', true, @(x) validateattributes(x,{'logical'},{}));
 addOptional(p, 'smooth_flag', false, @(x) validateattributes(x,{'logical'},{}));
 addOptional(p, 'plot_flag', false, @(x) validateattributes(x,{'logical'},{}));
 addOptional(p, 'proportion_freqrange', [0.3, 30], @(x) validateattributes(x, {'numeric','vector'},{'real','finite','nonnan'}));
-addOptional(p, 'mts_verbose', false, @(x) validateattributes(x,{'logical'},{}));
+addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results);
@@ -183,12 +185,33 @@ SOpower_valid = SOpower_stages_valid & SOpower_times_valid;
 peak_SOpower_norm = interp1(SOpow_times, SOpower_norm, TFpeak_times, 'nearest');
 
 %% Compute the SO power historgram
-% Get frequency and SO power bins
+% Get frequency bins
 [freq_bin_edges, freq_cbins] = create_bins(freq_range, freq_binsizestep(1), freq_binsizestep(2), 'partial');
 num_freqbins = length(freq_cbins);
 
+% Get SO power bins
+if isempty(SO_range)
+    SO_range(1) = min(SOpower_norm);
+    SO_range(2) = max(SOpower_norm);
+end
+if isempty(SO_binsizestep)
+    SO_binsizestep(1) = (SO_range(2) - SO_range(1)) / 5;
+    SO_binsizestep(2) = (SO_range(2) - SO_range(1)) / 100;
+end
 [SO_bin_edges, SO_cbins] = create_bins(SO_range, SO_binsizestep(1), SO_binsizestep(2), 'partial');
 num_SObins = length(SO_cbins);
+
+% Display SOPH settings
+if verbose
+    disp(['  SO-Power Histogram Settings' , newline, ...
+          '    Normalization Method: ', num2str(norm_method), newline, ...
+          '    Frequency Window Size and Step: ', num2str(freq_binsizestep), newline,...
+          '    Frequency Range: ', num2str(freq_range), newline,...
+          '    SO-Power Window Size and Step: ', num2str(SO_binsizestep), newline,...
+          '    SO-Power Range: ', num2str(SO_range), newline,...
+          '    Minimum time required in each SO-Power bin: ', num2str(min_time_in_bin), 'min', newline,...
+          '    Histogram in terms of rate per minute: ', num2str(rate_flag)])
+end
 
 % Intialize SOpow * freq matrix
 SO_mat = nan(num_SObins, num_freqbins);

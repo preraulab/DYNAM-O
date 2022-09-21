@@ -121,10 +121,11 @@ xlim(time_range/3600)
 
 %Plot %SO-Power
 axes(hypn_spect_ax(3))
-plot(SOpow_times/3600,SOpower_norm*100,'linewidth',2)
+plot(SOpow_times/3600,SOpower_norm,'linewidth',2)
 xlim(time_range/3600)
-ylim([0 120])
-set(hypn_spect_ax(3),'YTick',[0 50 100]);
+max_SOP = max(SOpower_norm);
+ylim([0 max_SOP+(0.1*max_SOP)])
+set(hypn_spect_ax(3),'YTick',[0 round(max_SOP/2, 2, 'significant') round(max_SOP, 2, 'significant')]);
 ylabel('%SOP')
 
 % Plot time-frequency peak scatterplot
@@ -154,7 +155,7 @@ xlim(time_range/3600)
 
 % Plot SO-power histogram
 axes(ax(2))
-imagesc(SOpow_bins*100, freq_bins, SOpow_mat');
+imagesc(SOpow_bins, freq_bins, SOpow_mat');
 axis xy;
 colormap(ax(2), 'parula');
 
@@ -173,7 +174,18 @@ c.Label.String = {'Density', '(peaks/min in bin)'};
 c.Label.Rotation = -90;
 c.Label.VerticalAlignment = "bottom";
 
-xlabel('%SO-Power');
+switch SOpower_norm_method
+    case 'p5shift'
+        xlab = 'SO-Power (dB)';
+    case 'percent'
+        xlab = '% SO-Power';
+    case 'none'
+        xlab = 'SO-Power (dB)';
+    case 'proportion'
+        xlab = 'SO-Power Proportion';
+end
+
+xlabel(xlab);
 ylabel('Frequency (Hz)');
 ylim(ylimits);
 th(3) = title('SO-Power Histogram');
