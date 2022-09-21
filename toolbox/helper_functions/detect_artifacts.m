@@ -31,7 +31,7 @@ function [artifacts] = detect_artifacts(data, Fs, crit_units, hf_crit, hf_pass, 
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %
-%   Last modified 01/22/2021 by Mike & Tom, Alex
+%   Last modified 09/21/2022 by Alex
 %% ********************************************************************
 
 %% Input parsing
@@ -182,6 +182,7 @@ end
 binds = false(size(data));
 binds(inds) = true;
 
+
 %Find all time points that have outlier high or low noise
 function bad_inds = find_outlier_noise(data, bad_inds)
 data_mean = mean(data(~bad_inds));
@@ -193,6 +194,7 @@ high_thresh = data_mean + outlier_scalar * data_std;
 
 inds = data <= low_thresh | data >= high_thresh;
 bad_inds(inds) = true;
+
 
 function [ detected_artifacts, y_detrend ] = compute_artifacts(filter_coeff, detrend_filt, crit, data_fixed, smooth_duration, Fs, bad_inds, verbose, verbosestring, histogram_plot, crit_units)
 %% Get artifacts for a particular frequency band
