@@ -7,6 +7,7 @@
 ## Table of Contents
 * [General Information](#general-information)
 * [Example](#example)
+* [Algorithm Description](#algorithm-description)
 * [Optimizations](#optimizations)
 * [Repository Structure](#repository-structure)
 * [Parameters](#parameters)
@@ -55,6 +56,36 @@ An [example script](https://github.com/preraulab/watershed_TFpeaks_toolbox/blob/
 
 <br/>
 <br/>
+
+## Algorithm Description
+### Transient Oscillation Detection 
+Input: Raw EEG timeseries and Spectrogram of EEG timeseries 
+1. Artifact Detection 
+    * iteratively marks artifacts 3.5 SDs above the mean
+2. Baseline Subtraction
+    * Find 2nd percentile of non-artifact data and subtract from spectrogram 
+3. Spectrogram Segmentation
+    * Breaks spectrogram into 30 second segments enabling parallel processing on each segment concurrently
+4. Extract TF-peaks for each segment (in parallel):
+    * Downsample high resolution segment via decimation depending on downsampling settings. Using a lower resolution version of the segment for watershed and merging allows a large runtime decrease.
+    * Run Matlab watershed image segmentation on lower resolution segment
+    * Create adjacency list for each region found from watershed
+      * loop over each region and dialate slightly to find all neighboring regions
+    * Merge over-segmented regions to form large, distinct TF-peaks 
+      * calculate a merging weight for each set of neighbors
+        * C = maximum value in boundary between regions - minimum value of total boundary of region 1
+        * D = maximum height of region 2 - maximum value in boundary between regions
+        * merge weight = C - D
+      * regions are merged iteratively starting with the largest merge weight, and affected merge weights are recalculated after each merge until all merge weights are below a set threshold.
+    * Interpolate TF-peak boundaries back onto high-resolution version of spectrogram segment
+    * Reject TF-peaks below bandwidth and duration cutoff criteria (done here to reduce number of peaks going forward to save on computation time)
+    * Trim all TF-peaks to 80% of their total volume
+    * Compute and store statistics for each peak (pixel indices, boundary indices, centroid frequency and time, amplitude, bandwidth, duration, etc.)
+5. Package TF-peak statistics from all segments into a single feature matrix
+6. Reject TF-peaks above or below bandwidth and duration cutoff criteria
+
+### SO-power Histogram Calculation
+### SO-phase Histogram Calculation
 
 ## Optimizations 
 This code is an optimized version of what was used in Stokes et. al., 2022. The following is a list of the changes made during optimization. The original unoptimized paper code can be found [here](https://github.com/preraulab/watershed_TFpeaks_toolbox/tree/transient_oscillation_paper).
