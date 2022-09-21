@@ -228,6 +228,7 @@ peak_dur = feature_matrix(:,strcmp(feature_names, 'Duration'));
 
 %% Compute SO power
 if verbose
+    disp(' ');
     disp('Computing SO-power histogram...')
 end
 
