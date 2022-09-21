@@ -248,20 +248,17 @@ if ~isempty(downsample_spect)
     Ldata = zeros(size(img_LR),"uint16");
     
     %Create the labeled image and skip empty regions
-    num_regions = 1;
-    for ii = 1:length(rgn)
+    num_regions = length(rgn);
+    for ii = 1:num_regions
         ii_pixels = rgn{ii};
         if ~isempty(ii_pixels)
-            Ldata(ii_pixels)=num_regions;
-            num_regions=num_regions+1;
+            Ldata(ii_pixels)=ii;
         end
     end
-    %Account for the last + 1
-    num_regions = num_regions-1;
 
     %Resize image
     LdataHR = imresize(Ldata,size(img),'nearest');
-
+    
     %COMPUTE NEW REGIONS
     rgn_HR = cell(1,num_regions);
     for ii = 1:num_regions

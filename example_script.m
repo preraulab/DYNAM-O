@@ -13,9 +13,6 @@
 %**********************************************************************
 
 %%%% Example script showing how to compute time-frequency peaks and SO-power/phase histograms
-%% PREPARE DATA
-%Clear workspace and close plots
-clear; close all; clc;
 
 %% SETTINGS
 %Select 'segment' or 'night' for example data range
@@ -23,10 +20,15 @@ data_range = 'night';
 
 %Settings for computing watershed
 % 'precision': high res settings
-% 'fast': ~2x speed-up with minimal impact on results *suggested*
-% 'draft': ~5x speed-up with increased high frequency TF-peaks
-
+% 'fast': speed-up with minimal impact on results *suggested*
+% 'draft': faster speed-up with increased high frequency TF-peaks, *not recommended for analyzing SOphase*
 spect_settings = 'fast';
+
+%Normalization setting for computing SO-power histogram
+SOpower_norm_method = 'p5shift'; % aligns at the 5th percentile, important for comparing across subjects
+% SOpower_norm_method = 'percent'; % use percent only if subjects all reach stage 3
+% SOpower_norm_method = 'proportion'; % ratio of SO-power to total power
+% SOpower_norm_method = 'none'; % raw dB power
 
 %Save figure image
 save_output_image = false;
@@ -63,10 +65,10 @@ switch data_range
 end
 
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
-[peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, boundaries] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range, 'spect_settings', spect_settings);
+[peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, boundaries] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range, 'spect_settings', spect_settings, 'SOpower_norm_method', SOpower_norm_method);
 
 %% COMPUTE SPECTROGRAM FOR DISPLAY
-[spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(EEG, Fs, [4,25],[15 29], [30 15],[],'linear',[],false, false);
+[spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(EEG, Fs, [4,25], [15 29], [30 15], [],'linear',[],false,false);
 
 % PLOT RESULTS FIGURE
 % Create figure
@@ -87,6 +89,7 @@ ax(3) = axes('Parent',fh,'Position',[0.555 0.07 0.335 0.3]);
 
 % Link axes of appropriate plots
 linkaxes([hypn_spect_ax, ax(1)], 'x');
+linkaxes([hypn_spect_ax(2), ax(1)], 'y');
 
 % Set yaxis limits
 ylimits = [4,25];
@@ -196,7 +199,7 @@ ylim(ylimits);
 %Keep color scales consistent across different settings
 %Run the climscale for different data
 if strcmpi(data_range,'night')
-    caxis([ 0.0085    0.0118]);
+    caxis([0.0085    0.0118]);
 elseif strcmpi(data_range,'segment')
     caxis([0.0070    0.0144]);
 else
@@ -212,8 +215,6 @@ set(th,'fontsize',15)
 if save_output_image
     %Output filename
     output_fname = ['toolbox_example_' data_range '_' spect_settings '.png']; %#ok<UNRCH>
-    print(gcf,'-dpng','-r200',output_fname);
+    print(fh,'-dpng','-r200',output_fname);
 end
-
-
 

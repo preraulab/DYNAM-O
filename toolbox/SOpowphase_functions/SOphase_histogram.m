@@ -1,6 +1,6 @@
 function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOphase, peak_selection_inds] = SOphase_histogram(varargin)
 % [SO_mat, freq_cbins, SO_cbins, time_in_bin] = SO_histogram(EEG, Fs, TFpeak_freqs, TFpeak_times, freq_range, freq_binsizestep, SO_range, SO_binsizestep, SO_freqrange, artifacts, ...
-%                                                            stage_exclude, t,time_range,  SOphase_filter, phase_freqSO_norm, rate_flag, smooth_flag, plot_flag)
+%                                                            stage_exclude, t_data,time_range,  SOphase_filter, phase_freqSO_norm, rate_flag, smooth_flag, plot_flag)
 %
 %
 %  Inputs:
@@ -22,9 +22,9 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOphase, 
 %       artifacts: 1xN logical - marks each timestep of EEG as artifact or non-artifact. Default = all false. 
 %       stage_exclude: 1xN logical - marks which timestep of EEG should be excluded due to being in an 
 %                      undesired stage. Default = all false.
-%       t: 1xN double - times for each EEG sample. Default = (0:length(EEG)-1)/Fs
+%       t_data: 1xN double - times for each EEG sample. Default = (0:length(EEG)-1)/Fs
 %       time_range: 1x2 double - min and max times for which to include TFpeaks. Also used to normalize 
-%                   SO power. Default = [t(1), t(end)] 
+%                   SO power. Default = [t_data(1), t_data(end)] 
 %       phase_freqSO_norm: 1x2 logical - normalize by dividing by the sum over each dimension 
 %                          of the SO phase histogram [frequency, SOphase]. Default = [true, false]
 %       rate_flag: logical - histogram output in terms of TFpeaks/min instead of count. Default = true.
@@ -56,13 +56,13 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOphase, 
 %% Parse input
 %Input handling
 %(EEG, Fs, TFpeak_freqs, TFpeak_SOphase, freq_range, freq_binsizestep, SO_range, SO_binsizestep, artifacts, ...
-%                                                            stage_exclude, t, SOphase_filter, phase_freqSO_norm, rate_flag, smooth_flag, plot_flag)
+%                                                            stage_exclude, t_data, SOphase_filter, phase_freqSO_norm, rate_flag, smooth_flag, plot_flag)
 p = inputParser;
 
 addRequired(p, 'EEG', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-addRequired(p,'TFpeak_freqs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-addRequired(p,'TFpeak_times', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
+addRequired(p, 'TFpeak_freqs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
+addRequired(p, 'TFpeak_times', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addOptional(p, 'freq_range', [0,40], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'freq_binsizestep', [1, 0.2], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
 addOptional(p, 'SO_range', [-pi,pi], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
@@ -71,7 +71,7 @@ addOptional(p, 'SO_freqrange', [0.3, 1.5], @(x) validateattributes(x, {'numeric'
 addOptional(p, 'SOphase_filter', []);
 addOptional(p, 'artifacts', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
 addOptional(p, 'stage_exclude', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
-addOptional(p, 't', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
+addOptional(p, 't_data', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'time_range', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'phase_freqSO_norm', [true, false], @(x) validateattributes(x,{'logical', 'vector'},{}));
 addOptional(p, 'rate_flag', true, @(x) validateattributes(x,{'logical'},{}));
@@ -97,16 +97,16 @@ else
     assert(length(stage_exclude) == size(EEG,2),'stage_exclude must be the same length as EEG');
 end
 
-if isempty(t)
-    t = (0:length(EEG)-1)/Fs;
+if isempty(t_data)
+    t_data = (0:length(EEG)-1)/Fs;
 else
-    assert(length(t) == size(EEG,2), 't must be the same length as EEG');
+    assert(length(t_data) == size(EEG,2), 't_data must be the same length as EEG');
 end
 
 if isempty(time_range)
-    time_range = [min(t), max(t)];
+    time_range = [min(t_data), max(t_data)];
 else
-    assert( (time_range(1) >= min(t)) & (time_range(2) <= max(t) ), 'lightsonoff_times cannot be outside of the time range described by "t"');
+    assert( (time_range(1) >= min(t_data)) & (time_range(2) <= max(t_data) ), 'lightsonoff_times cannot be outside of the time range described by "t_data"');
 end
 
 assert((SO_range(1) >= -pi) & (SO_range(2) <= pi), 'SO-phase range must be values between -pi and pi')
@@ -121,7 +121,7 @@ SOphase = SOphase';
 SOphase(artifacts) = nan;
 
 % Get bin size of SOphase
-SOphase_binsize = t(2) - t(1);
+SOphase_binsize = t_data(2) - t_data(1);
 
 %% Sort TFpeak time and frequency data
 [TFpeak_times, sortinds] = sort(TFpeak_times);
@@ -129,10 +129,10 @@ TFpeak_freqs = TFpeak_freqs(sortinds);
 
 %% Get valid peak indices
 %Get indices of peaks that occur during artifact
-artifact_inds_peaks = logical(interp1(t, double(artifacts), TFpeak_times, 'nearest'));
+artifact_inds_peaks = logical(interp1(t_data, double(artifacts), TFpeak_times, 'nearest'));
 
 % Get indices of peaks that are in selected sleep stages
-stage_inds_peaks = logical(interp1(t, double(~stage_exclude), TFpeak_times, 'nearest')); 
+stage_inds_peaks = logical(interp1(t_data, double(~stage_exclude), TFpeak_times, 'nearest')); 
 
 % Get indices of peaks that occur inside selected time range
 timerange_inds_peaks = (TFpeak_times >= time_range(1)) & (TFpeak_times <= time_range(2));
@@ -142,11 +142,11 @@ peak_selection_inds = stage_inds_peaks & ~artifact_inds_peaks & timerange_inds_p
 
 %% Get valid SOphase values
 % Exclude unwanted stages and times
-SOphase_valid_times = (t>=time_range(1) & t<=time_range(2));
+SOphase_valid_times = (t_data>=time_range(1) & t_data<=time_range(2));
 SOphase_valid = ~stage_exclude & SOphase_valid_times;
 
 %% Get SOphase at each peak time
-peak_SOphase = interp1(t, SOphase, TFpeak_times);
+peak_SOphase = interp1(t_data, SOphase, TFpeak_times);
 
 %% Re-wrap phases to be between -pi and pi
 peak_SOphase = mod(peak_SOphase, 2*pi) - pi;
