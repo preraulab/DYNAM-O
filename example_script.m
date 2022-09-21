@@ -22,7 +22,7 @@ data_range = 'night';
 % 'precision': high res settings
 % 'fast': speed-up with minimal impact on results *suggested*
 % 'draft': faster speed-up with increased high frequency TF-peaks, *not recommended for analyzing SOphase*
-spect_settings = 'fast';
+spect_settings = 'draft';
 
 %Normalization setting for computing SO-power histogram
 SOpower_norm_method = 'p5shift'; % aligns at the 5th percentile, important for comparing across subjects
@@ -119,7 +119,7 @@ ylim(ylimits);
 set(hypn_spect_ax(1),'XTick',{})
 xlim(time_range/3600)
 
-%Plot %SO-Power
+%Plot SO-Power trace
 axes(hypn_spect_ax(3))
 plot(SOpow_times/3600,SOpower_norm,'linewidth',2)
 xlim(time_range/3600)
