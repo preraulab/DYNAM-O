@@ -26,6 +26,7 @@ function [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bin
 %                                  baseline removal. Default = 5
 %       SOpower_norm_method (opt): character - normalization method for SO-power
 %                                  Options: 'p5shift'(default), 'percent', 'proportion', 'none'
+%       verbose (opt):             logical - display extra info. Default = true
 %
 %   Outputs:
 %       peak_props:   table - time, frequency, height, SOpower, and SOphase
