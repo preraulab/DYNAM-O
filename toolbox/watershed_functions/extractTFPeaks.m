@@ -240,9 +240,9 @@ if f_verb > 0
     disp([verb_pref '    merge took: ' num2str(toc(ttic)) ' seconds.']);
 end
 
-%*********************************************************************
-% Interpolate peak regions to high-resolution and reject small peaks *
-%*********************************************************************
+%**********************************************
+% Interpolate peak regions to high-resolution *
+%**********************************************
 if ~isempty(downsample_spect)
     %UPSCALE THE LABELED IMAGE
     Ldata = zeros(size(img_LR),"uint16");

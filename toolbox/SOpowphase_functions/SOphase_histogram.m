@@ -77,6 +77,8 @@ addOptional(p, 'phase_freqSO_norm', [true, false], @(x) validateattributes(x,{'l
 addOptional(p, 'rate_flag', true, @(x) validateattributes(x,{'logical'},{}));
 addOptional(p, 'smooth_flag', false, @(x) validateattributes(x,{'logical'},{}));
 addOptional(p, 'plot_flag', false, @(x) validateattributes(x,{'logical'},{}));
+addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{}));
+
 
 
 parse(p,varargin{:});
@@ -159,6 +161,17 @@ num_freqbins = length(freq_cbins);
 
 [SO_bin_edges, SO_cbins] = create_bins(SO_range, SO_binsizestep(1), SO_binsizestep(2), 'extend');
 num_SObins = length(SO_cbins);
+
+% Display SOPH settings
+if verbose
+    disp(['  SO-Phase Histogram Settings' , newline,...
+          '    Frequency Window Size and Step: ', num2str(freq_binsizestep), newline,...
+          '    Frequency Range: ', num2str(freq_range), newline,...
+          '    SO-Phase Window Size and Step: ', num2str(SO_binsizestep), newline,...
+          '    SO-Phase Range: ', num2str(SO_range), newline,...
+          '    Slow Oscillation Frequency Range: ', num2str(SO_freqrange), newline, ...
+          '    Histogram in terms of rate per minute: ', num2str(rate_flag)])
+end
 
 % Intialize SOphase * freq matrix
 SO_mat = nan(num_SObins, num_freqbins);
