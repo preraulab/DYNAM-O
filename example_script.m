@@ -126,7 +126,17 @@ xlim(time_range/3600)
 max_SOP = max(SOpower_norm);
 ylim([0 max_SOP+(0.1*max_SOP)])
 set(hypn_spect_ax(3),'YTick',[0 round(max_SOP/2, 2, 'significant') round(max_SOP, 2, 'significant')]);
-ylabel('%SOP')
+switch SOpower_norm_method
+    case 'p5shift'
+        ylab = 'SOP(dB)';
+    case 'percent'
+        ylab = '%SOP';
+    case 'none'
+        ylab = 'SOP(dB)';
+    case 'proportion'
+        ylab = 'SO Prop.';
+end
+ylabel(ylab);
 
 % Plot time-frequency peak scatterplot
 axes(ax(1))
