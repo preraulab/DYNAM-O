@@ -8,22 +8,24 @@ function [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bin
 %       SOpow_times, boundaries] = run_watershed_SOpowphase(data, Fs, stage_times, stage_vals)
 %
 %   Inputs:
-%       data (req):             [1xn] double - timeseries data to be analyzed
-%       Fs (req):               double - sampling frequency of data (Hz)
-%       stage_times (req):      [1xm] double - timestamps of stage_vals
-%       stage_vals (req):       [1xm] double - sleep stage values at eaach time in
-%                               stage_times. Note the staging convention: 0=unidentified, 1=N3,
-%                               2=N2, 3=N1, 4=REM, 5=WAKE
-%       t (opt):                [1xn] double - timestamps for data. Default = (0:length(data)-1)/Fs;
-%       time_range (opt):       [1x2] double - section of EEG to use in analysis
-%                               (seconds). Default = [0, max(t)]
-%       artifact_filters (opt): struct with 3 digitalFilter fields "hpFilt_high","hpFilt_broad","detrend_filt" -
-%                               filters to be used for artifact detection
-%       stages_include (opt):   [1xp] double - which stages to include in the SOpower and
-%                               SOphase analyses. Default = [1,2,3,4]
-%       lightsonoff_mins (opt): double - minutes before first non-wake
-%                               stage and after last non-wake stage to include in watershed
-%                               baseline removal. Default = 5
+%       data (req):                [1xn] double - timeseries data to be analyzed
+%       Fs (req):                  double - sampling frequency of data (Hz)
+%       stage_times (req):         [1xm] double - timestamps of stage_vals
+%       stage_vals (req):          [1xm] double - sleep stage values at eaach time in
+%                                  stage_times. Note the staging convention: 0=unidentified, 1=N3,
+%                                  2=N2, 3=N1, 4=REM, 5=WAKE
+%       t_data (opt):              [1xn] double - timestamps for data. Default = (0:length(data)-1)/Fs;
+%       time_range (opt):          [1x2] double - section of EEG to use in analysis
+%                                  (seconds). Default = [0, max(t)]
+%       artifact_filters (opt):    struct with 3 digitalFilter fields "hpFilt_high","hpFilt_broad","detrend_filt" -
+%                                  filters to be used for artifact detection
+%       stages_include (opt):      [1xp] double - which stages to include in the SOpower and
+%                                  SOphase analyses. Default = [1,2,3,4]
+%       lightsonoff_mins (opt):    double - minutes before first non-wake
+%                                  stage and after last non-wake stage to include in watershed
+%                                  baseline removal. Default = 5
+%       SOpower_norm_method (opt): character - normalization method for SO-power
+%                                  Options: 'p5shift'(default), 'percent', 'proportion', 'none'
 %
 %   Outputs:
 %       peak_props:   table - time, frequency, height, SOpower, and SOphase
@@ -61,28 +63,29 @@ addRequired(p, 'data', @(x) validateattributes(x, {'numeric', 'vector'}, {'real'
 addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric', 'vector'}, {'real','nonempty'}));
 addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric', 'vector'}, {'real','nonempty'}));
-addOptional(p, 't', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
+addOptional(p, 't_data', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'time_range', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'downsample_spect', [],  @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'isstruct'},{}));
 addOptional(p, 'stages_include', [1,2,3,4], @(x) validateattributes(x,{'numeric', 'vector'}, {'real', 'nonempty'}))
 addOptional(p, 'lightsonoff_mins', 5, @(x) validateattributes(x,{'numeric'},{'real','nonempty', 'nonnan'}));
+addOptional(p, 'SOpower_norm_method', 'p5shift', @(x) validateattributes(x, {'char', 'numeric'},{}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'spect_settings', 'fast', @(x) validateattributes(x,{'char','numeric'},{}));
 
 parse(p,varargin{:});
-parser_results = struct2cell(p.Results);
+parser_results = struct2cell(p.Results); %#ok<NASGU>
 field_names = fieldnames(p.Results);
 
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 
 
-if isempty(t)
-    t = (0:length(data)-1)/Fs;
+if isempty(t_data) %#ok<*NODEF>
+    t_data = (0:length(data)-1)/Fs;
 end
 
 if isempty(time_range)
-    time_range = [0, max(t)];
+    time_range = [0, max(t_data)];
 end
 
 if isempty(artifact_filters)
@@ -110,15 +113,20 @@ else
         case {'paper'} %Matches SLEEP paper settings exactly
             downsample_spect = [];
             seg_time = 60;
+            merge_thresh = 8;
         case {'precision'} %Matches SLEEP paper settings but smaller segments for speed
             downsample_spect = [];
             seg_time = 30;
-        case 'fast' %~3x speed improvement with little accuracy reduction
+            merge_thresh = 8;
+        case {'fast'} %~speed improvement with little accuracy reduction
             downsample_spect = [2 2];
             seg_time = 30;
-        case 'draft' %10x speed improvement with but phase shift
+            merge_thresh = 11;
+        case {'draft'} %greater speed improvement but increased high frequency peaks
             downsample_spect = [5 1];
             seg_time = 30;
+            merge_thresh = 13;
+            warning('The "draft" setting is not suitable for analyzing SO-phase, use "precision" or "fast" instead.')
         otherwise
             error('spect_settings must be ''precision'', ''fast'', ''draft'', or ''paper''')
     end
@@ -132,7 +140,7 @@ weight = 'unity'; % each taper is weighted the same
 ploton = false; % do not plot out
 mts_verbose = false;
 
-%MST frequency resolution
+%MTS frequency resolution
 df = taper_params(1)/time_window_params(1)*2;
 
 %Set min bandwidth and duration based on spectral parameters
@@ -147,35 +155,31 @@ if exist(['multitaper_spectrogram_coder_mex.' mexext],'file')
     [spect,stimes,sfreqs] = multitaper_spectrogram_mex(data, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
 else
     [spect,stimes,sfreqs] = multitaper_spectrogram(data, Fs, freq_range, taper_params, time_window_params, NFFT, detrend, weight, ploton, mts_verbose);
-    warning(sprintf('Unable to use mex version of multitaper_spectrogram. Using compiled multitaper spectrogram function will greatly increase the speed of this computaton. \n\nFind mex code at:\n    https://github.com/preraulab/multitaper_toolbox'));
+    warning(sprintf('Unable to use mex version of multitaper_spectrogram. Using compiled multitaper spectrogram function will greatly increase the speed of this computaton. \n\nFind mex code at:\n    https://github.com/preraulab/multitaper_toolbox')); %#ok<SPWRN>
 end
-
 
 %% Compute baseline spectrum used to flatten data spectrum
 if verbose
     disp('Performing artifact rejection...')
 end
 
-artifacts = detect_artifacts(data, Fs, [],[],[],[],[],[],[],[],[], ... % detect artifacts in EEG
+% Detect artifacts in EEG
+artifacts = detect_artifacts(data, Fs, [],[],[],[],[],[],[],[],[], ...
     artifact_filters.hpFilt_high, artifact_filters.hpFilt_broad, artifact_filters.detrend_filt);
-artifacts_stimes = logical(interp1(t, double(artifacts), stimes, 'nearest')); % get artifacts occuring at spectrogram times
-
-% Get lights off and lights on times
-lightsoff_time = max( min(t(~ismember(stage_vals,[5,0])))-lightsonoff_mins*60, 0); % 5 min before first non-wake stage
-lightson_time = min( max(t(~ismember(stage_vals,[5,0])))+lightsonoff_mins*60, max(stage_times)); % 5 min after last non-wake stage
+artifacts_stimes = logical(interp1(t_data, double(artifacts), stimes, 'nearest')); % get artifacts occuring at spectrogram times
 
 % Get invalid times for baseline computation
-invalid_times = (stimes > lightson_time & stimes < lightsoff_time) & artifacts_stimes;
+invalid_times = artifacts_stimes;
 
 spect_bl = spect;
 spect_bl(:,invalid_times) = NaN; % turn artifact times into NaNs for percentile computation
 spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
 
 baseline_ptile = 2; % using 2nd percentile of spectrogram as baseline
-baseline = prctile(spect_bl, baseline_ptile, 2);  % Get baseline
+baseline = prctile(spect_bl, baseline_ptile, 2); % get baseline
 
 %% Pick a segment of the spectrogram to extract peaks from
-% Use only a the specified segment of the spectrogram
+% Use only a specified segment of the spectrogram
 [~,start] = min(abs(time_range(1) - stimes));
 [~,last] = min(abs(time_range(2) - stimes));
 spect_in = spect(:, start:last);
@@ -187,13 +191,11 @@ if verbose
     tfp = tic;
 end
 
-[matr_names, matr_fields, peaks_matr,~,~, pixel_values,~,boundaries,~] = runSegmentedData(spect_in, stimes_in, sfreqs, baseline, seg_time, downsample_spect, dur_min, bw_min);
+[matr_names, matr_fields, peaks_matr,~,~, pixel_values,~,boundaries,~] = runSegmentedData(spect_in, stimes_in, sfreqs, baseline, seg_time, downsample_spect, dur_min, bw_min, [], merge_thresh);
 
 if verbose
-    disp(['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS')]);
-    disp(' ');
+    disp(['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
 end
-
 
 %% Filter out noise peaks
 if verbose
@@ -206,10 +208,10 @@ boundaries = boundaries(peak_mask,:);
 
 %% Compute SO power and SO phase
 % Exclude WAKE stages from analyses
-if length(stage_times) ~= length(t)
-    stages_t = interp1(stage_times, single(stage_vals), t, 'previous');
-elseif all(stage_times ~= t)
-    stages_t = interp1(stage_times, single(stage_vals), t, 'previous');
+if length(stage_times) ~= length(t_data)
+    stages_t = interp1(stage_times, single(stage_vals), t_data, 'previous');
+elseif ~all(stage_times == t_data)
+    stages_t = interp1(stage_times, single(stage_vals), t_data, 'previous');
 else
     stages_t = stage_vals;
 end
@@ -223,14 +225,15 @@ peak_height = feature_matrix(:,strcmp(feature_names, 'Height'));
 peak_bw = feature_matrix(:,strcmp(feature_names, 'Bandwidth'));
 peak_dur = feature_matrix(:,strcmp(feature_names, 'Duration'));
 
-
 %% Compute SO power
 if verbose
     disp('Computing SO-power histogram...')
 end
 
 % use ('plot_flag', true) to plot directly from this function call
-[SOpow_mat, freq_bins, SOpow_bins, ~, ~, peak_SOpow, peak_inds, SOpower_norm, ~, SOpow_times] = SOpower_histogram(data, Fs, peak_freqs, peak_times, 'stage_exclude', stage_exclude, 'artifacts', artifacts);
+[SOpow_mat, freq_bins, SOpow_bins, ~, ~, peak_SOpow, peak_inds, SOpower_norm, ~, SOpow_times] = SOpower_histogram(data, Fs, peak_freqs, peak_times, 'stage_exclude', stage_exclude, 'artifacts', artifacts, 'norm_method', SOpower_norm_method);
+
+boundaries = boundaries(peak_inds,:);
 
 %% Compute SO phase
 if verbose
@@ -256,12 +259,9 @@ peak_props = table(peak_times(peak_inds), peak_freqs(peak_inds), peak_height(pea
     peak_SOpow(peak_inds), peak_SOphase(peak_inds), peak_bw(peak_inds), peak_dur(peak_inds), 'VariableNames', {'peak_times', 'peak_freqs', 'peak_height', ...
     'peak_SOpow', 'peak_SOphase', 'peak_bw', 'peak_dur'});
 
-boundaries = boundaries(peak_inds,:);
-
-
 if verbose
-    disp(' ');
-    disp(['Total time: ' datestr(seconds(toc(ttotal)),'HH:MM:SS')]);
+    disp([newline, 'Total time: ' datestr(seconds(toc(ttotal)),'HH:MM:SS')]);
 end
+
 end
 

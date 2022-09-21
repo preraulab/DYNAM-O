@@ -102,7 +102,7 @@ end
 % Check necessary inputs *
 %*************************
 if isempty(data) && isempty(rgn) && isempty(rgn_lbls) && isempty(Lborders) && isempty(adj_list)
-    [rgn, rgn_lbls, Lborders, adj_list, data] = peaksWShed;
+    [rgn, rgn_lbls, Lborders, adj_list, data] = Ldata2graph;
     f_valid_inputs = true;
 elseif ~isempty(data) && ~isempty(rgn) && ~isempty(rgn_lbls) && ~isempty(Lborders) && ~isempty(adj_list)
     f_valid_inputs = true;
@@ -276,6 +276,7 @@ end
 
 %Remove dead regions
 rgn = rgn(cellfun(@(x)~isempty(x),rgn));
+Lborders = Lborders(cellfun(@(x)~isempty(x),Lborders));
 
 end
 

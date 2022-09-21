@@ -134,6 +134,7 @@ end
 %% Get bad indicies
 %Get bad indices
 bad_inds = (isnan(data) | isinf(data) | find_flat(data))';
+bad_inds = find_outlier_noise(data, bad_inds);
 
 %Interpolate big gaps in data
 t = 1:length(data);
@@ -181,6 +182,17 @@ end
 binds = false(size(data));
 binds(inds) = true;
 
+%Find all time points that have outlier high or low noise
+function bad_inds = find_outlier_noise(data, bad_inds)
+data_mean = mean(data(~bad_inds));
+data_std = std(data(~bad_inds));
+
+outlier_scalar = 10;
+low_thresh = data_mean - outlier_scalar * data_std;
+high_thresh = data_mean + outlier_scalar * data_std;
+
+inds = data <= low_thresh | data >= high_thresh;
+bad_inds(inds) = true;
 
 function [ detected_artifacts, y_detrend ] = compute_artifacts(filter_coeff, detrend_filt, crit, data_fixed, smooth_duration, Fs, bad_inds, verbose, verbosestring, histogram_plot, crit_units)
 %% Get artifacts for a particular frequency band
