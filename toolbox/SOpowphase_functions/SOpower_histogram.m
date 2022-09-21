@@ -26,7 +26,7 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_n
 %       stage_exclude: 1xN logical - marks which timestep of EEG should be excluded due to being in an 
 %                      undesired stage. Default = all false.
 %       t_data: 1xN double - times for each EEG sample. Default = (0:length(EEG)-1)/Fs
-%       norm_method: char - normalization method for SOpower. 'percentile' (default), 'shift', 'absolute'.
+%       norm_method: char - normalization method for SO-power. Options: 'p5shift'(default), 'percent', 'proportion', 'none'.
 %       min_time_in_bin: numerical - time (minutes) required in each SO power bin to include 
 %                              in SO power analysis. Otherwise all values in that SO power bin will 
 %                              be NaN. Default = 1.
