@@ -59,7 +59,7 @@ After installing the package, execute the example script on the command line:
 ```
 
 Once a parallel pool has started (if applicable), the following result should be generated: 
- 
+
 <figure ><img src="https://prerau.bwh.harvard.edu/images/segment_fast.png" alt="example segment" width="40%;">
 <figcaption><b>Output from the example segment of data provided with the toolbox.</b></figcaption></figure>
 <br/><br/>
@@ -80,17 +80,8 @@ This should produce the following output:
 The following preset settings are available in our example script. As all data are different, it is essential to verify equivalency before relying on a speed-optimized solution other than precision.
 
 - “precision”:  Most accurate assessment of individual peak bounds and phase
-     * 30s segments
-     * No resampling
-     * Merge threshold of 8
 - “fast”: Faster approach, with accurate SO-power/phase histograms, minimal difference in phase
-     *	30s segments
-     *	2x2 downsampling
-     *	Merge threshold of 11
 - “draft”: Fastest approach. Good SO-power/phase histograms but with increased high-frequency peaks. Not recommended for assessment of individual peaks or precision phase estimation.
-     * 30s segments
-     * 1x5 downsampling
-     * Merge threshold of 13
 
 Adjust these by selecting the appropriate and changing 'fast' to the appropriate quality setting.
 
@@ -228,19 +219,16 @@ Inputs: Raw EEG timeseries and TF-peak frequencies and times
 This code is an optimized version of what was used in Stokes et. al., 2022. The following is a list of the changes made during optimization. The original unoptimized paper code can be found [here](https://github.com/preraulab/watershed_TFpeaks_toolbox/tree/transient_oscillation_paper).
 * Candidate TF-Peak regions that are below the duration and bandwidth cutoffs are now removed prior to trimming and peak property calculations
 * Empty regions that come out of the merge procedure are now removed prior to trimming and peak property calculations
-* Watershed and the merging procedure now run on a lower resolution spectrogram (downsampled from the input spectrogram using decimation) to get the rough watershed regions,w hich are then mapped back onto the high-resolution spectrogram, from which trimming and peak property calculations are done.
+* Watershed and the merging procedure now run on a lower resolution spectrogram (downsampled from the input spectrogram using decimation) to get the rough watershed regions, which are then mapped back onto the high-resolution spectrogram, from which trimming and peak property calculations are done.
 * Spectrogram segment size reduced from 60s to 30s
 * During the merging process, the adjacency list is now stored as unidirectional graph (instead of bidirectional), and only the larger of the merging weights between two regions is stored during iterative merge weight computation. 
-
-<br/>
-<br/>
 
 ## Repository Structure
 The contents of the "toolbox" folder is organized as follows:
 
 ```
 /
-example_script.m: Runs the full TFpeak finding algorithm, computes the SO-Power and SO-Phase histograms, and plots a summary figure. Uses example data contained in example_data folder.
+│   example_script.m: Runs the full TFpeak finding algorithm, computes the SO-Power and SO-Phase histograms, and plots a summary figure. Uses example data │   contained in example_data folder.
 │
 └───/toolbox/
     │
@@ -260,17 +248,3 @@ example_script.m: Runs the full TFpeak finding algorithm, computes the SO-Power 
             including baseline removal, data chunking, imageegmentation, peak merging, peak trimming, and 
             calculating and saving out the TF-peak statistics.  
 ```
-
-
-<br/>
-<br/>
-
-## Parameters
-Input and output parameter descriptions and function descriptions for each function can be found in the documentation string under the function definition in each function file (.m). The top-level function to identify TF-peaks using the watershed algorithm is the [extract_TFpeaks](https://github.com/preraulab/watershed_TFpeaks_toolbox/blob/master/all_functions/watershed_functions/extract_TFpeaks.m) function. The top level functions to compute and plot the SO-power and SO-phase histograms are [SOpower_histogram](https://github.com/preraulab/watershed_TFpeaks_toolbox/blob/master/all_functions/SOpowphase_functions/SOpower_histogram.m) and [SOphase_histogram](https://github.com/preraulab/watershed_TFpeaks_toolbox/blob/master/all_functions/SOpowphase_functions/SOphase_histogram.m).
-
-<br/>
-<br/>
-
-<br/>
-<br/>
-
