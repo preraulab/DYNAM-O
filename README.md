@@ -60,8 +60,7 @@ After installing the package, execute the example script on the command line:
 
 Once a parallel pool has started (if applicable), the following result should be generated: 
  
-<figure ><img src="https://prerau.bwh.harvard.edu/images/segment_fast.png" alt="example segment" style="display: block; margin-left: auto;
- margin-right: auto; width: 30%;">
+<figure ><img src="https://prerau.bwh.harvard.edu/images/segment_fast.png" alt="example segment" width="40%;">
 <figcaption><b>Output from the example segment of data provided with the toolbox.</b></figcaption></figure>
 <br/><br/>
 
@@ -74,10 +73,53 @@ Once the segment has succesfully completed, you can run the full night of data b
 data_range = 'night';
 ```
 This should produce the following output:
-<figure><img src="https://prerau.bwh.harvard.edu/images/night_fast.png" alt="full night example" style="width:100%"> <figcaption align = "center"><b>Output from the example full night of data provided with the toolbox.</b></figcaption></figure>
+<figure><img src="https://prerau.bwh.harvard.edu/images/night_fast.png" alt="full night example" style="width:40%"> <figcaption align = "center"><b>Output from the example full night of data provided with the toolbox.</b></figcaption></figure>
 <br/><br/>
 
+### Changing the Quality Settings
+The following preset settings are available in our example script. As all data are different, it is essential to verify equivalency before relying on a speed-optimized solution other than precision.
 
+- “precision”:  Most accurate assessment of individual peak bounds and phase
+     * 30s segments
+     * No resampling
+     * Merge threshold of 8
+- “fast”: Faster approach, with accurate SO-power/phase histograms, minimal difference in phase
+     *	30s segments
+     *	2x2 downsampling
+     *	Merge threshold of 11
+- “draft”: Fastest approach. Good SO-power/phase histograms but with increased high-frequency peaks. Not recommended for assessment of individual peaks or precision phase estimation.
+     * 30s segments
+     * 1x5 downsampling
+     * Merge threshold of 13
+
+Adjust these by selecting the appropriate and changing 'fast' to the appropriate quality setting.
+
+``` matlab
+%Quality settings for computing watershed
+% 'precision': high res settings
+% 'fast': speed-up with minimal impact on results *suggested*
+% 'draft': faster speed-up with increased high frequency TF-peaks, *not recommended for analyzing SOphase*
+quality_setting = 'fast';
+```
+
+### Changing the SO-power Normalization
+
+There are also multiple normalization schemes that can be used for the SO-power.
+
+-	'none': No normalization. The unaltered SO-power in dB.
+- 'p5shift':	Percentile shifted. The Nth percentile of artifact free SO-power during sleep (non-wake) times is computed and subtracted. We use the 5th percentile by default, as it roughly corresponds with aligning subjects by N1 power. This is the recommended normalization for any multi-subject comparisons.
+- 'percent': %SO-power. SO-power is scaled between 1st and 99th percentile of artifact free data during sleep (non-wake) times. This this only appropriate for within-night comparisons or when it is known all subjects reach the same stage of sleep.
+- 'proportional': The ratio of slow to total SO-power.
+
+To change this, comment in/out the appropriate line.
+
+``` matlab
+%Normalization setting for computing SO-power histogram
+SOpower_norm_method = 'p5shift'; % aligns at the 5th percentile, important for comparing across subjects
+% SOpower_norm_method = 'percent'; % use percent only if subjects all reach stage 3
+% SOpower_norm_method = 'proportion'; % ratio of SO-power to total power
+% SOpower_norm_method = 'none'; % raw dB power
+```
 <br/>
 <br/>
 
