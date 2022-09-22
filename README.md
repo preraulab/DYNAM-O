@@ -1,7 +1,17 @@
-# Toolbox - Watershed TFpeaks and SO-power/phase Histograms
+# Transient Oscillation Dynamics Toolbox v1.0 - Prerau Laboratory (sleepEEG.org)
 
-### This is the repository for the updated and optimized toolbox code used to identify time-frequency peaks in EEG data and create slow-oscillation power and phase histograms from the extracted TF-peak data. The code here is updated and optimized off of the code used in the following publication: 
+### This repository contains the updated and optimized toolbox code for extracting time-frequency peaks from EEG data and creating slow-oscillation power and phase histograms. 
+
+## Citation
+
+Please cite the following paper when using this package: 
 > Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach, Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis for Electroencephalographic Phenotyping and Biomarker Identification, Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+
+as well as:
+> Transient Oscillation Dynamics Toolbox v1.0 (sleepEEG.org/transient_oscillations)
+
+The paper is available open access at https://doi.org/10.1093/sleep/zsac223
+
 --- 
 
 ## Table of Contents
@@ -20,10 +30,10 @@
 <img src="https://prerau.bwh.harvard.edu/images/Transient%20Oscillation%20Graphical%20Abstract.png" width="600" />
 </p>
 <p align="center">
-  <sup><sub>Stokes et. al., 2022</sup></sub>
+  <sup><sub>Summary of the motivation and approach described in Stokes et. al., 2022</sup></sub>
 </p>
 
-This repository contains code to detect time-frequency peaks (TF-peaks) in a spectrogram of EEG data using the watershed image segmentation algorithm. TF-peaks represent transient oscillatory neural activity at specific frequencies with sleep spindles (a key neural biomarker) comprising a subset of TF-peaks. An explanation of the method used to compute the multitaper spectrogram of EEG data can be found [here](https://github.com/preraulab/multitaper_toolbox). The watershed method treats the spectrogram image as a topography and identifies the catchment basins (troughs), into which water falling on the terrain would collect, thus identifying local maxima. To reduce over-segmentation, neighboring regions are merged based on a novel merge rule designed to form complete, distinct TF-peaks in the spectrogram topography. 
+This repository contains code to detect time-frequency peaks (TF-peaks) in a spectrogram of EEG data using the approach based on the one described in ([Stokes et. al, 2022](https://doi.org/10.1093/sleep/zsac223)). TF-peaks represent transient oscillatory neural activity with in the EEG, which by definition will appear as a peak in the time-frequency topography of the spectrogram. Within sleep, perhaps the most important transient EEG oscillation is the sleep spindle, which has been linked to memory consolidation, and changes spindle activity have been linked with natural aging as well as numerous psychiatric and neurodegenerative disorders. This approach extracts TF-peaks by identifies salient peaks in the time-frequency topography of the spectrogram. The dynamics of the TF-peaks can then be described in terms of continuous correlates of sleep depth and cortical up/down states using representations called slow-oscillation (SO) power and phase histograms. This package provides the tools for TF-peak extraction as well as the creation of the SO-power/phase histograms.
 
 <p align="center">
 <img src="https://prerau.bwh.harvard.edu/images/watershed_summary_graphic.png" width="400" />
@@ -46,7 +56,7 @@ This repository also contains code to create slow-oscillation power (SO-power) a
 <br/>
 <br/>
 
-## Example
+## Quick Start: Using the Transient Oscillation Dynamics Toolbox
 An [example script](https://github.com/preraulab/watershed_TFpeaks_toolbox/blob/master/example_script.m) is provided in the repository that takes an excerpt of a single channel of [example sleep EEG data](https://github.com/preraulab/watershed_TFpeaks_toolbox/blob/master/example_data/example_data.mat) and runs the TF-peak detection watershed algorithm and the SO-power and SO-phase analyses, plotting the resulting hypnogram, spectrogram, TF-peak scatterplot, SO-power histogram, and SO-phase histogram (shown below). It is recommended to use parallel processing to speed up the watershed and merging computation. The extract_TFpeaks function may automatically try to open parallel processing with the default number of cores. To check how many cores your machine has, use the `feature('numcores')` command. To turn on parallel processing with a specific number of cores, use the `parpool(x)` command, where x is the number of cores, before running the script. 
 
 <br/>
