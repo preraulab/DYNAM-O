@@ -18,10 +18,9 @@ The paper is available open access at https://doi.org/10.1093/sleep/zsac223
 * [Overview](#overview)
 * [Background and Motiviation](#background-and-motivation)
 * [Quick Start](#quick-start-using-the-toolbox)
-* [Algorithm Description](#algorithm-description)
+* [Algorithm Summary](#algorithm-summary)
 * [Optimizations](#optimizations)
 * [Repository Structure](#repository-structure)
-* [Parameters](#parameters)
 
 ## Overview 
 
