@@ -118,14 +118,16 @@ You can save the image output by adjusting these lines:
 %Save figure image
 save_output_image = false;
 output_fname = [];
-`
+```
+
 You can also save the raw data with by changing the value of `save_peak_properties`:
+``` matlab
 %Save peak property data
 %   0: Does not save anything
 %   1: Saves a subset of properties for each TFpeak 
 %   2: Saves all properties for all peaks (including rejected noise peaks) 
 save_peak_properties = 0;
-
+```
 
 ## Running Your Own Data
 The main function to run is run_watershed_SOpowphase.m
