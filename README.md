@@ -33,19 +33,19 @@ Scientists typically study brain activity during sleep using the electroencephal
 
 <figure><img src="https://prerau.bwh.harvard.edu/images/EEG-time%20trace.png" alt="eeg trace" style="width:100%">
 <figcaption align = "center"><b>An original paper tape trace of EEG from the 1930s, showing sleep spindles. (Loomis et. al 1935)</b></figcaption></figure>
-<br><br>
+<br/><br/>
 
 One particularly important set of sleep brainwave events are called sleep spindles. These spindles are short oscillation waveforms, usually lasting less than 1-2 seconds, that are linked to our ability to convert short-term memories to long-term memories. Changes in spindle activity have been linked with numerous disorders such as schizophrenia, autism, and Alzheimer’s disease, as well as with natural aging. Rather than looking for spindle activity according to the historical definition, we develop a new approach to automatically extract tens of thousands of short spindle-like transient oscillation waveform events from the EEG data throughout the entire night. This approach takes advantage of the fact that transient oscillations will looks like high-power regions in the spectrogram, which represent salient time-frequency peaks (TF-peaks) in the spectrogram.
-<br><br>
+<br/><br/>
 
 <figure><img src="https://prerau.bwh.harvard.edu/images/TF-peak%20detection_small.png" alt="tf-peaks" style="width:100%"> <figcaption align = "center"><b>Transient oscillation activity in the time domain will appear as contiguous high-power regions in the spectrogram, which represent salient peaks (TF-peaks) in the time-frequency topography.</b></figcaption></figure>
-<br><br>
+<br/><br/>
 
 The TF-peak detection method is based on the watershed algorithm, which is commonly used in computer vision applications to segment an image into distinct objects. The watershed method treats an image as a topography and identifies the catchment basins, that is, the troughs, into which water falling on the terrain would collect.
-<br><br>
+<br/><br/>
 
 <figure><img src="https://prerau.bwh.harvard.edu/images/SOpowphase_small.png" alt="SO-power/phase histograms" style="width:100%"> <figcaption align = "center"><b>Slow-oscillation power and phase histograms create representations of TF-peak activity as function of continuous depth-of-sleep and as a function of timing with respect to cortical up/down states.</b></figcaption></figure>
-<br><br>
+<br/><br/>
 
 Next, instead of looking at the waveforms in terms of fixed sleep stages (i.e., Wake, REM, and non-REM stages 1-3) as di standard sleep studies, we can characterize the full continuum of gradual changes that occur in the brain during sleep. We use the slow oscillation power (SO-phase) as a metric of continuous depth of sleep, and slow-oscillation phase (SO-phase) to represent timing with respect to cortical up/down states. By characterizing TF-peak activity in terms of these two metrics, we can create graphical representations, called SO-power and SO-phase histograms. This creates a comprehensive representation of transient oscillation dynamics at different time scales, providing a highly informative new visualization technique and powerful basis for EEG phenotyping and biomarker identification in pathological states. To form the SO-power histogram, the central frequency of the TF-peak and SO-power at which the peak occured are computed. Each TF-peak is then sorted into its corresponding 2D frequency x SO-power bin and the count in each bin is normalized by the total sleep time in that SO-power bin to obtain TF-peak density in each grid bin. The same process is used to form the SO-phase histograms except the SO-phase at the time of the TF-peak is used in place of SO-power, and each row is normalized by the total peak count in the row to create probability densities.
 
@@ -58,19 +58,24 @@ After installing the package, execute the example script on the command line:
 > example_script;
 ```
 
-Once a parallel pool has started (if applicable), the following result should be generated
+Once a parallel pool has started (if applicable), the following result should be generated: 
  
- 
-<figure><div style="text-align: center;"><img src="https://prerau.bwh.harvard.edu/images/segment_fast.png" alt="example segment" width="50%"></div>
-<figcaption align = "center"><b>Output from the example segment of data provided with the toolbox</b></figcaption></figure>
-<br><br>
+<figure ><img src="https://prerau.bwh.harvard.edu/images/segment_fast.png" alt="example segment" style="display: block; margin-left: auto;
+ margin-right: auto; width: 30%;">
+<figcaption><b>Output from the example segment of data provided with the toolbox.</b></figcaption></figure>
+<br/><br/>
 
+This is the general output for the algorithm. On top is the hypnogram, EEG spectrogram, and the SO-power trace. In the middle is a scatterplot of the TF-peaks with x = time, y = frequency, size = peak prominence, and color = SO-phase. On the bottom are the SO-power and SO-phase histograms.
 
+Once the segment has succesfully completed, you can run the full night of data by changing the following line in the example script, such that the variable data_range changes from 'segment' to 'night'.
 
 ``` matlab
 %%Select 'segment' or 'night' for example data range
 data_range = 'night';
 ```
+This should produce the following output:
+<figure><img src="https://prerau.bwh.harvard.edu/images/night_fast.png" alt="full night example" style="width:100%"> <figcaption align = "center"><b>Output from the example full night of data provided with the toolbox.</b></figcaption></figure>
+<br/><br/>
 
 
 <br/>
