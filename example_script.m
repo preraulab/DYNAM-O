@@ -16,13 +16,13 @@
 
 %% SETTINGS
 %Select 'segment' or 'night' for example data range
-data_range = 'night';
+data_range = 'segment';
 
 %Settings for computing watershed
 % 'precision': high res settings
 % 'fast': speed-up with minimal impact on results *suggested*
 % 'draft': faster speed-up with increased high frequency TF-peaks, *not recommended for analyzing SOphase*
-spect_settings = 'draft';
+spect_settings = 'fast';
 
 %Normalization setting for computing SO-power histogram
 SOpower_norm_method = 'p5shift'; % aligns at the 5th percentile, important for comparing across subjects
