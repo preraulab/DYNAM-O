@@ -26,7 +26,7 @@ data_fname = 'example_data/example_data.mat';
 data_range = 'segment'; %Only works for example data provide
 
 %% ALGORITHM SETTINGS
-%Settings for computing watershed:
+%Quality settings for the algorithm:
 %   'precision': high res settings
 %   'fast': speed-up with minimal impact on results *suggested*
 %   'draft': faster speed-up with increased high frequency TF-peaks, *not recommended for analyzing SOphase*
