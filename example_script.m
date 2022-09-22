@@ -33,6 +33,11 @@ SOpower_norm_method = 'p5shift'; % aligns at the 5th percentile, important for c
 %Save figure image
 save_output_image = false;
 
+%Save peak property data
+save_peak_properties = 0;  % does not save anything
+%save_peak_properties = 1; % saves a subset of properties for each TFpeak 
+%save_peak_properties = 2; % saves all properties for all peaks (including rejected noise peaks) 
+
 %% PREPARE DATA
 %Check for parallel toolbox
 v = ver;
@@ -65,7 +70,7 @@ switch data_range
 end
 
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
-[peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, boundaries] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range, 'spect_settings', spect_settings, 'SOpower_norm_method', SOpower_norm_method);
+[peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, boundaries] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range, 'spect_settings', spect_settings, 'SOpower_norm_method', SOpower_norm_method, 'save_pref', save_peak_properties);
 
 %% COMPUTE SPECTROGRAM FOR DISPLAY
 [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(EEG, Fs, [4,25], [15 29], [30 15], [],'linear',[],false,false);

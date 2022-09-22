@@ -1,4 +1,4 @@
-function [matr_names, matr_fields, peaks_matr, PixelIdxList, PixelList, PixelValues, rgn, bndry, valid_peak_mask] = ...
+function [feature_matrix, feature_names, xywcntrd, PixelIdxList, PixelList, PixelValues, rgn, bndry, combined_mask] = ...
     runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, ...
     dur_min, bw_min, conn_wshed, merge_thresh, max_merges, trim_vol, trim_shift, conn_trim, ...
     conn_stats, bl_thresh_flag, CI_upper_bl, merge_rule, f_verb, verb_pref, f_disp, f_save, ofile_pref)
@@ -54,7 +54,7 @@ function [matr_names, matr_fields, peaks_matr, PixelIdxList, PixelList, PixelVal
 %   f_save       -- integer indicator of whether to save output files and how much
 %                   information to save. [0 = no saving, 1 = save fewer peak stats,
 %                   2 = save all peak stats]. Default 0.
-%   ofile_pref   -- string of path and data name for outputs. default 'tmp'.
+%   ofile_pref   -- string of path and data name for outputs. default './'.
 %
 % OUTPUTS:
 %   peaks_matr      -- matrix of peak features. each row is a peak.
@@ -159,7 +159,7 @@ if nargin < 22 || isempty(f_save)
 end
 
 if nargin < 23 || isempty(ofile_pref)
-    ofile_pref = 'tmp/';
+    ofile_pref = './';
 end
 
 %******************
@@ -260,8 +260,13 @@ end
     segs_PixelIdxList, segs_matr_fields, segs_peaks_matr, verb_pref, f_verb);
 
 
-%% Save peak stats *
-valid_peak_mask = savePeakStats(peaks_matr, matr_names, matr_fields, PixelIdxList, f_save, ofile_pref, verb_pref, f_verb);
+%% Filter out Noise Peaks and Save Peak Stats *
+[feature_matrix, feature_names, xywcntrd, combined_mask] = filterSavePeakStats(peaks_matr, matr_names, matr_fields, PixelIdxList, PixelValues, bndry, f_save, ofile_pref, verb_pref, f_verb);
+PixelIdxList = PixelIdxList(combined_mask);
+PixelList = PixelList(combined_mask);
+PixelValues = PixelValues(combined_mask);
+rgn = rgn(combined_mask);
+bndry = bndry(combined_mask);
 
 if f_verb > 0
     disp([verb_pref 'Done with peak stats.']);

@@ -73,6 +73,7 @@ addOptional(p, 'lightsonoff_mins', 5, @(x) validateattributes(x,{'numeric'},{'re
 addOptional(p, 'SOpower_norm_method', 'p5shift', @(x) validateattributes(x, {'char', 'numeric'},{}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'spect_settings', 'fast', @(x) validateattributes(x,{'char','numeric'},{}));
+addOptional(p, 'save_pref', 0, @(x) validateattributes(x,{'numeric', 'vector'}, {'real', 'nonempty'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -192,20 +193,12 @@ if verbose
     tfp = tic;
 end
 
-[matr_names, matr_fields, peaks_matr,~,~, pixel_values,~,boundaries,~] = runSegmentedData(spect_in, stimes_in, sfreqs, baseline, seg_time, downsample_spect, dur_min, bw_min, [], merge_thresh);
+[feature_matrix, feature_names, xywcntrd, ~, ~, ~, ~, boundaries, ~] = runSegmentedData(spect_in, stimes_in, sfreqs, baseline, seg_time, downsample_spect, dur_min, bw_min, [], merge_thresh, [],[],[],[],[],[],[],[],[],[],[],save_pref);
 
 if verbose
     disp(['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
 end
 
-%% Filter out noise peaks
-if verbose
-    disp('Removing noise peaks...')
-end
-
-[feature_matrix, feature_names, xywcntrd, peak_mask] = filterpeaks_watershed(peaks_matr, matr_fields, matr_names, pixel_values);
-
-boundaries = boundaries(peak_mask,:);
 
 %% Compute SO power and SO phase
 % Exclude WAKE stages from analyses
