@@ -65,7 +65,7 @@ Once a parallel pool has started (if applicable), the following result should be
 
 This is the general output for the algorithm. On top is the hypnogram, EEG spectrogram, and the SO-power trace. In the middle is a scatterplot of the TF-peaks with x = time, y = frequency, size = peak prominence, and color = SO-phase. On the bottom are the SO-power and SO-phase histograms.
 
-Once the segment has succesfully completed, you can run the full night of data by changing the following line in the example script, such that the variable data_range changes from 'segment' to 'night'.
+Once the segment has succesfully completed, you can run the full night of data by changing the following line in the example script under `DATA SETTINGS`, such that the variable data_range changes from 'segment' to 'night'.
 
 ``` matlab
 %%Select 'segment' or 'night' for example data range
@@ -76,7 +76,7 @@ This should produce the following output:
 <br/><br/>
 
 ### Changing the Quality Settings
-The following preset settings are available in our example script. As all data are different, it is essential to verify equivalency before relying on a speed-optimized solution other than precision.
+The following preset settings are available in our example script under `ALGORITHM SETTINGS`. As all data are different, it is essential to verify equivalency before relying on a speed-optimized solution other than precision.
 
 - “precision”:  Most accurate assessment of individual peak bounds and phase
 - “fast”: Faster approach, with accurate SO-power/phase histograms, minimal difference in phase
@@ -85,11 +85,11 @@ The following preset settings are available in our example script. As all data a
 Adjust these by selecting the appropriate and changing 'fast' to the appropriate quality setting.
 
 ``` matlab
-%Quality settings for computing watershed
-% 'precision': high res settings
-% 'fast': speed-up with minimal impact on results *suggested*
-% 'draft': faster speed-up with increased high frequency TF-peaks, *not recommended for analyzing SOphase*
-quality_setting = 'fast';
+%Quality settings for the algorithm:
+%   'precision': high res settings
+%   'fast': speed-up with minimal impact on results *suggested*
+%   'draft': faster speed-up with increased high frequency TF-peaks, *not recommended for analyzing SOphase*
+quality_setting = 'draft';
 ```
 
 ### Changing the SO-power Normalization
@@ -104,11 +104,12 @@ There are also multiple normalization schemes that can be used for the SO-power.
 To change this, comment in/out the appropriate line.
 
 ``` matlab
-%Normalization setting for computing SO-power histogram
-SOpower_norm_method = 'p5shift'; % aligns at the 5th percentile, important for comparing across subjects
-% SOpower_norm_method = 'percent'; % use percent only if subjects all reach stage 3
-% SOpower_norm_method = 'proportion'; % ratio of SO-power to total power
-% SOpower_norm_method = 'none'; % raw dB power
+%Normalization setting for computing SO-power histogram:
+%   'p5shift': Aligns at the 5th percentile, important for comparing across subjects
+%   'percent': Scales between 1st and 99th ptile. Use percent only if subjects all reach stage 3
+%   'proportion': ratio of SO-power to total power
+%   'none': No normalization. Raw dB power
+SOpower_norm_method = 'p5shift';
 ```
 
 ## Running Your Own Data
