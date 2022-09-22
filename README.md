@@ -7,11 +7,14 @@
 Please cite the following paper when using this package: 
 > Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach, Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis for Electroencephalographic Phenotyping and Biomarker Identification, Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
 
-as well as:
+which can be referred to in the text as:
 > Transient Oscillation Dynamics Toolbox v1.0 (sleepEEG.org/transient_oscillations)
 
 The paper is available open access at https://doi.org/10.1093/sleep/zsac223
 
+### Preceptually Uniform Colormaps
+Included in this package are versions of a rainbow and "gouldian" colormap, designed to be more perceptually uniform than jet and parula, respectively. If you use them, please cite:
+> Peter Kovesi. Good Colour Maps: How to Design Them. arXiv:1509.03700 [cs.GR] 2015 https://arxiv.org/abs/1509.03700
 --- 
 
 ## Table of Contents
