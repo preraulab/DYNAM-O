@@ -177,9 +177,6 @@ The main outputs are:
 
 View the full documentation for all parameters and outputs.
 
-<br/>
-<br/>
-
 # Documentation and Tutorials
 
 ## Algorithm Summary
