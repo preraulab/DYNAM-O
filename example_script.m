@@ -30,7 +30,7 @@ data_range = 'segment'; %Only works for example data provide
 %   'precision': high res settings
 %   'fast': speed-up with minimal impact on results *suggested*
 %   'draft': faster speed-up with increased high frequency TF-peaks, *not recommended for analyzing SOphase*
-quality_setting = 'draft';
+quality_setting = 'fast';
 
 %Normalization setting for computing SO-power histogram:
 %   'p5shift': Aligns at the 5th percentile, important for comparing across subjects
@@ -44,9 +44,10 @@ save_output_image = false;
 output_fname = [];
 
 %Save peak property data
-save_peak_properties = 0;  % does not save anything
-%save_peak_properties = 1; % saves a subset of properties for each TFpeak 
-%save_peak_properties = 2; % saves all properties for all peaks (including rejected noise peaks) 
+%   0: Does not save anything
+%   1: Saves a subset of properties for each TFpeak 
+%   2: Saves all properties for all peaks (including rejected noise peaks) 
+save_peak_properties = 0;
 
 %% PREPARE DATA
 %Check for parallel toolbox
