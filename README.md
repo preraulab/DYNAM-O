@@ -59,7 +59,7 @@ An [example script](https://github.com/preraulab/watershed_TFpeaks_toolbox/blob/
 
 ## Algorithm Description
 ### Transient Oscillation Detection 
-Input: Raw EEG timeseries and Spectrogram of EEG timeseries 
+Inputs: Raw EEG timeseries and Spectrogram of EEG timeseries 
 1. Artifact Detection 
     * iteratively marks artifacts 3.5 SDs above the mean
 2. Baseline Subtraction
@@ -85,8 +85,33 @@ Input: Raw EEG timeseries and Spectrogram of EEG timeseries
 6. Reject TF-peaks above or below bandwidth and duration cutoff criteria
 
 ### SO-power Histogram Calculation
+Inputs: Raw EEG timeseries and TF-peak frequencies and times
+1. Compute SO-Power on artifact rejected EEG timeseries
+  * Compute multitaper spectrogram of EEG timeseries (30s windows, 15s stepsize, 29 tapers, 1Hz resolution)
+  * Integrate spectrogram between 0.3 and 1.5 Hz 
+2. Normalize SO-Power via selected method
+  * Percent normalization: Subtracts 1st percentile and divides by 99th percentile. Used only if subjects all reach stage 3
+  * p5shift normalization: Subtracts 5th percentile, important for comparing across subjects
+  * proportion normalization: Ratio of SO-power to total power
+  * No normalization
+3. Create SO-Power and frequency bins based on desired SO-Power and frequency window and step sizes
+4. Compute TF-peak rate in each pixel of SO-Power-Frequency histogram
+  * Count how many TF-peaks fall into each pixel's given frequency and SO-Power bin
+  * Divide by total sleep time spent in the given SO-Power bin
+ 
 ### SO-phase Histogram Calculation
-
+Inputs: Raw EEG timeseries and TF-peak frequencies and times
+1. Compute SO-Phase on 0.3-1.5Hz bandpassed EEG timeseries
+  * Compute Herbert transform of bandpassed signal
+  * Unwrap Herbert phase (so that it is in terms of cumulative radians)
+  * Interpolate phase at each TF-peak time 
+  * Rewrap phase of each TF-peak so that 0 radians corresponds to SO peak and -pi or pi corresponds to SO trough
+2. Create SO-Phase and frequency bins based on desired SO-Phase and frequency window and step sizes
+3. Compute TF-peak rate in each pixel of SO-Phase-Frequency histogram
+  * Count how many TF-peaks fall into each pixel's given frequency and SO-Phase bin
+  * Divide by total sleep time spent in the given SO-Phase bin
+4. Normalize each frequency row of histogram so that row integration adds to 1
+ 
 ## Optimizations 
 This code is an optimized version of what was used in Stokes et. al., 2022. The following is a list of the changes made during optimization. The original unoptimized paper code can be found [here](https://github.com/preraulab/watershed_TFpeaks_toolbox/tree/transient_oscillation_paper).
 * Candidate TF-Peak regions that are below the duration and bandwidth cutoffs are now removed prior to trimming and peak property calculations
