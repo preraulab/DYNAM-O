@@ -125,9 +125,10 @@ SOpower_norm_method = 'p5shift'; % aligns at the 5th percentile, important for c
 The main function to run is run_watershed_SOpowphase.m
 
 ``` matlab
-run_watershed_SOpowphase(data, Fs, stage_times, stage_vals, 'time_range', time_range, 'quality_setting', quality_setting, 'SOpower_norm_method', SOpower_norm_method);
+run_watershed_SOpowphase(data, Fs, stage_times, stage_vals, 'time_range', time_range, 'quality_setting', 
+                         quality_setting, 'SOpower_norm_method', SOpower_norm_method);
 ```
-It requires the following basic inputs:
+It uses the following basic inputs:
 ``` matlab
 %       data (req):                [1xn] double - timeseries data to be analyzed
 %       Fs (req):                  double - sampling frequency of data (Hz)
@@ -162,6 +163,9 @@ The main outputs are:
 %       SOpower_norm: 1D double - normalized SO-power used to compute histogram
 %       SOpow_times:  1D double - SO-power times
 ```
+
+View the full documentation for all parameters and outputs.
+
 <br/>
 <br/>
 
