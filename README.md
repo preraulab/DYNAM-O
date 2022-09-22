@@ -117,6 +117,8 @@ This code is an optimized version of what was used in Stokes et. al., 2022. The 
 * Candidate TF-Peak regions that are below the duration and bandwidth cutoffs are now removed prior to trimming and peak property calculations
 * Empty regions that come out of the merge procedure are now removed prior to trimming and peak property calculations
 * Watershed and the merging procedure now run on a lower resolution spectrogram (downsampled from the input spectrogram using decimation) to get the rough watershed regions,w hich are then mapped back onto the high-resolution spectrogram, from which trimming and peak property calculations are done.
+* Spectrogram segment size reduced from 60s to 30s
+* During the merging process, the adjacency list is now stored as unidirectional graph (instead of bidirectional), and only the larger of the merging weights between two regions is stored during iterative merge weight computation. 
 
 <br/>
 <br/>
