@@ -82,7 +82,7 @@ The following preset settings are available in our example script under `ALGORIT
 - “fast”: Faster approach, with accurate SO-power/phase histograms, minimal difference in phase
 - “draft”: Fastest approach. Good SO-power/phase histograms but with increased high-frequency peaks. Not recommended for assessment of individual peaks or precision phase estimation.
 
-Adjust these by selecting the appropriate and changing 'fast' to the appropriate quality setting.
+Adjust these by selecting the appropriate and changing `quality_setting` from 'fast' to the appropriate quality setting.
 
 ``` matlab
 %Quality settings for the algorithm:
@@ -101,7 +101,7 @@ There are also multiple normalization schemes that can be used for the SO-power.
 - 'percent': %SO-power. SO-power is scaled between 1st and 99th percentile of artifact free data during sleep (non-wake) times. This this only appropriate for within-night comparisons or when it is known all subjects reach the same stage of sleep.
 - 'proportional': The ratio of slow to total SO-power.
 
-To change this, comment in/out the appropriate line.
+To change this, change `SOpower_norm_method` to the appropriate value.
 
 ``` matlab
 %Normalization setting for computing SO-power histogram:
@@ -111,6 +111,21 @@ To change this, comment in/out the appropriate line.
 %   'none': No normalization. Raw dB power
 SOpower_norm_method = 'p5shift';
 ```
+
+## Saving Output
+You can save the image output by adjusting these lines: 
+``` matlab
+%Save figure image
+save_output_image = false;
+output_fname = [];
+`
+You can also save the raw data with by changing the value of `save_peak_properties`:
+%Save peak property data
+%   0: Does not save anything
+%   1: Saves a subset of properties for each TFpeak 
+%   2: Saves all properties for all peaks (including rejected noise peaks) 
+save_peak_properties = 0;
+
 
 ## Running Your Own Data
 The main function to run is run_watershed_SOpowphase.m
