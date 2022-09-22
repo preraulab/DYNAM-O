@@ -1,4 +1,4 @@
-# Transient Oscillation Dynamics Toolbox v1.0 - Prerau Laboratory (sleepEEG.org)
+# Transient Oscillation Dynamics Toolbox v1.0 - Prerau Laboratory ([sleepEEG.org](https://prerau.bwh.harvard.edu/))
 
 ### This repository contains the updated and optimized toolbox code for extracting time-frequency peaks from EEG data and creating slow-oscillation power and phase histograms. 
 
