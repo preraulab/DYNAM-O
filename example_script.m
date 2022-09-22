@@ -14,29 +14,40 @@
 
 %%%% Example script showing how to compute time-frequency peaks and SO-power/phase histograms
 
-%% SETTINGS
+%% PATH SETTINGS
+% Add necessary functions to path
+addpath(genpath('./toolbox'))
+
+%% DATA SETTINGS
+%Location of example data
+data_fname = 'example_data/example_data.mat';
+
 %Select 'segment' or 'night' for example data range
-data_range = 'night';
+data_range = 'segment'; %Only works for example data provide
 
-%Settings for computing watershed
-% 'precision': high res settings
-% 'fast': speed-up with minimal impact on results *suggested*
-% 'draft': faster speed-up with increased high frequency TF-peaks, *not recommended for analyzing SOphase*
-spect_settings = 'fast';
+%% ALGORITHM SETTINGS
+%Quality settings for the algorithm:
+%   'precision': high res settings
+%   'fast': speed-up with minimal impact on results *suggested*
+%   'draft': faster speed-up with increased high frequency TF-peaks, *not recommended for analyzing SOphase*
+quality_setting = 'fast';
 
-%Normalization setting for computing SO-power histogram
-SOpower_norm_method = 'p5shift'; % aligns at the 5th percentile, important for comparing across subjects
-% SOpower_norm_method = 'percent'; % use percent only if subjects all reach stage 3
-% SOpower_norm_method = 'proportion'; % ratio of SO-power to total power
-% SOpower_norm_method = 'none'; % raw dB power
+%Normalization setting for computing SO-power histogram:
+%   'p5shift': Aligns at the 5th percentile, important for comparing across subjects
+%   'percent': Scales between 1st and 99th ptile. Use percent only if subjects all reach stage 3
+%   'proportion': ratio of SO-power to total power
+%   'none': No normalization. Raw dB power
+SOpower_norm_method = 'p5shift';
 
 %Save figure image
 save_output_image = false;
+output_fname = [];
 
 %Save peak property data
-save_peak_properties = 0;  % does not save anything
-%save_peak_properties = 1; % saves a subset of properties for each TFpeak 
-%save_peak_properties = 2; % saves all properties for all peaks (including rejected noise peaks) 
+%   0: Does not save anything
+%   1: Saves a subset of properties for each TFpeak 
+%   2: Saves all properties for all peaks (including rejected noise peaks) 
+save_peak_properties = 0;
 
 %% PREPARE DATA
 %Check for parallel toolbox
@@ -45,9 +56,10 @@ haspar = any(strcmp({v.Name}, 'Parallel Computing Toolbox'));
 if haspar
     gcp;
 end
+%% LOAD DATA
 
 %Load example EEG data
-load('example_data/example_data.mat', 'EEG', 'stage_vals', 'stage_times', 'Fs');
+load(data_fname, 'data', 'stage_vals', 'stage_times', 'Fs');
 
 %STAGE NOTATION (in order of sleep depth)
 % W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
@@ -70,10 +82,11 @@ switch data_range
 end
 
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
-[peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, boundaries] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range, 'spect_settings', spect_settings, 'SOpower_norm_method', SOpower_norm_method, 'save_pref', save_peak_properties);
+[peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, boundaries] = ...
+    run_watershed_SOpowphase(data, Fs, stage_times, stage_vals, 'time_range', time_range, 'quality_setting', quality_setting, 'SOpower_norm_method', SOpower_norm_method, 'save_pref', save_peak_properties);
 
 %% COMPUTE SPECTROGRAM FOR DISPLAY
-[spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(EEG, Fs, [4,25], [15 29], [30 15], [],'linear',[],false,false);
+[spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(data, Fs, [4,25], [15 29], [30 15], [],'linear',[],false,false);
 
 % PLOT RESULTS FIGURE
 % Create figure
@@ -241,7 +254,9 @@ set(th,'fontsize',15)
 %% PRINT OUTPUT
 if save_output_image
     %Output filename
-    output_fname = ['toolbox_example_' data_range '_' spect_settings '.png']; %#ok<UNRCH>
+    if isempty(output_fname)
+        output_fname = 'TFpeakDynamics.png'
+    end
     print(fh,'-dpng','-r200',output_fname);
 end
 

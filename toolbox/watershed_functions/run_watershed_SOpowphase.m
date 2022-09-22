@@ -72,7 +72,7 @@ addOptional(p, 'stages_include', [1,2,3,4], @(x) validateattributes(x,{'numeric'
 addOptional(p, 'lightsonoff_mins', 5, @(x) validateattributes(x,{'numeric'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'SOpower_norm_method', 'p5shift', @(x) validateattributes(x, {'char', 'numeric'},{}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
-addOptional(p, 'spect_settings', 'fast', @(x) validateattributes(x,{'char','numeric'},{}));
+addOptional(p, 'quality_setting', 'fast', @(x) validateattributes(x,{'char','numeric'},{}));
 addOptional(p, 'save_pref', 0, @(x) validateattributes(x,{'numeric', 'vector'}, {'real', 'nonempty'}));
 
 parse(p,varargin{:});
@@ -106,12 +106,12 @@ ttotal = tic;
 time_window_params = [1,0.05]; % [time window, time step] in seconds
 dsfreqs = 0.1; % For consistency with our results we expect a df of 0.1 Hz or less
 
-if isnumeric(spect_settings) % If spect_settings is numeric use it, and don't downsample
+if isnumeric(quality_setting) % If spect_settings is numeric use it, and don't downsample
     time_window_params = spect_settings(1:2);
     dsfreqs = spect_settings(3);
     downsample_spect = [];
 else
-    switch lower(spect_settings)
+    switch lower(quality_setting)
         case {'paper'} %Matches SLEEP paper settings exactly
             downsample_spect = [];
             seg_time = 60;
