@@ -120,6 +120,48 @@ SOpower_norm_method = 'p5shift'; % aligns at the 5th percentile, important for c
 % SOpower_norm_method = 'proportion'; % ratio of SO-power to total power
 % SOpower_norm_method = 'none'; % raw dB power
 ```
+
+## Running Your Own Data
+The main function to run is run_watershed_SOpowphase.m
+
+``` matlab
+run_watershed_SOpowphase(data, Fs, stage_times, stage_vals, 'time_range', time_range, 'quality_setting', quality_setting, 'SOpower_norm_method', SOpower_norm_method);
+```
+It requires the following basic inputs:
+``` matlab
+%       data (req):                [1xn] double - timeseries data to be analyzed
+%       Fs (req):                  double - sampling frequency of data (Hz)
+%       stage_times (req):         [1xm] double - timestamps of stage_vals
+%       stage_vals (req):          [1xm] double - sleep stage values at eaach time in
+%                                  stage_times. Note the staging convention: 0=unidentified, 1=N3,
+%                                  2=N2, 3=N1, 4=REM, 5=WAKE
+%       t_data (opt):              [1xn] double - timestamps for data. Default = (0:length(data)-1)/Fs;
+%       time_range (opt):          [1x2] double - section of EEG to use in analysis
+%                                  (seconds). Default = [0, max(t)]
+%       stages_include (opt):      [1xp] double - which stages to include in the SOpower and
+%                                  SOphase analyses. Default = [1,2,3,4]
+%       SOpower_norm_method (opt): character - normalization method for SO-power
+```
+
+The main outputs are:
+``` matlab
+%       peak_props:   table - time, frequency, height, SOpower, and SOphase
+%                     for each TFpeak
+%       SOpow_mat:    2D double - SO power histogram data
+%       SOphase_mat:  2D double - SO phase histogram data
+%       SOpow_bins:   1D double - SO power bin center values for dimension 1 of SOpow_mat
+%       SOphase_bins: 1D double - SO phase bin center values for dimension
+%                     1 of SOphase_mat
+%       freq_bins:    1D double - frequency bin center values for dimension 2
+%                     of SOpow_mat and SOphase_mat
+%       spect:        2D double - spectrogram of data
+%       stimes:       1D double - timestamp bin center values for dimension 2 of
+%                     spect
+%       sfreqs:       1D double - frequency bin center values for dimension 1 of
+%                     spect
+%       SOpower_norm: 1D double - normalized SO-power used to compute histogram
+%       SOpow_times:  1D double - SO-power times
+```
 <br/>
 <br/>
 
