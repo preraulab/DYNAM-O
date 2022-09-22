@@ -22,7 +22,7 @@ data_range = 'night';
 % 'precision': high res settings
 % 'fast': speed-up with minimal impact on results *suggested*
 % 'draft': faster speed-up with increased high frequency TF-peaks, *not recommended for analyzing SOphase*
-spect_settings = 'draft';
+quality_setting = 'fast';
 
 %Normalization setting for computing SO-power histogram
 SOpower_norm_method = 'p5shift'; % aligns at the 5th percentile, important for comparing across subjects
@@ -70,7 +70,7 @@ switch data_range
 end
 
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
-[peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, boundaries] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range, 'spect_settings', spect_settings, 'SOpower_norm_method', SOpower_norm_method, 'save_pref', save_peak_properties);
+[peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, boundaries] = run_watershed_SOpowphase(EEG, Fs, stage_times, stage_vals, 'time_range', time_range, 'quality_setting', quality_setting, 'SOpower_norm_method', SOpower_norm_method, 'save_pref', save_peak_properties);
 
 %% COMPUTE SPECTROGRAM FOR DISPLAY
 [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(EEG, Fs, [4,25], [15 29], [30 15], [],'linear',[],false,false);
@@ -241,7 +241,7 @@ set(th,'fontsize',15)
 %% PRINT OUTPUT
 if save_output_image
     %Output filename
-    output_fname = ['toolbox_example_' data_range '_' spect_settings '.png']; %#ok<UNRCH>
+    output_fname = ['toolbox_example_' data_range '_' quality_setting '.png']; %#ok<UNRCH>
     print(fh,'-dpng','-r200',output_fname);
 end
 
