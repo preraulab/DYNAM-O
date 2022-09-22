@@ -15,14 +15,13 @@ The paper is available open access at https://doi.org/10.1093/sleep/zsac223
 --- 
 
 ## Table of Contents
-* [Overview](#general-information)
-* [Example](#example)
+* [Overview](#overview)
+* [Background and Motiviation](#background-and-motivation)
+* [Quick Start](#quick-start-using-the-toolbox)
 * [Algorithm Description](#algorithm-description)
 * [Optimizations](#optimizations)
 * [Repository Structure](#repository-structure)
 * [Parameters](#parameters)
-* [Citations](#citations)
-* [Status](#status)
 
 ## Overview 
 
@@ -37,35 +36,54 @@ Scientists typically study brain activity during sleep using the electroencephal
 <br><br>
 
 One particularly important set of sleep brainwave events are called sleep spindles. These spindles are short oscillation waveforms, usually lasting less than 1-2 seconds, that are linked to our ability to convert short-term memories to long-term memories. Changes in spindle activity have been linked with numerous disorders such as schizophrenia, autism, and Alzheimer’s disease, as well as with natural aging. Rather than looking for spindle activity according to the historical definition, we develop a new approach to automatically extract tens of thousands of short spindle-like transient oscillation waveform events from the EEG data throughout the entire night. This approach takes advantage of the fact that transient oscillations will looks like high-power regions in the spectrogram, which represent salient time-frequency peaks (TF-peaks) in the spectrogram.
-<br>
+<br><br>
 
 <figure><img src="https://prerau.bwh.harvard.edu/images/TF-peak%20detection_small.png" alt="tf-peaks" style="width:100%"> <figcaption align = "center"><b>Transient oscillation activity in the time domain will appear as contiguous high-power regions in the spectrogram, which represent salient peaks (TF-peaks) in the time-frequency topography.</b></figcaption></figure>
-<br><br><br>
+<br><br>
 
 The TF-peak detection method is based on the watershed algorithm, which is commonly used in computer vision applications to segment an image into distinct objects. The watershed method treats an image as a topography and identifies the catchment basins, that is, the troughs, into which water falling on the terrain would collect.
-<br>
+<br><br>
 
 <figure><img src="https://prerau.bwh.harvard.edu/images/SOpowphase_small.png" alt="SO-power/phase histograms" style="width:100%"> <figcaption align = "center"><b>Slow-oscillation power and phase histograms create representations of TF-peak activity as function of continuous depth-of-sleep and as a function of timing with respect to cortical up/down states.</b></figcaption></figure>
 <br><br>
 
 Next, instead of looking at the waveforms in terms of fixed sleep stages (i.e., Wake, REM, and non-REM stages 1-3) as di standard sleep studies, we can characterize the full continuum of gradual changes that occur in the brain during sleep. We use the slow oscillation power (SO-phase) as a metric of continuous depth of sleep, and slow-oscillation phase (SO-phase) to represent timing with respect to cortical up/down states. By characterizing TF-peak activity in terms of these two metrics, we can create graphical representations, called SO-power and SO-phase histograms. This creates a comprehensive representation of transient oscillation dynamics at different time scales, providing a highly informative new visualization technique and powerful basis for EEG phenotyping and biomarker identification in pathological states. To form the SO-power histogram, the central frequency of the TF-peak and SO-power at which the peak occured are computed. Each TF-peak is then sorted into its corresponding 2D frequency x SO-power bin and the count in each bin is normalized by the total sleep time in that SO-power bin to obtain TF-peak density in each grid bin. The same process is used to form the SO-phase histograms except the SO-phase at the time of the TF-peak is used in place of SO-power, and each row is normalized by the total peak count in the row to create probability densities.
 
-## Quick Start: Using the Transient Oscillation Dynamics Toolbox
-An [example script](https://github.com/preraulab/watershed_TFpeaks_toolbox/blob/master/example_script.m) is provided in the repository that takes an excerpt of a single channel of [example sleep EEG data](https://github.com/preraulab/watershed_TFpeaks_toolbox/blob/master/example_data/example_data.mat) and runs the TF-peak detection watershed algorithm and the SO-power and SO-phase analyses, plotting the resulting hypnogram, spectrogram, TF-peak scatterplot, SO-power histogram, and SO-phase histogram (shown below). It is recommended to use parallel processing to speed up the watershed and merging computation. The extract_TFpeaks function may automatically try to open parallel processing with the default number of cores. To check how many cores your machine has, use the `feature('numcores')` command. To turn on parallel processing with a specific number of cores, use the `parpool(x)` command, where x is the number of cores, before running the script. 
+## Quick Start: Using the Toolbox
+An [example script](https://github.com/preraulab/watershed_TFpeaks_toolbox/blob/master/example_script.m) is provided in the repository that takes an excerpt of a single channel of [example sleep EEG data](https://github.com/preraulab/watershed_TFpeaks_toolbox/blob/master/example_data/example_data.mat) and runs the TF-peak detection watershed algorithm and the SO-power and SO-phase analyses, plotting the resulting hypnogram, spectrogram, TF-peak scatterplot, SO-power histogram, and SO-phase histogram (shown below). 
+
+After installing the package, execute the example script on the command line:
+
+``` matlab
+> example_script;
+```
+
+Once a parallel pool has started (if applicable), the following result should be generated
+ 
+ 
+<figure><div style="text-align: center;"><img src="https://prerau.bwh.harvard.edu/images/segment_fast.png" alt="example segment" width="50%"></div>
+<figcaption align = "center"><b>Output from the example segment of data provided with the toolbox</b></figcaption></figure>
+<br><br>
+
+
+
+``` matlab
+%%Select 'segment' or 'night' for example data range
+data_range = 'night';
+```
+
 
 <br/>
-<p align="center">
-<img src="https://prerau.bwh.harvard.edu/images/toolbox_example_segment.png" width="600" />
-</p>
-
-<br/>
 <br/>
 
-## Algorithm Description
+# Documentation and Tutorials
+
+## Algorithm Summary
+Here we provide a brief summary of the steps for the TF-peak detection as well as for the SO-power histogram. 
+
 ### Transient Oscillation Detection 
 Inputs: Raw EEG timeseries and Spectrogram of EEG timeseries 
 1. Artifact Detection 
-    * iteratively marks artifacts 3.5 SDs above the mean
 2. Baseline Subtraction
     * Find 2nd percentile of non-artifact data and subtract from spectrogram 
 3. Spectrogram Segmentation
@@ -74,13 +92,10 @@ Inputs: Raw EEG timeseries and Spectrogram of EEG timeseries
     * Downsample high resolution segment via decimation depending on downsampling settings. Using a lower resolution version of the segment for watershed and merging allows a large runtime decrease.
     * Run Matlab watershed image segmentation on lower resolution segment
     * Create adjacency list for each region found from watershed
-      * loop over each region and dialate slightly to find all neighboring regions
+      * Loop over each region and dialate slightly to find all neighboring regions
     * Merge over-segmented regions to form large, distinct TF-peaks 
-      * calculate a merging weight for each set of neighbors
-        * C = maximum value in boundary between regions - minimum value of total boundary of region 1
-        * D = maximum height of region 2 - maximum value in boundary between regions
-        * merge weight = C - D
-      * regions are merged iteratively starting with the largest merge weight, and affected merge weights are recalculated after each merge until all merge weights are below a set threshold.
+      * Calculate a merge weight for each set of neighbors
+      * Regions are merged iteratively starting with the largest merge weight, and affected merge weights are recalculated after each merge until all merge weights are below a set threshold.
     * Interpolate TF-peak boundaries back onto high-resolution version of spectrogram segment
     * Reject TF-peaks below bandwidth and duration cutoff criteria (done here to reduce number of peaks going forward to save on computation time)
     * Trim all TF-peaks to 80% of their total volume
@@ -152,19 +167,6 @@ Input and output parameter descriptions and function descriptions for each funct
 
 <br/>
 <br/>
-
-## Citations
-The code contained in this repository is companion to the paper:  
-> Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach, Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis for Electroencephalographic Phenotyping and Biomarker Identification, Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
-
-which should be cited for academic use of this code.  
-
-<br/>
-<br/>
-
-
-## Status 
-All implementations are complete and functional, but are subject to change.
 
 <br/>
 <br/>
