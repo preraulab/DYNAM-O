@@ -1,4 +1,4 @@
-function [feature_matrix, feature_names, xywcntrd, combined_mask] = filterpeaks_watershed(peaks_matr, matr_fields, matr_names, pixel_values, dur_minmax, bw_minmax, freq_minmax)
+function [feature_matrix, feature_names, xywcntrd, combined_mask] = filterpeaks_watershed(peaks_matr, matr_fields, matr_names, pixel_values, dur_minmax, bw_minmax, freq_minmax, ht_db_min)
 %FILTERPEAKS_WATERSHED 
 %
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
@@ -11,9 +11,6 @@ function [feature_matrix, feature_names, xywcntrd, combined_mask] = filterpeaks_
 %       for Electroencephalographic Phenotyping and Biomarker Identification,
 %       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
 %**********************************************************************
-
-
-
 
 %% Deal with Inputs
 
@@ -35,6 +32,10 @@ if nargin < 7 || isempty(freq_minmax)
     freq_minmax = [0, 40];
 end
 
+if nargin < 8 || isempty(ht_db_min)
+    ht_db_min = 7.63;
+end
+
 %% Extract features from peaks matrix
 [feature_matrix, feature_names, ~, ~, ~, ~, xywcntrd] = extract_params_watershed(peaks_matr, matr_fields, matr_names, pixel_values);
 
@@ -42,18 +43,22 @@ disp(['Total peaks: ', num2str(size(feature_matrix,1))])
 
 %% Filter features
 %Filter for duration
-feature_ind = find(strcmp(feature_names,'Duration'));
+feature_ind = strcmp(feature_names,'Duration');
 dur_inds = (feature_matrix(:,feature_ind) > dur_minmax(1)) & (feature_matrix(:,feature_ind) < dur_minmax(2));
 
 %Filter for bandwidth
-feature_ind = find(strcmp(feature_names,'Bandwidth'));
+feature_ind = strcmp(feature_names,'Bandwidth');
 bw_inds = (feature_matrix(:,feature_ind) > bw_minmax(1)) & (feature_matrix(:,feature_ind) < bw_minmax(2));
 
 %Filter for peak frequency
-feature_ind = find(strcmp(feature_names,'Peak Frequency'));
+feature_ind = strcmp(feature_names,'Peak Frequency');
 pf_inds = (feature_matrix(:,feature_ind) > freq_minmax(1)) & (feature_matrix(:,feature_ind) < freq_minmax(2));
 
-combined_mask = dur_inds & bw_inds & pf_inds;
+%Filter for peak height
+feature_ind = strcmp(feature_names,'Height');
+ht_inds = pow2db(feature_matrix(:,feature_ind)) > ht_db_min;
+
+combined_mask = dur_inds & bw_inds & pf_inds & ht_inds;
 
 feature_matrix = feature_matrix(combined_mask, :);
 xywcntrd = xywcntrd(combined_mask, :);

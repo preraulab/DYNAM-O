@@ -149,6 +149,11 @@ df = taper_params(1)/time_window_params(1)*2;
 bw_min = df/2;
 dur_min = time_window_params(1)/2;
 
+%Set minimal peak height based on confidence interval lower bound of MTS
+chi2_df = 2 * taper_params(2);
+alpha = 0.95;
+ht_db_min = -pow2db(chi2_df / chi2inv(alpha/2 + 0.5, chi2_df)) * 2;
+
 if verbose
     disp('Computing TF-peak spectrogram...')
 end
@@ -193,12 +198,11 @@ if verbose
     tfp = tic;
 end
 
-[feature_matrix, feature_names, xywcntrd, ~, ~, ~, ~, boundaries, ~] = runSegmentedData(spect_in, stimes_in, sfreqs, baseline, seg_time, downsample_spect, dur_min, bw_min, [], merge_thresh, [],[],[],[],[],[],[],[],[],[],[],save_pref);
+[feature_matrix, feature_names, xywcntrd, ~, ~, ~, ~, boundaries, ~] = runSegmentedData(spect_in, stimes_in, sfreqs, baseline, seg_time, downsample_spect, dur_min, bw_min, ht_db_min, [], merge_thresh, [],[],[],[],[],[],[],[],[],[],[],save_pref);
 
 if verbose
-    disp(['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
+    disp(['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline, newline]);
 end
-
 
 %% Compute SO power and SO phase
 % Exclude WAKE stages from analyses
@@ -221,7 +225,6 @@ peak_dur = feature_matrix(:,strcmp(feature_names, 'Duration'));
 
 %% Compute SO power
 if verbose
-    disp(' ');
     disp('Computing SO-power histogram...')
 end
 

@@ -3,7 +3,7 @@
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
-%      
+%
 %   Please provide the following citation for all use:
 %       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach, 
 %       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis 
@@ -56,8 +56,8 @@ haspar = any(strcmp({v.Name}, 'Parallel Computing Toolbox'));
 if haspar
     gcp;
 end
-%% LOAD DATA
 
+%% LOAD DATA
 %Load example EEG data
 load(data_fname, 'data', 'stage_vals', 'stage_times', 'Fs');
 
@@ -137,7 +137,7 @@ ylim(ylimits);
 set(hypn_spect_ax(1),'XTick',{})
 xlim(time_range/3600)
 
-%Plot SO-Power trace
+% Plot SO-Power trace
 axes(hypn_spect_ax(3))
 plot(SOpow_times/3600,SOpower_norm,'linewidth',2)
 xlim(time_range/3600)
@@ -145,12 +145,10 @@ max_SOP = max(SOpower_norm);
 ylim([0 max_SOP+(0.1*max_SOP)])
 set(hypn_spect_ax(3),'YTick',[0 round(max_SOP/2, 2, 'significant') round(max_SOP, 2, 'significant')]);
 switch SOpower_norm_method
-    case 'p5shift'
+    case {'p5shift', 'none'}
         ylab = 'SOP(dB)';
     case 'percent'
         ylab = '%SOP';
-    case 'none'
-        ylab = 'SOP(dB)';
     case 'proportion'
         ylab = 'SO Prop.';
 end
@@ -160,13 +158,14 @@ ylabel(ylab);
 axes(ax(1))
 %Compute peak dot size
 pmax = prctile(peak_props.peak_height, 95); % get 95th ptile of heights
-peak_props.peak_height(peak_props.peak_height>pmax) = pmax; % don't plot larger than 95th ptile or else dots could obscure other things on the plot
-peak_size = peak_props.peak_height/6;
+peak_height = peak_props.peak_height;
+peak_height(peak_height>pmax) = pmax; % don't plot larger than 95th ptile or else dots could obscure other things on the plot
+peak_size = peak_height/6;
 
 scatter(peak_props.peak_times/3600, peak_props.peak_freqs, peak_size, peak_props.peak_SOphase, 'filled'); % scatter plot all peaks
 
 %Make circular colormap
-colormap(ax(1),circshift(hsv(2^12),-400))
+colormap(ax(1),circshift(hsv(2^12),-650))
 
 c = colorbar_noresize;
 c.Label.String = 'Phase (radians)';
@@ -203,12 +202,10 @@ c.Label.Rotation = -90;
 c.Label.VerticalAlignment = "bottom";
 
 switch SOpower_norm_method
-    case 'p5shift'
+    case {'p5shift', 'none'}
         xlab = 'SO-Power (dB)';
     case 'percent'
         xlab = '% SO-Power';
-    case 'none'
-        xlab = 'SO-Power (dB)';
     case 'proportion'
         xlab = 'SO-Power Proportion';
 end
