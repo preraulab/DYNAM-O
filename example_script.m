@@ -123,7 +123,7 @@ th(1) = title('EEG Spectrogram');
 axes(hypn_spect_ax(2))
 imagesc(stimes_disp/3600, sfreqs_disp, pow2db(spect_disp));
 axis xy
-colormap(hypn_spect_ax(2), 'jet');
+colormap(hypn_spect_ax(2), rainbow4);
 climscale;
 
 c = colorbar_noresize; % set colobar
@@ -184,7 +184,7 @@ xlim(time_range/3600)
 axes(ax(2))
 imagesc(SOpow_bins, freq_bins, SOpow_mat');
 axis xy;
-colormap(ax(2), 'parula');
+colormap(ax(2), gouldian);
 
 %Keep color scales consistent across different settings
 %Run the climscale for different data
