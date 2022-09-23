@@ -1,6 +1,6 @@
 function [feature_matrix, feature_names, xywcntrd, PixelIdxList, PixelList, PixelValues, rgn, bndry, combined_mask] = ...
     runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, ...
-    dur_min, bw_min, conn_wshed, merge_thresh, max_merges, trim_vol, trim_shift, conn_trim, ...
+    dur_min, bw_min, ht_db_min, conn_wshed, merge_thresh, max_merges, trim_vol, trim_shift, conn_trim, ...
     conn_stats, bl_thresh_flag, CI_upper_bl, merge_rule, f_verb, verb_pref, f_disp, f_save, ofile_pref)
 %runSegmentedData: Wrapper that runs:
 %   1. Baseline subtraction
@@ -19,13 +19,14 @@ function [feature_matrix, feature_names, xywcntrd, PixelIdxList, PixelList, Pixe
 %   stimes       --  1D timestamps corresponding to the 2nd dim of spect (seconds) --required
 %   sfreqs       --  1D frequencies corresponding to the 1st dim of spect (Hertz) --required
 %   baseline     --  1D baseline spectrum used to normalize the spectrogram. default []
-%   seg_time   --  length of each segment of spectrogram to process
+%   seg_time     --  length of each segment of spectrogram to process
 %                    at a time (in seconds). Default = 30. Note that a 60s segment time is
 %                    used in the paper accompanying this code, but using 30s offers large
 %                    speedup and should not greatly affect results
 %   downsample_spect   --  2x1 double indicating number of rows and columns to downsize spect to. 
 %   dur_min      -- minimum duration allowed
 %   bw_min       -- minimum bandwidth allowed
+%   ht_db_min    -- minimum height in dB allowed
 %   conn_wshed   -- pixel connection to be used by peaksWShed. default 8.
 %   merge_thresh -- threshold weight value for when to stop merge rule. default 8.
 %   max_merges   -- maximum number of merges to perform. default inf.
@@ -102,63 +103,67 @@ if nargin < 8 || isempty(bw_min)
     bw_min = 0;
 end
 
-if nargin < 9 || isempty(conn_wshed)
+if nargin < 9 || isempty(ht_db_min)
+    ht_db_min = 7.63;
+end
+
+if nargin < 10 || isempty(conn_wshed)
     conn_wshed = 8;
 end
 
-if nargin < 10 || isempty(merge_thresh)
+if nargin < 11 || isempty(merge_thresh)
     merge_thresh = 8;
 end
 
-if nargin < 11 || isempty(max_merges)
+if nargin < 12 || isempty(max_merges)
     max_merges = inf;
 end
 
-if nargin < 12 || isempty(trim_vol)
+if nargin < 13 || isempty(trim_vol)
     trim_vol = 0.8;
 end
 
-if nargin < 13 || isempty(trim_shift)
+if nargin < 14 || isempty(trim_shift)
     trim_shift = [];
 end
 
-if nargin < 14 || isempty(conn_trim)
+if nargin < 15 || isempty(conn_trim)
     conn_trim = 8;
 end
 
-if nargin < 15 || isempty(conn_stats)
+if nargin < 16 || isempty(conn_stats)
     conn_stats = 8;
 end
 
-if nargin < 16 || isempty(bl_thresh_flag)
+if nargin < 17 || isempty(bl_thresh_flag)
     bl_thresh_flag = false;
 end
 
-if nargin < 17 || isempty(CI_upper_bl)
+if nargin < 18 || isempty(CI_upper_bl)
     CI_upper_bl = [];
 end
 
-if nargin < 18 || isempty(merge_rule)
+if nargin < 19 || isempty(merge_rule)
     merge_rule = 'default';
 end
 
-if nargin < 19 || isempty(f_verb)
+if nargin < 20 || isempty(f_verb)
     f_verb = 1;
 end
 
-if nargin < 20 || isempty(verb_pref)
+if nargin < 21 || isempty(verb_pref)
     verb_pref = '';
 end
 
-if nargin < 21 || isempty(f_disp)
+if nargin < 22 || isempty(f_disp)
     f_disp = 0;
 end
 
-if nargin < 22 || isempty(f_save)
+if nargin < 23 || isempty(f_save)
     f_save = 0;
 end
 
-if nargin < 23 || isempty(ofile_pref)
+if nargin < 24 || isempty(ofile_pref)
     ofile_pref = './';
 end
 
@@ -252,16 +257,14 @@ if f_verb > 0
 end
 
 
-
 %% Assembles peaks stats for all segs into single matrix and cell arrays 
-
 [matr_names, matr_fields, peaks_matr, PixelIdxList, PixelList, PixelValues, rgn, bndry] = ...
     packagePeakStats(segs_rgn, segs_bndry, segs_matr_names, segs_PixelValues, segs_PixelList,...
     segs_PixelIdxList, segs_matr_fields, segs_peaks_matr, verb_pref, f_verb);
 
 
 %% Filter out Noise Peaks and Save Peak Stats *
-[feature_matrix, feature_names, xywcntrd, combined_mask] = filterSavePeakStats(peaks_matr, matr_names, matr_fields, PixelIdxList, PixelValues, bndry, f_save, ofile_pref, verb_pref, f_verb);
+[feature_matrix, feature_names, xywcntrd, combined_mask] = filterSavePeakStats(peaks_matr, matr_names, matr_fields, PixelIdxList, PixelValues, bndry, ht_db_min, f_save, ofile_pref, verb_pref, f_verb);
 PixelIdxList = PixelIdxList(combined_mask);
 PixelList = PixelList(combined_mask);
 PixelValues = PixelValues(combined_mask);

@@ -1,4 +1,4 @@
-function [feature_matrix, feature_names, xywcntrd, combined_mask] = filterSavePeakStats(peaks_matr, matr_names, matr_fields, PixelIdxList, PixelValues, bndry, f_save, ofile_pref, ...
+function [feature_matrix, feature_names, xywcntrd, combined_mask] = filterSavePeakStats(peaks_matr, matr_names, matr_fields, PixelIdxList, PixelValues, bndry, ht_db_min, f_save, ofile_pref, ...
                                        verb_pref, f_verb)
 % savePeakStats: Saves peak stats to file(s)
 %
@@ -15,6 +15,7 @@ function [feature_matrix, feature_names, xywcntrd, combined_mask] = filterSavePe
 %       f_save: -- integer indicator of whether to save output files and how much
 %                   information to save. [0 = no saving, 1 = save fewer peak stats,
 %                   2 = save all peak stats]. Default 0.
+%       ht_db_min:  minimum height in dB allowed
 %       ofile_pref: string of path and data name for outputs. default './'.
 %       verb_pref: prefix string for verbose output. defaults to ''.
 %       f_verb: number indicating depth of output text statements of progress.
@@ -38,19 +39,23 @@ function [feature_matrix, feature_names, xywcntrd, combined_mask] = filterSavePe
 %% Deal with inputs
 assert(nargin >= 6, '6 input arguments required');
 
-if nargin < 7 || isempty(f_save)
+if nargin < 7 || isempty(ht_db_min)
+    ht_db_min = 7.63;
+end
+
+if nargin < 8 || isempty(f_save)
     f_save = 0;
 end
 
-if nargin < 8 || isempty(ofile_pref)
+if nargin < 9 || isempty(ofile_pref)
     ofile_pref = './';
 end
 
-if nargin < 9 || isempty(verb_pref)
+if nargin < 10 || isempty(verb_pref)
     verb_pref = '';
 end
 
-if nargin < 10 || isempty(f_verb)
+if nargin < 11 || isempty(f_verb)
     f_verb = 1;
 end
 
@@ -59,7 +64,7 @@ if f_verb
     disp('Removing noise peaks...')
 end
 
-[feature_matrix, feature_names, xywcntrd, combined_mask] = filterpeaks_watershed(peaks_matr, matr_fields, matr_names, PixelIdxList, [0.5,5], [2,15], [0,40]);
+[feature_matrix, feature_names, xywcntrd, combined_mask] = filterpeaks_watershed(peaks_matr, matr_fields, matr_names, PixelIdxList, [0.5,5], [2,15], [0,40], ht_db_min);
 
 %% Save out desired data
 
