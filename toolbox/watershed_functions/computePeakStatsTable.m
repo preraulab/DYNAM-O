@@ -1,28 +1,16 @@
-function statsTable = computePeakStatsTable(regions,boundaries,data,xaxis,yaxis,segment_num)
+function statsTable = computePeakStatsTable(regions,boundaries,data,xvalues,yvalues,segment_num)
 % gets the region properties for the peaks 
 %
 % INPUTS:
 %   regions    -- 1D cell array of vector lists of linear idx of all pixels for each region.
 %   boundaries -- 1D cell array of vector lists of linear idx of border pixels for each region.
 %   data       -- 2D matrix of image data. defaults to peaks(100).
-%   xaxis      -- x axis of image data. default 1:size(data,2).
-%   yaxis      -- y axis of image data. default 1:size(data,1).
-%   chunk_num  -- segment number if data comes from larger image. default 1.
-%   conn       -- pixel connection to be used by peaksWShedStats_LData. default 8.
-%   f_verb     -- number indicating depth of output text statements of progress.
-%                 0 - no output. 1 - output current function level.
-%                 >1 - output at subfunction levels. defaults to 0.
-%   verb_pref  -- prefix string for verbose output. defaults to ''.
-%
+%   xvalues      -- x axis of image data. default 1:size(data,2).
+%   yvalues      -- y axis of image data. default 1:size(data,1).
+%   segment_num  -- segment number if data comes from larger image. default 1.
+
 % OUTPUTS:
-%   peaks_matr   -- matrix of peak features. each row is a peak.
-%   matr_names   -- 1D cell array of names for each feature.
-%   matr_fields  -- vector indicating number of matrix columns occupied by each feature.
-%   PixelIdxList -- 1D cell array of vector lists of linear idx of all pixels for each region.
-%   PixelList    -- 1D cell array of vector lists of row-col idx of all pixels for each region.
-%   PixelValues  -- 1D cell array of vector lists of all pixel values for each region.
-%   rgn          -- same as PixelIdxList.
-%   bndry        -- 1D cell array of vector lists of linear idx of border pixels for each region.
+%   statsTable   -- Table of peak statistics
 %
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
@@ -35,37 +23,6 @@ function statsTable = computePeakStatsTable(regions,boundaries,data,xaxis,yaxis,
 %       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
 %
 %**********************************************************************
-
-%*************************
-% Handle variable inputs *
-%*************************
-if nargin < 9
-    verb_pref = [];
-end
-if nargin < 8
-    f_verb = [];
-end
-if nargin < 7
-    conn = [];
-end
-if nargin < 6
-    segment_num = [];
-end
-if nargin < 5
-    yaxis = [];
-end
-if nargin < 4
-    xaxis = [];
-end
-if nargin < 3
-    data = [];
-end
-if nargin < 2
-    boundaries = [];
-end
-if nargin < 1
-    regions = [];
-end
 
 % Check required inputs
 % Region pixel lists, boundary pixel lists, and original 2D image data
@@ -88,12 +45,12 @@ end
 %**********************************************
 if f_valid_inputs
     % x-axis
-    if isempty(xaxis)
-        xaxis = 1:size(data,2);
+    if isempty(xvalues)
+        xvalues = 1:size(data,2);
     end
     % y-axis
-    if isempty(yaxis)
-        yaxis = 1:size(data,1);
+    if isempty(yvalues)
+        yvalues = 1:size(data,1);
     end
     % id number of chunk in larger dataset
     if isempty(segment_num)
@@ -104,17 +61,18 @@ end
 %Convert data to labeled data
 Ldata = cell2Ldata(regions,size(data),boundaries);
 
+%Compute the stats table
 statsTable = regionprops('table',Ldata,data,'Area','BoundingBox',...
         'WeightedCentroid','Extrema','MinIntensity','MaxIntensity',...
         'PixelIdxList','PixelList','PixelValues');
 
 %Get the dx and dy
-dx = diff(xaxis(1:2));
-dy = diff(yaxis(1:2));
+dx = diff(xvalues(1:2));
+dy = diff(yvalues(1:2));
 
 %Get the segment bounds
-seg_startx = xaxis(1);
-seg_starty = yaxis(1);
+seg_startx = xvalues(1);
+seg_starty = yvalues(1);
 
 %Area
 statsTable.Area = statsTable.Area * dx * dy;
