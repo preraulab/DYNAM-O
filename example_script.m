@@ -144,7 +144,8 @@ xlim(time_range/3600)
 min_SOP = min(SOpower_norm);
 max_SOP = max(SOpower_norm);
 ylim([min_SOP-(0.1*abs(min_SOP)), max_SOP+(0.1*abs(max_SOP))])
-set(hypn_spect_ax(3),'YTick',[round(min_SOP, 2, 'significant') round(max_SOP/2, 2, 'significant') round(max_SOP, 2, 'significant')]);
+set(hypn_spect_ax(3),'YTick',[round(min_SOP, 2, 'significant') round((max_SOP+min_SOP)/2, 2, 'significant') round(max_SOP, 2, 'significant')]);
+set(hypn_spect_ax(3),'yticklabel',num2str(get(hypn_spect_ax(3),'ytick')','%.1f'))
 switch SOpower_norm_method
     case {'p5shift', 'none'}
         ylab = 'SOP(dB)';
