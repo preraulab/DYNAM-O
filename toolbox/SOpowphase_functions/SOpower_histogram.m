@@ -124,6 +124,9 @@ nanEEG(artifacts) = nan;
 SOpow_times = SOpow_times + t_data(1); % adjust the time axis to t_data
 SOpow_full_binsize = SOpow_times(2) - SOpow_times(1);
 
+% Exclude outlier SOpower that usually reflect artifacts
+SOpower(abs(nanzscore(SOpower)) >= 3) = nan;
+
 % Normalize SO power
 if isnumeric(norm_method) %#ok<NODEF>
     % Allow numeric input to set the percentile used in the 'shift' method
