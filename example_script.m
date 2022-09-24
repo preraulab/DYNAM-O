@@ -191,7 +191,7 @@ colormap(ax(2), gouldian);
 if strcmpi(data_range,'night')
     caxis([0 8.5]);
 elseif strcmpi(data_range,'segment')
-    caxis([0 2.4]);
+    caxis([0 8.5]);
 else
     climscale([],[],false);
 end
