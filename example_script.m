@@ -121,7 +121,8 @@ th(1) = title('EEG Spectrogram');
 
 % Plot spectrogram
 axes(hypn_spect_ax(2))
-imagesc(stimes_disp/3600, sfreqs_disp, pow2db(spect_disp));
+stimes_inds = stimes_disp >= time_range(1) & stimes_disp <= time_range(2);
+imagesc(stimes_disp(stimes_inds)/3600, sfreqs_disp, pow2db(spect_disp(:, stimes_inds)));
 axis xy
 colormap(hypn_spect_ax(2), rainbow4);
 climscale;
