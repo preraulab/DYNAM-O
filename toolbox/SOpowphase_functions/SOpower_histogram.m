@@ -160,10 +160,6 @@ switch norm_method
         error(['Normalization method "', norm_method, '" not recognized']);
 end
 
-%% Sort TFpeak time and frequency data
-[TFpeak_times, sortinds] = sort(TFpeak_times);
-TFpeak_freqs = TFpeak_freqs(sortinds);
-
 %% Get valid peak indices
 %Get indices of peaks that occur during artifact
 artifact_inds_peaks = logical(interp1(t_data, double(artifacts), TFpeak_times, 'nearest'));
