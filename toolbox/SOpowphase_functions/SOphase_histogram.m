@@ -79,8 +79,6 @@ addOptional(p, 'smooth_flag', false, @(x) validateattributes(x,{'logical'},{}));
 addOptional(p, 'plot_flag', false, @(x) validateattributes(x,{'logical'},{}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{}));
 
-
-
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results);
 field_names = fieldnames(p.Results);
@@ -114,9 +112,9 @@ end
 assert((SO_range(1) >= -pi) & (SO_range(2) <= pi), 'SO-phase range must be values between -pi and pi')
 assert(SO_binsizestep(1) < 2*pi, 'SO-phase bin size must be less than 2*pi')
 
-
 %% Compute SO phase
-[SOphase, ~] = compute_SOPhase(EEG, Fs, SO_freqrange, SOphase_filter);
+[SOphase, t_phase] = compute_SOPhase(EEG, Fs, SO_freqrange, SOphase_filter);
+t_phase = t_phase + t_data(1); % adjust the time axis to t_data
 SOphase = SOphase';
 
 % Replace artifact times with nans

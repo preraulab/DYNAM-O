@@ -60,7 +60,6 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_n
 %       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
 %**********************************************************************
 
-
 %% Parse input
 
 p = inputParser;
@@ -116,13 +115,13 @@ else
     assert( (time_range(1) >= min(t_data)) & (time_range(2) <= max(t_data) ), 'lightsonoff_times cannot be outside of the time range described by "t_data"');
 end
 
-
 %% replace artifact timepoints with NaNs
 nanEEG = EEG;
-nanEEG(artifacts) = nan; 
+nanEEG(artifacts) = nan;
 
 %% Compute SO power
 [SOpower, SOpow_times] = compute_mtspect_power(nanEEG, Fs, 'freq_range', SO_freqrange);
+SOpow_times = SOpow_times + t_data(1); % adjust the time axis to t_data
 SOpow_full_binsize = SOpow_times(2) - SOpow_times(1);
 
 % Normalize SO power
