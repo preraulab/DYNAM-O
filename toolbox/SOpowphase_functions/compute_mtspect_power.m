@@ -33,7 +33,7 @@ eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 [SO_spect, stimes, sfreqs] = multitaper_spectrogram_mex(data, Fs, freq_range, tapers, window_params, [], 0, [], false, verbose);
 
 %Compute dt
-dt = stimes(2)-stimes(1);
+dt = stimes(2) - stimes(1);
 df = sfreqs(2) - sfreqs(1);
 
 %Takes the total power and converts to dB
