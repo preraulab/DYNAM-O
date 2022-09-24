@@ -1,5 +1,4 @@
-function [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, boundaries] = ...
-    run_watershed_SOpowphase(varargin)
+function [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, boundaries] = run_watershed_SOpowphase(varargin)
 % run_watershed_SOpowphase: run_watershed_SOpowphase: Run watershed algorithm to extract time-frequency peaks from 
 %                           spectrogram of data, then compute Slow-Oscillation power and phase histograms
 %
@@ -167,7 +166,7 @@ else
     [spect,stimes,sfreqs] = multitaper_spectrogram(data, Fs, freq_range, taper_params, time_window_params, NFFT, detrend, weight, ploton, mts_verbose);
     warning(sprintf('Unable to use mex version of multitaper_spectrogram. Using compiled multitaper spectrogram function will greatly increase the speed of this computaton. \n\nFind mex code at:\n    https://github.com/preraulab/multitaper_toolbox')); %#ok<SPWRN>
 end
-stimes = stimes + t_data(1); % adjust the time axis to time range
+stimes = stimes + t_data(1); % adjust the time axis to t_data
 
 %% Compute baseline spectrum used to flatten data spectrum
 verb_disp(verbose, 'Performing artifact rejection...')
@@ -177,11 +176,9 @@ artifacts = detect_artifacts(data, Fs, [],[],[],[],[],[],[],[],[], ...
     artifact_filters.hpFilt_high, artifact_filters.hpFilt_broad, artifact_filters.detrend_filt);
 artifacts_stimes = logical(interp1(t_data, double(artifacts), stimes, 'nearest')); % get artifacts occurring at spectrogram times
 
-% Get invalid times for baseline computation
-invalid_times = artifacts_stimes;
-
+% Exclude segments with artifacts during baseline computation
 spect_bl = spect;
-spect_bl(:,invalid_times) = NaN; % turn artifact times into NaNs for percentile computation
+spect_bl(:,artifacts_stimes) = NaN; % turn artifact times into NaNs for percentile computation
 spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
 
 baseline_ptile = 2; % using 2nd percentile of spectrogram as baseline

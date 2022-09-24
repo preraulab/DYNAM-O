@@ -141,9 +141,10 @@ xlim(time_range/3600)
 axes(hypn_spect_ax(3))
 plot(SOpow_times/3600,SOpower_norm,'linewidth',2)
 xlim(time_range/3600)
+min_SOP = min(SOpower_norm);
 max_SOP = max(SOpower_norm);
-ylim([0 max_SOP+(0.1*max_SOP)])
-set(hypn_spect_ax(3),'YTick',[0 round(max_SOP/2, 2, 'significant') round(max_SOP, 2, 'significant')]);
+ylim([min_SOP-(0.1*abs(min_SOP)), max_SOP+(0.1*abs(max_SOP))])
+set(hypn_spect_ax(3),'YTick',[round(min_SOP, 2, 'significant') round(max_SOP/2, 2, 'significant') round(max_SOP, 2, 'significant')]);
 switch SOpower_norm_method
     case {'p5shift', 'none'}
         ylab = 'SOP(dB)';
@@ -188,9 +189,7 @@ colormap(ax(2), gouldian);
 
 %Keep color scales consistent across different settings
 %Run the climscale for different data
-if strcmpi(data_range,'night')
-    caxis([0 8.5]);
-elseif strcmpi(data_range,'segment')
+if any(strcmpi(data_range,{'night', 'segment'}))
     caxis([0 8.5]);
 else
     climscale([],[],false);
@@ -238,7 +237,7 @@ ylim(ylimits);
 if strcmpi(data_range,'night')
     caxis([0.0085    0.0118]);
 elseif strcmpi(data_range,'segment')
-    caxis([0.0070    0.0144]);
+    caxis([0.0064    0.0145]);
 else
     climscale([],[],false);
 end
