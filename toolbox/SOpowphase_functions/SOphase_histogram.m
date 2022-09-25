@@ -134,7 +134,7 @@ peak_selection_inds = stage_inds_peaks & ~artifact_inds_peaks & timerange_inds_p
 %% Get valid SOphase indices
 % Exclude unwanted stages, artifacts, and outside time range
 SOphase_stages_valid = ~stage_exclude;
-SOphase_artifact_valid = ~isnan(SOphase);
+SOphase_artifact_valid = ~isnan(SOphase)';
 SOphase_times_valid = (t_data>=time_range(1) & t_data<=time_range(2));
 
 SOphase_valid = SOphase_stages_valid & SOphase_artifact_valid & SOphase_times_valid;
@@ -173,25 +173,27 @@ prop_in_bin = zeros(num_SObins,1);
 
 for s = 1:num_SObins
     
-    % Check for bins that need to be wrapped because phase is circular -pi to pi
-    if (SO_bin_edges(1,s) <= -pi) % Lower limit should be wrapped
+    % Check for bin edges that need to be wrapped because phase is circular -pi to pi
+    if SO_bin_edges(1,s) <= -pi % Lower limit should be wrapped
         wrapped_edge_lowlim = SO_bin_edges(1,s) + (2*pi);
-        time_in_bin_inds = (SOphase >= wrapped_edge_lowlim) | (SOphase < SO_bin_edges(2,s)); % time in bin index computation
-        SO_inds = (peak_SOphase >= wrapped_edge_lowlim) | (peak_SOphase < SO_bin_edges(2,s)); % peaks in bin index computation
-        
-    elseif (SO_bin_edges(2,s) >= pi) % Upper limit should be wrapped
+    else
+        wrapped_edge_lowlim = SO_bin_edges(1,s);
+    end
+    if SO_bin_edges(2,s) >= pi % Upper limit should be wrapped
         wrapped_edge_highlim = SO_bin_edges(2,s) - (2*pi);
-        time_in_bin_inds = (SOphase < wrapped_edge_highlim) | (SOphase >= SO_bin_edges(1,s));
-        SO_inds = (peak_SOphase < wrapped_edge_highlim) | (peak_SOphase >= SO_bin_edges(1,s)); 
-    
-    else % Both limits are within -pi to pi, no wrapping necessary
-        time_in_bin_inds = (SOphase >= SO_bin_edges(1,s)) & (SOphase < SO_bin_edges(2,s));
-        SO_inds = (peak_SOphase >= SO_bin_edges(1,s)) & (peak_SOphase < SO_bin_edges(2,s));
+    else
+        wrapped_edge_highlim = SO_bin_edges(2,s);
     end
     
-    % Get time in bin and proportion of time in bin
-    time_in_bin(s) = (sum(time_in_bin_inds' & SOphase_valid) * SOphase_binsize) / 60;
-    time_in_bin_allstages = (sum(time_in_bin_inds & SOphase_valid_allstages') * SOphase_binsize) / 60;
+    % Get indices of SOphase that occur in this SOphase bin
+    TIB_inds = (SOphase >= wrapped_edge_lowlim) & (SOphase < wrapped_edge_highlim);
+    
+    % Get indices of TFpeaks that occur in this SOphase bin
+    SO_inds = (peak_SOphase >= wrapped_edge_lowlim) & (peak_SOphase < wrapped_edge_highlim);
+    
+    % Get time in bin (min) and proportion of time in bin
+    time_in_bin(s) = (sum(TIB_inds & SOphase_valid') * SOphase_binsize) / 60;
+    time_in_bin_allstages = (sum(TIB_inds & SOphase_valid_allstages') * SOphase_binsize) / 60;
     prop_in_bin(s) = time_in_bin(s) / time_in_bin_allstages;
                 
     for f = 1:num_freqbins    
@@ -236,6 +238,5 @@ if plot_flag
 end
 
 end
-
 
 
