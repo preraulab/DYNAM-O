@@ -124,22 +124,21 @@ SOphase(artifacts) = nan;
 SOphase_binsize = t_data(2) - t_data(1);
 
 %% Get valid peak indices
-%Get indices of peaks that occur during artifact
-artifact_inds_peaks = logical(interp1(t_data, double(artifacts), TFpeak_times, 'nearest'));
-
-% Get indices of peaks that are in selected sleep stages
+% Exclude peaks during unwanted stages, artifacts, and outside time range
 stage_inds_peaks = logical(interp1(t_data, double(~stage_exclude), TFpeak_times, 'nearest')); 
-
-% Get indices of peaks that occur inside selected time range
+artifact_inds_peaks = logical(interp1(t_data, double(artifacts), TFpeak_times, 'nearest'));
 timerange_inds_peaks = (TFpeak_times >= time_range(1)) & (TFpeak_times <= time_range(2));
 
-% Combine all indices to select peaks that occur during valid stages/times
 peak_selection_inds = stage_inds_peaks & ~artifact_inds_peaks & timerange_inds_peaks;
 
-%% Get valid SOphase values
-% Exclude unwanted stages and times
-SOphase_valid_times = (t_data>=time_range(1) & t_data<=time_range(2));
-SOphase_valid = ~stage_exclude & SOphase_valid_times;
+%% Get valid SOphase indices
+% Exclude unwanted stages, artifacts, and outside time range
+SOphase_stages_valid = ~stage_exclude;
+SOphase_artifact_valid = ~isnan(SOphase);
+SOphase_times_valid = (t_data>=time_range(1) & t_data<=time_range(2));
+
+SOphase_valid = SOphase_stages_valid & SOphase_artifact_valid & SOphase_times_valid;
+SOphase_valid_allstages = SOphase_artifact_valid & SOphase_times_valid;
 
 %% Get SOphase at each peak time
 peak_SOphase = interp1(t_data, SOphase, TFpeak_times);
@@ -192,7 +191,7 @@ for s = 1:num_SObins
     
     % Get time in bin and proportion of time in bin
     time_in_bin(s) = (sum(time_in_bin_inds' & SOphase_valid) * SOphase_binsize) / 60;
-    time_in_bin_allstages = (sum(time_in_bin_inds & SOphase_valid_times') * SOphase_binsize) / 60;
+    time_in_bin_allstages = (sum(time_in_bin_inds & SOphase_valid_allstages') * SOphase_binsize) / 60;
     prop_in_bin(s) = time_in_bin(s) / time_in_bin_allstages;
                 
     for f = 1:num_freqbins    
@@ -216,16 +215,16 @@ for s = 1:num_SObins
 end
 
 %% Normalize along a dimension if desired
-if phase_freqSO_norm(1) == true
+if phase_freqSO_norm(1)
     SO_mat = SO_mat ./ sum(SO_mat,1);
 end
 
-if phase_freqSO_norm(2) == true
+if phase_freqSO_norm(2)
     SO_mat = SO_mat ./ sum(SO_mat,2);
 end
 
 %% Plot
-if plot_flag == true
+if plot_flag
    figure;
    imagesc(SO_cbins, freq_cbins, SO_mat')
    axis xy
