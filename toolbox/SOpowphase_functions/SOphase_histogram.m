@@ -173,23 +173,21 @@ prop_in_bin = zeros(num_SObins,1);
 
 for s = 1:num_SObins
     
-    % Check for bin edges that need to be wrapped because phase is circular -pi to pi
-    if SO_bin_edges(1,s) <= -pi % Lower limit should be wrapped
+    % Check for bins that need to be wrapped because phase is circular -pi to pi
+    if (SO_bin_edges(1,s) <= -pi) % Lower limit should be wrapped
         wrapped_edge_lowlim = SO_bin_edges(1,s) + (2*pi);
-    else
-        wrapped_edge_lowlim = SO_bin_edges(1,s);
-    end
-    if SO_bin_edges(2,s) >= pi % Upper limit should be wrapped
+        TIB_inds = (SOphase >= wrapped_edge_lowlim) | (SOphase < SO_bin_edges(2,s));
+        SO_inds = (peak_SOphase >= wrapped_edge_lowlim) | (peak_SOphase < SO_bin_edges(2,s));
+    
+    elseif (SO_bin_edges(2,s) >= pi) % Upper limit should be wrapped
         wrapped_edge_highlim = SO_bin_edges(2,s) - (2*pi);
-    else
-        wrapped_edge_highlim = SO_bin_edges(2,s);
+        TIB_inds = (SOphase < wrapped_edge_highlim) | (SOphase >= SO_bin_edges(1,s));
+        SO_inds = (peak_SOphase < wrapped_edge_highlim) | (peak_SOphase >= SO_bin_edges(1,s)); 
+    
+    else % Both limits are within -pi to pi, no wrapping necessary
+        TIB_inds = (SOphase >= SO_bin_edges(1,s)) & (SOphase < SO_bin_edges(2,s));
+        SO_inds = (peak_SOphase >= SO_bin_edges(1,s)) & (peak_SOphase < SO_bin_edges(2,s));
     end
-    
-    % Get indices of SOphase that occur in this SOphase bin
-    TIB_inds = (SOphase >= wrapped_edge_lowlim) & (SOphase < wrapped_edge_highlim);
-    
-    % Get indices of TFpeaks that occur in this SOphase bin
-    SO_inds = (peak_SOphase >= wrapped_edge_lowlim) & (peak_SOphase < wrapped_edge_highlim);
     
     % Get time in bin (min) and proportion of time in bin
     time_in_bin(s) = (sum(TIB_inds & SOphase_valid') * SOphase_binsize) / 60;
