@@ -176,7 +176,7 @@ peak_selection_inds = stage_inds_peaks & ~artifact_inds_peaks & timerange_inds_p
 %% Get valid SOpower indices
 % Exclude unwanted stages, artifacts, and outside time range
 SOpower_stages_valid = logical(interp1(t_data, double(~stage_exclude), SOpow_times, 'nearest'));
-SOpower_artifact_valid = ~isnan(SOpower_norm);
+SOpower_artifact_valid = ~isnan(SOpower_norm)';
 SOpower_times_valid = (SOpow_times>=time_range(1) & SOpow_times<=time_range(2));
 
 SOpower_valid = SOpower_stages_valid & SOpower_artifact_valid & SOpower_times_valid;
@@ -222,15 +222,15 @@ prop_in_bin = zeros(num_SObins,1);
 
 for s = 1:num_SObins
    
-    % Get indices of SOpow that occur in this SOpow bin 
+    % Get indices of SOpow that occur in this SOpow bin
     TIB_inds = (SOpower_norm >= SO_bin_edges(1,s)) & (SOpower_norm < SO_bin_edges(2,s));
     
     % Get indices of TFpeaks that occur in this SOpow bin
     SO_inds = (peak_SOpower_norm >= SO_bin_edges(1,s)) & (peak_SOpower_norm < SO_bin_edges(2,s));
     
-    % Find time in bin (min)
-    time_in_bin(s) = (sum(TIB_inds & SOpower_valid') * SOpow_full_binsize)/60;
-    time_in_bin_allstages = (sum(TIB_inds & SOpower_valid_allstages') * SOpow_full_binsize)/60;
+    % Get time in bin (min) and proportion of time in bin
+    time_in_bin(s) = (sum(TIB_inds & SOpower_valid') * SOpow_full_binsize) / 60;
+    time_in_bin_allstages = (sum(TIB_inds & SOpower_valid_allstages') * SOpow_full_binsize) / 60;
     prop_in_bin(s) = time_in_bin(s)/time_in_bin_allstages;
     
     % if less than threshold time in SO bin, whole column of SO power hist should be nan
