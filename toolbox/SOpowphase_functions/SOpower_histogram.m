@@ -86,12 +86,12 @@ addOptional(p, 'proportion_freqrange', [0.3, 30], @(x) validateattributes(x, {'n
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{}));
 
 parse(p,varargin{:});
-parser_results = struct2cell(p.Results);
+parser_results = struct2cell(p.Results); %#ok<NASGU>
 field_names = fieldnames(p.Results);
 
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 
-if isempty(artifacts)
+if isempty(artifacts) %#ok<*NODEF>
     artifacts = false(size(EEG,2),1);
 else
     assert(length(artifacts) == size(EEG,2),'artifacts must be the same length as EEG');
@@ -115,7 +115,7 @@ else
     assert( (time_range(1) >= min(t_data)) & (time_range(2) <= max(t_data) ), 'lightsonoff_times cannot be outside of the time range described by "t_data"');
 end
 
-%% replace artifact timepoints with NaNs
+%% Replace artifact timepoints with NaNs
 nanEEG = EEG;
 nanEEG(artifacts) = nan;
 
@@ -127,8 +127,13 @@ SOpow_full_binsize = SOpow_times(2) - SOpow_times(1);
 % Exclude outlier SOpower that usually reflect artifacts
 SOpower(abs(nanzscore(SOpower)) >= 3) = nan;
 
+% Remove single time points sandwiched between nan values 
+last_isnan = [0; isnan(SOpower(1:end-1))];
+next_isnan = [isnan(SOpower(2:end)); 0];
+SOpower(last_isnan & next_isnan) = nan;
+
 % Normalize SO power
-if isnumeric(norm_method) %#ok<NODEF>
+if isnumeric(norm_method)
     % Allow numeric input to set the percentile used in the 'shift' method
     shift_ptile = norm_method;
     norm_method = 'shift';
@@ -235,7 +240,6 @@ for s = 1:num_SObins
         continue
     end 
     
-    
     if sum(SO_inds & peak_selection_inds) >= 1
         
         for f = 1:num_freqbins    
@@ -252,11 +256,11 @@ for s = 1:num_SObins
         SO_mat(s,:) = 0;
     end
     
-    if smooth_flag == true 
+    if smooth_flag
         SO_mat(s,:) = smooth(SO_mat(s,:));
     end 
     
-    if rate_flag == true
+    if rate_flag
         SO_mat(s,:) = SO_mat(s,:) / time_in_bin(s);
     end
     

@@ -80,12 +80,12 @@ addOptional(p, 'plot_flag', false, @(x) validateattributes(x,{'logical'},{}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{}));
 
 parse(p,varargin{:});
-parser_results = struct2cell(p.Results);
+parser_results = struct2cell(p.Results); %#ok<NASGU>
 field_names = fieldnames(p.Results);
 
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 
-if isempty(artifacts)
+if isempty(artifacts) %#ok<*NODEF>
     artifacts = false(size(EEG,2),1);
 else
     assert(length(artifacts) == size(EEG,2),'artifacts must be the same length as EEG');
@@ -114,7 +114,7 @@ assert(SO_binsizestep(1) < 2*pi, 'SO-phase bin size must be less than 2*pi')
 
 %% Compute SO phase
 [SOphase, t_phase] = compute_SOPhase(EEG, Fs, SO_freqrange, SOphase_filter);
-t_phase = t_phase + t_data(1); % adjust the time axis to t_data
+t_phase = t_phase + t_data(1); %#ok<NASGU> % adjust the time axis to t_data
 SOphase = SOphase';
 
 % Replace artifact times with nans
@@ -204,17 +204,15 @@ for s = 1:num_SObins
         SO_mat(s,f) = sum(SO_inds & freq_inds & peak_selection_inds);
 
     end
-    
-end
-
-if smooth_flag == true 
-    for s = 1:num_SObins % separated from parfor loop due to parallelization constraints
+        
+    if smooth_flag
         SO_mat(s,:) = smooth(SO_mat(s,:));
+    end 
+    
+    if rate_flag
+        SO_mat(s,:) = SO_mat(s,:) / time_in_bin(s);
     end
-end 
-
-if rate_flag == true
-    SO_mat = SO_mat ./ time_in_bin;
+    
 end
 
 %% Normalize along a dimension if desired
