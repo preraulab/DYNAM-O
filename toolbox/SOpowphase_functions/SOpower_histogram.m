@@ -221,7 +221,7 @@ time_in_bin = zeros(num_SObins,1);
 prop_in_bin = zeros(num_SObins,1);
 
 for s = 1:num_SObins
-   
+    
     % Get indices of SOpow that occur in this SOpow bin
     TIB_inds = (SOpower_norm >= SO_bin_edges(1,s)) & (SOpower_norm < SO_bin_edges(2,s));
     
