@@ -166,23 +166,21 @@ switch norm_method
 end
 
 %% Get valid peak indices
-%Get indices of peaks that occur during artifact
-artifact_inds_peaks = logical(interp1(t_data, double(artifacts), TFpeak_times, 'nearest'));
-
-% Get indices of peaks that are in selected sleep stages
+% Exclude peaks during unwanted stages, artifacts, and outside time range
 stage_inds_peaks = logical(interp1(t_data, double(~stage_exclude), TFpeak_times, 'nearest')); 
-
-% Get indices of peaks that occur inside selected time range
+artifact_inds_peaks = logical(interp1(t_data, double(artifacts), TFpeak_times, 'nearest'));
 timerange_inds_peaks = (TFpeak_times >= time_range(1)) & (TFpeak_times <= time_range(2));
 
-% Combine all indices to select peaks that occur during valid stages/times
 peak_selection_inds = stage_inds_peaks & ~artifact_inds_peaks & timerange_inds_peaks;
 
-%% Get valid SOpower values
-% Exclude unwanted stages and times
+%% Get valid SOpower indices
+% Exclude unwanted stages, artifacts, and outside time range
 SOpower_stages_valid = logical(interp1(t_data, double(~stage_exclude), SOpow_times, 'nearest'));
+SOpower_artifact_valid = ~isnan(SOpower_norm);
 SOpower_times_valid = (SOpow_times>=time_range(1) & SOpow_times<=time_range(2));
-SOpower_valid = SOpower_stages_valid & SOpower_times_valid;
+
+SOpower_valid = SOpower_stages_valid & SOpower_artifact_valid & SOpower_times_valid;
+SOpower_valid_allstages = SOpower_artifact_valid & SOpower_times_valid;
 
 %% Get SOpower at each peak time
 peak_SOpower_norm = interp1(SOpow_times, SOpower_norm, TFpeak_times, 'nearest');
@@ -232,7 +230,7 @@ for s = 1:num_SObins
     
     % Find time in bin (min)
     time_in_bin(s) = (sum(TIB_inds & SOpower_valid') * SOpow_full_binsize)/60;
-    time_in_bin_allstages = (sum(TIB_inds & SOpower_times_valid') * SOpow_full_binsize)/60;
+    time_in_bin_allstages = (sum(TIB_inds & SOpower_valid_allstages') * SOpow_full_binsize)/60;
     prop_in_bin(s) = time_in_bin(s)/time_in_bin_allstages;
     
     % if less than threshold time in SO bin, whole column of SO power hist should be nan
@@ -267,20 +265,20 @@ for s = 1:num_SObins
 end
 
 %% Normalize along a dimension if desired
-if pow_freqSO_norm(1) == true
+if pow_freqSO_norm(1)
     SO_mat = SO_mat ./ sum(SO_mat,1);
 end
 
-if pow_freqSO_norm(2) == true
+if pow_freqSO_norm(2)
     SO_mat = SO_mat ./ sum(SO_mat,2);
 end
 
 %% Plot
-if plot_flag == true
+if plot_flag
    figure;
    imagesc(SO_cbins, freq_cbins, SO_mat')
    axis xy
-   colormap parula
+   colormap(gouldian)
    climscale([],[],false);
    colorbar;
    xlabel('SO Power (normalized)');
