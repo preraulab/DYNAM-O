@@ -79,6 +79,9 @@ This should produce the following output:
 <figure><img src="https://prerau.bwh.harvard.edu/images/night_fast.png" alt="full night example" style="width:40%"> <figcaption align = "center"><b>Output from the example full night of data provided with the toolbox.</b></figcaption></figure>
 <br/><br/>
 
+For more in-depth information and documentation on the Transient Oscillation Dynamics algorithms visit [the Prerau Lab website.](https://prerau.bwh.harvard.edu/transient-oscillations-dynamics)
+<br/><br/>
+
 ### Changing the Quality Settings
 The following preset settings are available in our example script under `ALGORITHM SETTINGS`. As all data are different, it is essential to verify equivalency before relying on a speed-optimized solution other than precision.
 
