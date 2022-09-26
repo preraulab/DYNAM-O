@@ -122,7 +122,7 @@ nanEEG(artifacts) = nan;
 %% Compute SO power
 [SOpower, SOpow_times] = compute_mtspect_power(nanEEG, Fs, 'freq_range', SO_freqrange);
 SOpow_times = SOpow_times + t_data(1); % adjust the time axis to t_data
-SOpow_full_binsize = SOpow_times(2) - SOpow_times(1);
+SOpow_times_step = SOpow_times(2) - SOpow_times(1);
 
 % Exclude outlier SOpower that usually reflect artifacts
 SOpower(abs(nanzscore(SOpower)) >= 3) = nan;
@@ -229,9 +229,9 @@ for s = 1:num_SObins
     SO_inds = (peak_SOpower_norm >= SO_bin_edges(1,s)) & (peak_SOpower_norm < SO_bin_edges(2,s));
     
     % Get time in bin (min) and proportion of time in bin
-    time_in_bin(s) = (sum(TIB_inds & SOpower_valid') * SOpow_full_binsize) / 60;
-    time_in_bin_allstages = (sum(TIB_inds & SOpower_valid_allstages') * SOpow_full_binsize) / 60;
-    prop_in_bin(s) = time_in_bin(s)/time_in_bin_allstages;
+    time_in_bin(s) = (sum(TIB_inds & SOpower_valid') * SOpow_times_step) / 60;
+    time_in_bin_allstages = (sum(TIB_inds & SOpower_valid_allstages') * SOpow_times_step) / 60;
+    prop_in_bin(s) = time_in_bin(s) / time_in_bin_allstages;
     
     % if less than threshold time in SO bin, whole column of SO power hist should be nan
     if time_in_bin(s) < min_time_in_bin

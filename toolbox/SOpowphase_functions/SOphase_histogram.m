@@ -117,11 +117,11 @@ assert(SO_binsizestep(1) < 2*pi, 'SO-phase bin size must be less than 2*pi')
 t_phase = t_phase + t_data(1); %#ok<NASGU> % adjust the time axis to t_data
 SOphase = SOphase';
 
+% Get time step size of SOphase
+SOphase_times_step = t_data(2) - t_data(1);
+
 % Replace artifact times with nans
 SOphase(artifacts) = nan;
-
-% Get bin size of SOphase
-SOphase_binsize = t_data(2) - t_data(1);
 
 %% Get valid peak indices
 % Exclude peaks during unwanted stages, artifacts, and outside time range
@@ -190,8 +190,8 @@ for s = 1:num_SObins
     end
     
     % Get time in bin (min) and proportion of time in bin
-    time_in_bin(s) = (sum(TIB_inds & SOphase_valid') * SOphase_binsize) / 60;
-    time_in_bin_allstages = (sum(TIB_inds & SOphase_valid_allstages') * SOphase_binsize) / 60;
+    time_in_bin(s) = (sum(TIB_inds & SOphase_valid') * SOphase_times_step) / 60;
+    time_in_bin_allstages = (sum(TIB_inds & SOphase_valid_allstages') * SOphase_times_step) / 60;
     prop_in_bin(s) = time_in_bin(s) / time_in_bin_allstages;
                 
     for f = 1:num_freqbins    
