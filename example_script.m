@@ -18,7 +18,7 @@ data_range = 'segment';
 v = ver;
 haspar = any(strcmp({v.Name}, 'Parallel Computing Toolbox'));
 if haspar
-    gcp;
+%    gcp;
 end
 
 %Load example EEG data
@@ -34,7 +34,7 @@ switch data_range
     case 'segment'
         % Pick a segment of the spectrogram to extract peaks from
         % Choose an example segment from the data
-        time_range = [8420 13446];
+        time_range = [10000, 10500]; %[8420 13446];
         output_fname = 'toolbox_example_segment.png';
         disp('Running example segment')
     case 'night'

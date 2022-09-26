@@ -123,10 +123,6 @@ SOphase(artifacts) = nan;
 % Get bin size of SOphase
 SOphase_binsize = t(2) - t(1);
 
-%% Sort TFpeak time and frequency data
-[TFpeak_times, sortinds] = sort(TFpeak_times);
-TFpeak_freqs = TFpeak_freqs(sortinds);
-
 %% Get valid peak indices
 %Get indices of peaks that occur during artifact
 artifact_inds_peaks = logical(interp1(t, double(artifacts), TFpeak_times, 'nearest'));
@@ -167,7 +163,7 @@ SO_mat = nan(num_SObins, num_freqbins);
 time_in_bin = zeros(num_SObins,1);
 prop_in_bin = zeros(num_SObins,1);
 
-parfor s = 1:num_SObins
+for s = 1:num_SObins
     
     % Check for bins that need to be wrapped because phase is circular -pi to pi
     if (SO_bin_edges(1,s) <= -pi) % Lower limit should be wrapped
