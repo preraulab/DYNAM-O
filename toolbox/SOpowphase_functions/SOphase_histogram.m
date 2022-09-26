@@ -79,15 +79,13 @@ addOptional(p, 'smooth_flag', false, @(x) validateattributes(x,{'logical'},{}));
 addOptional(p, 'plot_flag', false, @(x) validateattributes(x,{'logical'},{}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{}));
 
-
-
 parse(p,varargin{:});
-parser_results = struct2cell(p.Results);
+parser_results = struct2cell(p.Results); %#ok<NASGU>
 field_names = fieldnames(p.Results);
 
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 
-if isempty(artifacts)
+if isempty(artifacts) %#ok<*NODEF>
     artifacts = false(size(EEG,2),1);
 else
     assert(length(artifacts) == size(EEG,2),'artifacts must be the same length as EEG');
@@ -114,38 +112,33 @@ end
 assert((SO_range(1) >= -pi) & (SO_range(2) <= pi), 'SO-phase range must be values between -pi and pi')
 assert(SO_binsizestep(1) < 2*pi, 'SO-phase bin size must be less than 2*pi')
 
-
 %% Compute SO phase
-[SOphase, ~] = compute_SOPhase(EEG, Fs, SO_freqrange, SOphase_filter);
+[SOphase, t_phase] = compute_SOPhase(EEG, Fs, SO_freqrange, SOphase_filter);
+t_phase = t_phase + t_data(1); %#ok<NASGU> % adjust the time axis to t_data
 SOphase = SOphase';
+
+% Get time step size of SOphase
+SOphase_times_step = t_data(2) - t_data(1);
 
 % Replace artifact times with nans
 SOphase(artifacts) = nan;
 
-% Get bin size of SOphase
-SOphase_binsize = t_data(2) - t_data(1);
-
-%% Sort TFpeak time and frequency data
-[TFpeak_times, sortinds] = sort(TFpeak_times);
-TFpeak_freqs = TFpeak_freqs(sortinds);
-
 %% Get valid peak indices
-%Get indices of peaks that occur during artifact
-artifact_inds_peaks = logical(interp1(t_data, double(artifacts), TFpeak_times, 'nearest'));
-
-% Get indices of peaks that are in selected sleep stages
+% Exclude peaks during unwanted stages, artifacts, and outside time range
 stage_inds_peaks = logical(interp1(t_data, double(~stage_exclude), TFpeak_times, 'nearest')); 
-
-% Get indices of peaks that occur inside selected time range
+artifact_inds_peaks = logical(interp1(t_data, double(artifacts), TFpeak_times, 'nearest'));
 timerange_inds_peaks = (TFpeak_times >= time_range(1)) & (TFpeak_times <= time_range(2));
 
-% Combine all indices to select peaks that occur during valid stages/times
 peak_selection_inds = stage_inds_peaks & ~artifact_inds_peaks & timerange_inds_peaks;
 
-%% Get valid SOphase values
-% Exclude unwanted stages and times
-SOphase_valid_times = (t_data>=time_range(1) & t_data<=time_range(2));
-SOphase_valid = ~stage_exclude & SOphase_valid_times;
+%% Get valid SOphase indices
+% Exclude unwanted stages, artifacts, and outside time range
+SOphase_stages_valid = ~stage_exclude;
+SOphase_artifact_valid = ~isnan(SOphase)';
+SOphase_times_valid = (t_data>=time_range(1) & t_data<=time_range(2));
+
+SOphase_valid = SOphase_stages_valid & SOphase_artifact_valid & SOphase_times_valid;
+SOphase_valid_allstages = SOphase_artifact_valid & SOphase_times_valid;
 
 %% Get SOphase at each peak time
 peak_SOphase = interp1(t_data, SOphase, TFpeak_times);
@@ -178,27 +171,27 @@ SO_mat = nan(num_SObins, num_freqbins);
 time_in_bin = zeros(num_SObins,1);
 prop_in_bin = zeros(num_SObins,1);
 
-parfor s = 1:num_SObins
+for s = 1:num_SObins
     
     % Check for bins that need to be wrapped because phase is circular -pi to pi
     if (SO_bin_edges(1,s) <= -pi) % Lower limit should be wrapped
         wrapped_edge_lowlim = SO_bin_edges(1,s) + (2*pi);
-        time_in_bin_inds = (SOphase >= wrapped_edge_lowlim) | (SOphase < SO_bin_edges(2,s)); % time in bin index computation
-        SO_inds = (peak_SOphase >= wrapped_edge_lowlim) | (peak_SOphase < SO_bin_edges(2,s)); % peaks in bin index computation
-        
+        TIB_inds = (SOphase >= wrapped_edge_lowlim) | (SOphase < SO_bin_edges(2,s));
+        SO_inds = (peak_SOphase >= wrapped_edge_lowlim) | (peak_SOphase < SO_bin_edges(2,s));
+    
     elseif (SO_bin_edges(2,s) >= pi) % Upper limit should be wrapped
         wrapped_edge_highlim = SO_bin_edges(2,s) - (2*pi);
-        time_in_bin_inds = (SOphase < wrapped_edge_highlim) | (SOphase >= SO_bin_edges(1,s));
+        TIB_inds = (SOphase < wrapped_edge_highlim) | (SOphase >= SO_bin_edges(1,s));
         SO_inds = (peak_SOphase < wrapped_edge_highlim) | (peak_SOphase >= SO_bin_edges(1,s)); 
     
     else % Both limits are within -pi to pi, no wrapping necessary
-        time_in_bin_inds = (SOphase >= SO_bin_edges(1,s)) & (SOphase < SO_bin_edges(2,s));
+        TIB_inds = (SOphase >= SO_bin_edges(1,s)) & (SOphase < SO_bin_edges(2,s));
         SO_inds = (peak_SOphase >= SO_bin_edges(1,s)) & (peak_SOphase < SO_bin_edges(2,s));
     end
     
-    % Get time in bin and proportion of time in bin
-    time_in_bin(s) = (sum(time_in_bin_inds' & SOphase_valid) * SOphase_binsize) / 60;
-    time_in_bin_allstages = (sum(time_in_bin_inds & SOphase_valid_times') * SOphase_binsize) / 60;
+    % Get time in bin (min) and proportion of time in bin
+    time_in_bin(s) = (sum(TIB_inds & SOphase_valid') * SOphase_times_step) / 60;
+    time_in_bin_allstages = (sum(TIB_inds & SOphase_valid_allstages') * SOphase_times_step) / 60;
     prop_in_bin(s) = time_in_bin(s) / time_in_bin_allstages;
                 
     for f = 1:num_freqbins    
@@ -210,30 +203,28 @@ parfor s = 1:num_SObins
         SO_mat(s,f) = sum(SO_inds & freq_inds & peak_selection_inds);
 
     end
+        
+    if smooth_flag
+        SO_mat(s,:) = smooth(SO_mat(s,:));
+    end 
+    
+    if rate_flag
+        SO_mat(s,:) = SO_mat(s,:) / time_in_bin(s);
+    end
     
 end
 
-if smooth_flag == true 
-    for s = 1:num_SObins % separated from parfor loop due to parallelization constraints
-        SO_mat(s,:) = smooth(SO_mat(s,:));
-    end
-end 
-
-if rate_flag == true
-    SO_mat = SO_mat ./ time_in_bin;
-end
-
 %% Normalize along a dimension if desired
-if phase_freqSO_norm(1) == true
+if phase_freqSO_norm(1)
     SO_mat = SO_mat ./ sum(SO_mat,1);
 end
 
-if phase_freqSO_norm(2) == true
+if phase_freqSO_norm(2)
     SO_mat = SO_mat ./ sum(SO_mat,2);
 end
 
 %% Plot
-if plot_flag == true
+if plot_flag
    figure;
    imagesc(SO_cbins, freq_cbins, SO_mat')
    axis xy
@@ -245,6 +236,5 @@ if plot_flag == true
 end
 
 end
-
 
 
