@@ -1,5 +1,4 @@
-function [trim_matr, matr_names, matr_fields, trim_PixelIdxList, trim_PixelList, ...
-    trim_PixelValues, trim_rgn, trim_bndry, seq_time] = extractTFPeaks(img,x,y,num_segment,conn_wshed,...
+function stats_table = extractTFPeaks(img,x,y,num_segment,conn_wshed,...
     merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,conn_stats,...
     bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
 % extractTFPeaks: determines the peak regions of a 2D image and
@@ -310,8 +309,7 @@ if f_verb > 0
     disp([verb_pref '  Starting stats...']);
     ttic = tic;
 end
-[trim_matr, matr_names, matr_fields, trim_PixelIdxList, trim_PixelList, trim_PixelValues, ...
-    trim_rgn,trim_bndry] = computePeakStats(trim_rgn,trim_bndry,img,x,y,num_segment,conn_stats,f_verb-1,['    ' verb_pref]);
+stats_table = computePeakStatsTable(trim_rgn,trim_bndry,img,x,y,num_segment);
 seq_time = (now-t_start)/datenum([0 0 0 0 0 1]);
 if f_verb > 0
     disp([verb_pref '    stats took: ' num2str(toc(ttic)) ' seconds.']);
