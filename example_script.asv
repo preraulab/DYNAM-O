@@ -43,6 +43,12 @@ SOpower_norm_method = 'p5shift';
 save_output_image = false;
 output_fname = [];
 
+%Save peak property data
+%   0: Does not save anything
+%   1: Saves a subset of properties for each TFpeak 
+%   2: Saves all properties for all peaks (including rejected noise peaks) 
+save_peak_properties = 0;
+
 %% PREPARE DATA
 %Check for parallel toolbox
 v = ver;
@@ -77,13 +83,12 @@ end
 
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
 [stats_table, hist_peakidx, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times] = ...
-    run_watershed_SOpowphase(data, Fs, stage_times, stage_vals, 'time_range', time_range, 'quality_setting', quality_setting, 'SOpower_norm_method', SOpower_norm_method);
+    run_watershed_SOpowphase(data, Fs, stage_times, stage_vals, 'time_range', time_range, 'quality_setting', quality_setting, 'SOpower_norm_method', SOpower_norm_method, 'save_pref', save_peak_properties);
 
 %% COMPUTE SPECTROGRAM FOR DISPLAY
 [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(data, Fs, [4,25], [15 29], [30 15], [],'linear',[],false,false);
 
-% Plot only TFpeaks that contribute to SO-power/phase histograms 
-stats_table = stats_table(hist_peakidx, :);
+% Plot only TF
 
 % PLOT RESULTS FIGURE
 % Create figure

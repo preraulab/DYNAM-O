@@ -1,4 +1,4 @@
-function filter_idx = filter_peak_statstable(stats_table, dur_minmax, bw_minmax, freq_minmax, ht_db_min)
+function [filter_idx, dur_inds, bw_inds, pf_inds, ht_inds] = filter_peak_statstable(stats_table, dur_minmax, bw_minmax, freq_minmax, ht_db_min, verbose)
 %FILTERPEAKS_WATERSHED 
 %
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
@@ -13,7 +13,6 @@ function filter_idx = filter_peak_statstable(stats_table, dur_minmax, bw_minmax,
 %**********************************************************************
 
 %% Deal with Inputs
-
 assert(nargin > 1, 'Must provide stats table');
 
 if nargin < 2 || isempty(dur_minmax)
@@ -32,14 +31,13 @@ if nargin < 5 || isempty(ht_db_min)
     ht_db_min = 7.63;
 end
 
-disp(['Total peaks: ', num2str(size(stats_table,1))])
+verb_disp(verbose, ['Total peaks: ', num2str(size(stats_table,1))]);
 
 %% Filter features
 %Filter for duration
 dur_inds = (stats_table.Duration > dur_minmax(1)) & (stats_table.Duration < dur_minmax(2));
 
 %Filter for bandwidth
-
 bw_inds = (stats_table.Bandwidth > bw_minmax(1)) & (stats_table.Bandwidth < bw_minmax(2));
 
 %Filter for peak frequency
@@ -50,7 +48,7 @@ ht_inds = pow2db(stats_table.Height) > ht_db_min;
 
 filter_idx = dur_inds & bw_inds & pf_inds & ht_inds;
 
-disp(['Number of Peaks After Rejection: ', num2str(sum(filter_idx))])
-
+verb_disp(verbose, ['Number of Peaks After Rejection: ', num2str(sum(filter_idx))]);
+    
 end
 
