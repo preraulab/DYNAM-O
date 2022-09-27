@@ -2,7 +2,7 @@ function [stats_table, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bi
 % run_watershed_SOpowphase: run_watershed_SOpowphase: Run watershed algorithm to extract time-frequency peaks from 
 %                           spectrogram of data, then compute Slow-Oscillation power and phase histograms
 %
-% Usage:
+%   Usage:
 %       [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, 
 %       SOpow_times, boundaries] = run_watershed_SOpowphase(data, Fs, stage_times, stage_vals)
 %
@@ -95,7 +95,7 @@ if isempty(artifact_filters)
     artifact_filters.detrend_filt = [];
 end
 
-
+%Save total time
 ttotal = tic;
 
 %% Truncate data to time range
