@@ -1,5 +1,7 @@
 function statsTable = computePeakStatsTable(regions,boundaries,data,xvalues,yvalues,segment_num)
-% gets the region properties for the peaks 
+% COMPUTEPEAKSTATSTABLE Creates a table of the region properties for the peaks 
+%
+% statsTable = computePeakStatsTable(regions, boundaries, data, xvalues, yvalues, segment_num)
 %
 % INPUTS:
 %   regions    -- 1D cell array of vector lists of linear idx of all pixels for each region.
@@ -8,7 +10,7 @@ function statsTable = computePeakStatsTable(regions,boundaries,data,xvalues,yval
 %   xvalues      -- x axis of image data. default 1:size(data,2).
 %   yvalues      -- y axis of image data. default 1:size(data,1).
 %   segment_num  -- segment number if data comes from larger image. default 1.
-
+%
 % OUTPUTS:
 %   statsTable   -- Table of peak statistics
 %
@@ -63,7 +65,7 @@ Ldata = cell2Ldata(regions,size(data),boundaries);
 
 %Compute the stats table
 statsTable = regionprops('table',Ldata,data,'Area','BoundingBox',...
-        'WeightedCentroid','Extrema','MinIntensity','MaxIntensity',...
+        'WeightedCentroid',...
         'PixelIdxList','PixelList','PixelValues');
 
 %Get the dx and dy
@@ -74,15 +76,21 @@ dy = diff(yvalues(1:2));
 seg_startx = xvalues(1);
 seg_starty = yvalues(1);
 
+%Remove Dead Rows
+good_indices = statsTable.Area  > 0;
+statsTable = statsTable(good_indices,:);
+boundaries = boundaries(good_indices);
+regions = regions(good_indices);
+
 %Area
 statsTable.Area = statsTable.Area * dx * dy;
 
 %Volume
-statsTable.Volume = cellfun(@(x)sum(x)*dx*dy,statsTable.PixelValues);
+statsTable.Volume = cellfun(@(x)pow2db(sum(x))*dx*dy,statsTable.PixelValues);
 
 %Boundaries 
 [a,b] = cellfun(@(x)ind2sub(size(data),x),boundaries,'UniformOutput',false);
-statsTable.Boundaries = cellfun(@(a,b)[(b-1)*dx+seg_startx  (a-1)*dy+seg_starty ], a, b, 'Uniform', 0);
+statsTable.Boundaries = cellfun(@(a,b)[(b-1)*dx+seg_startx,  (a-1)*dy+seg_starty ], a, b, 'Uniform', 0);
 
 %Weighted Centroid 
 % statsTable.WeightedCentroidxy = [(statsTable.WeightedCentroid(:,1)-1)*dx+seg_startx  (statsTable.WeightedCentroid(:,2)-1)*dy+seg_starty ];
@@ -94,7 +102,7 @@ statsTable.PeakTime = (statsTable.WeightedCentroid(:,1)-1)*dx+seg_startx;
 statsTable.PeakFrequency = (statsTable.WeightedCentroid(:,2)-1)*dy+seg_starty;
 
 %Height
-statsTable.Height = statsTable.MaxIntensity-statsTable.MinIntensity;
+statsTable.Height = cellfun(@max,statsTable.PixelValues) - cellfun(@min, statsTable.PixelValues);
 
 %Segment Number
 statsTable.SegmentNum(:,1) = segment_num;

@@ -82,7 +82,7 @@ switch data_range
 end
 
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
-[peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, boundaries] = ...
+[stats_table, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times] = ...
     run_watershed_SOpowphase(data, Fs, stage_times, stage_vals, 'time_range', time_range, 'quality_setting', quality_setting, 'SOpower_norm_method', SOpower_norm_method, 'save_pref', save_peak_properties);
 
 %% COMPUTE SPECTROGRAM FOR DISPLAY
@@ -160,12 +160,14 @@ ylabel(ylab);
 % Plot time-frequency peak scatterplot
 axes(ax(1))
 %Compute peak dot size
-pmax = prctile(peak_props.peak_height, 95); % get 95th ptile of heights
-peak_height = peak_props.peak_height;
-peak_height(peak_height>pmax) = pmax; % don't plot larger than 95th ptile or else dots could obscure other things on the plot
-peak_size = peak_height/6;
+peak_size = stats_table.Height/6;
 
-scatter(peak_props.peak_times/3600, peak_props.peak_freqs, peak_size, peak_props.peak_SOphase, 'filled'); % scatter plot all peaks
+%Do not plot larger than 95th ptile or else dots could obscure other things on the plot
+pmax = prctile(stats_table.Height, 95); % get 95th ptile of heights
+pmax_inds = stats_table.Height> pmax;
+peak_size(pmax_inds) = nan;
+
+scatter(stats_table.PeakTime/3600, stats_table.PeakFrequency, peak_size, stats_table.SOphase, 'filled'); % scatter plot all peaks
 
 %Make circular colormap
 colormap(ax(1),circshift(hsv(2^12),-650))

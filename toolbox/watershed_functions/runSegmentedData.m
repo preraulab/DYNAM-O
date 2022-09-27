@@ -1,4 +1,4 @@
-function [feature_matrix, feature_names, xywcntrd, PixelIdxList, PixelList, PixelValues, rgn, bndry, combined_mask] = ...
+function stats_table = ...
     runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, ...
     dur_min, bw_min, ht_db_min, conn_wshed, merge_thresh, max_merges, trim_vol, trim_shift, conn_trim, ...
     conn_stats, bl_thresh_flag, CI_upper_bl, merge_rule, f_verb, verb_pref, f_disp, f_save, ofile_pref)
@@ -23,7 +23,7 @@ function [feature_matrix, feature_names, xywcntrd, PixelIdxList, PixelList, Pixe
 %                    at a time (in seconds). Default = 30. Note that a 60s segment time is
 %                    used in the paper accompanying this code, but using 30s offers large
 %                    speedup and should not greatly affect results
-%   downsample_spect   --  2x1 double indicating number of rows and columns to downsize spect to. 
+%   downsample_spect   --  2x1 double indicating number of rows and columns to downsize spect to.
 %   dur_min      -- minimum duration allowed
 %   bw_min       -- minimum bandwidth allowed
 %   ht_db_min    -- minimum height in dB allowed
@@ -58,14 +58,7 @@ function [feature_matrix, feature_names, xywcntrd, PixelIdxList, PixelList, Pixe
 %   ofile_pref   -- string of path and data name for outputs. default './'.
 %
 % OUTPUTS:
-%   peaks_matr      -- matrix of peak features. each row is a peak.
-%   matr_names      -- 1D cell array of names for each feature.
-%   matr_fields     -- vector indicating number of matrix columns occupied by each feature.
-%   PixelIdxList    -- 1D cell array of vector lists of linear idx of all pixels for each region.
-%   PixelList       -- 1D cell array of vector lists of row-col idx of all pixels for each region.
-%   PixelValues     -- 1D cell array of vector lists of all pixel values for each region.
-%   rgn             -- same as PixelIdxList.
-%   bndry           -- 1D cell array of vector lists of linear idx of border pixels for each region.
+%   stats_table     -- table of peak statistics
 %
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
@@ -188,20 +181,11 @@ end
 
 %% Extract TFpeaks from spectrogram segments
 
-% Initialize storage for parallel processing of image segs 
+% Initialize storage for parallel processing of image segs
 n_segs = length(data_segs);
-segs_matr_names = cell(n_segs,1);
-segs_matr_fields = cell(n_segs,1);
-segs_peaks_matr = cell(n_segs,1);
-segs_PixelIdxList = cell(n_segs,1);
-segs_PixelList = cell(n_segs,1);
-segs_PixelValues = cell(n_segs,1);
-segs_rgn = cell(n_segs,1);
-segs_bndry = cell(n_segs,1);
-segs_time = zeros(n_segs,1);
+stats_tables = cell(n_segs,1);
 
-
-% In parallel, find TFpeaks for each seg 
+% In parallel, find TFpeaks for each seg
 computetime = tic;
 if n_segs > 1
 
@@ -224,9 +208,7 @@ if n_segs > 1
     %MAIN LOOP ACROSS SEGMENTS
     parfor ii = 1:n_segs
         if length(x_segs{ii})>1
-            [segs_peaks_matr{ii}, segs_matr_names{ii}, segs_matr_fields{ii}, ...
-                segs_PixelIdxList{ii},segs_PixelList{ii},segs_PixelValues{ii}, ...
-                segs_rgn{ii},segs_bndry{ii},segs_time(ii)] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,conn_stats,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
+            stats_tables{ii} =  extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,conn_stats,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
         end
 
         % Update loading bar
@@ -239,9 +221,7 @@ if n_segs > 1
     delete(h); % delete loading bar
 else % if there is only 1 segment total
     for ii = 1:n_segs
-        [segs_peaks_matr{ii}, segs_matr_names{ii}, segs_matr_fields{ii}, ...
-            segs_PixelIdxList{ii},segs_PixelList{ii},segs_PixelValues{ii}, ...
-            segs_rgn{ii},segs_bndry{ii},segs_time(ii)] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,ii,conn_wshed,merge_thresh,max_merges,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh_flag,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
+        stats_tables{ii} = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,ii,conn_wshed,merge_thresh,max_merges,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh_flag,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
     end
 end
 
@@ -251,28 +231,24 @@ end
         segments_processed = segments_processed + 1;
     end
 
-
 if f_verb > 0
     disp([verb_pref '  Computing took ' num2str(toc(computetime)/60) ' minutes.']);
 end
 
+%% Assembles peaks stats for all segs into single table and filters
+stats_table = cat(1,stats_tables{:});
 
-%% Assembles peaks stats for all segs into single matrix and cell arrays 
-[matr_names, matr_fields, peaks_matr, PixelIdxList, PixelList, PixelValues, rgn, bndry] = ...
-    packagePeakStats(segs_rgn, segs_bndry, segs_matr_names, segs_PixelValues, segs_PixelList,...
-    segs_PixelIdxList, segs_matr_fields, segs_peaks_matr, verb_pref, f_verb);
+%Get filter index
+filter_idx = filter_peak_statstable(stats_table, [dur_min 5], [bw_min 15], [-inf inf], [ht_db_min inf]);
+%Filter the table
+stats_table = stats_table(filter_idx,:);
 
-
-%% Filter out Noise Peaks and Save Peak Stats *
-[feature_matrix, feature_names, xywcntrd, combined_mask] = filterSavePeakStats(peaks_matr, matr_names, matr_fields, PixelIdxList, PixelValues, bndry, ht_db_min, f_save, ofile_pref, verb_pref, f_verb);
-PixelIdxList = PixelIdxList(combined_mask);
-PixelList = PixelList(combined_mask);
-PixelValues = PixelValues(combined_mask);
-rgn = rgn(combined_mask);
-bndry = bndry(combined_mask);
-
-if f_verb > 0
-    disp([verb_pref 'Done with peak stats.']);
+%% Save data
+if f_save
+    if f_verb > 0
+        disp(['Saving ' ofile_pref '...']);
+    end
+    save(ofile_pref,"stats_table");
 end
 
 end
