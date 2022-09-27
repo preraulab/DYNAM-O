@@ -66,7 +66,7 @@ Ldata = cell2Ldata(regions,size(data),boundaries);
 
 %Compute the stats table
 statsTable = regionprops('table',Ldata,data,'Area',...
-        'WeightedCentroid','PixelIdxList','PixelList','PixelValues');
+        'WeightedCentroid','PixelValues');
 
 %Get the dx and dy
 dx = diff(xvalues(1:2));
