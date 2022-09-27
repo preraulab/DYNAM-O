@@ -8,7 +8,7 @@ Please cite the following paper when using this package:
 > Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach, Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis for Electroencephalographic Phenotyping and Biomarker Identification, Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
 
 which can be referred to in the text as:
-> Transient Oscillation Dynamics Toolbox v1.0 (sleepEEG.org/transient_oscillations)
+> Transient Oscillation Dynamics Toolbox v1.0 (sleepEEG.org/transient-oscillations-dynamics)
 
 The paper is available open access at https://doi.org/10.1093/sleep/zsac223
 
@@ -182,6 +182,8 @@ The main outputs are:
 View the full documentation for all parameters and outputs.
 
 # Documentation and Tutorials
+
+For more comprehensive documentation see [sleepEEG.org/transient-oscillations-dynamics](https://prerau.bwh.harvard.edu/transient-oscillations-dynamics/)
 
 ## Algorithm Summary
 Here we provide a brief summary of the steps for the TF-peak detection as well as for the SO-power histogram. 
