@@ -1,7 +1,8 @@
 function statsTable = computePeakStatsTable(regions,boundaries,data,xvalues,yvalues,segment_num)
 % COMPUTEPEAKSTATSTABLE Creates a table of the region properties for the peaks 
 %
-% statsTable = computePeakStatsTable(regions, boundaries, data, xvalues, yvalues, segment_num)
+% USAGE:
+%   statsTable = computePeakStatsTable(regions, boundaries, data, xvalues, yvalues, segment_num)
 %
 % INPUTS:
 %   regions    -- 1D cell array of vector lists of linear idx of all pixels for each region.
@@ -64,9 +65,8 @@ end
 Ldata = cell2Ldata(regions,size(data),boundaries);
 
 %Compute the stats table
-statsTable = regionprops('table',Ldata,data,'Area','BoundingBox',...
-        'WeightedCentroid',...
-        'PixelIdxList','PixelList','PixelValues');
+statsTable = regionprops('table',Ldata,data,'Area',...
+        'WeightedCentroid','PixelIdxList','PixelList','PixelValues');
 
 %Get the dx and dy
 dx = diff(xvalues(1:2));
