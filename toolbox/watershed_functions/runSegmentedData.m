@@ -205,7 +205,7 @@ delete(h); % delete loading bar
         segments_processed = segments_processed + 1;
     end
 
-if f_verb > 0
+if f_verb > 1
     disp([verb_pref '  Computing took ' num2str(toc(computetime)/60) ' minutes.']);
 end
 

@@ -157,9 +157,9 @@ df = taper_params(1)/time_window_params(1)*2;
 dur_min = time_window_params(1)/2;
 bw_min = df/2;
 
-%Max duration and bandwidth are set to be some large values 
-dur_max = 5;
-bw_max = 15;
+%Max duration and bandwidth are set to be large values 
+dur_max = 5; % second
+bw_max = 15; % Hz
 
 %Set minimal peak height based on confidence interval lower bound of MTS
 chi2_df = 2 * taper_params(2);
@@ -198,18 +198,18 @@ tfp = verb_disp(verbose, 'Extracting TF-peaks from the spectrogram...');
 
 stats_table = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, dur_min, bw_min, [], merge_thresh);
 
-verb_disp(verbose, ['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline, newline]);
+verb_disp(verbose, ['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
 
 %% Filter stats_table based on duration, bandwidth, frequency, and height
 filter_idx = filter_peak_statstable(stats_table, [dur_min, dur_max], [bw_min, bw_max], [-inf inf], ht_db_min, verbose);
 stats_table = stats_table(filter_idx, :);
 
-%% Get peak stages and artifacts
+%% Get peak stages and check for artifacts
 stats_table.PeakStage = interp1(stage_times, single(stage_vals), stats_table.PeakTime, 'previous');
 stats_table.Artifacts = logical(interp1(t_data, double(artifacts), stats_table.PeakTime, 'nearest'));
 
 %% Compute SO-power and SO-phase histograms
-% Exclude time-frequency peaks during WAKE stages from histograms
+% Exclude time-frequency peaks during specified stages from histograms
 if length(stage_times) ~= length(t_data)
     stages_t_data = interp1(stage_times, single(stage_vals), t_data, 'previous');
 elseif ~all(stage_times == t_data)
@@ -239,7 +239,7 @@ verb_disp(verbose, 'Computing SO-phase histogram...')
 % [SOphase_mat, ~, SOphase_cbins, TIB_phase, PIB_phase] = SOphase_histogram(data, Fs, stats_table.PeakFrequency, stats_table.PeakTime, 't_data', t_data, 'stage_exclude', stage_exclude, 'artifacts', artifacts, ...
 %                                                                           'SOphase_flter', custom_SOphase_filter);
 
-%%
+%% EOF
 verb_disp(verbose, [newline, 'Total time: ' datestr(seconds(toc(ttotal)),'HH:MM:SS')]);
 
 end
