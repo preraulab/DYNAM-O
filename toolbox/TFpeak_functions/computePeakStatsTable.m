@@ -50,7 +50,7 @@ assert(iscell(regions) && ~isempty(regions),'Regions must be a cell array');
 assert(iscell(boundaries) && ~isempty(boundaries),'Boundaries must be a cell array');
 assert(isnumeric(data) && ismatrix(data) && min(size(data))>1,'Data must be an MxN numeric matrix');
 
-%% Convert data to labeled data
+%% Convert data to labelled data
 Ldata = cell2Ldata(regions,size(data),boundaries);
 
 %Compute the stats table
@@ -80,8 +80,8 @@ statsTable.Area = statsTable.Area*dx*dy;
 statsTable.Volume = cellfun(@(x)sum(x)*dx*dy, statsTable.PixelValues);
 
 %Boundaries 
-[a,b] = cellfun(@(x)ind2sub(size(data),x),boundaries,'UniformOutput',false); % a,b in pixel indices
-statsTable.Boundaries = cellfun(@(a,b)[(b-1)*dx+seg_startx, (a-1)*dy+seg_starty], a, b, 'Uniform', 0);
+[a,b] = cellfun(@(x)ind2sub(size(data),x),boundaries,'UniformOutput',false);
+statsTable.Boundaries = cellfun(@(a,b)[(b-1)*dx+seg_startx, (a-1)*dy+seg_starty], a, b, 'Uniform', 0); % a,b in pixel indices
 
 %Peak Time
 statsTable.PeakTime = statsTable.WeightedCentroid(:,1)*dx+seg_startx; % WeightedCentroid in spatial coordinates
@@ -90,15 +90,15 @@ statsTable.PeakTime = statsTable.WeightedCentroid(:,1)*dx+seg_startx; % Weighted
 statsTable.PeakFrequency = statsTable.WeightedCentroid(:,2)*dy+seg_starty; % WeightedCentroid in spatial coordinates
 
 %Height
-statsTable.Height = cellfun(@max,statsTable.PixelValues) - cellfun(@min, statsTable.PixelValues);
+statsTable.Height = cellfun(@max,statsTable.PixelValues) - cellfun(@min,statsTable.PixelValues);
 
 %Segment Number
 statsTable.SegmentNum(:,1) = segment_num;
 
 %Duration
-statsTable.Duration = statsTable.BoundingBox(:,3)*dx; % Bounding box in spatial coordinates
+statsTable.Duration = statsTable.BoundingBox(:,3)*dx; % BoundingBox in spatial coordinates
 
 %Bandwidth
-statsTable.Bandwidth = statsTable.BoundingBox(:,4)*dy; % Bounding box in spatial coordinates
+statsTable.Bandwidth = statsTable.BoundingBox(:,4)*dy; % BoundingBox in spatial coordinates
 
 end

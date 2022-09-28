@@ -1,10 +1,10 @@
-function [stats_table, hist_peakidx, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times] = run_watershed_SOpowphase(varargin)
-% run_TFPeakSOHistograms: Run watershed algorithm to extract time-frequency peaks from 
-%                           spectrogram of data, then compute Slow-Oscillation power and phase histograms
+function [stats_table, hist_peakidx, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times] = runTFPeakSOHistograms(varargin)
+% RUNTFPEAKSOHISTOGRAMS: Run watershed algorithm to extract time-frequency peaks from 
+%                        spectrogram of data, then compute Slow-Oscillation power and phase histograms
 %
 %   Usage:
 %       [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, 
-%       SOpow_times, boundaries] = run_watershed_SOpowphase(data, Fs, stage_times, stage_vals)
+%       SOpow_times, boundaries] = runTFPeakSOHistograms(data, Fs, stage_times, stage_vals)
 %
 %   Inputs:
 %       data (req):                [1xn] double - timeseries data to be analyzed
@@ -167,7 +167,7 @@ alpha = 0.95;
 ht_db_min = -pow2db(chi2_df / chi2inv(alpha/2 + 0.5, chi2_df)) * 2;
 
 if verbose
-disp('Computing TF-peak spectrogram...');
+    disp('Computing TF-peak spectrogram...');
 end
 
 if exist(['multitaper_spectrogram_coder_mex.' mexext],'file')
@@ -199,8 +199,9 @@ baseline = prctile(spect_bl, baseline_ptile, 2); % get baseline
 %% Compute time-frequency peaks
 if verbose
     disp('Extracting TF-peaks from the spectrogram...');
+    tfp = tic;
 end
-tfp = tic;
+
 stats_table = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, dur_min, bw_min, [], merge_thresh);
 
 if verbose
