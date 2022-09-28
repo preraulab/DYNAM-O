@@ -1,6 +1,6 @@
 function combined_mask = savePeakStats(peaks_matr, matr_names, matr_fields, PixelIdxList, f_save, ofile_pref, ...
                                        verb_pref, f_verb)
-% savePeakStats: Saves peak stats to file(s)
+%SAVEPEAKSTATS saves peak stats to file(s)
 %
 %   Usage:
 %       savePeakStats(peaks_matr, matr_names, matr_fields, PixelIdxList, f_save, ofile_pref, ...

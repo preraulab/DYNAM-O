@@ -1,5 +1,9 @@
 function [filter_idx, dur_inds, bw_inds, pf_inds, ht_inds] = filterStatsTable(stats_table, dur_minmax, bw_minmax, freq_minmax, ht_db_min, verbose)
-%FILTERPEAKS_WATERSHED 
+%FILTERSTATSTABLE gets indices of peaks that pass the BW, duration,
+%height, and frequency criteria
+%
+% Usage:
+%   [filter_idx, dur_inds, bw_inds, pf_inds, ht_inds] = filterStatsTable(stats_table, dur_minmax, bw_minmax, freq_minmax, ht_db_min, verbose)
 %
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
@@ -31,7 +35,13 @@ if nargin < 5 || isempty(ht_db_min)
     ht_db_min = 7.63;
 end
 
-verb_disp(verbose, ['Total peaks: ', num2str(size(stats_table,1))]);
+if nargin < 6 || isempty(verbose)
+    verbose = false;
+end
+
+if verbose
+    disp(['Total peaks: ', num2str(size(stats_table,1))]);
+end
 
 %% Filter features
 %Filter for duration
@@ -48,7 +58,9 @@ ht_inds = pow2db(stats_table.Height) > ht_db_min;
 
 filter_idx = dur_inds & bw_inds & pf_inds & ht_inds;
 
-verb_disp(verbose, ['Number of Peaks After Rejection: ', num2str(sum(filter_idx)), newline, newline]);
+if verbose
+    disp(['Number of Peaks After Rejection: ', num2str(sum(filter_idx)), newline, newline]);
+end
     
 end
 

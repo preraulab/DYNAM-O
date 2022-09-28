@@ -1,5 +1,5 @@
 function [SOPhase, t_data]= computeSOPhase(data, Fs, SO_freqrange, filter)
-% Computes slow-oscillation phase
+% COMPUTESOPHASE computes slow-oscillation phase
 %
 % Inputs:
 %       data: 1xN double - timeseries EEG data --required

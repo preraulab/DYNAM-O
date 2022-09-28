@@ -1,5 +1,8 @@
 function Ldata = runWatershed(data, conn, bl_thresh, f_verb, verb_pref, f_disp)
-% determines peak regions using matlab watershed function.
+% RUNWATERSHED determines peak regions using matlab watershed function.
+%
+% Usage:
+%   Ldata = runWatershed(data, conn, bl_thresh, f_verb, verb_pref, f_disp)
 %
 % INPUTS:
 %   data   -- 2D matrix of image data. defaults to peaks(100).
