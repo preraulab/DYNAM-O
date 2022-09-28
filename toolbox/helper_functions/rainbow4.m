@@ -1,5 +1,5 @@
 function map = rainbow4(N)
-
+%RAINBOW4 colormap
 % These colour maps are released under the Creative Commons BY License.
 % A summary of the conditions can be found at
 % https://creativecommons.org/licenses/by/4.0/
