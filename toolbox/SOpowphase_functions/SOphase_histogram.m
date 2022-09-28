@@ -123,13 +123,20 @@ SOphase_times_step = t_data(2) - t_data(1);
 % Replace artifact times with nans
 SOphase(artifacts) = nan;
 
+%% Get SOphase at each peak time
+peak_SOphase = interp1(t_data, SOphase, TFpeak_times);
+
+%% Re-wrap phases to be between -pi and pi
+peak_SOphase = mod(peak_SOphase, 2*pi) - pi;
+SOphase = mod(SOphase, 2*pi) - pi;
+
 %% Get valid peak indices
 % Exclude peaks during unwanted stages, artifacts, and outside time range
 stage_inds_peaks = logical(interp1(t_data, double(~stage_exclude), TFpeak_times, 'nearest')); 
 artifact_inds_peaks = logical(interp1(t_data, double(artifacts), TFpeak_times, 'nearest'));
 timerange_inds_peaks = (TFpeak_times >= time_range(1)) & (TFpeak_times <= time_range(2));
 
-peak_selection_inds = stage_inds_peaks & ~artifact_inds_peaks & timerange_inds_peaks;
+peak_selection_inds = stage_inds_peaks & ~artifact_inds_peaks & timerange_inds_peaks & ~isnan(peak_SOphase);
 
 %% Get valid SOphase indices
 % Exclude unwanted stages, artifacts, and outside time range
@@ -139,13 +146,6 @@ SOphase_times_valid = (t_data>=time_range(1) & t_data<=time_range(2));
 
 SOphase_valid = SOphase_stages_valid & SOphase_artifact_valid & SOphase_times_valid;
 SOphase_valid_allstages = SOphase_artifact_valid & SOphase_times_valid;
-
-%% Get SOphase at each peak time
-peak_SOphase = interp1(t_data, SOphase, TFpeak_times);
-
-%% Re-wrap phases to be between -pi and pi
-peak_SOphase = mod(peak_SOphase, 2*pi) - pi;
-SOphase = mod(SOphase, 2*pi) - pi;
 
 %% Compute the SO power historgram
 % Get frequency and SO phase bins
@@ -161,7 +161,7 @@ if verbose
           '    Frequency Window Size: ' num2str(freq_binsizestep(1)) ' Hz, Window Step: ' num2str(freq_binsizestep(2)) ' Hz', newline,...
           '    Frequency Range: ', num2str(freq_range(1)) '-' num2str(freq_range(2)) ' Hz', newline,...
           '    SO-Phase Window Size: ' num2str(SO_binsizestep(1)) ', Window Step: ' num2str(SO_binsizestep(2)), newline,...
-          '    SO-Phase Range: ', num2str(SO_range(1)/pi), 'π - ', num2str(SO_range(2)/pi), 'π'  newline, newline])
+          '    SO-Phase Range: ', num2str(SO_range(1)/pi), 'π - ', num2str(SO_range(2)/pi), 'π'  newline])
 end
 
 % Intialize SOphase * freq matrix
