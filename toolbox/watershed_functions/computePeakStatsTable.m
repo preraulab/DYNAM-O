@@ -66,7 +66,7 @@ Ldata = cell2Ldata(regions,size(data),boundaries);
 
 %Compute the stats table
 statsTable = regionprops('table',Ldata,data,'Area',...
-        'WeightedCentroid','PixelValues');
+        'BoundingBox','WeightedCentroid','PixelValues');
 
 %Get the dx and dy
 dx = diff(xvalues(1:2));
@@ -83,23 +83,20 @@ boundaries = boundaries(good_indices);
 regions = regions(good_indices);
 
 %Area
-statsTable.Area = statsTable.Area * dx * dy;
+statsTable.Area = statsTable.Area*dx*dy;
 
 %Volume
-statsTable.Volume = cellfun(@(x)pow2db(sum(x))*dx*dy,statsTable.PixelValues);
+statsTable.Volume = cellfun(@(x)sum(x)*dx*dy, statsTable.PixelValues);
 
 %Boundaries 
-[a,b] = cellfun(@(x)ind2sub(size(data),x),boundaries,'UniformOutput',false);
-statsTable.Boundaries = cellfun(@(a,b)[(b-1)*dx+seg_startx,  (a-1)*dy+seg_starty ], a, b, 'Uniform', 0);
-
-%Weighted Centroid 
-% statsTable.WeightedCentroidxy = [(statsTable.WeightedCentroid(:,1)-1)*dx+seg_startx  (statsTable.WeightedCentroid(:,2)-1)*dy+seg_starty ];
+[a,b] = cellfun(@(x)ind2sub(size(data),x),boundaries,'UniformOutput',false); % a,b in pixel indices
+statsTable.Boundaries = cellfun(@(a,b)[(b-1)*dx+seg_startx, (a-1)*dy+seg_starty], a, b, 'Uniform', 0);
 
 %Peak Time
-statsTable.PeakTime = (statsTable.WeightedCentroid(:,1)-1)*dx+seg_startx;
+statsTable.PeakTime = statsTable.WeightedCentroid(:,1)*dx+seg_startx; % WeightedCentroid in spatial coordinates
 
 %Peak Frequency
-statsTable.PeakFrequency = (statsTable.WeightedCentroid(:,2)-1)*dy+seg_starty;
+statsTable.PeakFrequency = statsTable.WeightedCentroid(:,2)*dy+seg_starty; % WeightedCentroid in spatial coordinates
 
 %Height
 statsTable.Height = cellfun(@max,statsTable.PixelValues) - cellfun(@min, statsTable.PixelValues);
@@ -107,8 +104,10 @@ statsTable.Height = cellfun(@max,statsTable.PixelValues) - cellfun(@min, statsTa
 %Segment Number
 statsTable.SegmentNum(:,1) = segment_num;
 
-%Bandwidth
-statsTable.Bandwidth = cellfun(@(x)max(x)-min(x),a)*dy;
-
 %Duration
-statsTable.Duration = cellfun(@(x)max(x)-min(x),b)*dx;
+statsTable.Duration = statsTable.BoundingBox(:,3)*dx; % Bounding box in spatial coordinates
+
+%Bandwidth
+statsTable.Bandwidth = statsTable.BoundingBox(:,4)*dy; % Bounding box in spatial coordinates
+
+end
