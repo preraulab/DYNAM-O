@@ -188,18 +188,18 @@ if isempty(f_disp)
     f_disp = 0;
 end
 
-%*************************************
-% Get low-res version of image       *
-%*************************************
+%*******************************
+% Get low-res version of image *
+%*******************************
 if ~isempty(downsample_spect)
     img_LR = img(1:downsample_spect(2):end, 1:downsample_spect(1):end);
 else
     img_LR = img;
 end
 
-%*************************************
-%   Run watershed and create graph   *
-%*************************************
+%************************************
+%   Run watershed and create graph  *
+%************************************
 t_start = now;
 if f_verb > 0
     disp([verb_pref 'Computing watershed and building graph...']);
@@ -258,11 +258,10 @@ else
 end
 
 %%
-%***********************************************************
+%**********************************************************
 % Do not trim regions already below the removal criteria  *
-%***********************************************************
+%**********************************************************
 if dur_min>0 || bw_min>0
-
     df = y(2)-y(1);
     dt = x(2)-x(1);
 

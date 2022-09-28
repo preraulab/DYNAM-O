@@ -79,7 +79,7 @@ statsTable.Area = statsTable.Area*dx*dy;
 %Volume
 statsTable.Volume = cellfun(@(x)sum(x)*dx*dy, statsTable.PixelValues);
 
-%Boundaries 
+%Boundaries
 [a,b] = cellfun(@(x)ind2sub(size(data),x),boundaries,'UniformOutput',false);
 statsTable.Boundaries = cellfun(@(a,b)[(b-1)*dx+seg_startx, (a-1)*dy+seg_starty], a, b, 'Uniform', 0); % a,b in pixel indices
 
