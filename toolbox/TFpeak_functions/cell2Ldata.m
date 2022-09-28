@@ -1,13 +1,13 @@
-function [ Ldata ] = cell2Ldata( rgn, data_size, Lborders , min_area)
-%CELL2LDATA takes rgn matrix and converts to labeled 2D form
+function [ Ldata ] = cell2Ldata(rgn, data_size, Lborders, min_area)
+%CELL2LDATA takes rgn matrix and converts to labelled 2D form
 %
 % Usage:
 %   [ Ldata ] = cell2Ldata( rgn, data_size, Lborders , min_area)
 %
 % OUTPUTS:
-%   rgn       -- two-column matrix of labeled pixels
+%   rgn       -- two-column matrix of labelled pixels
 %                first col is linear idx of pixels, second col is region label 
-%                border pixels are labeled twice
+%                border pixels are labelled twice
 %   data_size -- [num_rows num_cols]
 %   Lborders  -- 1D cell array of vector lists of linear idx of border pixels for each region
 %                If given, ASSUMES idx in Lborders corresponds to region

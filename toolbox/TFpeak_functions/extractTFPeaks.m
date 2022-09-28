@@ -208,7 +208,7 @@ end
 %Run the watershed
 Ldata = runWatershed(img_LR,conn_wshed,bl_thresh,f_verb-1,['    ' verb_pref],f_disp);
 
-%Convert labeled region to graph
+%Convert labelled region to graph
 [rgn, rgn_lbls, Lborders, adj_list] = Ldata2graph(Ldata,[],f_disp);
 
 if f_verb > 0
@@ -233,10 +233,10 @@ end
 % Interpolate peak regions to high-resolution *
 %**********************************************
 if ~isempty(downsample_spect)
-    %UPSCALE THE LABELED IMAGE
+    %UPSCALE THE LABELLED IMAGE
     Ldata = zeros(size(img_LR),"uint16");
     
-    %Create the labeled image and skip empty regions
+    %Create the labelled image and skip empty regions
     num_regions = length(rgn);
     for ii = 1:num_regions
         ii_pixels = rgn{ii};
