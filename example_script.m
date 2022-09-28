@@ -43,12 +43,6 @@ SOpower_norm_method = 'p5shift';
 save_output_image = false;
 output_fname = [];
 
-%Save peak property data
-%   0: Does not save anything
-%   1: Saves a subset of properties for each TFpeak 
-%   2: Saves all properties for all peaks (including rejected noise peaks) 
-save_peak_properties = 0;
-
 %% PREPARE DATA
 %Check for parallel toolbox
 v = ver;
@@ -71,22 +65,25 @@ switch data_range
     case 'segment'
         % Choose an example segment from the data
         time_range = [8420 13446];
-        disp('Running example segment')
+        disp(['Running example segment', newline])
     case 'night'
         wake_buffer = 5*60; %5 minute buffer before/after first/last wake
         start_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'first')) - wake_buffer;
         end_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'last')+1) + wake_buffer;
 
         time_range = [start_time end_time];
-        disp('Running full night')
+        disp(['Running full night', newline])
 end
 
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
-[peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, boundaries] = ...
-    run_watershed_SOpowphase(data, Fs, stage_times, stage_vals, 'time_range', time_range, 'quality_setting', quality_setting, 'SOpower_norm_method', SOpower_norm_method, 'save_pref', save_peak_properties);
+[stats_table, hist_peakidx, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times] = ...
+    runTFPeakSOHistograms(data, Fs, stage_times, stage_vals, 'time_range', time_range, 'quality_setting', quality_setting, 'SOpower_norm_method', SOpower_norm_method);
 
 %% COMPUTE SPECTROGRAM FOR DISPLAY
 [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(data, Fs, [4,25], [15 29], [30 15], [],'linear',[],false,false);
+
+% Plot only TFpeaks that contribute to SO-power/phase histograms 
+stats_table_SOPH = stats_table(hist_peakidx, :);
 
 % PLOT RESULTS FIGURE
 % Create figure
@@ -160,12 +157,14 @@ ylabel(ylab);
 % Plot time-frequency peak scatterplot
 axes(ax(1))
 %Compute peak dot size
-pmax = prctile(peak_props.peak_height, 95); % get 95th ptile of heights
-peak_height = peak_props.peak_height;
-peak_height(peak_height>pmax) = pmax; % don't plot larger than 95th ptile or else dots could obscure other things on the plot
-peak_size = peak_height/6;
+peak_size = stats_table_SOPH.Volume/15;
 
-scatter(peak_props.peak_times/3600, peak_props.peak_freqs, peak_size, peak_props.peak_SOphase, 'filled'); % scatter plot all peaks
+%Do not plot larger than 95th ptile or else dots could obscure other things on the plot
+pmax = prctile(stats_table_SOPH.Volume, 95); % get 95th ptile of heights
+pmax_inds = stats_table_SOPH.Volume> pmax;
+peak_size(pmax_inds) = nan;
+
+scatter(stats_table_SOPH.PeakTime/3600, stats_table_SOPH.PeakFrequency, peak_size, stats_table_SOPH.SOphase, 'filled'); % scatter plot all peaks
 
 %Make circular colormap
 colormap(ax(1),circshift(hsv(2^12),-650))
@@ -246,7 +245,7 @@ end
 
 th(4) = title('SO-Phase Histogram');
 
-set([ax hypn_spect_ax],'fontsize',10)
+set([ax(1:3) hypn_spect_ax],'fontsize',10)
 set(th,'fontsize',15)
 
 %% PRINT OUTPUT

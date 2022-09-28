@@ -1,6 +1,6 @@
 function [artifacts] = detect_artifacts(data, Fs, crit_units, hf_crit, hf_pass, bb_crit, bb_pass, smooth_duration, ...
     verbose, histogram_plot, return_filts_only, hpFilt_high, hpFilt_broad, detrend_filt)
-%EEG_DETECT_TIME_DOMAIN_ARTIFACTS  Detect artifacts in the time domain by iteratively removing data above a given z-score criterion
+%DETECT_ARTIFACTS  Detect artifacts in the time domain by iteratively removing data above a given z-score criterion
 %
 %   Usage:
 %   Direct input:
