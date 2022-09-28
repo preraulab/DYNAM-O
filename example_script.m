@@ -65,14 +65,14 @@ switch data_range
     case 'segment'
         % Choose an example segment from the data
         time_range = [8420 13446];
-        disp('Running example segment')
+        disp(['Running example segment', newline])
     case 'night'
         wake_buffer = 5*60; %5 minute buffer before/after first/last wake
         start_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'first')) - wake_buffer;
         end_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'last')+1) + wake_buffer;
 
         time_range = [start_time end_time];
-        disp('Running full night')
+        disp(['Running full night', newline])
 end
 
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
@@ -83,7 +83,7 @@ end
 [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(data, Fs, [4,25], [15 29], [30 15], [],'linear',[],false,false);
 
 % Plot only TFpeaks that contribute to SO-power/phase histograms 
-stats_table = stats_table(hist_peakidx, :);
+stats_table_SOPH = stats_table(hist_peakidx, :);
 
 % PLOT RESULTS FIGURE
 % Create figure
@@ -157,14 +157,14 @@ ylabel(ylab);
 % Plot time-frequency peak scatterplot
 axes(ax(1))
 %Compute peak dot size
-peak_size = stats_table.Height/6;
+peak_size = stats_table_SOPH.Height/6;
 
 %Do not plot larger than 95th ptile or else dots could obscure other things on the plot
-pmax = prctile(stats_table.Height, 95); % get 95th ptile of heights
-pmax_inds = stats_table.Height> pmax;
+pmax = prctile(stats_table_SOPH.Height, 95); % get 95th ptile of heights
+pmax_inds = stats_table_SOPH.Height> pmax;
 peak_size(pmax_inds) = nan;
 
-scatter(stats_table.PeakTime/3600, stats_table.PeakFrequency, peak_size, stats_table.SOphase, 'filled'); % scatter plot all peaks
+scatter(stats_table_SOPH.PeakTime/3600, stats_table_SOPH.PeakFrequency, peak_size, stats_table_SOPH.SOphase, 'filled'); % scatter plot all peaks
 
 %Make circular colormap
 colormap(ax(1),circshift(hsv(2^12),-650))

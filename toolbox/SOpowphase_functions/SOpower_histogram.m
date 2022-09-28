@@ -165,13 +165,16 @@ switch norm_method
         error(['Normalization method "', norm_method, '" not recognized']);
 end
 
+%% Get SOpower at each peak time
+peak_SOpower_norm = interp1(SOpow_times, SOpower_norm, TFpeak_times, 'nearest');
+
 %% Get valid peak indices
 % Exclude peaks during unwanted stages, artifacts, and outside time range
 stage_inds_peaks = logical(interp1(t_data, double(~stage_exclude), TFpeak_times, 'nearest')); 
 artifact_inds_peaks = logical(interp1(t_data, double(artifacts), TFpeak_times, 'nearest'));
 timerange_inds_peaks = (TFpeak_times >= time_range(1)) & (TFpeak_times <= time_range(2));
 
-peak_selection_inds = stage_inds_peaks & ~artifact_inds_peaks & timerange_inds_peaks;
+peak_selection_inds = stage_inds_peaks & ~artifact_inds_peaks & timerange_inds_peaks & ~isnan(peak_SOpower_norm);
 
 %% Get valid SOpower indices
 % Exclude unwanted stages, artifacts, and outside time range
@@ -181,9 +184,6 @@ SOpower_times_valid = (SOpow_times>=time_range(1) & SOpow_times<=time_range(2));
 
 SOpower_valid = SOpower_stages_valid & SOpower_artifact_valid & SOpower_times_valid;
 SOpower_valid_allstages = SOpower_artifact_valid & SOpower_times_valid;
-
-%% Get SOpower at each peak time
-peak_SOpower_norm = interp1(SOpow_times, SOpower_norm, TFpeak_times, 'nearest');
 
 %% Compute the SO power historgram
 % Get frequency bins
