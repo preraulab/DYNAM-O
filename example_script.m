@@ -77,7 +77,7 @@ end
 
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
 [stats_table, hist_peakidx, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times] = ...
-    run_watershed_SOpowphase(data, Fs, stage_times, stage_vals, 'time_range', time_range, 'quality_setting', quality_setting, 'SOpower_norm_method', SOpower_norm_method);
+    runTFPeakSOHistograms(data, Fs, stage_times, stage_vals, 'time_range', time_range, 'quality_setting', quality_setting, 'SOpower_norm_method', SOpower_norm_method);
 
 %% COMPUTE SPECTROGRAM FOR DISPLAY
 [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(data, Fs, [4,25], [15 29], [30 15], [],'linear',[],false,false);
@@ -157,11 +157,11 @@ ylabel(ylab);
 % Plot time-frequency peak scatterplot
 axes(ax(1))
 %Compute peak dot size
-peak_size = stats_table_SOPH.Height/6;
+peak_size = stats_table_SOPH.Volume/15;
 
 %Do not plot larger than 95th ptile or else dots could obscure other things on the plot
-pmax = prctile(stats_table_SOPH.Height, 95); % get 95th ptile of heights
-pmax_inds = stats_table_SOPH.Height> pmax;
+pmax = prctile(stats_table_SOPH.Volume, 95); % get 95th ptile of heights
+pmax_inds = stats_table_SOPH.Volume> pmax;
 peak_size(pmax_inds) = nan;
 
 scatter(stats_table_SOPH.PeakTime/3600, stats_table_SOPH.PeakFrequency, peak_size, stats_table_SOPH.SOphase, 'filled'); % scatter plot all peaks

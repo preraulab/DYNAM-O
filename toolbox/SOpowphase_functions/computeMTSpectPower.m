@@ -1,12 +1,16 @@
-function [SO_power, stimes, sfreqs] = compute_mtspect_power(varargin)
-% [SO_power, stimes] = compute_mtspect_power(data, Fs, freq_range, tapers, window_params, smoothing_method, smoothing_param, interp_times, verbose)
+function [SO_power, stimes, sfreqs] = computeMTSpectPower(varargin)
+% [SO_power, stimes] = computeMTSpectPower(data, Fs, freq_range, tapers, window_params, smoothing_method, smoothing_param, interp_times, verbose)
 %
-%
-%   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
+%%   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
-%      
-%   Authors: Patrick Stokes, Michael Prerau, Thomas Possidente
+%
+%   Please provide the following citation for all use:
+%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
+%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification,
+%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%**********************************************************************
 
 %% Parse input
 %Input Error handling

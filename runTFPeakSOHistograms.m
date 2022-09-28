@@ -201,7 +201,7 @@ stats_table = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsa
 verb_disp(verbose, ['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
 
 %% Filter stats_table based on duration, bandwidth, frequency, and height
-filter_idx = filter_peak_statstable(stats_table, [dur_min, dur_max], [bw_min, bw_max], [-inf inf], ht_db_min, verbose);
+filter_idx = filterStatsTable(stats_table, [dur_min, dur_max], [bw_min, bw_max], [-inf inf], ht_db_min, verbose);
 stats_table = stats_table(filter_idx, :);
 
 %% Get peak stages and check for artifacts
@@ -224,13 +224,13 @@ stage_exclude = ~ismember(stages_t_data, stages_include);
 verb_disp(verbose, 'Computing SO-power histogram...')
 
 % use (...,'plot_flag', true) to plot directly from this function call
-[SOpow_mat, freq_bins, SOpow_bins, ~, ~, stats_table.SOpower, hist_peakidx, SOpower_norm, ~, SOpow_times] = SOpower_histogram(data, Fs, stats_table.PeakFrequency, stats_table.PeakTime, 't_data', t_data, 'stage_exclude', stage_exclude, 'artifacts', artifacts, 'norm_method', SOpower_norm_method);
+[SOpow_mat, freq_bins, SOpow_bins, ~, ~, stats_table.SOpower, hist_peakidx, SOpower_norm, ~, SOpow_times] = SOpowerHistogram(data, Fs, stats_table.PeakFrequency, stats_table.PeakTime, 't_data', t_data, 'stage_exclude', stage_exclude, 'artifacts', artifacts, 'norm_method', SOpower_norm_method);
 
 %% Compute SO-phase histogram
 verb_disp(verbose, 'Computing SO-phase histogram...')
 
 % use (..., 'plot_flag', true) to plot directly from this function call
-[SOphase_mat, ~, SOphase_bins, ~, ~, stats_table.SOphase] = SOphase_histogram(data, Fs, stats_table.PeakFrequency, stats_table.PeakTime, 't_data', t_data, 'stage_exclude', stage_exclude, 'artifacts', artifacts);
+[SOphase_mat, ~, SOphase_bins, ~, ~, stats_table.SOphase] = SOphaseHistogram(data, Fs, stats_table.PeakFrequency, stats_table.PeakTime, 't_data', t_data, 'stage_exclude', stage_exclude, 'artifacts', artifacts);
 
 % To use a custom precomputed SO phase filter, use the SOphase_filter argument
 % custom_SOphase_filter = designfilt('bandpassfir', 'StopbandFrequency1', 0.1, 'PassbandFrequency1', 0.4, ...

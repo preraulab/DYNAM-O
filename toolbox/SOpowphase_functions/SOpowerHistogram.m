@@ -1,6 +1,6 @@
-function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds, SOpower_norm, ptile, SOpow_times] = SOpower_histogram(varargin)
+function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds, SOpower_norm, ptile, SOpow_times] = SOpowerHistogram(varargin)
 % [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds] = ...
-%                           SO_histogram(EEG, Fs, TFpeak_freqs, TFpeak_times, freq_range, freq_binsizestep, ...
+%                           SOpowerHistogram(EEG, Fs, TFpeak_freqs, TFpeak_times, freq_range, freq_binsizestep, ...
 %                                        SO_range, SO_binsizestep, SOfreq_range, artifacts, ...
 %                                        stage_exclude, t_data, norm_method, min_time_in_bin, lightsonoff_times, ...
 %                                        pow_freqSO_norm, rate_flag, smooth_flag, plot_flag)
@@ -120,7 +120,7 @@ nanEEG = EEG;
 nanEEG(artifacts) = nan;
 
 %% Compute SO power
-[SOpower, SOpow_times] = compute_mtspect_power(nanEEG, Fs, 'freq_range', SO_freqrange);
+[SOpower, SOpow_times] = computeMTSpectPower(nanEEG, Fs, 'freq_range', SO_freqrange);
 SOpow_times = SOpow_times + t_data(1); % adjust the time axis to t_data
 SOpow_times_step = SOpow_times(2) - SOpow_times(1);
 
