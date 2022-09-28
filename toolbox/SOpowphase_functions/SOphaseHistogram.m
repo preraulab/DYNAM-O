@@ -1,5 +1,5 @@
-function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOphase, peak_selection_inds] = SOphase_histogram(varargin)
-% [SO_mat, freq_cbins, SO_cbins, time_in_bin] = SO_histogram(EEG, Fs, TFpeak_freqs, TFpeak_times, freq_range, freq_binsizestep, SO_range, SO_binsizestep, SO_freqrange, artifacts, ...
+function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOphase, peak_selection_inds] = SOphaseHistogram(varargin)
+% [SO_mat, freq_cbins, SO_cbins, time_in_bin] = SOPhase(EEG, Fs, TFpeak_freqs, TFpeak_times, freq_range, freq_binsizestep, SO_range, SO_binsizestep, SO_freqrange, artifacts, ...
 %                                                            stage_exclude, t_data,time_range,  SOphase_filter, phase_freqSO_norm, rate_flag, smooth_flag, plot_flag)
 %
 %
@@ -113,7 +113,7 @@ assert((SO_range(1) >= -pi) & (SO_range(2) <= pi), 'SO-phase range must be value
 assert(SO_binsizestep(1) < 2*pi, 'SO-phase bin size must be less than 2*pi')
 
 %% Compute SO phase
-[SOphase, t_phase] = compute_SOPhase(EEG, Fs, SO_freqrange, SOphase_filter);
+[SOphase, t_phase] = computeSOPhase(EEG, Fs, SO_freqrange, SOphase_filter);
 t_phase = t_phase + t_data(1); %#ok<NASGU> % adjust the time axis to t_data
 SOphase = SOphase';
 
