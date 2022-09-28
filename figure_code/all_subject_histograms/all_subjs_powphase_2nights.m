@@ -117,7 +117,7 @@ for ee = 1:num_elects
                 % set colormap and xticks
                 if pp==1
                     set(ax(ii), 'xtick', 0:.25:1,'xticklabel',{'0' '25' '50' '75' '100'});
-                    colormap(ax(ii), parula(2^12));
+                    colormap(ax(ii), gouldian);
                 else
                     set(ax(ii), 'xtick', [-pi/2, 0, pi/2], 'xticklabel', {'-\pi/2', '0', '\pi/2'});
                     colormap(ax(ii), magma(2^12));

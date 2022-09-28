@@ -122,6 +122,7 @@ for ee1 = 1:length(lhem)
     imagesc(SOpow_cbins, freq_cbins, mean_powhists(:,:,enum1)); % plot mean hist for electrode
     
     caxis(clims_pow);
+    colormap(gca,gouldian);
     axis xy;
     ylim(freq_range);
     xlim(powlims)
@@ -144,6 +145,7 @@ for ee1 = 1:length(lhem)
     grid on
     climscale(false);
     caxis(clims_pow);
+    colormap(gca, gouldian);
     axis xy;
     ylim(freq_range);
     xlim(powlims);
@@ -304,6 +306,7 @@ for ee1 = 1:length(enums)
         imagesc(SOpow_cbins, freq_cbins, mean_powhists(:,:,enum));
         title(electrodes{enum})
         caxis(clims_pow);
+        colormap(gca,gouldian);
         axis xy;
         ylim(freq_range);
         xlim(powlims);
@@ -328,6 +331,7 @@ for ee1 = 1:length(enums)
         imagesc(SOpow_cbins, freq_cbins, mean_powhists(:,:,enum));
         title(electrodes{enum})
         caxis(clims_pow);
+        colormap(gca,gouldian);
         axis xy;
         ylim(freq_range);
         xlim(powlims);

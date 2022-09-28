@@ -70,6 +70,7 @@ for nn = 1:num_norms
         imagesc(SOpow_cbins(:,nn), freq_cbins, mean(SOpow_hists{nn,ee},3,'omitnan')');
         axis xy;
         caxis(clims);
+        colormap(gca, gouldian);
         ylim(freq_range);
         xlim(xlims{nn})
         

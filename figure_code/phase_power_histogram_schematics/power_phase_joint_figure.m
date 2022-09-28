@@ -208,6 +208,7 @@ imagesc(pow_bin_centers*100,pow_freqs,pow_hist'); axis xy;
 xlabel('% Slow Wave Power');
 ylabel('Frequency (Hz)');
 climscale(ax(5), [], false);
+colormap(ax(5), gouldian);
 axis tight;
 title('Power Histogram');
 axis square

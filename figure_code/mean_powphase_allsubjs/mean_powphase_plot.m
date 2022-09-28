@@ -93,7 +93,7 @@ for ee = 1:num_elects
     
     imagesc(SOpow_cbins*100, freq_cbins, elect_data); % plot mean histogram
     axis xy;
-    colormap parula
+    colormap(gca, gouldian)
     caxis(cpow)
     grid on;
     set(ax_pow(ee*2-1), 'GridLineStyle', '--', 'GridColor', '[1, 1, 1]', 'GridAlpha', 0.8);

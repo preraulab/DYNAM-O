@@ -185,7 +185,7 @@ for rr = 1:num_pow_ROIs
     rectangle('Position',ROI_rect(rr,:),'linestyle',styles{rr});
 end
 
-colormap(ax(1), parula);
+colormap(ax(1), gouldian);
 clims = [.95 4.6];
 caxis(clims);
 ylim(ylims)
@@ -207,7 +207,7 @@ for rr = 1:num_pow_ROIs
     rectangle('Position',ROI_rect(rr,:),'linestyle',styles{rr});
 end
 
-colormap(ax(2), parula);
+colormap(ax(2), gouldian);
 caxis(clims);
 c = colorbar_noresize;
 c.Position(3:4) = c.Position(3:4)*.7;

@@ -108,7 +108,7 @@ for ss = 1:num_stages
         imagesc(SOpow_cbins*100, freq_cbins, squeeze(mean_powhists(ee,ss,:,:))); % plot mean powhist for selected electrode and stage combo
         axis xy;
         ylim(freq_range);
-        colormap(ax(count), 'parula');
+        colormap(ax(count), gouldian);
         caxis(cpow);
         
         if ss == 1

@@ -113,7 +113,7 @@ axes(ax(1));
 
 imagesc(stimes, sfreqs, nanpow2db(spect)');
 axis xy;
-colormap(ax(1),jet);
+colormap(ax(1),rainbow4);
 climscale;
 ylabel('Frequency (Hz)', 'FontSize',fs_label);
 title('Spectrogam', 'FontSize', fs_title);
@@ -194,6 +194,7 @@ axes(ax(1));
 imagesc(SOpow_cbins, freq_cbins, pow_hist);
 axis xy;
 caxis(cpow);
+colormap(ax(1), gouldian);
 axis tight;
 ylim(freq_range);
 ylabel('Frequency (Hz)','FontSize',fs_label);

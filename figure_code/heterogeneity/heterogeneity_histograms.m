@@ -66,6 +66,7 @@ for fig_num = 1:N
     imagesc(SOpow_cbins*100, freq_cbins, SOpow_hists(:,:,fig_num,1));
     axis xy;
     caxis(cpow)
+    colormap(gca, gouldian);
     title('Night 1')
     ylabel('Frequency (Hz)')
     ax(1).Position(2) = ax(1).Position(2) + .04;
@@ -76,6 +77,7 @@ for fig_num = 1:N
     axes(ax(2))
     imagesc(SOpow_cbins*100, freq_cbins, SOpow_hists(:,:,fig_num,2));
     caxis(cpow);
+    colormap(gca, gouldian);
     axis xy;
     title('Night 2')
 

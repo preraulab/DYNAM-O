@@ -204,7 +204,7 @@ axis xy;
 climscale(SOPH_axes(2),[2.5 97.5],false)
 cx=caxis;
 
-colormap(SOPH_axes(2),"parula");
+colormap(SOPH_axes(2),gouldian);
 set(gca,'xtick',[]);
 ylabel('Frequency (Hz)')
 th(3) = title('SO-power Histogram');

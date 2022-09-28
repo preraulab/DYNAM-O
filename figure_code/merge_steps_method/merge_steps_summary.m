@@ -175,7 +175,7 @@ axes(axs(1));
 imagesc(x,y,pow2db(data_sspect));
 axis xy;
 climscale;
-colormap(jet(1024));
+colormap(rainbow4);
 caxis([-19.7366 13.6733]);
 
 ylabel('Frequency (Hertz)');
@@ -187,7 +187,7 @@ set(ax,'XTickLabel',[]);
 axes(axs(3));
 imagesc(x,y,(data_sspect_bs));
 axis xy;
-colormap(jet(1024));
+colormap(rainbow4);
 caxis([-7 90]);
 
 ylabel('Frequency (Hertz)');
@@ -318,7 +318,7 @@ end
 axes(axs(5));
 imagesc(x,y,(data_sspect_bs));
 axis xy;
-colormap(jet(1024));
+colormap(rainbow4);
 caxis([-7 90]);
 
 ax=gca;
@@ -353,7 +353,7 @@ axes(axs(7));
 imagesc(x,y,pow2db(data_sspect));
 axis xy;
 climscale;
-colormap(jet);
+colormap(rainbow4);
 caxis([-19.7366 13.6733]);
 
 [~,scalelabel_x]=scaleline(gca,5,'5 seconds');

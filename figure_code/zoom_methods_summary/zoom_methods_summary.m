@@ -294,7 +294,7 @@ axes(ax_sim_spectrogram)
 imagesc(stimes_sim,sfreqs_sim, (spect_sim'));
 axis xy;
 climscale
-colormap(jet)
+colormap(rainbow4)
 
 set(gca,'xtick',[],'ytick',[]);
 ylim([2.1758   31.3514]);
@@ -309,7 +309,7 @@ xlim(full_night_bounds)
 axes(ax_full_night);
 imagesc(sstimes_fullnight, ssfreqs_fullnight, pow2db(sspect_fullnight'));
 axis xy;
-colormap(jet(1024));
+colormap(rainbow4);
 try
     caxis(curr_caxis);
 catch
@@ -329,7 +329,7 @@ cla;
 segment_5_mins_tinds = sstimes_fine>=five_min_bounds(1) & sstimes_fine<=five_min_bounds(2);
 imagesc(sstimes_fine(segment_5_mins_tinds), ssfreqs_fine,pow2db_sspect_fine(:,segment_5_mins_tinds));
 axis xy;
-colormap(jet(1024));
+colormap(rainbow4);
 caxis(c);
 [h_scaleline2, h_scalelabel2] = scaleline(60,'1 minute','x');
 
@@ -342,7 +342,7 @@ axes(ax_1_minute)
 segment_1_min_tinds = sstimes_fine>=one_min_bounds(1) & sstimes_fine<=one_min_bounds(2);
 imagesc(sstimes_fine(segment_1_min_tinds), ssfreqs_fine, pow2db_sspect_fine(:,segment_1_min_tinds));
 axis xy;
-colormap(jet(1024));
+colormap(rainbow4);
 caxis(c);
 
 vline(fifteen_sec_bounds,'linewidth',2,'color','m');
@@ -356,7 +356,7 @@ axes(ax_15_seconds);
 segment_20_sec_tinds = sstimes_fine>=fifteen_sec_bounds(1) & sstimes_fine<=fifteen_sec_bounds(2);
 imagesc(sstimes_fine(segment_20_sec_tinds), ssfreqs_fine, pow2db_sspect_fine(:,segment_20_sec_tinds));
 axis xy;
-colormap(jet(1024));
+colormap(rainbow4);
 caxis(c);
 
 ylabel('Frequency(Hz)');
@@ -381,7 +381,7 @@ imagesc(x_bs(bs_segment_20_sec_tinds),y_bs,data_bsspect(:,bs_segment_20_sec_tind
 axis xy;
 
 caxis([-7 90]);
-colormap(jet);
+colormap(rainbow4);
 ylim([0 40]);
 set(gca,'xtick',[],'ytick',[]);
 
@@ -484,7 +484,7 @@ imagesc(sstimes_fine(segment_20_sec_tinds), ssfreqs_fine, pow2db_sspect_fine(:,s
 
 axis xy;
 climscale;
-colormap(jet(1024));
+colormap(rainbow4);
 caxis(curr_caxis);
 ylim([0 40]);
 
@@ -520,7 +520,7 @@ imagesc(x_bs,y_bs,data_bsspect);
 xlim(fifteen_sec_bounds);
 axis xy;
 caxis([-7 90]);
-colormap(jet);
+colormap(rainbow4);
 ylim([0 40]);
 
 set(gca,'xtick',[],'ytick',[]);
