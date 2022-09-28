@@ -1,5 +1,5 @@
 function  [data_segs, x_segs] = segmentData(spect, stimes, sfreqs, seg_time, f_verb, verb_pref)
-% segmentData: takes a full spectrogram and chunks it into separate segments
+%SEGMENTDATA takes a full spectrogram and chunks it into separate segments
 %
 %   Usage:
 %       [data_segs, x_segs] = segmentData(spect, stimes, sfreqs, seg_time, f_verb, verb_pref)

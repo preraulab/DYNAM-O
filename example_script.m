@@ -245,7 +245,7 @@ end
 
 th(4) = title('SO-Phase Histogram');
 
-set([ax hypn_spect_ax],'fontsize',10)
+set([ax(1:3); hypn_spect_ax'],'fontsize',10)
 set(th,'fontsize',15)
 
 %% PRINT OUTPUT

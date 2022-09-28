@@ -1,5 +1,7 @@
 function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOphase, peak_selection_inds] = SOphaseHistogram(varargin)
-% [SO_mat, freq_cbins, SO_cbins, time_in_bin] = SOPhase(EEG, Fs, TFpeak_freqs, TFpeak_times, freq_range, freq_binsizestep, SO_range, SO_binsizestep, SO_freqrange, artifacts, ...
+% SOPHASEHISTOGRAM computes slow-oscillation phase matrix 
+% Usage:
+%   [SO_mat, freq_cbins, SO_cbins, time_in_bin] = SOPhase(EEG, Fs, TFpeak_freqs, TFpeak_times, freq_range, freq_binsizestep, SO_range, SO_binsizestep, SO_freqrange, artifacts, ...
 %                                                            stage_exclude, t_data,time_range,  SOphase_filter, phase_freqSO_norm, rate_flag, smooth_flag, plot_flag)
 %
 %

@@ -1,7 +1,10 @@
 function [trimmed_regions, trimmed_borders] = trimWshedRegions(data,regions,vol_thresh,shift_val,conn,f_verb,verb_pref,f_disp)
-% takes data and regions from peaksWShed and regionsMergeByWeight
+% TRIMWSHEDREGIONS takes data and regions from peaksWShed and regionsMergeByWeight
 % and trims the regions to a certain fraction of volume.
-%    
+%
+% Usage:
+%   [trimmed_regions, trimmed_borders] = trimWshedRegions(data,regions,vol_thresh,shift_val,conn,f_verb,verb_pref,f_disp)
+%
 % INPUTS:
 %   data       -- 2D matrix of image data. defaults to peaks(100).
 %   regions    -- 1D cell array of vector lists of linear idx of all pixels for each region.

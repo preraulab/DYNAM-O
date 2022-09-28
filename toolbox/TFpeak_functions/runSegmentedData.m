@@ -2,11 +2,8 @@ function stats_table = ...
     runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, ...
     dur_min, bw_min, conn_wshed, merge_thresh, max_merges, trim_vol, trim_shift, conn_trim, ...
     conn_stats, bl_thresh_flag, CI_upper_bl, merge_rule, f_verb, verb_pref, f_disp)
-%runSegmentedData: Wrapper that runs:
-%   1. Baseline subtraction
-%   2. Spectrogram segmentation
-%   3. TFpeak extraction (watershed, merging, trimming, stats)
-%   4. TFpeak statistics packaging and saving
+%RUNSEGMENTEDDATA wrapper that runs 1) baseline subtraction, 2) spectrogram
+%segmentation, 3) TFpeak extraction (watershed, merging, trimming, stats), 4)TFpeak statistics packaging and saving
 %
 %   Usage:
 %       [matr_names, matr_fields, peaks_matr, PixelIdxList, PixelList, PixelValues, rgn, bndry, valid_peak_mask] = ...

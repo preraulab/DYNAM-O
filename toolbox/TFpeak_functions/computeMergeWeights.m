@@ -1,7 +1,10 @@
 function e_wts = computeMergeWeights(rgn,data,rgn_lbls,rgn_bnds,amatr,merge_rule,f_verb,verb_pref)
-% determines the weights of directed adjacencies between regions
+% COMPUTEMERGEWEIGHTS determines the weights of directed adjacencies between regions
 % in a segmented 2D image. The weights are computed by edgeWeight, which is
 % internalized for speed.
+%
+% Usage:
+%    e_wts = computeMergeWeights(rgn,data,rgn_lbls,rgn_bnds,amatr,merge_rule,f_verb,verb_pref)
 %
 % INPUTS:
 %   rgn      -- a 1D cell array with each cell containing a vector of linear

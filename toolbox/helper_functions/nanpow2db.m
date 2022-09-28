@@ -1,5 +1,5 @@
 function ydB = nanpow2db(y)
-%POW2DB   Power to dB conversion, setting all bad values to nan
+%NANPOW2DB   Power to dB conversion, setting all bad values to nan
 %   YDB = POW2DB(Y) convert the data Y into its corresponding dB value YDB
 %
 %   % Example:

@@ -1,5 +1,8 @@
 function [ Ldata ] = cell2Ldata( rgn, data_size, Lborders , min_area)
-%region2ldata takes rgn matrix and converts to labeled 2D form
+%CELL2LDATA takes rgn matrix and converts to labeled 2D form
+%
+% Usage:
+%   [ Ldata ] = cell2Ldata( rgn, data_size, Lborders , min_area)
 %
 % OUTPUTS:
 %   rgn       -- two-column matrix of labeled pixels

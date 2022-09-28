@@ -1,5 +1,8 @@
 function [rgn, rgn_lbls, Lborders, adj_list] = Ldata2graph(Ldata, exclusion_val, f_disp, ax)
-% label region border pixels and determine region adjacencies.
+% LDATA2GRAPH label region border pixels and determine region adjacencies.
+%
+% Usage:
+%    [rgn, rgn_lbls, Lborders, adj_list] = Ldata2graph(Ldata, exclusion_val, f_disp, ax)
 %
 % INPUTS:
 %   Ldata  -- 2D matrix of labeled image data. Assumes boundaries are

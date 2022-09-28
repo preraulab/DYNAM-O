@@ -1,7 +1,10 @@
 function [rgn, brdrs, ematr, pick_update] = mergeRegions(rgn,a,b,lbls,brdrs,ematr)
-%regionMerge updates the pixel lists in rgn and borders and the adjacencies in 
+%MERGEREGIONS updates the pixel lists in rgn and borders and the adjacencies in 
 % ematr according to mergion regions b into region a. It also returns an 
 % indicator for what edge weights need to be updated
+%
+% Usage: 
+%   [rgn, brdrs, ematr, pick_update] = mergeRegions(rgn,a,b,lbls,brdrs,ematr)
 %
 % INPUTS: 
 %   rgn   -- a 1D cell array with each cell containing a vector of linear 

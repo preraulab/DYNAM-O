@@ -1,6 +1,10 @@
 function full_lidx = subLidx2FullLidx(sub_lidx,size_sub,top_left,size_full)
-%subLidx2FullLidx converts linear pixel indices within a subregion of an image into
+%SUBLIDX2FULLLIDX converts linear pixel indices within a subregion of an image into
 %the linear pixel indices within the full image.
+%
+% Usage: 
+%   full_lidx = subLidx2FullLidx(sub_lidx,size_sub,top_left,size_full)
+%
 %   INPUTS:  
 %     sub_lidx  - vector of linear pixel indices in subregion    
 %     size_sub  - size, [num_rows num_cols], of subregion

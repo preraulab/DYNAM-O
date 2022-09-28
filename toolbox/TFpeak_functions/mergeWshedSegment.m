@@ -1,8 +1,11 @@
 function [rgn, Lborders] = mergeWshedSegment(data,rgn,rgn_lbls,Lborders,adj_list,merge_thresh,max_merges,merge_rule,f_verb,verb_pref,f_disp)
-% takes the labeled image, borders, and adjacencies output
+% MERGEWSHEDSEGMENT takes the labeled image, borders, and adjacencies output
 % from peaksWShed and merges the regions according to the desired rule. The
 % default rule is designed to form large, complete peaks. It calls
 % computeMergeWeights and mergeRegion.
+%
+% Usage:
+%   [rgn, Lborders] = mergeWshedSegment(data,rgn,rgn_lbls,Lborders,adj_list,merge_thresh,max_merges,merge_rule,f_verb,verb_pref,f_disp)
 %
 % INPUTS:
 %   data         -- 2D matrix of image data. defaults to peaks(100).

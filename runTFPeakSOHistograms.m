@@ -1,5 +1,5 @@
 function [stats_table, hist_peakidx, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times] = run_watershed_SOpowphase(varargin)
-% run_watershed_SOpowphase: run_watershed_SOpowphase: Run watershed algorithm to extract time-frequency peaks from 
+% run_TFPeakSOHistograms: Run watershed algorithm to extract time-frequency peaks from 
 %                           spectrogram of data, then compute Slow-Oscillation power and phase histograms
 %
 %   Usage:
@@ -166,8 +166,9 @@ chi2_df = 2 * taper_params(2);
 alpha = 0.95;
 ht_db_min = -pow2db(chi2_df / chi2inv(alpha/2 + 0.5, chi2_df)) * 2;
 
-
-verb_disp(verbose, 'Computing TF-peak spectrogram...')
+if verbose
+disp('Computing TF-peak spectrogram...');
+end
 
 if exist(['multitaper_spectrogram_coder_mex.' mexext],'file')
     [spect,stimes,sfreqs] = multitaper_spectrogram_mex(data, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
@@ -178,7 +179,9 @@ end
 stimes = stimes + t_data(1); % adjust the time axis to t_data
 
 %% Compute baseline spectrum used to flatten data spectrum
-verb_disp(verbose, 'Performing artifact rejection...')
+if verbose 
+    disp('Performing artifact rejection...');
+end
 
 % Detect artifacts in EEG
 artifacts = detect_artifacts(data, Fs, [],[],[],[],[],[],[],[],[], ...
@@ -194,12 +197,15 @@ baseline_ptile = 2; % using 2nd percentile of spectrogram as baseline
 baseline = prctile(spect_bl, baseline_ptile, 2); % get baseline
 
 %% Compute time-frequency peaks
-tfp = verb_disp(verbose, 'Extracting TF-peaks from the spectrogram...');
-
+if verbose
+    disp('Extracting TF-peaks from the spectrogram...');
+end
+tfp = tic;
 stats_table = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, dur_min, bw_min, [], merge_thresh);
 
-verb_disp(verbose, ['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
-
+if verbose
+    disp(['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
+end
 %% Filter stats_table based on duration, bandwidth, frequency, and height
 filter_idx = filterStatsTable(stats_table, [dur_min, dur_max], [bw_min, bw_max], [-inf inf], ht_db_min, verbose);
 stats_table = stats_table(filter_idx, :);
@@ -221,13 +227,17 @@ end
 stage_exclude = ~ismember(stages_t_data, stages_include);
 
 %% Compute SO-power histogram
-verb_disp(verbose, 'Computing SO-power histogram...')
+if verbose
+    disp('Computing SO-power histogram...');
+end
 
 % use (...,'plot_flag', true) to plot directly from this function call
 [SOpow_mat, freq_bins, SOpow_bins, ~, ~, stats_table.SOpower, hist_peakidx, SOpower_norm, ~, SOpow_times] = SOpowerHistogram(data, Fs, stats_table.PeakFrequency, stats_table.PeakTime, 't_data', t_data, 'stage_exclude', stage_exclude, 'artifacts', artifacts, 'norm_method', SOpower_norm_method);
 
 %% Compute SO-phase histogram
-verb_disp(verbose, 'Computing SO-phase histogram...')
+if verbose
+    disp('Computing SO-phase histogram...');
+end
 
 % use (..., 'plot_flag', true) to plot directly from this function call
 [SOphase_mat, ~, SOphase_bins, ~, ~, stats_table.SOphase] = SOphaseHistogram(data, Fs, stats_table.PeakFrequency, stats_table.PeakTime, 't_data', t_data, 'stage_exclude', stage_exclude, 'artifacts', artifacts);
@@ -240,6 +250,6 @@ verb_disp(verbose, 'Computing SO-phase histogram...')
 %                                                                           'SOphase_flter', custom_SOphase_filter);
 
 %% EOF
-verb_disp(verbose, [newline, 'Total time: ' datestr(seconds(toc(ttotal)),'HH:MM:SS')]);
-
+if verbose
+    disp([newline, 'Total time: ' datestr(seconds(toc(ttotal)),'HH:MM:SS')]);
 end

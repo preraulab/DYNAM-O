@@ -1,5 +1,7 @@
 function [SO_power, stimes, sfreqs] = computeMTSpectPower(varargin)
-% [SO_power, stimes] = computeMTSpectPower(data, Fs, freq_range, tapers, window_params, smoothing_method, smoothing_param, interp_times, verbose)
+% COMPUTEMTSPECTPOWER computes the slow oscillation power of timeseries data
+% Usage:
+%   [SO_power, stimes] = computeMTSpectPower(data, Fs, freq_range, tapers, window_params, smoothing_method, smoothing_param, interp_times, verbose)
 %
 %%   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.

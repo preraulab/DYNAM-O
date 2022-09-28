@@ -1,5 +1,5 @@
 function [spect, bl_threshold] = removeBaseline(spect, baseline, bl_thresh, CI_upper_bl, f_verb)
-% removeBaseline: Subtract percentile baseline from spectrogram 
+% REMOVEBASELINE subtract percentile baseline from spectrogram 
 %
 %   Usage:
 %       [spect, bl_threshold] = removeBaseline(spect, baseline, bl_thresh, CI_upper_bl, f_verb)
