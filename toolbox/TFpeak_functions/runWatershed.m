@@ -16,7 +16,7 @@ function Ldata = runWatershed(data, conn, bl_thresh, f_verb, verb_pref, f_disp)
 %   f_disp -- flag indicator whether to plot. 
 %             defaults to false, unless using default data.
 % OUTPUTS:
-%   Ldata: labelled region data
+%   Ldata: labeled region data
 %
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
