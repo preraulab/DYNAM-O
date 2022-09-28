@@ -1,8 +1,8 @@
-function [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, boundaries] = run_watershed_SOpowphase(varargin)
+function [stats_table, hist_peakidx, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times] = run_watershed_SOpowphase(varargin)
 % run_watershed_SOpowphase: run_watershed_SOpowphase: Run watershed algorithm to extract time-frequency peaks from 
 %                           spectrogram of data, then compute Slow-Oscillation power and phase histograms
 %
-% Usage:
+%   Usage:
 %       [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, 
 %       SOpow_times, boundaries] = run_watershed_SOpowphase(data, Fs, stage_times, stage_vals)
 %
@@ -26,10 +26,15 @@ function [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bin
 %       SOpower_norm_method (opt): character - normalization method for SO-power
 %                                  Options: 'p5shift'(default), 'percent', 'proportion', 'none'
 %       verbose (opt):             logical - display extra info. Default = true
+%       quality_setting (opt):     charcater - Quality settings for the algorithm:
+%                                       'precision': high res settings
+%                                       'fast' (default): speed-up with minimal impact on results *suggested*
+%                                       'draft': faster speed-up with increased high frequency TF-peaks, *not recommended for analyzing SOphase*
 %
 %   Outputs:
-%       peak_props:   table - time, frequency, height, SOpower, and SOphase
+%       stats_table:  table - time, frequency, height, SOpower, and SOphase
 %                     for each TFpeak
+%       hist_peakidx: 1D logical - indices for TFpeaks included in histograms
 %       SOpow_mat:    2D double - SO power histogram data
 %       SOphase_mat:  2D double - SO phase histogram data
 %       SOpow_bins:   1D double - SO power bin center values for dimension 1 of SOpow_mat
@@ -72,7 +77,6 @@ addOptional(p, 'lightsonoff_mins', 5, @(x) validateattributes(x,{'numeric'},{'re
 addOptional(p, 'SOpower_norm_method', 'p5shift', @(x) validateattributes(x, {'char', 'numeric'},{}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'quality_setting', 'fast', @(x) validateattributes(x,{'char','numeric'},{}));
-addOptional(p, 'save_pref', 0, @(x) validateattributes(x,{'numeric', 'vector'}, {'real', 'nonempty'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -95,7 +99,7 @@ if isempty(artifact_filters)
     artifact_filters.detrend_filt = [];
 end
 
-
+%Save total time
 ttotal = tic;
 
 %% Truncate data to time range
@@ -149,14 +153,19 @@ mts_verbose = false; % suppress verbose messages
 %MTS frequency resolution
 df = taper_params(1)/time_window_params(1)*2;
 
-%Set min bandwidth and duration based on spectral parameters
-bw_min = df/2;
+%Set min duration and bandwidth based on spectral parameters
 dur_min = time_window_params(1)/2;
+bw_min = df/2;
+
+%Max duration and bandwidth are set to be large values 
+dur_max = 5; % second
+bw_max = 15; % Hz
 
 %Set minimal peak height based on confidence interval lower bound of MTS
 chi2_df = 2 * taper_params(2);
 alpha = 0.95;
 ht_db_min = -pow2db(chi2_df / chi2inv(alpha/2 + 0.5, chi2_df)) * 2;
+
 
 verb_disp(verbose, 'Computing TF-peak spectrogram...')
 
@@ -187,12 +196,20 @@ baseline = prctile(spect_bl, baseline_ptile, 2); % get baseline
 %% Compute time-frequency peaks
 tfp = verb_disp(verbose, 'Extracting TF-peaks from the spectrogram...');
 
-[feature_matrix, feature_names, xywcntrd, ~, ~, ~, ~, boundaries, ~] = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, dur_min, bw_min, ht_db_min, [], merge_thresh, [],[],[],[],[],[],[],[],[],[],[],save_pref);
+stats_table = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, dur_min, bw_min, [], merge_thresh);
 
-verb_disp(verbose, ['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline, newline]);
+verb_disp(verbose, ['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
+
+%% Filter stats_table based on duration, bandwidth, frequency, and height
+filter_idx = filter_peak_statstable(stats_table, [dur_min, dur_max], [bw_min, bw_max], [-inf inf], ht_db_min, verbose);
+stats_table = stats_table(filter_idx, :);
+
+%% Get peak stages and check for artifacts
+stats_table.PeakStage = interp1(stage_times, single(stage_vals), stats_table.PeakTime, 'previous');
+stats_table.Artifacts = logical(interp1(t_data, double(artifacts), stats_table.PeakTime, 'nearest'));
 
 %% Compute SO-power and SO-phase histograms
-% Exclude time-frequency peaks during WAKE stages from histograms
+% Exclude time-frequency peaks during specified stages from histograms
 if length(stage_times) ~= length(t_data)
     stages_t_data = interp1(stage_times, single(stage_vals), t_data, 'previous');
 elseif ~all(stage_times == t_data)
@@ -203,42 +220,26 @@ end
 
 stage_exclude = ~ismember(stages_t_data, stages_include);
 
-%% Extract time-frequency peak times, frequencies, and heights
-peak_times = xywcntrd(:,1);
-peak_freqs = xywcntrd(:,2);
-peak_height = feature_matrix(:,strcmp(feature_names, 'Height'));
-peak_bw = feature_matrix(:,strcmp(feature_names, 'Bandwidth'));
-peak_dur = feature_matrix(:,strcmp(feature_names, 'Duration'));
-
 %% Compute SO-power histogram
 verb_disp(verbose, 'Computing SO-power histogram...')
 
 % use (...,'plot_flag', true) to plot directly from this function call
-[SOpow_mat, freq_bins, SOpow_bins, ~, ~, peak_SOpow, peak_inds, SOpower_norm, ~, SOpow_times] = SOpower_histogram(data, Fs, peak_freqs, peak_times, 't_data', t_data, 'stage_exclude', stage_exclude, 'artifacts', artifacts, 'norm_method', SOpower_norm_method);
-
-boundaries = boundaries(peak_inds,:);
+[SOpow_mat, freq_bins, SOpow_bins, ~, ~, stats_table.SOpower, hist_peakidx, SOpower_norm, ~, SOpow_times] = SOpower_histogram(data, Fs, stats_table.PeakFrequency, stats_table.PeakTime, 't_data', t_data, 'stage_exclude', stage_exclude, 'artifacts', artifacts, 'norm_method', SOpower_norm_method);
 
 %% Compute SO-phase histogram
 verb_disp(verbose, 'Computing SO-phase histogram...')
 
 % use (..., 'plot_flag', true) to plot directly from this function call
-[SOphase_mat, ~, SOphase_bins, ~, ~, peak_SOphase, ~] = SOphase_histogram(data, Fs, peak_freqs, peak_times, 't_data', t_data, 'stage_exclude', stage_exclude, 'artifacts', artifacts);
+[SOphase_mat, ~, SOphase_bins, ~, ~, stats_table.SOphase] = SOphase_histogram(data, Fs, stats_table.PeakFrequency, stats_table.PeakTime, 't_data', t_data, 'stage_exclude', stage_exclude, 'artifacts', artifacts);
 
 % To use a custom precomputed SO phase filter, use the SOphase_filter argument
 % custom_SOphase_filter = designfilt('bandpassfir', 'StopbandFrequency1', 0.1, 'PassbandFrequency1', 0.4, ...
 %                        'PassbandFrequency2', 1.75, 'StopbandFrequency2', 2.05, 'StopbandAttenuation1', 60, ...
 %                        'PassbandRipple', 1, 'StopbandAttenuation2', 60, 'SampleRate', 256);
-% [SOphase_mat, ~, SOphase_cbins, TIB_phase, PIB_phase] = SOphase_histogram(data, Fs, peak_freqs, peak_times, 'stage_exclude', stage_exclude, 'artifacts', artifacts, ...
+% [SOphase_mat, ~, SOphase_cbins, TIB_phase, PIB_phase] = SOphase_histogram(data, Fs, stats_table.PeakFrequency, stats_table.PeakTime, 't_data', t_data, 'stage_exclude', stage_exclude, 'artifacts', artifacts, ...
 %                                                                           'SOphase_flter', custom_SOphase_filter);
 
-%% Make output peak properties table
-verb_disp(verbose, 'Creating output tables...')
-
-% Only time-frequency peaks during stages_include are outputted
-peak_props = table(peak_times(peak_inds), peak_freqs(peak_inds), peak_height(peak_inds), ...
-    peak_SOpow(peak_inds), peak_SOphase(peak_inds), peak_bw(peak_inds), peak_dur(peak_inds), 'VariableNames', {'peak_times', 'peak_freqs', 'peak_height', ...
-    'peak_SOpow', 'peak_SOphase', 'peak_bw', 'peak_dur'});
-
+%% EOF
 verb_disp(verbose, [newline, 'Total time: ' datestr(seconds(toc(ttotal)),'HH:MM:SS')]);
 
 end
