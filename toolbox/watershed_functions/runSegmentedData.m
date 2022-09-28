@@ -1,7 +1,7 @@
-function [feature_matrix, feature_names, xywcntrd, PixelIdxList, PixelList, PixelValues, rgn, bndry, combined_mask] = ...
+function stats_table = ...
     runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, ...
-    dur_min, bw_min, ht_db_min, conn_wshed, merge_thresh, max_merges, trim_vol, trim_shift, conn_trim, ...
-    conn_stats, bl_thresh_flag, CI_upper_bl, merge_rule, f_verb, verb_pref, f_disp, f_save, ofile_pref)
+    dur_min, bw_min, conn_wshed, merge_thresh, max_merges, trim_vol, trim_shift, conn_trim, ...
+    conn_stats, bl_thresh_flag, CI_upper_bl, merge_rule, f_verb, verb_pref, f_disp)
 %runSegmentedData: Wrapper that runs:
 %   1. Baseline subtraction
 %   2. Spectrogram segmentation
@@ -12,7 +12,7 @@ function [feature_matrix, feature_names, xywcntrd, PixelIdxList, PixelList, Pixe
 %       [matr_names, matr_fields, peaks_matr, PixelIdxList, PixelList, PixelValues, rgn, bndry, valid_peak_mask] = ...
 %       runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, ...
 %       dur_min, bw_min, conn_wshed, merge_thresh, max_merges, trim_vol, trim_shift, conn_trim, ...
-%       conn_stats, bl_thresh_flag, CI_upper_bl, merge_rule, f_verb, verb_pref, f_disp, f_save, ofile_pref)
+%       conn_stats, bl_thresh_flag, CI_upper_bl, merge_rule, f_verb, verb_pref, f_disp)
 %
 % INPUTS:
 %   spect        --  2D image data used to extract TFpeaks [freq, time] --required
@@ -23,10 +23,9 @@ function [feature_matrix, feature_names, xywcntrd, PixelIdxList, PixelList, Pixe
 %                    at a time (in seconds). Default = 30. Note that a 60s segment time is
 %                    used in the paper accompanying this code, but using 30s offers large
 %                    speedup and should not greatly affect results
-%   downsample_spect   --  2x1 double indicating number of rows and columns to downsize spect to. 
+%   downsample_spect   --  2x1 double indicating number of rows and columns to downsize spect to.
 %   dur_min      -- minimum duration allowed
 %   bw_min       -- minimum bandwidth allowed
-%   ht_db_min    -- minimum height in dB allowed
 %   conn_wshed   -- pixel connection to be used by peaksWShed. default 8.
 %   merge_thresh -- threshold weight value for when to stop merge rule. default 8.
 %   max_merges   -- maximum number of merges to perform. default inf.
@@ -52,20 +51,9 @@ function [feature_matrix, feature_names, xywcntrd, PixelIdxList, PixelList, Pixe
 %   verb_pref    -- prefix string for verbose output. defaults to ''.
 %   f_disp       -- flag indicator of whether to plot.
 %                   defaults to false, unless using default data.
-%   f_save       -- integer indicator of whether to save output files and how much
-%                   information to save. [0 = no saving, 1 = save fewer peak stats,
-%                   2 = save all peak stats]. Default 0.
-%   ofile_pref   -- string of path and data name for outputs. default './'.
 %
 % OUTPUTS:
-%   peaks_matr      -- matrix of peak features. each row is a peak.
-%   matr_names      -- 1D cell array of names for each feature.
-%   matr_fields     -- vector indicating number of matrix columns occupied by each feature.
-%   PixelIdxList    -- 1D cell array of vector lists of linear idx of all pixels for each region.
-%   PixelList       -- 1D cell array of vector lists of row-col idx of all pixels for each region.
-%   PixelValues     -- 1D cell array of vector lists of all pixel values for each region.
-%   rgn             -- same as PixelIdxList.
-%   bndry           -- 1D cell array of vector lists of linear idx of border pixels for each region.
+%   stats_table     -- table of peak statistics
 %
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
@@ -103,68 +91,56 @@ if nargin < 8 || isempty(bw_min)
     bw_min = 0;
 end
 
-if nargin < 9 || isempty(ht_db_min)
-    ht_db_min = 7.63;
-end
-
-if nargin < 10 || isempty(conn_wshed)
+if nargin < 9 || isempty(conn_wshed)
     conn_wshed = 8;
 end
 
-if nargin < 11 || isempty(merge_thresh)
+if nargin < 10 || isempty(merge_thresh)
     merge_thresh = 8;
 end
 
-if nargin < 12 || isempty(max_merges)
+if nargin < 11 || isempty(max_merges)
     max_merges = inf;
 end
 
-if nargin < 13 || isempty(trim_vol)
+if nargin < 12 || isempty(trim_vol)
     trim_vol = 0.8;
 end
 
-if nargin < 14 || isempty(trim_shift)
+if nargin < 13 || isempty(trim_shift)
     trim_shift = [];
 end
 
-if nargin < 15 || isempty(conn_trim)
+if nargin < 14 || isempty(conn_trim)
     conn_trim = 8;
 end
 
-if nargin < 16 || isempty(conn_stats)
+if nargin < 15 || isempty(conn_stats)
     conn_stats = 8;
 end
 
-if nargin < 17 || isempty(bl_thresh_flag)
+if nargin < 16 || isempty(bl_thresh_flag)
     bl_thresh_flag = false;
 end
 
-if nargin < 18 || isempty(CI_upper_bl)
+if nargin < 17 || isempty(CI_upper_bl)
     CI_upper_bl = [];
 end
 
-if nargin < 19 || isempty(merge_rule)
+if nargin < 18 || isempty(merge_rule)
     merge_rule = 'default';
 end
 
-if nargin < 20 || isempty(f_verb)
+if nargin < 19 || isempty(f_verb)
     f_verb = 1;
 end
 
-if nargin < 21 || isempty(verb_pref)
+if nargin < 20 || isempty(verb_pref)
     verb_pref = '';
 end
 
-if nargin < 22 || isempty(f_disp)
+if nargin < 21 || isempty(f_disp)
     f_disp = 0;
-end
-
-if nargin < 23 || isempty(f_save)
-    f_save = 0;
-end
-
-if nargin < 24 || isempty(ofile_pref)
-    ofile_pref = './';
 end
 
 %******************
@@ -181,69 +157,47 @@ if isempty(trim_shift)
     trim_shift = min(spect,[],'all');
 end
 
-
 %% Segment spectrogram data
 [data_segs, x_segs] = segmentData(spect, stimes, sfreqs, seg_time, f_verb, verb_pref);
 
-
 %% Extract TFpeaks from spectrogram segments
-
-% Initialize storage for parallel processing of image segs 
+% Initialize storage for parallel processing of image segs
 n_segs = length(data_segs);
-segs_matr_names = cell(n_segs,1);
-segs_matr_fields = cell(n_segs,1);
-segs_peaks_matr = cell(n_segs,1);
-segs_PixelIdxList = cell(n_segs,1);
-segs_PixelList = cell(n_segs,1);
-segs_PixelValues = cell(n_segs,1);
-segs_rgn = cell(n_segs,1);
-segs_bndry = cell(n_segs,1);
-segs_time = zeros(n_segs,1);
+stats_tables = cell(n_segs,1);
 
-
-% In parallel, find TFpeaks for each seg 
+% In parallel, find TFpeaks for each seg
 computetime = tic;
-if n_segs > 1
 
-    % Check for parallel processing toolbox and set up loading bar
-    v = ver;
-    haspar = any(strcmp({v.Name}, 'Parallel Computing Toolbox'));
+% Check for parallel processing toolbox and set up loading bar
+v = ver;
+haspar = any(strcmp({v.Name}, 'Parallel Computing Toolbox'));
+if haspar
+    D = parallel.pool.DataQueue;
+    h = waitbar(0, 'Processing Segments...');
+    afterEach(D, @nUpdateWaitbar);
+else
+    h = waitbar(0, 'Processing Segments...');
+end
+segments_processed = 1;
+
+if f_verb > 0
+    disp([verb_pref 'Processing segments...']);
+end
+
+%MAIN LOOP ACROSS SEGMENTS
+parfor ii = 1:n_segs
+    if length(x_segs{ii})>1
+        stats_tables{ii} = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,conn_stats,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
+    end
+    
+    % Update loading bar
     if haspar
-        D = parallel.pool.DataQueue;
-        h = waitbar(0, 'Processing Segments...');
-        afterEach(D, @nUpdateWaitbar);
+        send(D, ii);
     else
-        h = waitbar(0, 'Processing Segments...');
-    end
-    segments_processed = 1;
-
-    if f_verb > 0
-        disp([verb_pref 'Processing segments...']);
-    end
-
-    %MAIN LOOP ACROSS SEGMENTS
-    parfor ii = 1:n_segs
-        if length(x_segs{ii})>1
-            [segs_peaks_matr{ii}, segs_matr_names{ii}, segs_matr_fields{ii}, ...
-                segs_PixelIdxList{ii},segs_PixelList{ii},segs_PixelValues{ii}, ...
-                segs_rgn{ii},segs_bndry{ii},segs_time(ii)] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,conn_stats,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
-        end
-
-        % Update loading bar
-        if haspar
-            send(D, ii);
-        else
-            h = waitbar(ii/n_segs,  [num2str(ii) ' out of ' num2str(n_segs) ' (' num2str((ii/n_segs*100),'%.2f') '%) segments processed...']);
-        end
-    end
-    delete(h); % delete loading bar
-else % if there is only 1 segment total
-    for ii = 1:n_segs
-        [segs_peaks_matr{ii}, segs_matr_names{ii}, segs_matr_fields{ii}, ...
-            segs_PixelIdxList{ii},segs_PixelList{ii},segs_PixelValues{ii}, ...
-            segs_rgn{ii},segs_bndry{ii},segs_time(ii)] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,ii,conn_wshed,merge_thresh,max_merges,trim_vol,trim_shift,conn_trim,conn_stats,bl_thresh_flag,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
+        h = waitbar(ii/n_segs, [num2str(ii) ' out of ' num2str(n_segs) ' (' num2str((ii/n_segs*100),'%.2f') '%) segments processed...']);
     end
 end
+delete(h); % delete loading bar
 
 %Add a parallel friendly waitbar
     function nUpdateWaitbar(~)
@@ -251,29 +205,12 @@ end
         segments_processed = segments_processed + 1;
     end
 
-
-if f_verb > 0
+if f_verb > 1
     disp([verb_pref '  Computing took ' num2str(toc(computetime)/60) ' minutes.']);
 end
 
-
-%% Assembles peaks stats for all segs into single matrix and cell arrays 
-[matr_names, matr_fields, peaks_matr, PixelIdxList, PixelList, PixelValues, rgn, bndry] = ...
-    packagePeakStats(segs_rgn, segs_bndry, segs_matr_names, segs_PixelValues, segs_PixelList,...
-    segs_PixelIdxList, segs_matr_fields, segs_peaks_matr, verb_pref, f_verb);
-
-
-%% Filter out Noise Peaks and Save Peak Stats *
-[feature_matrix, feature_names, xywcntrd, combined_mask] = filterSavePeakStats(peaks_matr, matr_names, matr_fields, PixelIdxList, PixelValues, bndry, ht_db_min, f_save, ofile_pref, verb_pref, f_verb);
-PixelIdxList = PixelIdxList(combined_mask);
-PixelList = PixelList(combined_mask);
-PixelValues = PixelValues(combined_mask);
-rgn = rgn(combined_mask);
-bndry = bndry(combined_mask);
-
-if f_verb > 0
-    disp([verb_pref 'Done with peak stats.']);
-end
+%% Assembles peaks stats for all segs into single table
+stats_table = cat(1,stats_tables{:});
 
 end
 

@@ -1,5 +1,4 @@
-function [trim_matr, matr_names, matr_fields, trim_PixelIdxList, trim_PixelList, ...
-    trim_PixelValues, trim_rgn, trim_bndry, seq_time] = extractTFPeaks(img,x,y,num_segment,conn_wshed,...
+function stats_table = extractTFPeaks(img,x,y,num_segment,conn_wshed,...
     merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,conn_stats,...
     bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
 % extractTFPeaks: determines the peak regions of a 2D image and
@@ -42,14 +41,7 @@ function [trim_matr, matr_names, matr_fields, trim_PixelIdxList, trim_PixelList,
 %   f_disp       -- flag indicator of whether to plot.
 %                   defaults to 0, unless using default data.
 % OUTPUTS:
-%   peaks_matr   -- matrix of peak features. each row is a peak.
-%   matr_names   -- 1D cell array of names for each feature.
-%   matr_fields  -- vector indicating number of matrix columns occupied by each feature.
-%   PixelIdxList -- 1D cell array of vector lists of linear idx of all pixels for each region.
-%   PixelList    -- 1D cell array of vector lists of row-col idx of all pixels for each region.
-%   PixelValues  -- 1D cell array of vector lists of all pixel values for each region.
-%   rgn          -- same as PixelIdxList.
-%   bndry        -- 1D cell array of vector lists of linear idx of border pixels for each region.
+%   stats_table   -- Table of peak statistics. Each row is a peak.
 %
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
@@ -310,8 +302,9 @@ if f_verb > 0
     disp([verb_pref '  Starting stats...']);
     ttic = tic;
 end
-[trim_matr, matr_names, matr_fields, trim_PixelIdxList, trim_PixelList, trim_PixelValues, ...
-    trim_rgn,trim_bndry] = computePeakStats(trim_rgn,trim_bndry,img,x,y,num_segment,conn_stats,f_verb-1,['    ' verb_pref]);
+%Create the peak stats table
+stats_table = computePeakStatsTable(trim_rgn,trim_bndry,img,x,y,num_segment);
+
 seq_time = (now-t_start)/datenum([0 0 0 0 0 1]);
 if f_verb > 0
     disp([verb_pref '    stats took: ' num2str(toc(ttic)) ' seconds.']);
