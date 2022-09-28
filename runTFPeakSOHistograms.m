@@ -3,7 +3,7 @@ function [stats_table, hist_peakidx, SOpow_mat, SOphase_mat, SOpow_bins, SOphase
 %                        spectrogram of data, then compute Slow-Oscillation power and phase histograms
 %
 %   Usage:
-%       [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, 
+%       [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm,... 
 %       SOpow_times, boundaries] = runTFPeakSOHistograms(data, Fs, stage_times, stage_vals)
 %
 %   Inputs:
