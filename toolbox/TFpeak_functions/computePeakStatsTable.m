@@ -50,7 +50,7 @@ assert(iscell(regions) && ~isempty(regions),'Regions must be a cell array');
 assert(iscell(boundaries) && ~isempty(boundaries),'Boundaries must be a cell array');
 assert(isnumeric(data) && ismatrix(data) && min(size(data))>1,'Data must be an MxN numeric matrix');
 
-%% Convert data to labelled data
+%% Convert data to labeled data
 Ldata = cell2Ldata(regions,size(data),boundaries);
 
 %Compute the stats table
