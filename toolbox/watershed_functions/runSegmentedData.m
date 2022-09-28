@@ -187,14 +187,14 @@ end
 %MAIN LOOP ACROSS SEGMENTS
 parfor ii = 1:n_segs
     if length(x_segs{ii})>1
-        stats_tables{ii} =  extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,conn_stats,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
+        stats_tables{ii} = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,conn_stats,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
     end
     
     % Update loading bar
     if haspar
         send(D, ii);
     else
-        h = waitbar(ii/n_segs,  [num2str(ii) ' out of ' num2str(n_segs) ' (' num2str((ii/n_segs*100),'%.2f') '%) segments processed...']);
+        h = waitbar(ii/n_segs, [num2str(ii) ' out of ' num2str(n_segs) ' (' num2str((ii/n_segs*100),'%.2f') '%) segments processed...']);
     end
 end
 delete(h); % delete loading bar
