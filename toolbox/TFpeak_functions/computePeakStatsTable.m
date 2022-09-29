@@ -65,8 +65,8 @@ dy = diff(yvalues(1:2));
 seg_startx = xvalues(1);
 seg_starty = yvalues(1);
 
-%Remove Dead Rows
-good_indices = statsTable.Area  > 0;
+%Remove dead rows
+good_indices = statsTable.Area > 0;
 statsTable = statsTable(good_indices,:);
 boundaries = boundaries(good_indices);
 regions = regions(good_indices);

@@ -109,12 +109,14 @@ if isempty(data) && isempty(rgn) && isempty(rgn_lbls) && isempty(Lborders) && is
     f_valid_inputs = true;
 elseif ~isempty(data) && ~isempty(rgn) && ~isempty(rgn_lbls) && ~isempty(Lborders) && ~isempty(adj_list)
     f_valid_inputs = true;
-elseif isempty(adj_list) && ~isempty(data) && ~isempty(rgn) && ~isempty(rgn_lbls) && ~isempty(Lborders)
+elseif ~isempty(data) && ~isempty(rgn) && ~isempty(rgn_lbls) && ~isempty(Lborders) && isempty(adj_list)
     f_valid_inputs = false;
-    disp('Caution: amatr is empty, possibly indicative of a single region input to merge.');
+    if f_verb > 1
+        disp([verb_pref 'Caution: adj_list is empty, possibly indicative of a single region input to merge.']);
+    end
 else
     f_valid_inputs = false;
-    disp('WARNING: data, rgn, Lborders, rgn_lbls, or amatr were not provided to regionMergeByWeight. Returning original regions.');
+    disp('WARNING: data, rgn, Lborders, rgn_lbls, or amatr were not provided to mergeWshedSegment. Returning original regions.');
 end
 
 %*************************
