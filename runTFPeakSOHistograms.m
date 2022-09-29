@@ -211,9 +211,9 @@ end
 filter_idx = filterStatsTable(stats_table, [dur_min, dur_max], [bw_min, bw_max], [-inf inf], ht_db_min, verbose);
 stats_table = stats_table(filter_idx, :);
 
-%% Get peak stages and check for artifacts
+%% Get peak stages
 stats_table.PeakStage = interp1(stage_times, single(stage_vals), stats_table.PeakTime, 'previous');
-stats_table.Artifacts = logical(interp1(t_data, double(artifacts), stats_table.PeakTime, 'nearest'));
+stats_table.PeakStage(logical(interp1(t_data, double(artifacts), stats_table.PeakTime, 'nearest'))) = 6;
 
 %% Compute SO-power and SO-phase histograms
 % Exclude time-frequency peaks during specified stages from histograms
