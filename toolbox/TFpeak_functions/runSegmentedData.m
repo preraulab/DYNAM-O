@@ -183,9 +183,13 @@ end
 
 %MAIN LOOP ACROSS SEGMENTS
 parfor ii = 1:n_segs
-    if length(x_segs{ii})>1
-        stats_tables{ii} = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,conn_stats,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
+    % Check for valid segments
+    if all(~data_segs{ii}, 'all') || all(isnan(data_segs{ii}), 'all') || length(x_segs{ii}) <= 1
+        stats_tables{ii} = table;
+        continue
     end
+    
+    stats_tables{ii} = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,conn_stats,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
     
     % Update loading bar
     if haspar
@@ -210,4 +214,3 @@ end
 stats_table = cat(1,stats_tables{:});
 
 end
-
