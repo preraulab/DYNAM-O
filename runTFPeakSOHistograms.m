@@ -215,6 +215,7 @@ stats_table = stats_table(filter_idx, :);
 stats_table.PeakStage = interp1(stage_times, single(stage_vals), stats_table.PeakTime, 'previous');
 stats_table.PeakStage(logical(interp1(t_data, double(artifacts), stats_table.PeakTime, 'nearest'))) = 6;
 stats_table.Properties.VariableDescriptions("PeakStage") = "Stage: 6 = Artifact, 5 = W, 4 = R, 3 = N1, 2 = N2, 1 = N3, 0 = Unknown";
+stats_table.Properties.VariableUnits("Stage #")
 
 %% Compute SO-power and SO-phase histograms
 % Exclude time-frequency peaks during specified stages from histograms
@@ -254,7 +255,7 @@ end
 % use (..., 'plot_flag', true) to plot directly from this function call
 [SOphase_mat, ~, SOphase_bins, ~, ~, stats_table.SOphase] = SOphaseHistogram(data, Fs, stats_table.PeakFrequency, stats_table.PeakTime, 't_data', t_data, 'stage_exclude', stage_exclude, 'artifacts', artifacts);
 stats_table.Properties.VariableDescriptions("SOphase") = "Slow-oscillation phase at peak time";
-stats_table.Properties.VariableUnits("Bandwidth") = "rad";
+stats_table.Properties.VariableUnits("SOphase") = "rad";
 
 
 % To use a custom precomputed SO phase filter, use the SOphase_filter argument
