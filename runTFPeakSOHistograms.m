@@ -215,7 +215,7 @@ stats_table = stats_table(filter_idx, :);
 stats_table.PeakStage = interp1(stage_times, single(stage_vals), stats_table.PeakTime, 'previous');
 stats_table.PeakStage(logical(interp1(t_data, double(artifacts), stats_table.PeakTime, 'nearest'))) = 6;
 stats_table.Properties.VariableDescriptions("PeakStage") = "Stage: 6 = Artifact, 5 = W, 4 = R, 3 = N1, 2 = N2, 1 = N3, 0 = Unknown";
-stats_table.Properties.VariableUnits("Stage #")
+stats_table.Properties.VariableUnits("PeakStage") = "Stage #";
 
 %% Compute SO-power and SO-phase histograms
 % Exclude time-frequency peaks during specified stages from histograms
