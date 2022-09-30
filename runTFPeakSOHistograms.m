@@ -214,6 +214,7 @@ stats_table = stats_table(filter_idx, :);
 %% Get peak stages
 stats_table.PeakStage = interp1(stage_times, single(stage_vals), stats_table.PeakTime, 'previous');
 stats_table.PeakStage(logical(interp1(t_data, double(artifacts), stats_table.PeakTime, 'nearest'))) = 6;
+stats_table.Properties.VariableDescriptions("PeakStage") = "Stage: 6 = Artifact, 5 = W, 4 = R, 3 = N1, 2 = N2, 1 = N3, 0 = Unknown";
 
 %% Compute SO-power and SO-phase histograms
 % Exclude time-frequency peaks during specified stages from histograms
@@ -234,6 +235,16 @@ end
 
 % use (...,'plot_flag', true) to plot directly from this function call
 [SOpow_mat, freq_bins, SOpow_bins, ~, ~, stats_table.SOpower, hist_peakidx, SOpower_norm, ~, SOpow_times, SOpower] = SOpowerHistogram(data, Fs, stats_table.PeakFrequency, stats_table.PeakTime, 't_data', t_data, 'stage_exclude', stage_exclude, 'artifacts', artifacts, 'norm_method', SOpower_norm_method);
+stats_table.Properties.VariableDescriptions("SOpower") = "Slow-oscillation power at peak time";
+switch SOpower_norm_method
+    case {'p5shift', 'none'}
+        pow_units = "dB";
+    case 'percent'
+        pow_units = "%";
+    case 'proportion'
+        pow_units = "proportion";
+end
+stats_table.Properties.VariableUnits("SOpower") = pow_units;
 
 %% Compute SO-phase histogram
 if verbose
@@ -242,6 +253,9 @@ end
 
 % use (..., 'plot_flag', true) to plot directly from this function call
 [SOphase_mat, ~, SOphase_bins, ~, ~, stats_table.SOphase] = SOphaseHistogram(data, Fs, stats_table.PeakFrequency, stats_table.PeakTime, 't_data', t_data, 'stage_exclude', stage_exclude, 'artifacts', artifacts);
+stats_table.Properties.VariableDescriptions("SOphase") = "Slow-oscillation phase at peak time";
+stats_table.Properties.VariableUnits("Bandwidth") = "rad";
+
 
 % To use a custom precomputed SO phase filter, use the SOphase_filter argument
 % custom_SOphase_filter = designfilt('bandpassfir', 'StopbandFrequency1', 0.1, 'PassbandFrequency1', 0.4, ...
