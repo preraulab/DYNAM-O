@@ -77,59 +77,51 @@ stats_table.BoundingBox(:,1) = stats_table.BoundingBox(:,3)*dx + seg_startx;
 stats_table.BoundingBox(:,2) = stats_table.BoundingBox(:,4)*dy + seg_starty;
 stats_table.BoundingBox(:,3) = stats_table.BoundingBox(:,3)*dx;
 stats_table.BoundingBox(:,4) = stats_table.BoundingBox(:,4)*dy;
-stats_table.Properties.VariableDescriptions("BoundingBox") = "Bounding Box: (top left time, top left freq, width, height)";
-stats_table.Properties.VariableUnits("BoundingBox") = "(sec, Hz, sec, Hz)";
+stats_table.Properties.VariableDescriptions("BoundingBox") = "Bounding Box: <top left time, top left freq, width, height>";
 
 %Area
 stats_table.Area = stats_table.Area*dx*dy;
 stats_table.Properties.VariableDescriptions("Area") = "Time-frequency area of peak";
-stats_table.Properties.VariableUnits("Area") = "sec*Hz";
+stats_table.Properties.VariableUnits("Area") = "seconds*Hz";
 
 %Volume
 stats_table.Volume = cellfun(@(x)sum(x)*dx*dy, stats_table.PixelValues);
 stats_table.Properties.VariableDescriptions("Volume") = "Time-frequency volume of peak in s*μV^2";
-stats_table.Properties.VariableUnits("Volume") = "sec*μV^2";
+stats_table.Properties.VariableUnits("Volume") = "seconds*μV^2";
 
 %Boundaries
 [a,b] = cellfun(@(x)ind2sub(size(data),x),boundaries,'UniformOutput',false);
 stats_table.Boundaries = cellfun(@(a,b)[(b-1)*dx+seg_startx, (a-1)*dy+seg_starty], a, b, 'Uniform', 0); % a,b in pixel indices
-stats_table.Properties.VariableDescriptions("Boundaries") = "(time, frequency) of peak region boundary pixels";
-stats_table.Properties.VariableUnits("Boundaries") = "(seconds, Hz)";
+stats_table.Properties.VariableDescriptions("Boundaries") = "(time, frequency> of peak region boundary pixels";
+stats_table.Properties.VariableUnits("Boundaries") = "(seconds*μV^2";
 
 %Peak Time
 stats_table.PeakTime = stats_table.WeightedCentroid(:,1)*dx+seg_startx; % WeightedCentroid in spatial coordinates
 stats_table.Properties.VariableDescriptions("PeakTime") = "Peak time based on weighted centroid";
-stats_table.Properties.VariableUnits("PeakTime") = "sec";
 
 %Peak Frequency
 stats_table.PeakFrequency = stats_table.WeightedCentroid(:,2)*dy+seg_starty; % WeightedCentroid in spatial coordinates
 stats_table.Properties.VariableDescriptions("PeakFrequency") = "Peak frequency based on weighted centroid";
-stats_table.Properties.VariableUnits("PeakFrequency") = "Hz";
 
 %Height
 stats_table.Height = cellfun(@max,stats_table.PixelValues) - cellfun(@min,stats_table.PixelValues);
-stats_table.Properties.VariableDescriptions("Height") = "Peak height above baseline";
-stats_table.Properties.VariableUnits("Height") = "μV^2/Hz";
+stats_table.Properties.VariableDescriptions("Height") = "Peak height above baseline in μV^2/Hz";
 
 %Duration
 stats_table.Duration = stats_table.BoundingBox(:,3); % BoundingBox in spatial coordinates
 stats_table.Properties.VariableDescriptions("Duration") = "Peak duration in seconds";
-stats_table.Properties.VariableUnits("Duration") = "sec";
 
 %Bandwidth
 stats_table.Bandwidth = stats_table.BoundingBox(:,4); % BoundingBox in spatial coordinates
 stats_table.Properties.VariableDescriptions("Bandwidth") = "Peak bandwidth in Hz";
-stats_table.Properties.VariableUnits("Bandwidth") = "Hz";
 
 %Segment Number
 stats_table.SegmentNum(:,1) = segment_num;
 stats_table.Properties.VariableDescriptions("SegmentNum") = "Data segment number";
-stats_table.Properties.VariableUnits("SegmentNum") = "#";
 
 %Region data
-stats_table.Properties.VariableNames("PixelValues") = "HeightData";
+stats_table = renamevars(stats_table,'PixelValues','HeightData');
 stats_table.Properties.VariableDescriptions("HeightData") = "Height of all pixels within peak region";
-stats_table.Properties.VariableUnits("HeightData") = "μV^2/Hz";
 
 %Remove weighted centroid, since it is embedded in time and frequency columns
 stats_table.WeightedCentroid = [];

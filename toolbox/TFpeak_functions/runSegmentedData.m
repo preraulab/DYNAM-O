@@ -210,7 +210,8 @@ if f_verb > 1
     disp([verb_pref '  Computing took ' num2str(toc(computetime)/60) ' minutes.']);
 end
 
-%% Assembles peaks stats for all segs into single table
+%% Assembles peaks stats for all segs into single table and sorts by peak time
 stats_table = cat(1,stats_tables{:});
+stats_table = sortrows(stats_table,"PeakTime",'ascend');
 
 end
