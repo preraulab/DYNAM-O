@@ -145,7 +145,7 @@ axes(spect_axes(1))
 imagesc(stimes,sfreqs,pow2db(spect'));
 axis xy;
 climscale;
-colormap(spect_axes(1),jet);
+colormap(spect_axes(1),rainbow4);
 [~, sh] = scaleline(spect_axes(1), 3600,'1 Hour' );
 sh.FontSize = 12;
 
@@ -331,6 +331,7 @@ for p = 1:4
     imagesc(SOpow_bins*100, SOpow_freqs, squeeze(SOpow_bystage(p,:,:)));
     axis xy;
     caxis(cx);
+    colormap(bystage_axes(p), gouldian);
     
     if p == 1
         letter_label(gcf,bystage_axes(1),'E','l',lab_fsize,lab_gaps);

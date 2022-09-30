@@ -8,10 +8,10 @@ else
     sys_name='/eris';
 end
 
-addpath([sys_name '/preraugp/archive/Lunesta Study/sleep_stages/']);
+addpath([sys_name '/preraugp/archive/SZEEG/Lunesta Study/sleep_stages/']);
 
 % load data for the selected subject
-data_idir_name = [sys_name '/preraugp/archive/Lunesta Study/'];
+data_idir_name = [sys_name '/preraugp/archive/SZEEG/Lunesta Study/'];
 sess_name = 'Night2';
 chan_name = 'C3'; % F3 F4 C3 Cz C4 Pz O1 O2
 subj_name = 'Lun20';
@@ -293,8 +293,8 @@ axis off
 axes(ax_sim_spectrogram)
 imagesc(stimes_sim,sfreqs_sim, (spect_sim'));
 axis xy;
-climscale
-colormap(rainbow4)
+climscale;
+colormap(rainbow4);
 
 set(gca,'xtick',[],'ytick',[]);
 ylim([2.1758   31.3514]);
@@ -424,7 +424,7 @@ interp_freqs=linspace(surface_freq(1),surface_freq(end),length(surface_freq)*2);
 surface_sspect_int=interp2(tgrid,fgrid,surface_sspect,tgrid_int,fgrid_int);
 surface(tgrid_int,fgrid_int,surface_sspect_int,'edgecolor','none');
 
-colormap(jet(2048));
+colormap(rainbow4);
 
 caxis([-7 90]);
 view([az,el]);
@@ -564,7 +564,7 @@ cla
 az_3dpeak = 55.2; el_3dpeak= 22.8;
 az_3dpeak = 60; el_3dpeak = 34.8;
 surface(tgrid_int,fgrid_int,surface_sspect_int,'edgecolor','none');
-colormap(jet(20148));
+colormap(rainbow4);
 
 caxis([-7 90]);
 

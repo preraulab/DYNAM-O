@@ -341,7 +341,7 @@ if plot_szcontrol_phase
    
 end
 
-%% Plot Spectral Heterogeneity
+%% Plot Heterogeneity
  
 if plot_heterogeneity
     close all;
@@ -355,6 +355,9 @@ if plot_heterogeneity
     close all; 
     heterogeneity_histograms(SOpow_plot, SOphase_plot, SOpow_cbins_final, SOphase_cbins_final,...
         freq_cbins_final, fsave_path, print_png, print_eps);
+
+    %
+    heterogeneity_figure;
     
 end
 

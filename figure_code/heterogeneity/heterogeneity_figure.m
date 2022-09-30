@@ -2,24 +2,24 @@
 
 %% SET UP PATHS
 % check whether martinos / eris
-fpath='/preraugp/projects/spindle_detection/results/lunesta/figures/hist_counts/';
+%fpath='/preraugp/projects/spindle_detection/results/lunesta/figures/hist_counts/';
 
 if exist('/data/preraugp', 'dir')
     base='/data';
 else
     base='/eris';
 end
- addpath('/data/preraugp/projects/transient_oscillations/code/Lunesta histograms over time')
-hist_path=fullfile(base,'//preraugp/projects/transient_oscillations/code/Lunesta histograms over time/results/lunesta/figures/hist_20180302/');
+ addpath('/data/preraugp/projects/transient_oscillations/transient_oscillations_original/code/Lunesta histograms over time')
+hist_path=fullfile(base,'//preraugp/projects/transient_oscillations/transient_oscillations_original/code/Lunesta histograms over time/results/lunesta/figures/hist_20180302/');
 addpath(hist_path);
 
-mst_path=fullfile(base,'/preraugp/archive/Lunesta Study/');
+mst_path=fullfile(base,'/preraugp/archive/SZEEG/Lunesta Study/');
 
 % add path to EEGs and sleep stages to plot the spectrogram
-addpath([base '/preraugp/archive/Lunesta Study']);
+addpath([base '/preraugp/archive/SZEEG/Lunesta Study']);
 
 % add path to the sleep stage text files
-addpath([base '/preraugp/archive/Lunesta Study/sleep_stages/']);
+addpath([base '/preraugp/archive/SZEEG/Lunesta Study/sleep_stages/']);
 
 % add path to load csv's
 addpath(genpath([base '/preraugp/projects/spindle_detection/code/Lunesta histograms over time/All_channels_filtered_peaks']));
@@ -134,7 +134,7 @@ electrode = 'C3';
 
 subj_count = 0;
 % 
- for subject_number = [11] %[10,2,9,3] % old subjects: 10,2,11,3
+ for subject_number = [10,2,11,3] % subjects: 10,2,11,3
 
     
     subj_count = subj_count+1;
@@ -228,7 +228,7 @@ subj_count = 0;
     axes(ax(3));
     imagesc(full_sstimes,full_ssfreqs,pow2db(full_sspect)');
     axis xy;
-    colormap jet;
+    colormap rainbow4;
     xlim(full_night_xlims(subject_number,:));
     caxis([-12 10]);
     set(gca,'XTickLabel',[]);
@@ -260,7 +260,7 @@ subj_count = 0;
     axes(ax(4));
     imagesc(segment_sstimes, full_ssfreqs_fine, pow2db(full_sspect_fine(segment_spect_inds,:)'))
     axis xy;
-    colormap jet;
+    colormap rainbow4;
     % climscale;
     % xlim(segment_xlims(subject_number,:));
     caxis(segment_caxis(subject_number,:));
@@ -372,7 +372,7 @@ subj_count = 0;
     % axes(ax(4));
     % imagesc(full_sstimes,full_ssfreqs,pow2db(full_sspect)');
     % axis xy;
-    % colormap jet;
+    % colormap rainbow4;
     % xlim(full_night_xlims(subject_number,:));
     % caxis([-12 10]);
     % set(gca,'XTickLabel',[]);
@@ -391,7 +391,7 @@ subj_count = 0;
     % axes(ax(3));
     % imagesc(full_sstimes_fine,full_ssfreqs_fine,pow2db(full_sspect_fine)');
     % axis xy;
-    % colormap jet;
+    % colormap rainbow4;
     % climscale;
     % xlim(segment_xlims(subject_number,:));
     % caxis(segment_caxis(subject_number,:));
@@ -400,7 +400,7 @@ subj_count = 0;
     % % axes(ax(5))
     % % imagesc(segment_sstimes,full_ssfreqs_fine,segment_bsspect);
     % % axis xy;
-    % % colormap(jet(1024));
+    % % colormap(rainbow4);
     % % climscale;
     % % xlim(segment_xlims(subject_number,:));
     % % scaleline(10,'10 seconds');
@@ -409,7 +409,7 @@ subj_count = 0;
     % axes(ax(5))
     % imagesc(full_sstimes_fine,full_ssfreqs_fine,full_bsspect);
     % axis xy;
-    % colormap(jet(1024));
+    % colormap(rainbow4);
     % climscale;
     % xlim(segment_xlims(subject_number,:));
     % scaleline(10,'10 seconds');

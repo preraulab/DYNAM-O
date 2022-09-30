@@ -98,7 +98,7 @@ SOphase_axes = split_axis(ax(3),[.15 .85],1);
 
 %% Plotting
 
-cphase = [0.0088, 0.0116];
+cphase = [0.0058    0.0094];
 
 %Plot the hypnogram
 axes(spect_axes(2));
@@ -132,7 +132,7 @@ axes(spect_axes(1));
 imagesc(stimes,sfreqs,pow2db(spect'));
 axis xy;
 caxis([-12.5994    8.8176]);
-colormap(spect_axes(1),jet(1024));
+colormap(spect_axes(1),rainbow4);
 ylabel('Frequency (Hz)');
 % topcolorbar;
 set(gca,'xtick',[]);
@@ -253,7 +253,7 @@ set(SOphase_axes,'fontsize',ax_fsize);
 set(ax(2),'fontsize',ax_fsize);
 set(th,'fontsize',26);
 
-%Resecale page to big size to get everything to fit well
+%Rescale page to big size to get everything to fit well
 set(gcf,'units','normalized','paperunits','normalized','papertype','usletter','paperposition',[0 0 1.75 1.5],'position',[0 0 1.75 1.5]);
 
 %Print if selected

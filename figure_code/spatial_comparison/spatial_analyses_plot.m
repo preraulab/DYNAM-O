@@ -169,7 +169,7 @@ for ee1 = 1:length(lhem)
         axis tight
         grid on
         caxis(clims_diffpow);
-        colormap(gca,flipud(redbluemap(1024)))
+        colormap(gca,redbluedark);
         ylim(freq_range)
         xlim(powlims);
     end
@@ -253,7 +253,7 @@ for ee1 = 1:length(lhem)
         grid on
         
         caxis(clims_diffphase);
-        colormap(ax(ee1 + N*2),flipud(redbluemap(1024)))
+        colormap(ax(ee1 + N*2),redbluedark);
         ylim(freq_range)
         xlim(phaselims);
         
@@ -359,7 +359,7 @@ for ee2 = 1:length(enums)
             grid on
             
             caxis(clims_diffpow);
-            colormap(gca,flipud(redbluemap(1024)))
+            colormap(gca,redbluedark);
             ylim(freq_range);
             xlim(powlims);
             if ee2==3
@@ -451,7 +451,7 @@ for ee2 = 1:length(enums)
         grid on
         
         caxis(clims_diffphase);
-        colormap(gca,flipud(redbluemap(1024)))
+        colormap(gca,redbluedark);
         ylim(freq_range);
         xlim(phaselims);
         

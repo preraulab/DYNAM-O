@@ -222,7 +222,7 @@ end
 
 clims_diff = [-0.001, 0.001];
 caxis(clims_diff);
-colormap(ax(3), redbluemap)
+colormap(ax(3), flipud(redbluedark));
 
 c = colorbar_noresize;
 c.Position(3:4) = c.Position(3:4)*.7;

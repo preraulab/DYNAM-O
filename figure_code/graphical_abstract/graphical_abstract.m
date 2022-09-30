@@ -33,7 +33,7 @@ function graphical_abstract(data, Fs, stages, stage_times, pow_hist, phase_hist,
 %%%************************************************************************************%%%%
 
 %% Deal with Inputs
-aassert(nargin >= 11, '11 or more inputs required, see function docstring');
+assert(nargin >= 11, '11 or more inputs required, see function docstring');
 
 if nargin < 9 || isempty(fsave_path)
     fsave_path = '';
@@ -113,11 +113,10 @@ axes(ax(1));
 
 imagesc(stimes, sfreqs, nanpow2db(spect)');
 axis xy;
-colormap(ax(1),rainbow4);
 climscale;
+colormap(ax(1),rainbow4);
 ylabel('Frequency (Hz)', 'FontSize',fs_label);
 title('Spectrogam', 'FontSize', fs_title);
-colormap(ax(1),jet);
 xlim(time_range);
 A = letter_label(gcf,ax(1),'A','l',lab_fsize,lab_gaps);
 

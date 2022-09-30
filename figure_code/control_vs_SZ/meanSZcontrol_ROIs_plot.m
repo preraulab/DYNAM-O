@@ -233,7 +233,7 @@ for rr = 1:num_pow_ROIs
 end
 
 caxis(clims_diff);
-colormap(ax(3), redbluemap)
+colormap(ax(3), flipud(redbluedark))
 
 c = colorbar_noresize;
 c.Position(3:4) = c.Position(3:4)*.7;

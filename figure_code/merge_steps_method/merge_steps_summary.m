@@ -9,14 +9,14 @@ else
 end
 
 % Add paths to access required functions
-addpath([sys_name,'/preraugp/code/multitaper']);
+addpath([sys_name,'/preraugp/code/labcode/multitaper']);
 addpath([sys_name,'/preraugp/users/prath/projects/EDF_Deidentification']);
-addpath([sys_name '/preraugp/archive/Lunesta Study/sleep_stages/']); % add path to the sleep stage text files
+addpath([sys_name '/preraugp/archive/SZEEG/Lunesta Study/sleep_stages/']); % add path to the sleep stage text files
 addpath([sys_name,'/preraugp/projects/spindle_detection/code/wshed/']);
 addpath([sys_name, '/preraugp/users/prath/projects/Spindle Detection/code/Exploratory_Analysis/main_code/export_fig_func/']);
 
 % Build file path
-data_idir_name = [sys_name '/preraugp/archive/Lunesta Study/'];
+data_idir_name = [sys_name '/preraugp/archive/SZEEG/Lunesta Study/'];
 sess_name = 'Night2';
 chan_name = 'C3'; % F3 F4 C3 Cz C4 Pz O1 O2
 subj_name = 'Lun20';
