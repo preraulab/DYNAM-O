@@ -35,7 +35,7 @@ fifteen_sec_bounds = [21280  21295];
 peak_3d_xlim = [21288  21291];
 peak_3d_ylim = [9.2920 17.4613];
 
-curr_caxis = [-19.7366 13.6733];
+curr_caxis = [-10.5 19.77];
 
 % Spectrogram parameters
 taper_params_ultradian = [3, 5];
@@ -293,11 +293,12 @@ axis off
 axes(ax_sim_spectrogram)
 imagesc(stimes_sim,sfreqs_sim, (spect_sim'));
 axis xy;
-climscale;
+caxis([0 500]);
 colormap(rainbow4);
+colorbar;
 
-set(gca,'xtick',[],'ytick',[]);
-ylim([2.1758   31.3514]);
+set(gca,'xtick',[]);
+%ylim([2.1758   31.3514]);
 axis tight
 
 % full night hypnogram
@@ -332,6 +333,7 @@ axis xy;
 colormap(rainbow4);
 caxis(c);
 [h_scaleline2, h_scalelabel2] = scaleline(60,'1 minute','x');
+
 
 ylabel('Frequency(Hz)')
 rectangle('Position',[one_min_bounds(1) 0 diff(one_min_bounds) 40],'EdgeColor','m','LineWidth',2)
@@ -376,14 +378,16 @@ axis off;
 % axis for baseline subtracted spectrogram
 axes(ax_baseline_subtracted);
 bs_segment_20_sec_tinds = x_bs>=fifteen_sec_bounds(1) & x_bs<=fifteen_sec_bounds(2);
-imagesc(x_bs(bs_segment_20_sec_tinds),y_bs,data_bsspect(:,bs_segment_20_sec_tinds));
+bs_segment_freq_inds = y_bs > 0 & y_bs <= 25;
+imagesc(x_bs(bs_segment_20_sec_tinds),y_bs(bs_segment_freq_inds),data_bsspect(bs_segment_freq_inds,bs_segment_20_sec_tinds));
 
 axis xy;
 
-caxis([-7 90]);
+caxis([0 50]);
 colormap(rainbow4);
-ylim([0 40]);
-set(gca,'xtick',[],'ytick',[]);
+ylim([0 25]);
+set(gca,'xtick',[]);
+colorbar;
 
 
 hold on;
@@ -426,8 +430,9 @@ surface(tgrid_int,fgrid_int,surface_sspect_int,'edgecolor','none');
 
 colormap(rainbow4);
 
-caxis([-7 90]);
+caxis([0 50]);
 view([az,el]);
+ylim([0,25])
 set(gca,'xtick',[],'ytick',[],'ztick',[]);
 axis off;
 zlim([0 420])
@@ -437,56 +442,58 @@ material dull;
 camlight left;
 camlight left;
 camlight left;
-
-hold on;
-for ii = 1:length(trim_bndry)
-    if ~isempty(trim_bndry{ii})
-
-        % filter peaks that have bw 2 to 15, duration 0.5 to 5 and frequency 5 to infinity.
-        xy_bndbox_ind=find_indices_variable('xy_bndbox',matr_names,matr_fields);
-        bw_ind=xy_bndbox_ind(2);
-        dur_ind=xy_bndbox_ind(2)-1;
-
-        if (trim_matr(ii,bw_ind)>=2)&&(trim_matr(ii,dur_ind)>=0.5)
-            tmp = zeros(nr,nc);
-            tmp(trim_rgn{ii}) = 1;
-
-            bndry_rc = bwboundaries(tmp,'noholes');
-
-            xvals=x_bs(bndry_rc{1}(:,2));
-            yvals=y_bs(bndry_rc{1}(:,1));
-
-            [~,xinds]=findclosest(surface_time, xvals);
-
-            [~,yinds]=findclosest(surface_freq,yvals);
-
-            floor_offset = 5;
-
-            zvals=zeros(size(xvals));
-            for jj=1:length(xinds)
-                zvals(jj)=surface_sspect(yinds(jj),xinds(jj)) + floor_offset;
-            end
-            if (min(xvals)>=21289 & max(xvals)<=21291 &  min(yvals)>=9 & max(yvals)<=17)
-                plot3(xvals,yvals,min(zvals)*ones(size(xvals)),'m','LineWidth',8);
-            else
-                plot3(xvals,yvals,min(zvals)*ones(size(xvals)),'Color',[.7 .7 .7],'LineWidth',4);
-            end
-        end
-    end
-end
-
-ylim([.1 40]);
+% 
+% hold on;
+% for ii = 1:length(trim_bndry)
+%     if ~isempty(trim_bndry{ii})
+% 
+%         % filter peaks that have bw 2 to 15, duration 0.5 to 5 and frequency 5 to infinity.
+%         xy_bndbox_ind=find_indices_variable('xy_bndbox',matr_names,matr_fields);
+%         bw_ind=xy_bndbox_ind(2);
+%         dur_ind=xy_bndbox_ind(2)-1;
+% 
+%         if (trim_matr(ii,bw_ind)>=2)&&(trim_matr(ii,dur_ind)>=0.5)
+%             tmp = zeros(nr,nc);
+%             tmp(trim_rgn{ii}) = 1;
+% 
+%             bndry_rc = bwboundaries(tmp,'noholes');
+% 
+%             xvals=x_bs(bndry_rc{1}(:,2));
+%             yvals=y_bs(bndry_rc{1}(:,1));
+% 
+%             [~,xinds]=findclosest(surface_time, xvals);
+% 
+%             [~,yinds]=findclosest(surface_freq,yvals);
+% 
+%             floor_offset = 5;
+% 
+%             zvals=zeros(size(xvals));
+%             for jj=1:length(xinds)
+%                 zvals(jj)=surface_sspect(yinds(jj),xinds(jj)) + floor_offset;
+%             end
+%             if (min(xvals)>=21289 & max(xvals)<=21291 &  min(yvals)>=9 & max(yvals)<=17)
+%                 %plot3(xvals,yvals,min(zvals)*ones(size(xvals)),'m','LineWidth',8);
+%             else
+%                 %plot3(xvals,yvals,min(zvals)*ones(size(xvals)),'Color',[.7 .7 .7],'LineWidth',4);
+%             end
+%         end
+%     end
+% end
+% 
+% ylim([.1 40]);
 
 
 %***** axis for spectrogram and trimmed overlay***%
 axes(ax_region_plot)
-imagesc(sstimes_fine(segment_20_sec_tinds), ssfreqs_fine, pow2db_sspect_fine(:,segment_20_sec_tinds));
+trimmed_overlay_freq_inds = ssfreqs_fine > 0 & ssfreqs_fine <= 25;
+imagesc(sstimes_fine(segment_20_sec_tinds), ssfreqs_fine(trimmed_overlay_freq_inds), pow2db_sspect_fine(trimmed_overlay_freq_inds,segment_20_sec_tinds));
 
 axis xy;
 climscale;
 colormap(rainbow4);
 caxis(curr_caxis);
-ylim([0 40]);
+ylim([0 25]);
+colorbar;
 
 hold on;
 for ii = 1:length(trim_bndry)
@@ -508,115 +515,115 @@ for ii = 1:length(trim_bndry)
     end
 end
 
-set(gca,'xtick',[],'ytick',[]);
+set(gca,'xtick',[]);
 
 %% 3d peak
-figure;
-ax_3dpeak=figdesign(1,2);
-
-% axis for baseline subtracted spectrogram
-axes(ax_3dpeak(1));
-imagesc(x_bs,y_bs,data_bsspect);
-xlim(fifteen_sec_bounds);
-axis xy;
-caxis([-7 90]);
-colormap(rainbow4);
-ylim([0 40]);
-
-set(gca,'xtick',[],'ytick',[]);
-set(gca,'xticklabel',[]);
-xlim(peak_3d_xlim);
-ylim(peak_3d_ylim);
-axis square;
-axis off;
-
-hold on
-for ii = 2012
-    if ~isempty(trim_bndry{ii})
-
-        xy_bndbox_ind=find_indices_variable('xy_bndbox',matr_names,matr_fields);
-        bw_ind=xy_bndbox_ind(2);
-        dur_ind=xy_bndbox_ind(2)-1;
-        inds_xy_wcentrd=find_indices_variable('xy_wcentrd',matr_names,matr_fields);
-        pf_ind=inds_xy_wcentrd(2);
-
-        xvals=x_bs(bndry_rc{1}(:,2));
-        yvals=y_bs(bndry_rc{1}(:,1));
-
-        if (trim_matr(ii,bw_ind)>=2)&&(trim_matr(ii,dur_ind)>=0.5)
-            tmp = zeros(nr,nc);
-            tmp(trim_rgn{ii}) = 1;
-            bndry_rc = bwboundaries(tmp,'noholes');
-            if (min(xvals)>=21289 & max(xvals)<=21291 &  min(yvals)>=9 & max(yvals)<=17)
-                plot(xvals,yvals,'w','LineWidth',3);
-                plot(xvals,yvals,'m','LineWidth',2);
-            end
-        end
-    end
-end
-
-
-plot(trim_matr(ii,pf_ind-1),trim_matr(ii,pf_ind),'wo');
-
-% 3d surface view of baseline subtracted segment
-axes(ax_3dpeak(2));
-cla
-az_3dpeak = 55.2; el_3dpeak= 22.8;
-az_3dpeak = 60; el_3dpeak = 34.8;
-surface(tgrid_int,fgrid_int,surface_sspect_int,'edgecolor','none');
-colormap(rainbow4);
-
-caxis([-7 90]);
-
-view([az_3dpeak,el]);
-set(gca,'xtick',[],'ytick',[],'ztick',[]);
-axis off;
-zlim([0 420])
-xlim(peak_3d_xlim);
-ylim(peak_3d_ylim);
-axis square;
-linkaxes([ax_3dpeak(1) ax_3dpeak(2)],'xy');
-
-shading interp;
-material dull;
-camlight left;
-camlight left;
-camlight left;
-
-hold on;
-for ii = 2012
-    if ~isempty(trim_bndry{ii})
-
-        % filter peaks that have bw 2 to 15, duration 0.5 to 5 and frequency 5 to infinity.
-        xy_bndbox_ind=find_indices_variable('xy_bndbox',matr_names,matr_fields);
-        bw_ind=xy_bndbox_ind(2);
-        dur_ind=xy_bndbox_ind(2)-1;
-        inds_xy_wcentrd=find_indices_variable('xy_wcentrd',matr_names,matr_fields);
-        pf_ind=inds_xy_wcentrd(2);
-
-        if (trim_matr(ii,bw_ind)>=2)&&(trim_matr(ii,dur_ind)>=0.5)
-            % plot them
-            tmp = zeros(nr,nc);
-            tmp(trim_rgn{ii}) = 1;
-
-            bndry_rc = bwboundaries(tmp,'noholes');
-
-
-            xvals=x_bs(bndry_rc{1}(:,2));
-            yvals=y_bs(bndry_rc{1}(:,1));
-
-            [~,xinds]=findclosest(surface_time, xvals);
-
-            [~,yinds]=findclosest(surface_freq,yvals);
-
-            zvals=zeros(size(xvals));
-            for jj=1:length(xinds)
-                zvals(jj)=surface_sspect(yinds(jj),xinds(jj))+10;
-            end
-            plot3(xvals,yvals,min(zvals)*ones(size(xvals)),'m','LineWidth',3);
-        end
-    end
-end
+% figure;
+% ax_3dpeak=figdesign(1,2);
+% 
+% % axis for baseline subtracted spectrogram
+% axes(ax_3dpeak(1));
+% imagesc(x_bs,y_bs,data_bsspect);
+% xlim(fifteen_sec_bounds);
+% axis xy;
+% caxis([-7 90]);
+% colormap(rainbow4);
+% ylim([0 40]);
+% 
+% set(gca,'xtick',[],'ytick',[]);
+% set(gca,'xticklabel',[]);
+% xlim(peak_3d_xlim);
+% ylim(peak_3d_ylim);
+% axis square;
+% axis off;
+% 
+% hold on
+% for ii = 2012
+%     if ~isempty(trim_bndry{ii})
+% 
+%         xy_bndbox_ind=find_indices_variable('xy_bndbox',matr_names,matr_fields);
+%         bw_ind=xy_bndbox_ind(2);
+%         dur_ind=xy_bndbox_ind(2)-1;
+%         inds_xy_wcentrd=find_indices_variable('xy_wcentrd',matr_names,matr_fields);
+%         pf_ind=inds_xy_wcentrd(2);
+% 
+%         xvals=x_bs(bndry_rc{1}(:,2));
+%         yvals=y_bs(bndry_rc{1}(:,1));
+% 
+%         if (trim_matr(ii,bw_ind)>=2)&&(trim_matr(ii,dur_ind)>=0.5)
+%             tmp = zeros(nr,nc);
+%             tmp(trim_rgn{ii}) = 1;
+%             bndry_rc = bwboundaries(tmp,'noholes');
+%             if (min(xvals)>=21289 & max(xvals)<=21291 &  min(yvals)>=9 & max(yvals)<=17)
+%                 plot(xvals,yvals,'w','LineWidth',3);
+%                 plot(xvals,yvals,'m','LineWidth',2);
+%             end
+%         end
+%     end
+% end
+% 
+% 
+% plot(trim_matr(ii,pf_ind-1),trim_matr(ii,pf_ind),'wo');
+% 
+% % 3d surface view of baseline subtracted segment
+% axes(ax_3dpeak(2));
+% cla
+% az_3dpeak = 55.2; el_3dpeak= 22.8;
+% az_3dpeak = 60; el_3dpeak = 34.8;
+% surface(tgrid_int,fgrid_int,surface_sspect_int,'edgecolor','none');
+% colormap(rainbow4);
+% 
+% caxis([-7 90]);
+% 
+% view([az_3dpeak,el]);
+% set(gca,'xtick',[],'ytick',[],'ztick',[]);
+% axis off;
+% zlim([0 420])
+% xlim(peak_3d_xlim);
+% ylim(peak_3d_ylim);
+% axis square;
+% linkaxes([ax_3dpeak(1) ax_3dpeak(2)],'xy');
+% 
+% shading interp;
+% material dull;
+% camlight left;
+% camlight left;
+% camlight left;
+% 
+% hold on;
+% for ii = 2012
+%     if ~isempty(trim_bndry{ii})
+% 
+%         % filter peaks that have bw 2 to 15, duration 0.5 to 5 and frequency 5 to infinity.
+%         xy_bndbox_ind=find_indices_variable('xy_bndbox',matr_names,matr_fields);
+%         bw_ind=xy_bndbox_ind(2);
+%         dur_ind=xy_bndbox_ind(2)-1;
+%         inds_xy_wcentrd=find_indices_variable('xy_wcentrd',matr_names,matr_fields);
+%         pf_ind=inds_xy_wcentrd(2);
+% 
+%         if (trim_matr(ii,bw_ind)>=2)&&(trim_matr(ii,dur_ind)>=0.5)
+%             % plot them
+%             tmp = zeros(nr,nc);
+%             tmp(trim_rgn{ii}) = 1;
+% 
+%             bndry_rc = bwboundaries(tmp,'noholes');
+% 
+% 
+%             xvals=x_bs(bndry_rc{1}(:,2));
+%             yvals=y_bs(bndry_rc{1}(:,1));
+% 
+%             [~,xinds]=findclosest(surface_time, xvals);
+% 
+%             [~,yinds]=findclosest(surface_freq,yvals);
+% 
+%             zvals=zeros(size(xvals));
+%             for jj=1:length(xinds)
+%                 zvals(jj)=surface_sspect(yinds(jj),xinds(jj))+10;
+%             end
+%             %plot3(xvals,yvals,min(zvals)*ones(size(xvals)),'m','LineWidth',3);
+%         end
+%     end
+% end
 
 %%
 function[inds_var] = find_indices_variable(variable_name,matr_names,matr_fields)

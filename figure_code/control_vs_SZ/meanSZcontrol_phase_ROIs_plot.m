@@ -165,9 +165,13 @@ styles = {'--','-'};
 
 for rr = 1:num_phase_ROIs
     if ~ROI_flip_flag(rr)
-        rectangle('Position',ROI_rect(rr,:),'linestyle',styles{rr}, 'edgecolor', 'w');
+        rectangle('Position',ROI_rect(rr,:),'linestyle',styles{rr}, 'edgecolor', 'w', 'linewidth', 2);
     end
 end
+
+hold on;
+plot([-pi, (-1.5*pi)/2, (-1.5*pi)/2, -pi], [11, 11, 6, 6],'linewidth',2,'Color', 'w');
+plot([pi, (3*pi)/4, (3*pi)/4, pi, ], [6, 6, 11, 11],'linewidth',2,'Color', 'w');
 
 colormap(ax(1), magma);
 clims = [0.0067   0.0090];
@@ -188,9 +192,13 @@ axis xy;
 
 for rr = 1:num_phase_ROIs
     if ~ROI_flip_flag(rr)
-        rectangle('Position',ROI_rect(rr,:),'linestyle',styles{rr}, 'edgecolor', 'w');
+        rectangle('Position',ROI_rect(rr,:),'linestyle',styles{rr}, 'edgecolor', 'w', 'linewidth', 2);
     end
 end
+
+hold on;
+plot([-pi, (-1.5*pi)/2, (-1.5*pi)/2, -pi], [11, 11, 6, 6],'linewidth',2,'Color', 'w');
+plot([pi, (3*pi)/4, (3*pi)/4, pi, ], [6, 6, 11, 11],'linewidth',2,'Color', 'w');
 
 colormap(ax(2), magma);
 caxis(clims);
@@ -216,13 +224,17 @@ axis xy;
 
 for rr = 1:num_phase_ROIs
     if ~ROI_flip_flag(rr)
-        rectangle('Position',ROI_rect(rr,:),'linestyle',styles{rr});
+        rectangle('Position',ROI_rect(rr,:),'linestyle',styles{rr},'linewidth', 2);
     end
 end
 
+hold on;
+plot([-pi, (-1.5*pi)/2, (-1.5*pi)/2, -pi], [11, 11, 6, 6],'linewidth',2,'color', 'k');
+plot([pi, (3*pi)/4, (3*pi)/4, pi, ], [6, 6, 11, 11],'linewidth',2,'color','k');
+
 clims_diff = [-0.001, 0.001];
 caxis(clims_diff);
-colormap(ax(3), flipud(redbluedark));
+colormap(ax(3), flipud(redbluelight));
 
 c = colorbar_noresize;
 c.Position(3:4) = c.Position(3:4)*.7;

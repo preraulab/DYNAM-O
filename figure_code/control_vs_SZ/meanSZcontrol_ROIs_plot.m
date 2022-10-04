@@ -182,7 +182,7 @@ axis xy;
 styles = {'--','-',':','-.','-.'};
 
 for rr = 1:num_pow_ROIs
-    rectangle('Position',ROI_rect(rr,:),'linestyle',styles{rr});
+    rectangle('Position',ROI_rect(rr,:),'linestyle',styles{rr},'linewidth',2);
 end
 
 colormap(ax(1), gouldian);
@@ -204,7 +204,7 @@ imagesc(SOpowmean_cbins*pow_mult, freqmean_cbins, powmean_sz);
 axis xy;
 
 for rr = 1:num_pow_ROIs
-    rectangle('Position',ROI_rect(rr,:),'linestyle',styles{rr});
+    rectangle('Position',ROI_rect(rr,:),'linestyle',styles{rr}, 'linewidth',2);
 end
 
 colormap(ax(2), gouldian);
@@ -229,11 +229,11 @@ imagesc(SOpowmean_cbins*pow_mult, freqmean_cbins, diff_pow);
 axis xy;
 
 for rr = 1:num_pow_ROIs
-    rectangle('Position',ROI_rect(rr,:),'linestyle',styles{rr});
+    rectangle('Position',ROI_rect(rr,:),'linestyle',styles{rr},'linewidth',2);
 end
 
 caxis(clims_diff);
-colormap(ax(3), flipud(redbluedark))
+colormap(ax(3), flipud(redbluelight))
 
 c = colorbar_noresize;
 c.Position(3:4) = c.Position(3:4)*.7;

@@ -167,7 +167,7 @@ end
 
 %% plotting
 fh = figure;
-axs = figdesign(16,2,'margin',[.05 .05 .05 .05 .01],'type','usletter','orient','portrait',...
+axs = figdesign(16,2,'margin',[.05 .05 .05 .05 .06, .06],'type','usletter','orient','portrait',...
     'merge',{[1:2:7],[9:2:15],[17:2:23],[25:2:31],[2:2:8],[10:2:16],[18:2:24],[26:2:32]});
 
 % original spectrogram segment
@@ -177,8 +177,10 @@ axis xy;
 climscale;
 colormap(rainbow4);
 caxis([-19.7366 13.6733]);
+A = letter_label(gcf,axs(1),'A','left',24,[.01 .05]);
+A.Position = [-0.0059    0.9359    0.0500    0.0500];
 
-ylabel('Frequency (Hertz)');
+ylabel('Frequency (Hz)');
 ax=gca;
 ax.FontSize=f_size;
 set(ax,'XTickLabel',[]);
@@ -189,8 +191,10 @@ imagesc(x,y,(data_sspect_bs));
 axis xy;
 colormap(rainbow4);
 caxis([-7 90]);
+C = letter_label(gcf,axs(1),'C','left',24,[.01 .05]);
+C.Position = [-0.0118    0.6953    0.0500    0.0500];
 
-ylabel('Frequency (Hertz)');
+ylabel('Frequency (Hz)');
 ax=gca;
 ax.FontSize=f_size;
 set(ax,'XTickLabel',[]);
@@ -199,6 +203,8 @@ set(ax,'XTickLabel',[]);
 axes(axs(2));
 imagesc(x,y,RGB_init);
 axis xy;
+B = letter_label(gcf,axs(1),'B','left',24,[.01 .05]);
+B.Position = [ 0.4718    0.9314    0.0500    0.0500];
 
 ax=gca;
 ax.FontSize=f_size;
@@ -220,9 +226,10 @@ set(ax, 'YTickLabel',[], 'XTickLabel',[]);
 axes(axs(4));
 imagesc(x,y,RGB2_half);
 axis xy;
-[~,scalelabel_x]=scaleline(gca,5,'5 seconds');
-scalelabel_x.FontSize=f_size;
-
+% [~,scalelabel_x]=scaleline(gca,5,'5 seconds');
+% scalelabel_x.FontSize=f_size;
+D = letter_label(gcf,axs(1),'D','left',24,[.01 .05]);
+D.Position = [0.4753    0.7059    0.0500    0.0500];
 ax=gca;
 ax.FontSize=f_size;
 
@@ -245,6 +252,8 @@ axes(axs(6));
 % plot as regions
 imagesc(x,y,RGB2_final);
 axis xy;
+F = letter_label(gcf,axs(1),'F','left',24,[.01 .05]);
+F.Position = [0.4718    0.4577    0.0500    0.0500];
 
 ax=gca;
 ax.FontSize=f_size;
@@ -270,6 +279,8 @@ scalelabel_x.FontSize=f_size;
 ax=gca;
 ax.FontSize=f_size;
 set(ax, 'YTickLabel',[], 'XTickLabel',[])
+H = letter_label(gcf,axs(1),'H','left',24,[.01 .05]);
+H.Position = [0.4800    0.2171    0.0500    0.0500];
 
 % plot picked peaks as black boundaries
 hold on;
@@ -320,11 +331,13 @@ imagesc(x,y,(data_sspect_bs));
 axis xy;
 colormap(rainbow4);
 caxis([-7 90]);
+E = letter_label(gcf,axs(1),'E','left',24,[.01 .05]);
+E.Position = [-0.0106    0.4547    0.0500    0.0500];
 
 ax=gca;
 ax.FontSize=f_size;
 set(ax, 'XTickLabel',[])
-ylabel('Frequency (Hertz)');
+ylabel('Frequency (Hz)');
 
 hold on;
 for ii = 1:length(trim_bndry)
@@ -355,12 +368,14 @@ axis xy;
 climscale;
 colormap(rainbow4);
 caxis([-19.7366 13.6733]);
+G = letter_label(gcf,axs(1),'G','left',24,[.01 .05]);
+G.Position = [-0.0047    0.2141    0.0500    0.0500];
 
 [~,scalelabel_x]=scaleline(gca,5,'5 seconds');
 scalelabel_x.FontSize=f_size;
 ax=gca;
 ax.FontSize=f_size;
-ylabel('Frequency (Hertz)');
+ylabel('Frequency (Hz)');
 
 hold on;
 for ii = 1:length(trim_bndry)
@@ -382,6 +397,8 @@ for ii = 1:length(trim_bndry)
         end
     end
 end
+
+set(gcf,'units','normalized','paperunits','normalized','papertype','usletter','paperposition',[0 0 1.04 1],'position',[0 0 1.04 1])
 
 %% Print if selected
 if print_png

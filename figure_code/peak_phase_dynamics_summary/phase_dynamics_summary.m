@@ -78,7 +78,7 @@ psize(psize<=0)=1e-100;
 %% Generate axes
 close all
 figure
-ax = figdesign(5,2,'type','usletter','orient','portrait','merge',{1:2, 3:4, [5 7 9 ],[6 8 10]},'margins', [.035 .06 .1 .08 .045 .05]);
+ax = figdesign(5,2,'type','usletter','orient','portrait','merge',{1:2, 3:4, [5 7 9 ],[6 8 10]},'margins', [.035 .06 .1 .1 .045 .05]);
 set(gcf,'units','normalized');
 
 
@@ -134,7 +134,6 @@ axis xy;
 caxis([-12.5994    8.8176]);
 colormap(spect_axes(1),rainbow4);
 ylabel('Frequency (Hz)');
-% topcolorbar;
 set(gca,'xtick',[]);
 [~, sh] = scaleline(spect_axes(1), 3600,'1 Hour' );
 sh.FontSize = 12;
@@ -143,6 +142,7 @@ cbar = colorbar_noresize(spect_axes(1));
 cbar.Label.String = 'Power (dB)';
 cbar.Label.Rotation = -90;
 cbar.Label.VerticalAlignment = "bottom";
+cbar.Position(3) = cbar.Position(3) - 0.015;
 
 
 %Plot the scatter plot
@@ -161,6 +161,7 @@ cbar = colorbar_noresize(ax(2));
 cbar.Label.String = 'Phase (rad)';
 cbar.Label.Rotation = -90;
 cbar.Label.VerticalAlignment = "bottom";
+cbar.Position(3) = cbar.Position(3) - 0.015;
 
 set(cbar,'xtick',([-pi -pi/2 0 pi/2 pi]),'xticklabel',({'-\pi', '-\pi/2', '0', '\pi/2', '\pi'}));
 

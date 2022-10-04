@@ -96,7 +96,7 @@ hem_use = lhem;
 N = length(hem_use);
 
 % Set limits for power and phase values
-powlims = [0,1];
+powlims = [0,1]*100;
 phaselims = [-pi, pi];
 
 % Hardcode colormap limits for each type of plot
@@ -106,10 +106,11 @@ clims_diffpow = [-1.5, 1.5];
 clims_diffphase = [-.005 .006];
 
 %% HEMISPHERE ANALYSIS
+rb_cmap = redbluelight; rb_cmap = rb_cmap(25:end-25,:);
 
 % Start power hemisphere analysis figure
 f1 = figure;
-ax = figdesign(3, N, 'type','usletter','orient','portrait','margins',[.05 .1 .1 .1 .04]);
+ax = figdesign(3, N, 'type','usletter','orient','portrait','margins',[.05 .1 .1 .1 .06, .06]);
 
 for ee1 = 1:length(lhem)
     enum1 = lhem(ee1);
@@ -119,7 +120,7 @@ for ee1 = 1:length(lhem)
     
     axes(ax(ee1))
     
-    imagesc(SOpow_cbins, freq_cbins, mean_powhists(:,:,enum1)); % plot mean hist for electrode
+    imagesc(SOpow_cbins*100, freq_cbins, mean_powhists(:,:,enum1)); % plot mean hist for electrode
     
     caxis(clims_pow);
     colormap(gca,gouldian);
@@ -141,7 +142,7 @@ for ee1 = 1:length(lhem)
     
     
     axes(ax(ee1 + N))
-    imagesc(SOpow_cbins, freq_cbins, mean_powhists(:,:,enum2)); % plot mean hist for comparison electrode
+    imagesc(SOpow_cbins*100, freq_cbins, mean_powhists(:,:,enum2)); % plot mean hist for comparison electrode
     grid on
     climscale(false);
     caxis(clims_pow);
@@ -161,15 +162,15 @@ for ee1 = 1:length(lhem)
     
     axes(ax(ee1 + N*2))
     if ee1 ~=3
-        imagesc(SOpow_cbins, freq_cbins, diff_pow{enum1,enum2}); % plot electrode comparison difference
+        imagesc(SOpow_cbins*100, freq_cbins, diff_pow{enum1,enum2}); % plot electrode comparison difference
         hold on
-        contour(SOpow_cbins, freq_cbins, abs(fdr_power{enum1,enum2}),[.95 .95],'color','k'); % highlight areas of significant difference
+        contour(SOpow_cbins*100, freq_cbins, abs(fdr_power{enum1,enum2}),[.95 .95],'color','k'); % highlight areas of significant difference
         
         axis xy;
         axis tight
         grid on
         caxis(clims_diffpow);
-        colormap(gca,redbluedark);
+        colormap(gca, rb_cmap);
         ylim(freq_range)
         xlim(powlims);
     end
@@ -191,7 +192,7 @@ outerlabels(ax, '% Slow Oscillation Power', 'Frequency (Hz)')
 phase_ticks = [-pi -pi/2 0 pi/2 pi];
 phase_labels = {'-\pi','-\pi/2','0','\pi/2','\pi'};
 f2 = figure;
-ax = figdesign(3, N, 'type','usletter','orient','portrait','margins',[.05 .1 .1 .1 .04]);
+ax = figdesign(3, N, 'type','usletter','orient','portrait','margins',[.05 .1 .1 .1 .06, .06]);
 for ee1 = 1:length(lhem)
     enum1 = lhem(ee1);
     ename1 = char(electrodes(enum1));
@@ -253,7 +254,7 @@ for ee1 = 1:length(lhem)
         grid on
         
         caxis(clims_diffphase);
-        colormap(ax(ee1 + N*2),redbluedark);
+        colormap(ax(ee1 + N*2),rb_cmap);
         ylim(freq_range)
         xlim(phaselims);
         
@@ -278,13 +279,16 @@ set(f_hem,'color','w','units','inches','position',[0 0 16 8.5], 'papertype','usl
 orient landscape;
 delete([f1 f2]); % delete unmerged figures
 
+%set(gcf,'units','normalized','paperunits','normalized','papertype','usletter','paperposition',[0 0 1.05 1.1],'position',[0 0 1.05, 1.1])
+
+
 % Save out as eps and/or png if desired
 if print_eps
-    print(f_hem,'-depsc',fullfile(fsave_path,'EPS','spatial_comparison_hemisphere.eps'));
+    print(f_hem,'-depsc',fullfile(fsave_path,'EPS','spatial_comparison_hemisphere_SZ.eps'));
 end
 
 if print_png
-    print(f_hem,'-dpng','-r300', fullfile(fsave_path,'PNG','spatial_comparison_hemisphere.png'));
+    print(f_hem,'-dpng','-r300', fullfile(fsave_path,'PNG','spatial_comparison_hemisphere_SZ.png'));
 end
 
 
@@ -295,7 +299,7 @@ N = length(enums);
 
 % Plot power histogrram spatial comparisons
 f3 = figure;
-ax = figdesign(N+1, N+1, 'type','usletter','orient','portrait','margins',[.05 .05 .05 .08 .05]);
+ax = figdesign(N+1, N+1, 'type','usletter','orient','portrait','margins',[.05 .05 .05 .08 .06, 0.06]);
 set(ax,'visible','off');
 
 for ee1 = 1:length(enums)
@@ -303,7 +307,7 @@ for ee1 = 1:length(enums)
     if ee1>1
         axes(ax(ee1))
         set(gca,'visible','on')
-        imagesc(SOpow_cbins, freq_cbins, mean_powhists(:,:,enum));
+        imagesc(SOpow_cbins*100, freq_cbins, mean_powhists(:,:,enum));
         title(electrodes{enum})
         caxis(clims_pow);
         colormap(gca,gouldian);
@@ -328,7 +332,7 @@ for ee1 = 1:length(enums)
     if ee1<N
         axes(ax(ee1+1 + N*ee1 + N))
         set(gca,'visible','on')
-        imagesc(SOpow_cbins, freq_cbins, mean_powhists(:,:,enum));
+        imagesc(SOpow_cbins*100, freq_cbins, mean_powhists(:,:,enum));
         title(electrodes{enum})
         caxis(clims_pow);
         colormap(gca,gouldian);
@@ -350,16 +354,16 @@ for ee2 = 1:length(enums)
         if enum1 ~= enum2
             axes(ax(sub2ind([N+1,N+1],ee1,ee2+1)))
             set(gca,'visible','on')
-            imagesc(SOpow_cbins, freq_cbins, diff_pow{enum1,enum2});
+            imagesc(SOpow_cbins*100, freq_cbins, diff_pow{enum1,enum2});
             hold on
-            contour(SOpow_cbins, freq_cbins, abs(fdr_power{enum1,enum2}),[.95 .95],'color','k');
+            contour(SOpow_cbins*100, freq_cbins, abs(fdr_power{enum1,enum2}),[.95 .95],'color','k');
             
             axis xy;
             axis tight
             grid on
             
             caxis(clims_diffpow);
-            colormap(gca,redbluedark);
+            colormap(gca,rb_cmap);
             ylim(freq_range);
             xlim(powlims);
             if ee2==3
@@ -373,14 +377,14 @@ for ee2 = 1:length(enums)
     end
 end
 ax_good = ax([ax.Visible]=='on');
-[~, h_yl, h_axbig] = outerlabels(ax_good, 'Slow Oscillation Phase (rad)', 'Frequency (Hz)');
+[~, h_yl, h_axbig] = outerlabels(ax_good, '% Slow Oscillation Power', 'Frequency (Hz)');
 h_axbig.YAxisLocation = 'right';
 h_yl.Rotation = -90;
 
 
 % Plot phase histogram spatial comparisons
 f4 = figure;
-ax = figdesign(N+1, N+1, 'type','usletter','orient','portrait','margins',[.05 .05 .05 .08 .05]);
+ax = figdesign(N+1, N+1, 'type','usletter','orient','portrait','margins',[.05 .05 .05 .08 .06, 0.06]);
 set(ax,'visible','off');
 
 phase_ticks = [-pi -pi/2 0 pi/2 pi];
@@ -451,7 +455,7 @@ for ee2 = 1:length(enums)
         grid on
         
         caxis(clims_diffphase);
-        colormap(gca,redbluedark);
+        colormap(gca,rb_cmap);
         ylim(freq_range);
         xlim(phaselims);
         
@@ -478,9 +482,9 @@ delete([f3 f4]);
 
 % Save eps and/or png out if desired
 if print_eps
-    print(f_elect,'-depsc',fullfile(fsave_path,'EPS','spatial_comparison.eps'));
+    print(f_elect,'-depsc',fullfile(fsave_path,'EPS','spatial_comparison_SZ.eps'));
 end
 
 if print_png
-    print(f_elect,'-dpng','-r300', fullfile(fsave_path,'PNG','spatial_comparison.png'));
+    print(f_elect,'-dpng','-r300', fullfile(fsave_path,'PNG','spatial_comparison_SZ.png'));
 end
