@@ -122,12 +122,10 @@ end
 % Set default arguments *
 %************************
 % The 2d matrix to be analyzed
-if isempty(img)
-    img = abs(peaks(100))+randn(100)*.5;
-    f_verb = 3;
-    f_disp = 1;
-    merge_thresh = 2;
+if isempty(img) || ~any(img,'all') || ~any(isfinite(img),"all")
+    error('Image must not be empty')
 end
+
 % x-axis
 if isempty(x)
     x = 1:size(img,2);
@@ -229,6 +227,12 @@ if f_verb > 0
     disp([verb_pref '    merge took: ' num2str(toc(ttic)) ' seconds.']);
 end
 
+%Return if empty stats table
+if isempty(rgn)
+    stats_table = {};
+    return;
+end
+
 %**********************************************
 % Interpolate peak regions to high-resolution *
 %**********************************************
@@ -270,6 +274,12 @@ if dur_min>0 || bw_min>0
     rgn_HR = rgn_HR(good_inds);
 end
 
+%Return if empty stats table
+if isempty(rgn_HR)
+    stats_table = {};
+    return;
+end
+
 %%
 %***********************************************************
 % Trim merged regions if trim_vol parameter is less than 1 *
@@ -290,6 +300,13 @@ else
     trim_rgn = rgn;
     trim_bndry = bndry;
 end
+
+%Return if empty stats table
+if isempty(trim_rgn)
+    stats_table = {};
+    return;
+end
+
 
 %***********************************
 % Computing stats for peak regions *

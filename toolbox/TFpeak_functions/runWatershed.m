@@ -68,11 +68,8 @@ end
 if isempty(conn)
     conn = 8;
 end
-if isempty(data)
-    N = 100;
-    data = abs(peaks(N))+randn(N)*.5; % peaks(100); % 
-    f_verb = 1;
-    f_disp = 1;
+if isempty(data) && ~any(isfinite(data),"all")
+    error('Data must be non-empty/nan/inf')
 end
 
 %****************

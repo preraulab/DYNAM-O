@@ -95,21 +95,7 @@ end
 % Check required inputs: data and regions *
 %******************************************
 if isempty(data)
-    if isempty(regions)
-        if f_verb > 0
-            disp([verb_pref 'Regions and data not provided to trimRegionsWShed. Generating simulated data...']);
-        end
-        data = abs(peaks(100))+randn(100)*.5;
-        [regions, rgn_lbls, Lborders, amatr] = peaksWShed(data); 
-        if f_verb > 0
-            disp([verb_pref 'Computing regions...']);
-        end
-        [regions, ~] = regionMergeByWeight(data,regions,rgn_lbls,Lborders,amatr);
-        f_valid_inputs = true;
-    else
-        f_valid_inputs = false;
-        disp('Warning: Image data for corresponding regions not provided to trimRegionsWShed.');
-    end
+    error('Data must be specified')
 else
     if isempty(regions)
         if f_verb > 0

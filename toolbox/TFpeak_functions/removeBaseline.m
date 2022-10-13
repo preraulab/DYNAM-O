@@ -32,6 +32,14 @@ function [spect, bl_threshold] = removeBaseline(spect, baseline, bl_thresh, CI_u
 %       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
 %**********************************************************************
 
+if nargin<1 || isempty(spect)
+    error('Spectrogram must be specificied')
+end
+
+if nargin<2 || isempty(baseline)
+    error('Baseline must be specificied')
+end
+
 if f_verb > 0
     disp('Removing baseline...');
 end
@@ -39,7 +47,7 @@ end
 % Remove baseline. Subtraction in dB equivalent to subtraction in non-dB.
 spect = spect./repmat(baseline,1,size(spect,2));
 
-if bl_thresh == true  % Get threshold used to remove low pow data
+if ~isempty(bl_thresh) && bl_thresh ~= 0  % Get threshold used to remove low pow data
     if isempty(CI_upper_bl)
         error('If bl_thresh is true, input CI_upper_bl must be provided')
     else

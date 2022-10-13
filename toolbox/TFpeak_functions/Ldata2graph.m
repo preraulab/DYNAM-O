@@ -53,10 +53,7 @@ if isempty(f_disp)
     f_disp = 0;
 end
 if isempty(Ldata)
-    N = 50;
-    I = abs(peaks(N))+randn(N)*.01;
-    Ldata = watershed(-I);
-    f_disp = 1;
+    error('Ldata must be specified')
 end
 if f_disp > 0 && isempty(ax)
     fh = figure;

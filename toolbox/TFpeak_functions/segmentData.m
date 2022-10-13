@@ -34,8 +34,7 @@ function  [data_segs, x_segs] = segmentData(spect, stimes, sfreqs, seg_time, f_v
 %*************************
 if nargin < 1 || isempty(spect)
     % The 2d matrix to be analyzed
-    spect = abs(peaks(100))+randn(100)*.5;
-    f_verb = 0;
+    error('Spectrogram must be specified')
 end
 
 if nargin < 2 || isempty(stimes)
