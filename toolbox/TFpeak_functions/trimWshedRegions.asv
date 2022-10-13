@@ -34,6 +34,7 @@ function [trimmed_regions, trimmed_borders] = trimWshedRegions(data,regions,vol_
 %
 %**********************************************************************
 
+
 %*******************************
 % Set variable inputs to empty *
 %*******************************
@@ -53,16 +54,66 @@ if nargin < 4 || isempty(shift_val)
     shift_val = min(min(data));
 end
 
-if nargin < 5 || isempty(f_verb)
+if nargin < 5
+    conn = [];
+end
+
+if nargin < 6
+    f_verb = [];
+end
+if nargin < 7
+    verb_pref = [];
+end
+if nargin < 8
+    f_disp = [];
+end
+
+%*************************
+% Set default parameters *
+%*************************
+ 
+end
+if isempty(f_verb)
     f_verb = 0;
 end
-
-if nargin < 6 || isempty(verb_pref)
+if isempty(verb_pref)
     verb_pref = '';
 end
-
-if nargin < 7 || isempty(f_disp)
+if isempty(f_disp)
     f_disp = 0;
+end
+
+%******************************************
+% Check required inputs: data and regions *
+%******************************************
+if isempty(data)
+    if isempty(regions)
+        if f_verb > 0
+            disp([verb_pref 'Regions and data not provided to trimRegionsWShed. Generating simulated data...']);
+        end
+        data = abs(peaks(100))+randn(100)*.5;
+        [regions, rgn_lbls, Lborders, amatr] = runWatershed(data);
+        if f_verb > 0
+            disp([verb_pref 'Computing regions...']);
+        end
+        [regions, ~] = regionMergeByWeight(data,regions,rgn_lbls,Lborders,amatr);
+        f_valid_inputs = true;
+    else
+        f_valid_inputs = false;
+        disp('Warning: Image data for corresponding regions not provided to trimRegionsWShed.');
+    end
+else
+    if isempty(regions)
+        if f_verb > 0
+            disp([verb_pref 'Regions for image data not provided to trimRegionsWShed. Computing regions...']);
+        end
+        [regions, rgn_lbls, Lborders, amatr] = runWatershed(data);
+        [regions, ~] = regionMergeByWeight(data,regions,rgn_lbls,Lborders,amatr);
+        f_valid_inputs = true;
+
+    else
+        f_valid_inputs = true;
+    end
 end
 
 %***************
@@ -154,7 +205,7 @@ for ii = 1:num_regions
             % Get boundaries of trimmed region
             tmp_data = zeros(num_sub_rows,num_sub_cols);
             tmp_data(sub_trim_cc) = 1;
-            tmp2 = bwboundaries(tmp_data,8,'noholes');
+            tmp2 = bwboundaries(tmp_data,conn,'noholes');
 
             % Convert row-col subimage boundaries to full image
             tmp2{1}(:,1) = tmp2{1}(:,1) + i_min-1;

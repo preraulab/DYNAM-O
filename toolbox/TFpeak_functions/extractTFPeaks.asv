@@ -153,7 +153,7 @@ if f_verb > 0
     ttic = tic;
 end
 
-[regions, bndry] = mergeWshedSegment(img_LR, regions, region_lbls, Lborders, adj_list, merge_thresh, max_merges,f_verb-1,['     ' verb_pref],f_disp);
+[regions, bndry] = mergeWshedSegment(img_LR, regions, region_lbls, Lborders, adj_list, merge_thresh, max_merges,[],f_verb-1,['     ' verb_pref],f_disp);
 
 if f_verb > 0
     disp([verb_pref '    merge took: ' num2str(toc(ttic)) ' seconds.']);
@@ -190,7 +190,7 @@ if ~isempty(downsample_spect)
         region_HR{ii} = find(LdataHR == ii);
     end
 
-    regions = region_HR;
+    regions = regions;
 end
 
 
@@ -226,13 +226,16 @@ if trim_vol < 1 && trim_vol > 0
     if f_verb > 0
         disp([verb_pref '    trim took: ' num2str(toc(ttic)) ' seconds.']);
     end
-
-    regions = trim_rgn;
-    bndry = trim_bndry;
+else
+    if f_verb > 0
+        disp([verb_pref '  Trim parameter geq 1 or leq 0. No trimming.']);
+    end
+    trim_rgn = regions;
+    trim_bndry = bndry;
 end
 
 %Check for empty regions
-if isempty(regions)
+if isempty(trim_rgn)
     stats_table = {};
     return;
 end
@@ -244,9 +247,8 @@ if f_verb > 0
     disp([verb_pref '  Starting stats...']);
     ttic = tic;
 end
-
 %Create the peak stats table
-stats_table = computePeakStatsTable(regions,bndry,img,x,y,num_segment);
+stats_table = computePeakStatsTable(trim_rgn,trim_bndry,img,x,y,num_segment);
 
 seq_time = (now-t_start)/datenum([0 0 0 0 0 1]);
 if f_verb > 0
