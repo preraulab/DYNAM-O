@@ -1,7 +1,7 @@
 function stats_table = ...
     runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, ...
-    dur_min, bw_min, merge_thresh, max_merges, trim_vol, trim_shift, ...
-    bl_thresh_flag, CI_upper_bl, f_verb, verb_pref, f_disp)
+    dur_min, bw_min, conn_wshed, merge_thresh, max_merges, trim_vol, trim_shift, conn_trim, ...
+    conn_stats, bl_thresh_flag, CI_upper_bl, merge_rule, f_verb, verb_pref, f_disp)
 %RUNSEGMENTEDDATA wrapper that runs 1) baseline subtraction, 2) spectrogram
 %segmentation, 3) TFpeak extraction (watershed, merging, trimming, stats), 4)TFpeak statistics packaging and saving
 %
@@ -23,16 +23,20 @@ function stats_table = ...
 %   downsample_spect   --  2x1 double indicating number of rows and columns to downsize spect to.
 %   dur_min      -- minimum duration allowed
 %   bw_min       -- minimum bandwidth allowed
+%   conn_wshed   -- pixel connection to be used by peaksWShed. default 8.
 %   merge_thresh -- threshold weight value for when to stop merge rule. default 8.
 %   max_merges   -- maximum number of merges to perform. default inf.
 %   trim_vol     -- fraction maximum trimmed volume (from 0 to 1),
 %                   i.e. 1 means no trim. default 0.8.
 %   trim_shift   -- value to be subtracted from image prior to evaulation of trim volume.
 %                   default min(min(img_data)).
+%   conn_trim    -- pixel connection to be used by trimRegionsWShed. default 8.
+%   conn_stats   -- pixel connection to be used by peaksWShedStats_LData. default 8.
 %   bl_thresh_flag  -- flag indicating use of baseline thresholding to reduce volume of data
 %                   being run through watershed and merging. Default = []
 %   CI_upper_bl  -- upper confidence interval of the baseline, used to
 %                   compute the threshold used in bl_thresh. Default = []
+%   merge_rule   -- rule used to merge segments into complete TFpeaks. Default = 'absolute'
 %   f_verb       -- number indicating depth of output text statements of progress.
 %                   0 - no output.
 %                   1 - output current function level.
@@ -84,39 +88,55 @@ if nargin < 8 || isempty(bw_min)
     bw_min = 0;
 end
 
-if nargin < 9 || isempty(merge_thresh)
+if nargin < 9 || isempty(conn_wshed)
+    conn_wshed = 8;
+end
+
+if nargin < 10 || isempty(merge_thresh)
     merge_thresh = 8;
 end
 
-if nargin < 10 || isempty(max_merges)
+if nargin < 11 || isempty(max_merges)
     max_merges = inf;
 end
 
-if nargin < 11 || isempty(trim_vol)
+if nargin < 12 || isempty(trim_vol)
     trim_vol = 0.8;
 end
 
-if nargin < 12 || isempty(trim_shift)
+if nargin < 13 || isempty(trim_shift)
     trim_shift = [];
 end
 
-if nargin < 13 || isempty(bl_thresh_flag)
+if nargin < 14 || isempty(conn_trim)
+    conn_trim = 8;
+end
+
+if nargin < 15 || isempty(conn_stats)
+    conn_stats = 8;
+end
+
+if nargin < 16 || isempty(bl_thresh_flag)
     bl_thresh_flag = false;
 end
 
-if nargin < 14 || isempty(CI_upper_bl)
+if nargin < 17 || isempty(CI_upper_bl)
     CI_upper_bl = [];
 end
 
-if nargin < 15 || isempty(f_verb)
+if nargin < 18 || isempty(merge_rule)
+    merge_rule = 'default';
+end
+
+if nargin < 19 || isempty(f_verb)
     f_verb = 1;
 end
 
-if nargin < 16 || isempty(verb_pref)
+if nargin < 20 || isempty(verb_pref)
     verb_pref = '';
 end
 
-if nargin < 17 || isempty(f_disp)
+if nargin < 21 || isempty(f_disp)
     f_disp = 0;
 end
 
@@ -169,8 +189,7 @@ parfor ii = 1:n_segs
         continue
     end
     
-    stats_tables{ii} = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,ii,merge_thresh,max_merges,downsample_spect,...
-        dur_min,bw_min,trim_vol,trim_shift,bl_threshold,f_verb-1,['  ' verb_pref],f_disp);
+    stats_tables{ii} = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,conn_stats,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
     
     % Update loading bar
     if haspar

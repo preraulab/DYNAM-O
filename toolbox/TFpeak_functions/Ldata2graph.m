@@ -1,19 +1,19 @@
-function [region, region_lbls, Lborders, adj_list] = Ldata2graph(Ldata, exclusion_val, f_disp, ax)
+function [rgn, rgn_lbls, Lborders, adj_list] = Ldata2graph(Ldata, exclusion_val, f_disp, ax)
 % LDATA2GRAPH label region border pixels and determine region adjacencies.
 %
 % Usage:
-%    [region, region_lbls, Lborders, adj_list] = Ldata2graph(Ldata, exclusion_val, f_disp, ax)
+%    [rgn, rgn_lbls, Lborders, adj_list] = Ldata2graph(Ldata, exclusion_val, f_disp, ax)
 %
 % INPUTS:
 %   Ldata  -- 2D matrix of labeled image data. Assumes boundaries are
 %             labeled 0 as for the output of watershed.
 %             defaults to abs(peaks(50))+randn(50)*.01.
-%   exclusion_val -- value of data to mask out (default [])
+%   exclusion_val -- value of
 %   f_disp -- flag indicator whether to plot.
 %             defaults to false, unless using default Ldata.
 % OUTPUTS:
-%   region         -- 1D cell array of vector lists of linear idx of all pixels for each region.
-%   region_lbls    -- vector of region labels.
+%   rgn         -- 1D cell array of vector lists of linear idx of all pixels for each region.
+%   rgn_lbls    -- vector of region labels.
 %   Lborders    -- 1D cell array of vector lists of linear idx of border pixels for each region.
 %   adj_list       -- two-column matrix of region adjacencies.
 %                  each row contains region lables of two adjacent regions.
@@ -53,7 +53,10 @@ if isempty(f_disp)
     f_disp = 0;
 end
 if isempty(Ldata)
-    error('Ldata cannot be empty')
+    N = 50;
+    I = abs(peaks(N))+randn(N)*.01;
+    Ldata = watershed(-I);
+    f_disp = 1;
 end
 if f_disp > 0 && isempty(ax)
     fh = figure;
@@ -96,25 +99,25 @@ if ~isempty(exclusion_val)
 end
 
 % Get region label of first pixel in each region
-region_lbls = Ldata(cellfun(@(x)x(1),{region_props.PixelIdxList}));
+rgn_lbls = Ldata(cellfun(@(x)x(1),{region_props.PixelIdxList}));
 
-num_rgns = length(region_lbls);
+num_rgns = length(rgn_lbls);
 
 % Create a cell for the number of regions
-region = cell(1,num_rgns);
+rgn = cell(1,num_rgns);
 Lborders = cell(1,num_rgns);
 nbr_matrs = cell(1,num_rgns);
 
 for ii = 1:num_rgns
-    curr_rgn_lbl = region_lbls(ii);
+    curr_rgn_lbl = rgn_lbls(ii);
 
     % Get linear indices of current region pixels
     % curr_rgn_img = (Ldata == curr_rgn_lbl);
     % rgn{ii} = find(curr_rgn_img);
-    region{ii} = region_props(ii).PixelIdxList;
+    rgn{ii} = region_props(ii).PixelIdxList;
 
     % Convert to row and column coordinates of region pixels
-    [i_full,j_full] = ind2sub([num_rows,num_cols],region{ii});
+    [i_full,j_full] = ind2sub([num_rows,num_cols],rgn{ii});
 
     %**********************************************
     % Convert to subimage for faster computations *
@@ -186,7 +189,7 @@ end
 % Include border pixels in region lists *
 %****************************************
 for ii = 1:num_rgns
-    region{ii} = unique([region{ii}; Lborders{ii}]);
+    rgn{ii} = unique([rgn{ii}; Lborders{ii}]);
 end
 
 %*******************************************
@@ -197,7 +200,7 @@ if f_disp > 0
     for ii = 1:length(Lborders)
         [tmp_row, tmp_col] = ind2sub([num_rows num_cols],Lborders{ii});
         p = plot(ax,tmp_col,tmp_row,'wo','markerfacecolor','w','markersize',3);
-        title(ax,['Border for Region ' num2str(region_lbls(ii))]);
+        title(ax,['Border for Region ' num2str(rgn_lbls(ii))]);
         pause(1);
         delete(p);
     end
