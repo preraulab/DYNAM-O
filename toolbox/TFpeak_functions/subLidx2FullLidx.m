@@ -17,9 +17,8 @@ function full_lidx = subLidx2FullLidx(sub_lidx,size_sub,top_left,size_full)
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
-%      
-%   Authors: Patrick Stokes
 %
+
     [sub_row, sub_col] = ind2sub(size_sub,sub_lidx);
     sub_row = sub_row + top_left(1) - 1;
     sub_col = sub_col + top_left(2) - 1;
