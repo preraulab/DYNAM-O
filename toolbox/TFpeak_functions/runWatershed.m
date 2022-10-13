@@ -1,11 +1,12 @@
-function Ldata = runWatershed(data, bl_thresh, f_verb, verb_pref, f_disp)
+function Ldata = runWatershed(data, conn, bl_thresh, f_verb, verb_pref, f_disp)
 % RUNWATERSHED determines peak regions using matlab watershed function.
 %
 % Usage:
-%   Ldata = runWatershed(data, bl_thresh, f_verb, verb_pref, f_disp)
+%   Ldata = runWatershed(data, conn, bl_thresh, f_verb, verb_pref, f_disp)
 %
 % INPUTS:
 %   data   -- 2D matrix of image data. defaults to peaks(100).
+%   conn   -- pixel connection to be used by watershed. default 8. 
 %   bl_thresh  -- power threshold used to cut off low power data to speed
 %                 up computation. Default = [];
 %   f_verb -- flag indicator whether to output text statements of progress.
@@ -32,27 +33,47 @@ function Ldata = runWatershed(data, bl_thresh, f_verb, verb_pref, f_disp)
 %*************************
 % Handle variable inputs *
 %*************************
-
-if nargin<1 || isempty(data) || ~any(isfinite(data),'all')
-    error('Data must be non-empty and finite')
+if nargin<6
+    f_disp = [];
 end
-
-if nargin<2 || isempty(bl_thresh)
+if nargin<5
+    verb_pref = [];
+end
+if nargin<4
+    f_verb = [];
+end
+if nargin<3
     bl_thresh = [];
 end
-
-if nargin<3 || isempty(f_verb)
-      f_verb = 0;
+if nargin<2
+    conn = [];
+end
+if nargin<1   
+    data = [];
 end
 
-if nargin<4 || isempty(verb_pref)
-     verb_pref = '';
-end
-
-if nargin<5 || isempty(f_disp)
+%************************
+% Set default arguments *
+%************************
+if isempty(f_disp)
     f_disp = false;
 end
+if isempty(verb_pref)
+    verb_pref = '';
+end
 
+if isempty(f_verb)
+    f_verb = 0;
+end
+if isempty(conn)
+    conn = 8;
+end
+if isempty(data)
+    N = 100;
+    data = abs(peaks(N))+randn(N)*.5; % peaks(100); % 
+    f_verb = 1;
+    f_disp = 1;
+end
 
 %****************
 % Run watershed *
@@ -62,11 +83,10 @@ if f_verb > 0
 end
 
 
-
 % Run watershed
 if isempty(bl_thresh)
     % Run watershed
-    Ldata = watershed(-data);
+    Ldata = watershed(-data , conn);
 else %EXPERIMENTAL: Threshold the data prior to running
     % set value used to mark regions labels where data should be excluded
     exclusion_val = intmax('uint16');
@@ -76,7 +96,7 @@ else %EXPERIMENTAL: Threshold the data prior to running
     data(below_thresh_inds) = flintmax;
     
     % Run watershed
-    Ldata = watershed(-data);
+    Ldata = watershed(-data , conn);
     
     % If region contains flintmax, set the region's label to exclusion_val
     for ii = 1:max(Ldata,[],'all','omitnan')
