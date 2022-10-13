@@ -45,9 +45,6 @@ end
 
 Ldata = zeros(data_size);
 for ii = 1:length(rgn)  
-%     if ii == 841
-%        disp(ii); 
-%     end
     ii_pixels = rgn{ii};
     if length(ii_pixels) >= min_area
         Ldata(ii_pixels)=ii;
