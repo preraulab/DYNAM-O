@@ -231,7 +231,7 @@ end
 
 %Return if empty stats table
 if isempty(regions)
-    stats_table = {};
+    stats_table = table;
     return;
 end
 
@@ -278,7 +278,7 @@ end
 
 %Return if empty stats table
 if isempty(regions)
-    stats_table = {};
+    stats_table = table;
     return;
 end
 
@@ -298,7 +298,7 @@ if trim_vol < 1
 
     %Return if empty stats table
     if isempty(trim_rgn)
-        stats_table = {};
+        stats_table = table;
         return;
     end
 

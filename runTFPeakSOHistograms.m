@@ -145,7 +145,7 @@ end
 freq_range = [0,30]; % frequency range to compute spectrum over (Hz)
 taper_params = [2,3]; % [time halfbandwidth product, number of tapers]
 nfft = 2^(nextpow2(Fs/dsfreqs)); % zero pad data to this minimum value for fft
-detrend = 'off'; % do not detrend
+detrend = 'constant'; % do not detrend
 weight = 'unity'; % each taper is weighted the same
 ploton = false; % do not plot out
 mts_verbose = false; % suppress verbose messages
@@ -173,7 +173,7 @@ end
 if exist(['multitaper_spectrogram_coder_mex.' mexext],'file')
     [spect,stimes,sfreqs] = multitaper_spectrogram_mex(data, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
 else
-    [spect,stimes,sfreqs] = multitaper_spectrogram(data, Fs, freq_range, taper_params, time_window_params, NFFT, detrend, weight, ploton, mts_verbose);
+    [spect,stimes,sfreqs] = multitaper_spectrogram(data, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
     warning(sprintf('Unable to use mex version of multitaper_spectrogram. Using compiled multitaper spectrogram function will greatly increase the speed of this computaton. \n\nFind mex code at:\n    https://github.com/preraulab/multitaper_toolbox')); %#ok<SPWRN>
 end
 stimes = stimes + t_data(1); % adjust the time axis to t_data
@@ -210,6 +210,10 @@ end
 %% Filter stats_table based on duration, bandwidth, frequency, and height
 filter_idx = filterStatsTable(stats_table, [dur_min, dur_max], [bw_min, bw_max], [-inf inf], ht_db_min, verbose);
 stats_table = stats_table(filter_idx, :);
+
+if isempty(stats_table)
+    error('No TFpeaks found');
+end
 
 %% Get peak stages
 stats_table.PeakStage = interp1(stage_times, single(stage_vals), stats_table.PeakTime, 'previous');
