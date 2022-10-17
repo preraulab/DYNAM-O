@@ -122,7 +122,7 @@ end
 % Set default arguments *
 %************************
 % The 2d matrix to be analyzed
-if isempty(img) || ~any(img,'all') || ~any(isfinite(img),"all")
+if isempty(img) || ~any(img(:)) || ~any(isfinite(img(:)))
     error('Image must not be empty')
 end
 
@@ -156,7 +156,7 @@ if isempty(trim_vol)
 end
 % floor level from which trim volume is evaluated
 if isempty(trim_shift)
-    trim_shift = min(img,[],'all');
+    trim_shift = min(img(:));
 end
 % connection parameter used in trimming regions
 if isempty(conn_trim)
@@ -240,7 +240,7 @@ end
 %**********************************************
 if ~isempty(downsample_spect)
     %UPSCALE THE LABELED IMAGE
-    Ldata = zeros(size(img_LR),"uint16");
+    Ldata = zeros(size(img_LR));
     
     %Create the labeled image and skip empty regions
     num_regions = length(regions);
