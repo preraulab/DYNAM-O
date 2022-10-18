@@ -173,6 +173,9 @@ end
 
 % Determine number of regions and maximum edge weight
 num_rgns = length(rgn);
+if num_rgns == 1
+    return
+end
 [max_wt,max_idx] = max(ematr(:,3));
 
 num_merges = 0;
