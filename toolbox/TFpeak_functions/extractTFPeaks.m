@@ -291,7 +291,7 @@ if trim_vol < 1
         disp([verb_pref '  Starting trim to ' num2str(100*trim_vol) ' percent volume...']);
         ttic = tic;
     end
-    [trim_rgn, trim_bndry] = trimWshedRegions(img,rgn_HR,trim_vol,trim_shift,conn_trim,f_verb-1,['    ' verb_pref],f_disp);
+    [trim_rgn, trim_bndry] = trimWshedRegions(img,regions,trim_vol,trim_shift,conn_trim,f_verb-1,['    ' verb_pref],f_disp);
     if f_verb > 0
         disp([verb_pref '    trim took: ' num2str(toc(ttic)) ' seconds.']);
     end
