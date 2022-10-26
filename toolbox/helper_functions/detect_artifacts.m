@@ -135,6 +135,7 @@ end
 %Get bad indices
 bad_inds = (isnan(data) | isinf(data) | find_flat(data))';
 bad_inds = find_outlier_noise(data, bad_inds);
+%bad_inds = bad_inds | data' > 225;
 
 %Interpolate big gaps in data
 t = 1:length(data);
@@ -194,6 +195,7 @@ high_thresh = data_mean + outlier_scalar * data_std;
 
 inds = data <= low_thresh | data >= high_thresh;
 bad_inds(inds) = true;
+
 
 
 function [ detected_artifacts, y_detrend ] = compute_artifacts(filter_coeff, detrend_filt, crit, data_fixed, smooth_duration, Fs, bad_inds, verbose, verbosestring, histogram_plot, crit_units)

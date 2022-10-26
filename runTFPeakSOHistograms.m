@@ -71,7 +71,7 @@ addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric', 'vector'}, {
 addOptional(p, 't_data', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'time_range', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'downsample_spect', [],  @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
-addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'isstruct'},{}));
+addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'struct'},{}));
 addOptional(p, 'stages_include', [1,2,3,4], @(x) validateattributes(x,{'numeric', 'vector'}, {'real', 'nonempty'}))
 addOptional(p, 'lightsonoff_mins', 5, @(x) validateattributes(x,{'numeric'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'SOpower_norm_method', 'p5shift', @(x) validateattributes(x, {'char', 'numeric'},{}));
@@ -178,16 +178,25 @@ else
 end
 stimes = stimes + t_data(1); % adjust the time axis to t_data
 
-%% Compute baseline spectrum used to flatten data spectrum
+%% Make sure stages are at t_data timepoint resolution
+if length(stage_times) ~= length(t_data)
+    stages_t_data = interp1(stage_times, single(stage_vals), t_data, 'previous');
+elseif ~all(stage_times == t_data)
+    stages_t_data = interp1(stage_times, single(stage_vals), t_data, 'previous');
+else
+    stages_t_data = stage_vals;
+end
+
+%% Artifcact Detection
 if verbose 
     disp('Performing artifact rejection...');
 end
 
-% Detect artifacts in EEG
 artifacts = detect_artifacts(data, Fs, [],[],[],[],[],[],[],[],[], ...
     artifact_filters.hpFilt_high, artifact_filters.hpFilt_broad, artifact_filters.detrend_filt);
 artifacts_stimes = logical(interp1(t_data, double(artifacts), stimes, 'nearest')); % get artifacts occurring at spectrogram times
 
+%% Compute baseline spectrum used to flatten data spectrum
 % Exclude segments with artifacts during baseline computation
 spect_bl = spect;
 spect_bl(:,artifacts_stimes) = NaN; % turn artifact times into NaNs for percentile computation
@@ -207,6 +216,7 @@ stats_table = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsa
 if verbose
     disp(['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
 end
+
 %% Filter stats_table based on duration, bandwidth, frequency, and height
 filter_idx = filterStatsTable(stats_table, [dur_min, dur_max], [bw_min, bw_max], [-inf inf], ht_db_min, verbose);
 stats_table = stats_table(filter_idx, :);
@@ -222,15 +232,8 @@ stats_table.Properties.VariableDescriptions{'PeakStage'} = 'Stage: 6 = Artifact,
 stats_table.Properties.VariableUnits{'PeakStage'} = 'Stage #';
 
 %% Compute SO-power and SO-phase histograms
-% Exclude time-frequency peaks during specified stages from histograms
-if length(stage_times) ~= length(t_data)
-    stages_t_data = interp1(stage_times, single(stage_vals), t_data, 'previous');
-elseif ~all(stage_times == t_data)
-    stages_t_data = interp1(stage_times, single(stage_vals), t_data, 'previous');
-else
-    stages_t_data = stage_vals;
-end
 
+% Exclude time-frequency peaks during specified stages from histograms
 stage_exclude = ~ismember(stages_t_data, stages_include);
 
 %% Compute SO-power histogram
