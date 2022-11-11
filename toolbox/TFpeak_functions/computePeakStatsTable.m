@@ -51,7 +51,10 @@ assert(iscell(boundaries) && ~isempty(boundaries),'Boundaries must be a cell arr
 assert(isnumeric(data) && ismatrix(data) && min(size(data))>1,'Data must be an MxN numeric matrix');
 
 %% Convert data to labeled data
-Ldata = cell2Ldata(regions,size(data),boundaries);
+Ldata = zeros(size(data));
+for ii = 1:length(regions)
+    Ldata(regions{ii}) = ii;
+end
 
 %Compute the stats table
 stats_table = regionprops('table',Ldata,data,'Area',...

@@ -1,4 +1,4 @@
-function [artifacts] = detect_artifacts(data, Fs, crit_units, hf_crit, hf_pass, bb_crit, bb_pass, smooth_duration, ...
+function [artifacts] = detect_artifacts2(data, Fs, crit_units, hf_crit, hf_pass, bb_crit, bb_pass, smooth_duration, ...
     verbose, histogram_plot, return_filts_only, hpFilt_high, hpFilt_broad, detrend_filt)
 %DETECT_ARTIFACTS  Detect artifacts in the time domain by iteratively removing data above a given z-score criterion
 %
@@ -54,15 +54,15 @@ if nargin < 3 || isempty(crit_units)
 end
 
 if nargin < 4 || isempty(hf_crit)
-    hf_crit = 3.5;
+    hf_crit = 4.5;
 end
 
 if nargin < 5 || isempty(hf_pass)
-    hf_pass = 25;
+    hf_pass = 35;
 end
 
 if nargin < 6 || isempty(bb_crit)
-    bb_crit = 3.5;
+    bb_crit = 4.5;
 end
 
 if nargin < 7 || isempty(bb_pass)
@@ -99,10 +99,16 @@ if nargin < 13 || isempty(hpFilt_broad)
 end
 
 if nargin < 14 || isempty(detrend_filt)
-    detrend_pass = 0.001;
-    detrend_filt = designfilt('highpassiir','FilterOrder',4, ...
-        'PassbandFrequency',detrend_pass,'PassbandRipple',0.2, ...
-        'SampleRate',Fs);
+    Fstop = 0.001;  % Stopband Frequency
+    Fpass = 0.003;  % Passband Frequency
+    Astop = 60;     % Stopband Attenuation (dB)
+    Apass = 0.2;    % Passband Ripple (dB)
+
+    h = fdesign.highpass('fst,fp,ast,ap', Fstop, Fpass, Astop, Apass, Fs);
+
+    detrend_filt = design(h, 'butter', ...
+        'MatchExactly', 'stopband', ...
+        'SOSScaleNorm', 'Linf');
 end
 
 %% If desired, return filter parameters only
@@ -170,13 +176,13 @@ else
     size_inds = clen>=min_size;
     clen = clen(size_inds);
     cind = cind(size_inds);
-    
+
     flat_inds = cell(1,length(clen));
-    
+
     for ii = 1:length(clen)
         flat_inds{ii} = cind(ii):(cind(ii)+(clen(ii)-1));
     end
-    
+
     inds = cat(2,flat_inds{:});
 end
 
@@ -213,8 +219,9 @@ y_smooth = movmean(y_hilbert, smooth_duration*Fs);
 % We should smooth then take log
 y_log = log(y_smooth);
 
-% detrend data via filter
-y_detrend = filter(detrend_filt, y_log);
+% Detrend data via filter
+y_detrend = y_log -movmedian(y_log,Fs*60*5);% spline_detrend(y_log,Fs,[],60);
+% y_detrend = filter(detrend_filt, y_log);
 y_signal = y_detrend;
 
 % create an indexing array marking bad timepoints before z-scoring
@@ -245,24 +252,24 @@ switch lower(crit_units)
     case {'median', 'std'}
         %Keep removing until all values under criterion
         over_crit = abs(y_signal)>crit & ~detected_artifacts';
-        
+
         %Loop until nothing over criterion
         count = 1;
         while any(over_crit)
-            
+
             %Update the detected artifact time points
             detected_artifacts(over_crit) = true;
-            
+
             %Compute modified z-score
             ysig = y_signal(~detected_artifacts);
             ymid = mean(ysig);
             ystd = std(ysig);
-            
+
             y_signal = (y_signal - ymid)/ystd;
-            
+
             %Find new criterion
             over_crit = abs(y_signal)>crit & ~detected_artifacts';
-            
+
             if histogram_plot
                 axes(ah);
                 histogram(y_signal(~detected_artifacts), 100);
@@ -272,14 +279,14 @@ switch lower(crit_units)
             end
             count = count + 1;
         end
-        
+
         if verbose
             disp(['     Ran ' num2str(num_iters) ' iterations']);
         end
     case {'outlier', 'mad'}
         y_signal(isoutlier(y_signal,'thresholdfactor',crit)) = nan;
         detected_artifacts = isnan(y_signal);
-        
+
         if histogram_plot
             axes(ah);
             histogram(y_signal(~detected_artifacts),100);
@@ -287,7 +294,7 @@ switch lower(crit_units)
             drawnow;
             pause(0.1);
         end
-        
+
     otherwise
         error('Invalid crit_units');
 end
