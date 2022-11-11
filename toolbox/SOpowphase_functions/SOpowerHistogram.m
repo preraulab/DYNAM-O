@@ -11,7 +11,7 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_n
 %       EEG: 1xN double - timeseries EEG data --required
 %       Fs: numerical - sampling frequency of EEG (Hz) --required
 %       TFpeak_freqs: Px1 - frequency each TF peak occurs (Hz) --required
-%       TFpeak_SOphase:  Px1 - times each TF peak occurs (s) --required
+%       TFpeak_times:  Px1 - times each TF peak occurs (s) --required
 %       freq_range: 1x2 double - min and max frequencies to consider in SO phase analysis 
 %                   (Hz). Default = [0,40] 
 %       freq_binsizestep: 1x2 double - [size, step] frequency bin size and bin step for frequency 
