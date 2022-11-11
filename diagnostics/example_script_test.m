@@ -20,7 +20,7 @@ addpath(genpath('./toolbox'))
 
 %% DATA SETTINGS
 %Location of example data
-data_fname = 'example_data/example_data.mat';
+data_fname = '/Users/Mike/PycharmProjects/pyTOD/chunk_data.mat';
 
 %Select 'segment' or 'night' for example data range
 data_range = 'night'; %Only works for example data provide
@@ -53,7 +53,7 @@ end
 
 %% LOAD DATA
 %Load example EEG data
-load(data_fname, 'data', 'stage_vals', 'stage_times', 'Fs');
+load(data_fname);%, 'data', 'stage_vals', 'stage_times', 'Fs');
 
 %STAGE NOTATION (in order of sleep depth)
 % W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
@@ -61,19 +61,21 @@ load(data_fname, 'data', 'stage_vals', 'stage_times', 'Fs');
 % Add necessary functions to path
 addpath(genpath('./toolbox'))
 
-switch data_range
-    case 'segment'
-        % Choose an example segment from the data
-        time_range = [8420 13446];
-        disp(['Running example segment', newline])
-    case 'night'
-        wake_buffer = 5*60; %5 minute buffer before/after first/last wake
-        start_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'first')) - wake_buffer;
-        end_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'last')+1) + wake_buffer;
+% switch data_range
+%     case 'segment'
+%         % Choose an example segment from the data
+%         time_range = [8420 13446];
+%         disp(['Running example segment', newline])
+%     case 'night'
+%         wake_buffer = 5*60; %5 minute buffer before/after first/last wake
+%         start_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'first')) - wake_buffer;
+%         end_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'last')+1) + wake_buffer;
 
-        time_range = [start_time end_time];
-        disp(['Running full night', newline])
-end
+%         time_range = [start_time end_time];
+%         disp(['Running full night', newline])
+% end
+t = (0:length(data)-1)/Fs;
+time_range = t([1,end]);
 
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
 [stats_table, hist_peakidx, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times] = ...
