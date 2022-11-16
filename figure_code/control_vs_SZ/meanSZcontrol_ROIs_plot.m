@@ -126,8 +126,6 @@ else
         region_count = squeeze(sum(powhist_counts(pow_regions{ii,2}, pow_regions{ii,1},:), [1,2], 'omitnan'));
         region_TIB = sum(TIBpow(:,pow_regions{ii,1}), 2);
         pow_params(:,ii) = (region_count./region_TIB);
-        pow_params(:,ii) = squeeze(mean(powhist_counts(pow_regions{ii,2}, pow_regions{ii,1},:), [1,2], 'omitnan'));
-
     end
 end
 
