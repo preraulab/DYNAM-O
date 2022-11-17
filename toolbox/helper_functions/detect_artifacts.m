@@ -1,4 +1,4 @@
-function [artifacts] = detect_artifacts(data, Fs, crit_units, hf_crit, hf_pass, bb_crit, bb_pass, smooth_duration, ...
+function [ artifacts ] = detect_artifacts(data, Fs, crit_units, hf_crit, hf_pass, bb_crit, bb_pass, smooth_duration, ...
     verbose, histogram_plot, return_filts_only, hpFilt_high, hpFilt_broad, detrend_duration)
 %DETECT_ARTIFACTS  Detect artifacts in the time domain by iteratively removing data above a given z-score criterion
 %
@@ -99,7 +99,7 @@ if nargin < 13 || isempty(hpFilt_broad)
 end
 
 if nargin < 14 || isempty(detrend_duration)
-    detrend_duration = 5*60;
+    detrend_duration = 5*60; % default is 5min
 end
 
 %% If desired, return filter parameters only
@@ -132,7 +132,6 @@ end
 %Get bad indices
 bad_inds = (isnan(data) | isinf(data) | find_flat(data))';
 bad_inds = find_outlier_noise(data, bad_inds);
-%bad_inds = bad_inds | data' > 225;
 
 %Interpolate big gaps in data
 t = 1:length(data);
@@ -150,6 +149,7 @@ bb_artifacts = compute_artifacts(hpFilt_broad, detrend_duration, bb_crit, data_f
 artifacts = hf_artifacts | bb_artifacts;
 % sanity check before outputting
 assert(length(artifacts) == length(data), 'Data vector length is inconsistent. Please check.')
+
 
 %Find all the flat areas in the data
 function binds = find_flat(data, min_size)
@@ -194,7 +194,6 @@ inds = data <= low_thresh | data >= high_thresh;
 bad_inds(inds) = true;
 
 
-
 function [ detected_artifacts, y_detrend ] = compute_artifacts(filter_coeff, detrend_duration, crit, data_fixed, smooth_duration, Fs, bad_inds, verbose, verbosestring, histogram_plot, crit_units)
 %% Get artifacts for a particular frequency band
 
@@ -211,7 +210,8 @@ y_smooth = movmean(y_hilbert, smooth_duration*Fs);
 y_log = log(y_smooth);
 
 % Detrend data via filter
-y_detrend = y_log -movmedian(y_log,Fs*detrend_duration);% spline_detrend(y_log,Fs,[],60);
+y_detrend = y_log - movmedian(y_log, Fs*detrend_duration);
+% y_detrend = spline_detrend(y_log, Fs, [], 60);
 % y_detrend = filter(detrend_filt, y_log);
 y_signal = y_detrend;
 
@@ -293,5 +293,4 @@ end
 if histogram_plot
     close(fh);
 end
-
 
