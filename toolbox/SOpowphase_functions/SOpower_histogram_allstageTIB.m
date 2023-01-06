@@ -1,6 +1,8 @@
-function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds, SOpower_norm, ptile, SOpow_times] = SOpowerHistogram(varargin)
-% [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds] = ...
-%                           SO_histogram(EEG, Fs, TFpeak_freqs, TFpeak_times, freq_range, freq_binsizestep, ...
+function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds, SOpower_norm, ptile, SOpow_times] = SOpower_histogram_allstageTIB(varargin)
+% % SOPOWERHISTOGRAM computes slow-oscillation power matrix
+% Usage:
+%   [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds] = ...
+%                           SOpowerHistogram(EEG, Fs, TFpeak_freqs, TFpeak_times, freq_range, freq_binsizestep, ...
 %                                        SO_range, SO_binsizestep, SOfreq_range, artifacts, ...
 %                                        stage_exclude, t_data, norm_method, min_time_in_bin, lightsonoff_times, ...
 %                                        pow_freqSO_norm, rate_flag, smooth_flag, plot_flag)
@@ -9,7 +11,7 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_n
 %       EEG: 1xN double - timeseries EEG data --required
 %       Fs: numerical - sampling frequency of EEG (Hz) --required
 %       TFpeak_freqs: Px1 - frequency each TF peak occurs (Hz) --required
-%       TFpeak_SOphase:  Px1 - times each TF peak occurs (s) --required
+%       TFpeak_times:  Px1 - times each TF peak occurs (s) --required
 %       freq_range: 1x2 double - min and max frequencies to consider in SO phase analysis 
 %                   (Hz). Default = [0,40] 
 %       freq_binsizestep: 1x2 double - [size, step] frequency bin size and bin step for frequency 
@@ -46,7 +48,7 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_n
 %       prop_in_bin: 1xT double - proportion of total time (all stages) in each bin spent in 
 %                          the selected stages
 %       peak_SOpower_norm: 1xP double - normalized slow oscillation power at each TFpeak
-%       peak_selection_inds: 1xP logical - which TFpeaks are valid give the artifacts and stage_exclusion 
+%       peak_selection_inds: 1xP logical - which TFpeaks are valid given the artifacts and stage_exclusion 
 %                            exclusions
 %
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
@@ -67,13 +69,17 @@ addRequired(p, 'EEG', @(x) validateattributes(x, {'numeric', 'vector'}, {'real',
 addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addRequired(p, 'TFpeak_freqs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addRequired(p, 'TFpeak_times', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
+addRequired(p, 'stages', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
+addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
+
 addOptional(p, 'freq_range', [0,40], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'freq_binsizestep', [1, 0.2], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
 addOptional(p, 'SO_range', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'SO_binsizestep', [], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
 addOptional(p, 'SO_freqrange', [0.3, 1.5], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan'}));
 addOptional(p, 'artifacts', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
-addOptional(p, 'stage_exclude', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
+addOptional(p, 'stage_exclude_SOP', [], @(x) validateattributes(x, {'numeric', 'vector'},{}));
+addOptional(p, 'stage_exclude_SOPH', [], @(x) validateattributes(x, {'numeric', 'vector'},{}));
 addOptional(p, 't_data', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'norm_method', 'p5shift', @(x) validateattributes(x, {'char', 'numeric'},{}));
 addOptional(p, 'min_time_in_bin', 1, @(x) validateattributes(x,{'numeric'},{'scalar','real','finite','nonnan', 'nonnegative','integer'}));
@@ -97,10 +103,12 @@ else
     assert(length(artifacts) == size(EEG,2),'artifacts must be the same length as EEG');
 end
 
-if isempty(stage_exclude)
-    stage_exclude = false(size(EEG,2),1);
-else
-    assert(length(stage_exclude) == size(EEG,2),'stage_exclude must be the same length as EEG');
+if isempty(stage_exclude_SOP)
+    stage_exclude_SOP = [5];
+end
+
+if isempty(stage_exclude_SOPH)
+    stage_exclude_SOPH = [5];
 end
 
 if isempty(t_data)
@@ -120,17 +128,23 @@ nanEEG = EEG;
 nanEEG(artifacts) = nan;
 
 %% Compute SO power
-[SOpower, SOpow_times] = compute_mtspect_power(nanEEG, Fs, 'freq_range', SO_freqrange);
+[SOpower, SOpow_times] = computeMTSpectPower(nanEEG, Fs, 'freq_range', SO_freqrange);
 SOpow_times = SOpow_times + t_data(1); % adjust the time axis to t_data
-SOpow_times_step = SOpow_times(2) - SOpow_times(1);
+SOpow_full_binsize = SOpow_times(2) - SOpow_times(1);
+
+%% Replace bad stages with NaNs
+stages_SOpower = interp1(stage_times, stages, SOpow_times, 'nearest');
+stage_exclude_stimes = ismember(stages_SOpower, stage_exclude_SOP);
+SOpower_goodstages = SOpower;
+SOpower_goodstages(stage_exclude_stimes) = nan;
 
 % Exclude outlier SOpower that usually reflect artifacts
-SOpower(abs(nanzscore(SOpower)) >= 3) = nan;
+SOpower_goodstages(abs(nanzscore(SOpower_goodstages)) >= 3) = nan;
 
 % Remove single time points sandwiched between nan values 
-last_isnan = [0; isnan(SOpower(1:end-1))];
-next_isnan = [isnan(SOpower(2:end)); 0];
-SOpower(last_isnan & next_isnan) = nan;
+last_isnan = [0; isnan(SOpower_goodstages(1:end-1))];
+next_isnan = [isnan(SOpower_goodstages(2:end)); 0];
+SOpower_goodstages(last_isnan & next_isnan) = nan;
 
 % Normalize SO power
 if isnumeric(norm_method)
@@ -141,33 +155,48 @@ else
     shift_ptile = 5;
 end
 switch norm_method 
+
+    case {'NREMshift', 'nrem', 'NREM'}
+        NREM_SOpow = SOpower_goodstages(ismember(stages_SOpower, [1,2]));
+        NREM_SOpow_mean_first5 = mean(NREM_SOpow(1:round(300/SOpow_full_binsize)), 'omitnan'); % mean of first 5 min of NREM
+        SOpower_norm = SOpower_goodstages - NREM_SOpow_mean_first5;
+        ptile = [];
+
+    case {'N1', 'n1', 'N1shift', 'n1shift'}
+        N1_SOpow_mean = mean(SOpower_goodstages(stages_SOpower==3), 'omitnan');
+        SOpower_norm = SOpower_goodstages - N1_SOpow_mean;
+        ptile = [];
+
     case {'proportion', 'normalized'}
         [proppower, ~] = compute_mtspect_power(nanEEG, Fs, 'freq_range', [proportion_freqrange(1), proportion_freqrange(2)]);
-        SOpower_norm = db2pow(SOpower)./db2pow(proppower);
+        SOpower_norm = db2pow(SOpower_goodstages)./db2pow(proppower);
         ptile = [];
     
     case {'percentile', 'percent', '%', '%SOP'}
         low_val =  1;
         high_val =  99;
-        ptile = prctile(SOpower(SOpow_times>=time_range(1) & SOpow_times<=time_range(2)), [low_val, high_val]);
-        SOpower_norm = SOpower-ptile(1);
+        ptile = prctile(SOpower_goodstages(SOpow_times>=time_range(1) & SOpow_times<=time_range(2)), [low_val, high_val]);
+        SOpower_norm = SOpower_goodstages-ptile(1);
         SOpower_norm = SOpower_norm/(ptile(2) - ptile(1));
         
     case {'shift', 'p5shift'}
-        ptile = prctile(SOpower(SOpow_times>=time_range(1) & SOpow_times<=time_range(2)), shift_ptile);
-        SOpower_norm = SOpower-ptile(1);
+        ptile = prctile(SOpower_goodstages(SOpow_times>=time_range(1) & SOpow_times<=time_range(2)), shift_ptile);
+        SOpower_norm = SOpower_goodstages-ptile(1);
 
     case {'absolute', 'none'}
-        SOpower_norm = SOpower;
+        SOpower_norm = SOpower_goodstages;
         ptile = [];
         
     otherwise
         error(['Normalization method "', norm_method, '" not recognized']);
 end
 
+%% Get SOpower at each peak time
+peak_SOpower_norm = interp1(SOpow_times, SOpower_norm, TFpeak_times, 'nearest');
+
 %% Get valid peak indices
 % Exclude peaks during unwanted stages, artifacts, and outside time range
-stage_inds_peaks = logical(interp1(t_data, double(~stage_exclude), TFpeak_times, 'nearest')); 
+stage_inds_peaks = ~ismember(interp1(stage_times, stages, TFpeak_times, 'nearest'), stage_exclude_SOPH); 
 artifact_inds_peaks = logical(interp1(t_data, double(artifacts), TFpeak_times, 'nearest'));
 timerange_inds_peaks = (TFpeak_times >= time_range(1)) & (TFpeak_times <= time_range(2));
 
@@ -175,15 +204,11 @@ peak_selection_inds = stage_inds_peaks & ~artifact_inds_peaks & timerange_inds_p
 
 %% Get valid SOpower indices
 % Exclude unwanted stages, artifacts, and outside time range
-SOpower_stages_valid = logical(interp1(t_data, double(~stage_exclude), SOpow_times, 'nearest'));
+SOpower_stages_valid = ~stage_exclude_stimes;
 SOpower_artifact_valid = ~isnan(SOpower_norm)';
 SOpower_times_valid = (SOpow_times>=time_range(1) & SOpow_times<=time_range(2));
 
 SOpower_valid = SOpower_stages_valid & SOpower_artifact_valid & SOpower_times_valid;
-SOpower_valid_allstages = SOpower_artifact_valid & SOpower_times_valid;
-
-%% Get SOpower at each peak time
-peak_SOpower_norm = interp1(SOpow_times, SOpower_norm, TFpeak_times, 'nearest');
 
 %% Compute the SO power historgram
 % Get frequency bins
@@ -217,8 +242,8 @@ end
 SO_mat = nan(num_SObins, num_freqbins);
 
 % Initialize time in bin
-time_in_bin = zeros(num_SObins,1);
-prop_in_bin = zeros(num_SObins,1);
+time_in_bin = zeros(num_SObins,5);
+prop_in_bin = zeros(num_SObins,5);
 
 for s = 1:num_SObins
     
@@ -229,12 +254,14 @@ for s = 1:num_SObins
     SO_inds = (peak_SOpower_norm >= SO_bin_edges(1,s)) & (peak_SOpower_norm < SO_bin_edges(2,s));
     
     % Get time in bin (min) and proportion of time in bin
-    time_in_bin(s) = (sum(TIB_inds & SOpower_valid') * SOpow_times_step) / 60;
-    time_in_bin_allstages = (sum(TIB_inds & SOpower_valid_allstages') * SOpow_times_step) / 60;
-    prop_in_bin(s) = time_in_bin(s) / time_in_bin_allstages;
+    for tt = 1:5
+        time_in_bin(s,tt) = (sum(TIB_inds & SOpower_valid' & stages_SOpower'==tt) * SOpow_full_binsize)/60;
+    end
+    time_in_bin_allstages = (sum(TIB_inds & SOpower_times_valid') .* SOpow_full_binsize)/60;
+    prop_in_bin(s,:) = time_in_bin(s,:)./time_in_bin_allstages;
     
     % if less than threshold time in SO bin, whole column of SO power hist should be nan
-    if time_in_bin(s) < min_time_in_bin
+    if sum(time_in_bin(s,:)) < min_time_in_bin
         continue
     end 
     
@@ -259,7 +286,7 @@ for s = 1:num_SObins
     end 
     
     if rate_flag
-        SO_mat(s,:) = SO_mat(s,:) / time_in_bin(s);
+        SO_mat(s,:) = SO_mat(s,:) / sum(time_in_bin(s,:));
     end
     
 end
