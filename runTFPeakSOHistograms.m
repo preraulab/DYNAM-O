@@ -272,7 +272,6 @@ end
 stats_table.Properties.VariableDescriptions{'SOphase'} = 'Slow-oscillation phase at peak time';
 stats_table.Properties.VariableUnits{'SOphase'} = 'rad';
 
-
 % To use a custom precomputed SO phase filter, use the SOphase_filter argument
 % custom_SOphase_filter = designfilt('bandpassfir', 'StopbandFrequency1', 0.1, 'PassbandFrequency1', 0.4, ...
 %                        'PassbandFrequency2', 1.75, 'StopbandFrequency2', 2.05, 'StopbandAttenuation1', 60, ...
