@@ -222,13 +222,13 @@ boundaries = boundaries(peak_inds,:);
 verb_disp(verbose, 'Computing SO-phase histogram...')
 
 % use (..., 'plot_flag', true) to plot directly from this function call
-[SOphase_mat, ~, SOphase_bins, ~, ~, peak_SOphase, ~] = SOphase_histogram(data, Fs, peak_freqs, peak_times, 't_data', t_data, 'stage_exclude', stage_exclude, 'artifacts', artifacts);
+[SOphase_mat, ~, SOphase_bins, ~, ~, peak_SOphase, ~] = SOphaseHistogram(data, Fs, peak_freqs, peak_times, 't_data', t_data, 'stage_exclude', stage_exclude, 'artifacts', artifacts);
 
 % To use a custom precomputed SO phase filter, use the SOphase_filter argument
 % custom_SOphase_filter = designfilt('bandpassfir', 'StopbandFrequency1', 0.1, 'PassbandFrequency1', 0.4, ...
 %                        'PassbandFrequency2', 1.75, 'StopbandFrequency2', 2.05, 'StopbandAttenuation1', 60, ...
 %                        'PassbandRipple', 1, 'StopbandAttenuation2', 60, 'SampleRate', 256);
-% [SOphase_mat, ~, SOphase_cbins, TIB_phase, PIB_phase] = SOphase_histogram(data, Fs, peak_freqs, peak_times, 'stage_exclude', stage_exclude, 'artifacts', artifacts, ...
+% [SOphase_mat, ~, SOphase_cbins, TIB_phase, PIB_phase] = SOphaseHistogram(data, Fs, peak_freqs, peak_times, 'stage_exclude', stage_exclude, 'artifacts', artifacts, ...
 %                                                                           'SOphase_flter', custom_SOphase_filter);
 
 %% Make output peak properties table

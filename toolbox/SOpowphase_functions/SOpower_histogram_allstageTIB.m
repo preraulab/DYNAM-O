@@ -168,7 +168,7 @@ switch norm_method
         ptile = [];
 
     case {'proportion', 'normalized'}
-        [proppower, ~] = compute_mtspect_power(nanEEG, Fs, 'freq_range', [proportion_freqrange(1), proportion_freqrange(2)]);
+        [proppower, ~] = computeMTSpectPower(nanEEG, Fs, 'freq_range', [proportion_freqrange(1), proportion_freqrange(2)]);
         SOpower_norm = db2pow(SOpower_goodstages)./db2pow(proppower);
         ptile = [];
     

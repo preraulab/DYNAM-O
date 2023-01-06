@@ -1,4 +1,4 @@
-function [stats_table, hist_peakidx, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, SOpower] = runTFPeakSOHistograms(varargin)
+function [stats_table, hist_peakidx, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, SOpower, SOpower_goodstages] = runTFPeakSOHistograms(varargin)
 % RUNTFPEAKSOHISTOGRAMS: Run watershed algorithm to extract time-frequency peaks from 
 %                        spectrogram of data, then compute Slow-Oscillation power and phase histograms
 %
@@ -72,7 +72,8 @@ addOptional(p, 't_data', [], @(x) validateattributes(x,{'numeric', 'vector'},{'r
 addOptional(p, 'time_range', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'downsample_spect', [],  @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'struct'},{}));
-addOptional(p, 'stages_include', [1,2,3,4], @(x) validateattributes(x,{'numeric', 'vector'}, {'real', 'nonempty'}))
+addOptional(p, 'stages_include_SOPH', [1,2,3,4], @(x) validateattributes(x,{'numeric', 'vector'}, {'real', 'nonempty'}))
+addOptional(p, 'stages_include_SOP', [1,2,3,4], @(x) validateattributes(x,{'numeric', 'vector'}, {'real', 'nonempty'}))
 addOptional(p, 'lightsonoff_mins', 5, @(x) validateattributes(x,{'numeric'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'SOpower_norm_method', 'p5shift', @(x) validateattributes(x, {'char', 'numeric'},{}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
@@ -234,7 +235,9 @@ stats_table.Properties.VariableUnits{'PeakStage'} = 'Stage #';
 %% Compute SO-power and SO-phase histograms
 
 % Exclude time-frequency peaks during specified stages from histograms
-stage_exclude = ~ismember(stages_t_data, stages_include);
+stage_exclude = ~ismember(stages_t_data, stages_include_SOPH);
+stage_exclude_SOP = ~ismember(stages_t_data, stages_include_SOP);
+
 
 %% Compute SO-power histogram
 if verbose
@@ -242,7 +245,10 @@ if verbose
 end
 
 % use (...,'plot_flag', true) to plot directly from this function call
-[SOpow_mat, freq_bins, SOpow_bins, ~, ~, stats_table.SOpower, hist_peakidx, SOpower_norm, ~, SOpow_times, SOpower] = SOpowerHistogram(data, Fs, stats_table.PeakFrequency, stats_table.PeakTime, 't_data', t_data, 'stage_exclude', stage_exclude, 'artifacts', artifacts, 'norm_method', SOpower_norm_method);
+[SOpow_mat, freq_bins, SOpow_bins, ~, ~, stats_table.SOpower, hist_peakidx, SOpower_norm, ~, SOpow_times,...
+    SOpower, SOpower_goodstages] = SOpowerHistogram(data, Fs, stats_table.PeakFrequency, stats_table.PeakTime, 't_data', t_data,...
+                    'stage_exclude', stage_exclude, 'stage_exclude_SOP', stage_exclude_SOP, 'artifacts', artifacts,...
+                    'norm_method', SOpower_norm_method);
 stats_table.Properties.VariableDescriptions{'SOpower'} = 'Slow-oscillation power at peak time';
 switch SOpower_norm_method
     case {'p5shift', 'none'}
@@ -251,6 +257,8 @@ switch SOpower_norm_method
         pow_units = '%';
     case 'proportion'
         pow_units = 'proportion';
+    otherwise
+        pow_units = 'dB';
 end
 stats_table.Properties.VariableUnits{'SOpower'} = pow_units;
 
@@ -269,7 +277,7 @@ stats_table.Properties.VariableUnits{'SOphase'} = 'rad';
 % custom_SOphase_filter = designfilt('bandpassfir', 'StopbandFrequency1', 0.1, 'PassbandFrequency1', 0.4, ...
 %                        'PassbandFrequency2', 1.75, 'StopbandFrequency2', 2.05, 'StopbandAttenuation1', 60, ...
 %                        'PassbandRipple', 1, 'StopbandAttenuation2', 60, 'SampleRate', 256);
-% [SOphase_mat, ~, SOphase_cbins, TIB_phase, PIB_phase] = SOphase_histogram(data, Fs, stats_table.PeakFrequency, stats_table.PeakTime, 't_data', t_data, 'stage_exclude', stage_exclude, 'artifacts', artifacts, ...
+% [SOphase_mat, ~, SOphase_cbins, TIB_phase, PIB_phase] = SOphaseHistogram(data, Fs, stats_table.PeakFrequency, stats_table.PeakTime, 't_data', t_data, 'stage_exclude', stage_exclude, 'artifacts', artifacts, ...
 %                                                                           'SOphase_flter', custom_SOphase_filter);
 
 %% EOF

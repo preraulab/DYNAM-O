@@ -120,7 +120,7 @@ nanEEG = EEG;
 nanEEG(artifacts) = nan;
 
 %% Compute SO power
-[SOpower, SOpow_times] = compute_mtspect_power(nanEEG, Fs, 'freq_range', SO_freqrange);
+[SOpower, SOpow_times] = computeMTSpectPower(nanEEG, Fs, 'freq_range', SO_freqrange);
 SOpow_times = SOpow_times + t_data(1); % adjust the time axis to t_data
 SOpow_times_step = SOpow_times(2) - SOpow_times(1);
 
@@ -142,7 +142,7 @@ else
 end
 switch norm_method 
     case {'proportion', 'normalized'}
-        [proppower, ~] = compute_mtspect_power(nanEEG, Fs, 'freq_range', [proportion_freqrange(1), proportion_freqrange(2)]);
+        [proppower, ~] = computeMTSpectPower(nanEEG, Fs, 'freq_range', [proportion_freqrange(1), proportion_freqrange(2)]);
         SOpower_norm = db2pow(SOpower)./db2pow(proppower);
         ptile = [];
     
