@@ -1,18 +1,23 @@
+<<<<<<< HEAD
 function [artifacts] = detect_artifacts2(data, Fs, crit_units, hf_crit, hf_pass, bb_crit, bb_pass, smooth_duration, ...
     verbose, histogram_plot, return_filts_only, hpFilt_high, hpFilt_broad, detrend_filt)
+=======
+function [ artifacts ] = detect_artifacts(data, Fs, crit_units, hf_crit, hf_pass, bb_crit, bb_pass, smooth_duration, ...
+    verbose, histogram_plot, return_filts_only, hpFilt_high, hpFilt_broad, detrend_duration)
+>>>>>>> 8ba4ec8f305a800420180acba29209f2a6eea8a1
 %DETECT_ARTIFACTS  Detect artifacts in the time domain by iteratively removing data above a given z-score criterion
 %
 %   Usage:
 %   Direct input:
 %   artifacts = detect_artifacts(data, Fs, crit_units, hf_crit, hf_pass, bb_crit, bb_pass, smooth_duration, ...
-%                                            verbose, histogram_plot, return_filts_only, hpFilt_high, hpFilt_broad, detrend_filt)
+%                                            verbose, histogram_plot, return_filts_only, hpFilt_high, hpFilt_broad, detrend_duration)
 %
 %   Input:
 %   data: 1 x <number of samples> vector - time series data-- required
 %   Fs: double - sampling frequency in Hz  -- required
 %   crit_units: string 'std' to use iterative crit_units (default) or a strict threshold on 'MAD',defined as K*MEDIAN(ABS(A-MEDIAN(A)))
 %   hf_crit: double - high frequency criterion - number of stds/MAD above the mean to remove (default: 3.5)
-%   hf_pass: double - high frequency pass band - frequency for high pass filter in Hz (default: 25 Hz)
+%   hf_pass: double - high frequency pass band - frequency for high pass filter in Hz (default: 35 Hz)
 %   bb_crit: double - broadband criterion - number of stds/MAD above the mean to remove (default: 3.5)
 %   bb_pass: double - broadband pass band - frequency for high pass filter in Hz (default: .1 Hz)
 %   smooth_duration: double - time (in seconds) to smooth the time series (default: 2 seconds)
@@ -22,7 +27,8 @@ function [artifacts] = detect_artifacts2(data, Fs, crit_units, hf_crit, hf_pass,
 %                                for use in this function (default: false)
 %   hpFilt_high: digitalFilter - Includes parameters to use for the high frequency high pass filter
 %   hpFilt_broad: digitalFilter - Includes parameters to use for the broadband high pass filter
-%   detrend_filter: digitalFilter - Includes parameters to use for the detrending high pass filter
+%   detrend_duration: double - Time in seconds to use for detrending
+%   (default: 300)
 %
 %   Output:
 %   artifacts: 1xT logical of times flagged as artifacts (logical OR of hf and bb artifacts)
@@ -31,7 +37,6 @@ function [artifacts] = detect_artifacts2(data, Fs, crit_units, hf_crit, hf_pass,
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %
-%   Last modified 09/21/2022 by Alex
 %% ********************************************************************
 
 %% Input parsing
@@ -98,6 +103,7 @@ if nargin < 13 || isempty(hpFilt_broad)
         'SampleRate',Fs);
 end
 
+<<<<<<< HEAD
 if nargin < 14 || isempty(detrend_filt)
     Fstop = 0.001;  % Stopband Frequency
     Fpass = 0.003;  % Passband Frequency
@@ -109,11 +115,15 @@ if nargin < 14 || isempty(detrend_filt)
     detrend_filt = design(h, 'butter', ...
         'MatchExactly', 'stopband', ...
         'SOSScaleNorm', 'Linf');
+=======
+if nargin < 14 || isempty(detrend_duration)
+    detrend_duration = 5*60; % default is 5min
+>>>>>>> 8ba4ec8f305a800420180acba29209f2a6eea8a1
 end
 
 %% If desired, return filter parameters only
 if return_filts_only
-    artifacts = [hpFilt_high, hpFilt_broad, detrend_filt];
+    artifacts = [hpFilt_high, hpFilt_broad];
     return
 end
 
@@ -141,24 +151,24 @@ end
 %Get bad indices
 bad_inds = (isnan(data) | isinf(data) | find_flat(data))';
 bad_inds = find_outlier_noise(data, bad_inds);
-%bad_inds = bad_inds | data' > 225;
 
 %Interpolate big gaps in data
 t = 1:length(data);
 data_fixed = interp1([0, t(~bad_inds), length(data)+1], [0; data(~bad_inds); 0], t)';
 
 %% Get high frequency artifacts
-[ hf_artifacts, high_detrend ] = compute_artifacts(hpFilt_high, detrend_filt, hf_crit, data_fixed, smooth_duration, Fs, bad_inds, verbose,...
+hf_artifacts = compute_artifacts(hpFilt_high, detrend_duration, hf_crit, data_fixed, smooth_duration, Fs, bad_inds, verbose,...
     'high frequency', histogram_plot, crit_units);
 
 %% Get broad band frequency artifacts
-[ bb_artifacts, broad_detrend ] = compute_artifacts(hpFilt_broad, detrend_filt, bb_crit, data_fixed, smooth_duration, Fs, bad_inds, verbose,...
+bb_artifacts = compute_artifacts(hpFilt_broad, detrend_duration, bb_crit, data_fixed, smooth_duration, Fs, bad_inds, verbose,...
     'broadband frequency', histogram_plot, crit_units);
 
 %% Join artifacts from different frequency bands
 artifacts = hf_artifacts | bb_artifacts;
 % sanity check before outputting
 assert(length(artifacts) == length(data), 'Data vector length is inconsistent. Please check.')
+
 
 %Find all the flat areas in the data
 function binds = find_flat(data, min_size)
@@ -203,8 +213,7 @@ inds = data <= low_thresh | data >= high_thresh;
 bad_inds(inds) = true;
 
 
-
-function [ detected_artifacts, y_detrend ] = compute_artifacts(filter_coeff, detrend_filt, crit, data_fixed, smooth_duration, Fs, bad_inds, verbose, verbosestring, histogram_plot, crit_units)
+function [ detected_artifacts, y_detrend ] = compute_artifacts(filter_coeff, detrend_duration, crit, data_fixed, smooth_duration, Fs, bad_inds, verbose, verbosestring, histogram_plot, crit_units)
 %% Get artifacts for a particular frequency band
 
 %Perform a high pass filter
@@ -220,7 +229,12 @@ y_smooth = movmean(y_hilbert, smooth_duration*Fs);
 y_log = log(y_smooth);
 
 % Detrend data via filter
+<<<<<<< HEAD
 y_detrend = y_log -movmedian(y_log,Fs*60*5);% spline_detrend(y_log,Fs,[],60);
+=======
+y_detrend = y_log - movmedian(y_log, Fs*detrend_duration);
+% y_detrend = spline_detrend(y_log, Fs, [], 60);
+>>>>>>> 8ba4ec8f305a800420180acba29209f2a6eea8a1
 % y_detrend = filter(detrend_filt, y_log);
 y_signal = y_detrend;
 
@@ -302,5 +316,4 @@ end
 if histogram_plot
     close(fh);
 end
-
 
