@@ -240,7 +240,7 @@ for s = 1:num_SObins
     
     if sum(SO_inds & peak_selection_inds) >= 1
         
-        for f = 1:num_freqbins    
+        for f = 1:num_freqbins
             
             % Get indices of TFpeaks that occur in this freq bin
             freq_inds = (TFpeak_freqs >= freq_bin_edges(1,f)) & (TFpeak_freqs < freq_bin_edges(2,f));
@@ -286,5 +286,3 @@ if plot_flag
 end
 
 end
-
-

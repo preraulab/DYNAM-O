@@ -104,11 +104,11 @@ else
 end
 
 if isempty(stage_exclude_SOP)
-    stage_exclude_SOP = [5];
+    stage_exclude_SOP = 5;
 end
 
 if isempty(stage_exclude_SOPH)
-    stage_exclude_SOPH = [5];
+    stage_exclude_SOPH = 5;
 end
 
 if isempty(t_data)
@@ -130,10 +130,10 @@ nanEEG(artifacts) = nan;
 %% Compute SO power
 [SOpower, SOpow_times] = computeMTSpectPower(nanEEG, Fs, 'freq_range', SO_freqrange);
 SOpow_times = SOpow_times + t_data(1); % adjust the time axis to t_data
-SOpow_full_binsize = SOpow_times(2) - SOpow_times(1);
+SOpow_times_step = SOpow_times(2) - SOpow_times(1);
 
-%% Replace bad stages with NaNs
-stages_SOpower = interp1(stage_times, stages, SOpow_times, 'nearest');
+% Replace bad stages with NaNs
+stages_SOpower = interp1(stage_times, stages, SOpow_times, 'previous');
 stage_exclude_stimes = ismember(stages_SOpower, stage_exclude_SOP);
 SOpower_goodstages = SOpower;
 SOpower_goodstages(stage_exclude_stimes) = nan;
@@ -158,7 +158,7 @@ switch norm_method
 
     case {'NREMshift', 'nrem', 'NREM'}
         NREM_SOpow = SOpower_goodstages(ismember(stages_SOpower, [1,2]));
-        NREM_SOpow_mean_first5 = mean(NREM_SOpow(1:round(300/SOpow_full_binsize)), 'omitnan'); % mean of first 5 min of NREM
+        NREM_SOpow_mean_first5 = mean(NREM_SOpow(1:round(300/SOpow_times_step)), 'omitnan'); % mean of first 5 min of NREM
         SOpower_norm = SOpower_goodstages - NREM_SOpow_mean_first5;
         ptile = [];
 
@@ -191,12 +191,9 @@ switch norm_method
         error(['Normalization method "', norm_method, '" not recognized']);
 end
 
-%% Get SOpower at each peak time
-peak_SOpower_norm = interp1(SOpow_times, SOpower_norm, TFpeak_times, 'nearest');
-
 %% Get valid peak indices
 % Exclude peaks during unwanted stages, artifacts, and outside time range
-stage_inds_peaks = ~ismember(interp1(stage_times, stages, TFpeak_times, 'nearest'), stage_exclude_SOPH); 
+stage_inds_peaks = ~ismember(interp1(stage_times, stages, TFpeak_times, 'previous'), stage_exclude_SOPH); 
 artifact_inds_peaks = logical(interp1(t_data, double(artifacts), TFpeak_times, 'nearest'));
 timerange_inds_peaks = (TFpeak_times >= time_range(1)) & (TFpeak_times <= time_range(2));
 
@@ -204,11 +201,15 @@ peak_selection_inds = stage_inds_peaks & ~artifact_inds_peaks & timerange_inds_p
 
 %% Get valid SOpower indices
 % Exclude unwanted stages, artifacts, and outside time range
-SOpower_stages_valid = ~stage_exclude_stimes;
+SOpower_stages_valid = ~ismember(stages_SOpower, stage_exclude_SOPH);
 SOpower_artifact_valid = ~isnan(SOpower_norm)';
 SOpower_times_valid = (SOpow_times>=time_range(1) & SOpow_times<=time_range(2));
 
 SOpower_valid = SOpower_stages_valid & SOpower_artifact_valid & SOpower_times_valid;
+SOpower_valid_allstages = SOpower_artifact_valid & SOpower_times_valid;
+
+%% Get SOpower at each peak time
+peak_SOpower_norm = interp1(SOpow_times, SOpower_norm, TFpeak_times, 'nearest');
 
 %% Compute the SO power historgram
 % Get frequency bins
@@ -255,10 +256,11 @@ for s = 1:num_SObins
     
     % Get time in bin (min) and proportion of time in bin
     for tt = 1:5
-        time_in_bin(s,tt) = (sum(TIB_inds & SOpower_valid' & stages_SOpower'==tt) * SOpow_full_binsize)/60;
+        time_in_bin(s,tt) = (sum(TIB_inds & SOpower_valid' & stages_SOpower'==tt) * SOpow_times_step) / 60;
     end
-    time_in_bin_allstages = (sum(TIB_inds & SOpower_times_valid') .* SOpow_full_binsize)/60;
-    prop_in_bin(s,:) = time_in_bin(s,:)./time_in_bin_allstages;
+    time_in_bin_allstages = (sum(TIB_inds & SOpower_valid_allstages') * SOpow_times_step) / 60;
+    prop_in_bin(s,:) = time_in_bin(s,:) / time_in_bin_allstages;
+    assert(sum(prop_in_bin(s,:)) == 1, 'Why does the proportion not sum to 1?')
     
     % if less than threshold time in SO bin, whole column of SO power hist should be nan
     if sum(time_in_bin(s,:)) < min_time_in_bin
@@ -267,7 +269,7 @@ for s = 1:num_SObins
     
     if sum(SO_inds & peak_selection_inds) >= 1
         
-        for f = 1:num_freqbins    
+        for f = 1:num_freqbins
             
             % Get indices of TFpeaks that occur in this freq bin
             freq_inds = (TFpeak_freqs >= freq_bin_edges(1,f)) & (TFpeak_freqs < freq_bin_edges(2,f));
@@ -313,5 +315,3 @@ if plot_flag
 end
 
 end
-
-
