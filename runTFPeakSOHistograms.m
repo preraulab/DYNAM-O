@@ -236,8 +236,7 @@ stats_table.Properties.VariableUnits{'PeakStage'} = 'Stage #';
 
 % Exclude time-frequency peaks during specified stages from histograms
 stage_exclude = ~ismember(stages_t_data, stages_include_SOPH);
-stage_exclude_SOP = ~ismember(stages_t_data, stages_include_SOP);
-
+stage_exclude_SOP = ~ismember(stages_t_data, stages_include_SOP); % Alex note: this Name-Value pair is not accepted into SOpowerHistogram. Changes are needed!
 
 %% Compute SO-power histogram
 if verbose
