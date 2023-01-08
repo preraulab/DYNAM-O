@@ -1,4 +1,4 @@
-function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds, SOpower_norm, ptile, SOpow_times] = SOpowerHistogram(varargin)
+function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds, SOpower_norm, ptile, SOpower_times] = SOpowerHistogram(varargin)
 % [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds] = ...
 %                           SO_histogram(EEG, Fs, TFpeak_freqs, TFpeak_times, freq_range, freq_binsizestep, ...
 %                                        SO_range, SO_binsizestep, SOfreq_range, artifacts, ...
@@ -10,11 +10,11 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_n
 %       Fs: numerical - sampling frequency of EEG (Hz) --required
 %       TFpeak_freqs: Px1 - frequency each TF peak occurs (Hz) --required
 %       TFpeak_times:  Px1 - times each TF peak occurs (s) --required
-%       freq_range: 1x2 double - min and max frequencies to consider in SO phase analysis 
-%                   (Hz). Default = [0,40] 
-%       freq_binsizestep: 1x2 double - [size, step] frequency bin size and bin step for frequency 
+%       freq_range: 1x2 double - min and max frequencies of TF peak to include in the histogram
+%                   (Hz). Default = [0,40]
+%       freq_binsizestep: 1x2 double - [size, step] frequency bin size and bin step for frequency
 %                         axis of SO phase histograms (Hz). Default = [1, 0.2]
-%       SO_range: 1x2 double - min and max SO power values to consider in SO phase analysis. 
+%       SO_range: 1x2 double - min and max SO power values to consider in SO phase analysis.
 %                 Default calculated using min and max of SO power
 %       SO_binsizestep: 1x2 double - [size, step] SO phase bin size and step for SO phase axis 
 %                            of histogram. Units are radians. Default
@@ -28,12 +28,12 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_n
 %       t_data: 1xN double - times for each EEG sample. Default = (0:length(EEG)-1)/Fs
 %       norm_method: char - normalization method for SO-power. Options: 'p5shift'(default), 'percent', 'proportion', 'none'.
 %       min_time_in_bin: numerical - time (minutes) required in each SO power bin to include 
-%                              in SO power analysis. Otherwise all values in that SO power bin will 
+%                              in SO power analysis. Otherwise all values in that SO power bin will
 %                              be NaN. Default = 1.
-%       time_range: 1x2 double - min and max times for which to include TFpeaks. Also used to normalize 
-%                   SO power. Default = [t_data(1), t_data(end)] 
-%       pow_freqSO_norm: 1x2 logical - normalize by dividing by the sum over each dimension 
-%                          of the SO phase histogram [frequency, SOphase]. Default = [true, false]
+%       time_range: 1x2 double - min and max times for which to include TFpeaks. Also used to normalize
+%                   SO power. Default = [t_data(1), t_data(end)]
+%       pow_freqSO_norm: 1x2 logical - normalize by dividing by the sum over each dimension
+%                          of the SO power histogram [frequency, SOpower]. Default = [true, false]
 %       rate_flag: logical - histogram output in terms of TFpeaks/min instead of count. Default = true.
 %       smooth_flag: logical - smooth the histogram using 5pt moving average 2D smoothing. Default = false.
 %       plot_flag: logical - SO power histogram plots. Default = false
@@ -69,6 +69,8 @@ addRequired(p, 'TFpeak_freqs', @(x) validateattributes(x, {'numeric', 'vector'},
 addRequired(p, 'TFpeak_times', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addOptional(p, 'freq_range', [0,40], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'freq_binsizestep', [1, 0.2], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
+addOptional(p, 'SOpower', [], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
+addOptional(p, 'SOpower_times', [], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addOptional(p, 'SO_range', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'SO_binsizestep', [], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
 addOptional(p, 'SO_freqrange', [0.3, 1.5], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan'}));
@@ -115,55 +117,68 @@ else
     assert( (time_range(1) >= min(t_data)) & (time_range(2) <= max(t_data) ), 'lightsonoff_times cannot be outside of the time range described by "t_data"');
 end
 
-%% Replace artifact timepoints with NaNs
-nanEEG = EEG;
-nanEEG(artifacts) = nan;
-
 %% Compute SO power
-[SOpower, SOpow_times] = computeMTSpectPower(nanEEG, Fs, 'freq_range', SO_freqrange);
-SOpow_times = SOpow_times + t_data(1); % adjust the time axis to t_data
-SOpow_times_step = SOpow_times(2) - SOpow_times(1);
-
-% Exclude outlier SOpower that usually reflect artifacts
-SOpower(abs(nanzscore(SOpower)) >= 3) = nan;
-
-% Remove single time points sandwiched between nan values 
-last_isnan = [0; isnan(SOpower(1:end-1))];
-next_isnan = [isnan(SOpower(2:end)); 0];
-SOpower(last_isnan & next_isnan) = nan;
-
-% Normalize SO power
-if isnumeric(norm_method)
-    % Allow numeric input to set the percentile used in the 'shift' method
-    shift_ptile = norm_method;
-    norm_method = 'shift';
-else
-    shift_ptile = 5;
-end
-switch norm_method 
-    case {'proportion', 'normalized'}
-        [proppower, ~] = computeMTSpectPower(nanEEG, Fs, 'freq_range', [proportion_freqrange(1), proportion_freqrange(2)]);
-        SOpower_norm = db2pow(SOpower)./db2pow(proppower);
-        ptile = [];
+if ~isempty(SOpower) % SOpower is directly provided
+    assert(~isempty(SOpower_times), 'SOpower input only but no SOpower_times received.')
+    SOpower_norm = SOpower;
+    norm_method = 'SOpower direct input';
     
-    case {'percentile', 'percent', '%', '%SOP'}
-        low_val =  1;
-        high_val =  99;
-        ptile = prctile(SOpower(SOpow_times>=time_range(1) & SOpow_times<=time_range(2)), [low_val, high_val]);
-        SOpower_norm = SOpower-ptile(1);
-        SOpower_norm = SOpower_norm/(ptile(2) - ptile(1));
-        
-    case {'shift', 'p5shift'}
-        ptile = prctile(SOpower(SOpow_times>=time_range(1) & SOpow_times<=time_range(2)), shift_ptile);
-        SOpower_norm = SOpower-ptile(1);
-
-    case {'absolute', 'none'}
-        SOpower_norm = SOpower;
-        ptile = [];
-        
-    otherwise
-        error(['Normalization method "', norm_method, '" not recognized']);
+else % Need to compute SOpower within the function
+    % Replace artifact timepoints with NaNs
+    nanEEG = EEG;
+    nanEEG(artifacts) = nan;
+    
+    % Now compute SOpower
+    [SOpower, SOpower_times] = computeMTSpectPower(nanEEG, Fs, 'freq_range', SO_freqrange);
+    SOpower_times = SOpower_times + t_data(1); % adjust the time axis to t_data
+    
+    % Exclude outlier SOpower that usually reflect artifacts
+    SOpower(abs(nanzscore(SOpower)) >= 3) = nan;
+    
+    % Remove single time points sandwiched between nan values
+    last_isnan = [0; isnan(SOpower(1:end-1))];
+    next_isnan = [isnan(SOpower(2:end)); 0];
+    SOpower(last_isnan & next_isnan) = nan;
+    
+    % Normalize SO power
+    if isnumeric(norm_method)
+        % Allow numeric input to set the percentile used in the 'shift' method
+        shift_ptile = norm_method;
+        norm_method = 'shift';
+    else
+        shift_ptile = 5;
+    end
+    switch norm_method
+        case {'proportion', 'normalized'}
+            [proppower, ~] = computeMTSpectPower(nanEEG, Fs, 'freq_range', [proportion_freqrange(1), proportion_freqrange(2)]);
+            SOpower_norm = db2pow(SOpower)./db2pow(proppower);
+            ptile = [];
+            
+        case {'percentile', 'percent', '%', '%SOP'}
+            low_val =  1;
+            high_val =  99;
+            ptile = prctile(SOpower(SOpower_times>=time_range(1) & SOpower_times<=time_range(2)), [low_val, high_val]);
+            SOpower_norm = SOpower-ptile(1);
+            SOpower_norm = SOpower_norm/(ptile(2) - ptile(1));
+            
+        case {'shift', 'p5shift'}
+            ptile = prctile(SOpower(SOpower_times>=time_range(1) & SOpower_times<=time_range(2)), shift_ptile);
+            SOpower_norm = SOpower-ptile(1);
+            
+        case {'absolute', 'none'}
+            SOpower_norm = SOpower;
+            ptile = [];
+            
+        otherwise
+            error(['Normalization method "', norm_method, '" not recognized']);
+    end
 end
+
+%% Get SOpower times step size
+SOpow_times_step = SOpower_times(2) - SOpower_times(1);
+
+%% Get SOpower at each peak time
+peak_SOpower_norm = interp1(SOpower_times, SOpower_norm, TFpeak_times, 'nearest');
 
 %% Get valid peak indices
 % Exclude peaks during unwanted stages, artifacts, and outside time range
@@ -175,15 +190,12 @@ peak_selection_inds = stage_inds_peaks & ~artifact_inds_peaks & timerange_inds_p
 
 %% Get valid SOpower indices
 % Exclude unwanted stages, artifacts, and outside time range
-SOpower_stages_valid = logical(interp1(t_data, double(~stage_exclude), SOpow_times, 'nearest'));
+SOpower_stages_valid = logical(interp1(t_data, double(~stage_exclude), SOpower_times, 'nearest'));
 SOpower_artifact_valid = ~isnan(SOpower_norm)';
-SOpower_times_valid = (SOpow_times>=time_range(1) & SOpow_times<=time_range(2));
+SOpower_times_valid = (SOpower_times>=time_range(1) & SOpower_times<=time_range(2));
 
 SOpower_valid = SOpower_stages_valid & SOpower_artifact_valid & SOpower_times_valid;
 SOpower_valid_allstages = SOpower_artifact_valid & SOpower_times_valid;
-
-%% Get SOpower at each peak time
-peak_SOpower_norm = interp1(SOpow_times, SOpower_norm, TFpeak_times, 'nearest');
 
 %% Compute the SO power historgram
 % Get frequency bins
