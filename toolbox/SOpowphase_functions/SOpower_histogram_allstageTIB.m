@@ -1,4 +1,4 @@
-function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds, SOpower_norm, ptile, SOpow_times] = SOpower_histogram_allstageTIB(varargin)
+function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds, SOpower_norm, ptile, SOpower_times] = SOpower_histogram_allstageTIB(varargin)
 % % SOPOWERHISTOGRAM computes slow-oscillation power matrix
 % Usage:
 %   [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds] = ...
@@ -123,17 +123,18 @@ else
     assert( (time_range(1) >= min(t_data)) & (time_range(2) <= max(t_data) ), 'lightsonoff_times cannot be outside of the time range described by "t_data"');
 end
 
-%% Replace artifact timepoints with NaNs
+%% Compute SO power
+% Replace artifact timepoints with NaNs
 nanEEG = EEG;
 nanEEG(artifacts) = nan;
 
-%% Compute SO power
-[SOpower, SOpow_times] = computeMTSpectPower(nanEEG, Fs, 'freq_range', SO_freqrange);
-SOpow_times = SOpow_times + t_data(1); % adjust the time axis to t_data
-SOpow_times_step = SOpow_times(2) - SOpow_times(1);
+% Now compute SOpower
+[SOpower, SOpower_times] = computeMTSpectPower(nanEEG, Fs, 'freq_range', SO_freqrange);
+SOpower_times = SOpower_times + t_data(1); % adjust the time axis to t_data
+SOpow_times_step = SOpower_times(2) - SOpower_times(1);
 
 % Replace bad stages with NaNs
-stages_SOpower = interp1(stage_times, stages, SOpow_times, 'previous');
+stages_SOpower = interp1(stage_times, stages, SOpower_times, 'previous');
 stage_exclude_stimes = ismember(stages_SOpower, stage_exclude_SOP);
 SOpower_goodstages = SOpower;
 SOpower_goodstages(stage_exclude_stimes) = nan;
@@ -175,12 +176,12 @@ switch norm_method
     case {'percentile', 'percent', '%', '%SOP'}
         low_val =  1;
         high_val =  99;
-        ptile = prctile(SOpower_goodstages(SOpow_times>=time_range(1) & SOpow_times<=time_range(2)), [low_val, high_val]);
+        ptile = prctile(SOpower_goodstages(SOpower_times>=time_range(1) & SOpower_times<=time_range(2)), [low_val, high_val]);
         SOpower_norm = SOpower_goodstages-ptile(1);
         SOpower_norm = SOpower_norm/(ptile(2) - ptile(1));
         
     case {'shift', 'p5shift'}
-        ptile = prctile(SOpower_goodstages(SOpow_times>=time_range(1) & SOpow_times<=time_range(2)), shift_ptile);
+        ptile = prctile(SOpower_goodstages(SOpower_times>=time_range(1) & SOpower_times<=time_range(2)), shift_ptile);
         SOpower_norm = SOpower_goodstages-ptile(1);
 
     case {'absolute', 'none'}
@@ -190,6 +191,9 @@ switch norm_method
     otherwise
         error(['Normalization method "', norm_method, '" not recognized']);
 end
+
+%% Get SOpower at each peak time
+peak_SOpower_norm = interp1(SOpower_times, SOpower_norm, TFpeak_times, 'nearest');
 
 %% Get valid peak indices
 % Exclude peaks during unwanted stages, artifacts, and outside time range
@@ -203,13 +207,10 @@ peak_selection_inds = stage_inds_peaks & ~artifact_inds_peaks & timerange_inds_p
 % Exclude unwanted stages, artifacts, and outside time range
 SOpower_stages_valid = ~ismember(stages_SOpower, stage_exclude_SOPH);
 SOpower_artifact_valid = ~isnan(SOpower_norm)';
-SOpower_times_valid = (SOpow_times>=time_range(1) & SOpow_times<=time_range(2));
+SOpower_times_valid = (SOpower_times>=time_range(1) & SOpower_times<=time_range(2));
 
 SOpower_valid = SOpower_stages_valid & SOpower_artifact_valid & SOpower_times_valid;
 SOpower_valid_allstages = SOpower_artifact_valid & SOpower_times_valid;
-
-%% Get SOpower at each peak time
-peak_SOpower_norm = interp1(SOpow_times, SOpower_norm, TFpeak_times, 'nearest');
 
 %% Compute the SO power historgram
 % Get frequency bins

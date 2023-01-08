@@ -72,8 +72,7 @@ addOptional(p, 't_data', [], @(x) validateattributes(x,{'numeric', 'vector'},{'r
 addOptional(p, 'time_range', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'downsample_spect', [],  @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'struct'},{}));
-addOptional(p, 'stages_include_SOPH', [1,2,3,4], @(x) validateattributes(x,{'numeric', 'vector'}, {'real', 'nonempty'}))
-addOptional(p, 'stages_include_SOP', [1,2,3,4], @(x) validateattributes(x,{'numeric', 'vector'}, {'real', 'nonempty'}))
+addOptional(p, 'stages_include', [1,2,3,4], @(x) validateattributes(x,{'numeric', 'vector'}, {'real', 'nonempty'}))
 addOptional(p, 'lightsonoff_mins', 5, @(x) validateattributes(x,{'numeric'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'SOpower_norm_method', 'p5shift', @(x) validateattributes(x, {'char', 'numeric'},{}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
@@ -233,10 +232,8 @@ stats_table.Properties.VariableDescriptions{'PeakStage'} = 'Stage: 6 = Artifact,
 stats_table.Properties.VariableUnits{'PeakStage'} = 'Stage #';
 
 %% Compute SO-power and SO-phase histograms
-
 % Exclude time-frequency peaks during specified stages from histograms
-stage_exclude = ~ismember(stages_t_data, stages_include_SOPH);
-stage_exclude_SOP = ~ismember(stages_t_data, stages_include_SOP); % Alex note: this Name-Value pair is not accepted into SOpowerHistogram. Changes are needed!
+stage_exclude = ~ismember(stages_t_data, stages_include);
 
 %% Compute SO-power histogram
 if verbose
@@ -246,8 +243,8 @@ end
 % use (...,'plot_flag', true) to plot directly from this function call
 [SOpow_mat, freq_bins, SOpow_bins, ~, ~, stats_table.SOpower, hist_peakidx, SOpower_norm, ~, SOpow_times,...
     SOpower, SOpower_goodstages] = SOpowerHistogram(data, Fs, stats_table.PeakFrequency, stats_table.PeakTime, 't_data', t_data,...
-                    'stage_exclude', stage_exclude, 'stage_exclude_SOP', stage_exclude_SOP, 'artifacts', artifacts,...
-                    'norm_method', SOpower_norm_method);
+                    'stage_exclude', stage_exclude, 'artifacts', artifacts, 'norm_method', SOpower_norm_method);
+
 stats_table.Properties.VariableDescriptions{'SOpower'} = 'Slow-oscillation power at peak time';
 switch SOpower_norm_method
     case {'p5shift', 'none'}

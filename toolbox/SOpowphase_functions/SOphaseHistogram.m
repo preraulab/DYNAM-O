@@ -9,8 +9,8 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOphase, 
 %       Fs: numerical - sampling frequency of EEG (Hz) --required
 %       TFpeak_freqs: Px1 - frequency each TF peak occurs (Hz) --required
 %       TFpeak_SOphase:  Px1 - times each TF peak occurs (s) --required
-%       freq_range: 1x2 double - min and max frequencies to consider in SO phase analysis 
-%                   (Hz). Default = [0,40] 
+%       freq_range: 1x2 double - min and max frequencies of TF peak to include in the histogram
+%                   (Hz). Default = [0,40]
 %       freq_binsizestep: 1x2 double - [size, step] frequency bin size and bin step for frequency 
 %                         axis of SO phase histograms (Hz). Default = [1, 0.2]
 %       SO_range: 1x2 double - min and max SO phase values (radians) to consider in SO phase analysis. 
@@ -66,6 +66,7 @@ addRequired(p, 'TFpeak_freqs', @(x) validateattributes(x, {'numeric', 'vector'},
 addRequired(p, 'TFpeak_times', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addOptional(p, 'freq_range', [0,40], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'freq_binsizestep', [1, 0.2], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
+addOptional(p, 'SOphase', [], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addOptional(p, 'SO_range', [-pi,pi], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'SO_binsizestep', [(2*pi)/5, (2*pi)/100], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
 addOptional(p, 'SO_freqrange', [0.3, 1.5], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan'}));
@@ -114,20 +115,28 @@ assert((SO_range(1) >= -pi) & (SO_range(2) <= pi), 'SO-phase range must be value
 assert(SO_binsizestep(1) < 2*pi, 'SO-phase bin size must be less than 2*pi')
 
 %% Compute SO phase
-[SOphase, t_phase] = computeSOPhase(EEG, Fs, SO_freqrange, SOphase_filter);
-t_phase = t_phase + t_data(1); %#ok<NASGU> % adjust the time axis to t_data
-SOphase = SOphase';
+if ~isempty(SOphase) % SOphase is directly provided
+    assert(~isempty(t_data), 'SOphase input only but no t_data received.')
+    
+else % Need to compute SOphase within the function
+    % Compute SOphase
+    SOphase = computeSOPhase(EEG, Fs, SO_freqrange, SOphase_filter);
+    SOphase = SOphase';
+    
+    % Replace artifact times with nans
+    SOphase(artifacts) = nan;
+end
 
-% Get time step size of SOphase
+% Make sure we have a phase value for every time point in t_data
+assert(length(SOphase) == length(t_data), 'SOphase and t_data have different dimensions.')
+
+%% Get SOphase times step size
 SOphase_times_step = t_data(2) - t_data(1);
-
-% Replace artifact times with nans
-SOphase(artifacts) = nan;
 
 %% Get SOphase at each peak time
 peak_SOphase = interp1(t_data, SOphase, TFpeak_times);
 
-%% Re-wrap phases to be between -pi and pi
+% Re-wrap phases to be between -pi and pi
 peak_SOphase = mod(peak_SOphase, 2*pi) - pi;
 SOphase = mod(SOphase, 2*pi) - pi;
 
@@ -237,5 +246,3 @@ if plot_flag
 end
 
 end
-
-
