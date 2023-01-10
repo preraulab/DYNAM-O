@@ -1,10 +1,5 @@
-<<<<<<< HEAD
-function [artifacts] = detect_artifacts2(data, Fs, crit_units, hf_crit, hf_pass, bb_crit, bb_pass, smooth_duration, ...
-    verbose, histogram_plot, return_filts_only, hpFilt_high, hpFilt_broad, detrend_filt)
-=======
 function [ artifacts ] = detect_artifacts(data, Fs, crit_units, hf_crit, hf_pass, bb_crit, bb_pass, smooth_duration, ...
     verbose, histogram_plot, return_filts_only, hpFilt_high, hpFilt_broad, detrend_duration)
->>>>>>> 8ba4ec8f305a800420180acba29209f2a6eea8a1
 %DETECT_ARTIFACTS  Detect artifacts in the time domain by iteratively removing data above a given z-score criterion
 %
 %   Usage:
@@ -103,22 +98,8 @@ if nargin < 13 || isempty(hpFilt_broad)
         'SampleRate',Fs);
 end
 
-<<<<<<< HEAD
-if nargin < 14 || isempty(detrend_filt)
-    Fstop = 0.001;  % Stopband Frequency
-    Fpass = 0.003;  % Passband Frequency
-    Astop = 60;     % Stopband Attenuation (dB)
-    Apass = 0.2;    % Passband Ripple (dB)
-
-    h = fdesign.highpass('fst,fp,ast,ap', Fstop, Fpass, Astop, Apass, Fs);
-
-    detrend_filt = design(h, 'butter', ...
-        'MatchExactly', 'stopband', ...
-        'SOSScaleNorm', 'Linf');
-=======
 if nargin < 14 || isempty(detrend_duration)
     detrend_duration = 5*60; % default is 5min
->>>>>>> 8ba4ec8f305a800420180acba29209f2a6eea8a1
 end
 
 %% If desired, return filter parameters only
@@ -145,7 +126,6 @@ if verbose
     disp(['     Broadband Passband: ' num2str(bb_pass) ' Hz']);
     disp('    ');
 end
-
 
 %% Get bad indicies
 %Get bad indices
@@ -229,12 +209,8 @@ y_smooth = movmean(y_hilbert, smooth_duration*Fs);
 y_log = log(y_smooth);
 
 % Detrend data via filter
-<<<<<<< HEAD
-y_detrend = y_log -movmedian(y_log,Fs*60*5);% spline_detrend(y_log,Fs,[],60);
-=======
 y_detrend = y_log - movmedian(y_log, Fs*detrend_duration);
 % y_detrend = spline_detrend(y_log, Fs, [], 60);
->>>>>>> 8ba4ec8f305a800420180acba29209f2a6eea8a1
 % y_detrend = filter(detrend_filt, y_log);
 y_signal = y_detrend;
 
@@ -316,4 +292,3 @@ end
 if histogram_plot
     close(fh);
 end
-
