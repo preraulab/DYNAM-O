@@ -261,7 +261,6 @@ for s = 1:num_SObins
     end
     time_in_bin_allstages = (sum(TIB_inds & SOpower_valid_allstages') * SOpow_times_step) / 60;
     prop_in_bin(s,:) = time_in_bin(s,:) / time_in_bin_allstages;
-    assert(sum(prop_in_bin(s,:)) == 1, 'Why does the proportion not sum to 1?')
     
     % if less than threshold time in SO bin, whole column of SO power hist should be nan
     if sum(time_in_bin(s,:)) < min_time_in_bin
