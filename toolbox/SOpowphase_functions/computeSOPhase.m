@@ -1,38 +1,12 @@
-function [SOPhase, t_data]= computeSOPhase(data, Fs, SO_freqrange, filter)
+function [SOphase, SOphase_times, SOphase_stages] = computeSOphase(EEG, Fs, isexcluded, EEG_times, filter, SO_freqrange, stage_vals, stage_times)
 % COMPUTESOPHASE computes slow-oscillation phase
-%
-% Inputs:
-%       data: 1xN double - timeseries EEG data --required
-%       Fs: numeric - sampling frequency of EEG (Hz) --required
-%       SO_freqrange: 1x2 double - min and max frequencies (Hz) considered to be "slow oscillation".
-%                     Default = [0.3, 1.5]
-%       filter: digitalFilter - filter used to smooth EEG data before hilbert transform. Default
-%               will use a precomputed filter if one exists for the Fs and SO_freqrange selected
-%               and will compute a filter internally if not (this process will slow the runtime
-%               and a warning will output).
-%
-% Outputs:
-%       SOPhase: 1xN double - timeseries SO-phase data UNWRAPPED (radians)
-%       t_data: 1xN double - times for each data point in SOPhase
-%   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
-%   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
-%   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
-%
-%   Please provide the following citation for all use:
-%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-%       for Electroencephalographic Phenotyping and Biomarker Identification,
-%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
-%**********************************************************************
-
-if nargin < 3 || isempty(SO_freqrange)
+if ~exist('SO_freqrange', 'var') || isempty(SO_freqrange)
     SO_freqrange = [0.3, 1.5];
 end
 
-if nargin < 3 || isempty(filter)
+if ~exist('filter', 'var') || isempty(filter)
     filter = [];
 end
-
 
 if isempty(filter)
 
@@ -67,12 +41,23 @@ else
     d = filter;
 end
 
-filtdata = filtfilt(d,double(data));
+filtdata = filtfilt(d,double(EEG));
 
 data_analytic = hilbert(filtdata);
-SOPhase = unwrap(angle(data_analytic)-pi);
-t_data = (0:length(data)-1)/Fs;
+SOphase = unwrap(angle(data_analytic)-pi);
+SOphase_times = (0:length(EEG)-1)/Fs;
 
+% Replace excluded times with nans
+SOphase(isexcluded) = nan;
+
+% Adjust the time axis to EEG_times
+SOphase_times = SOphase_times + EEG_times(1); % adjust the time axis to EEG_times
+
+% Compute SOphase stage
+if ~isempty(stage_vals) && ~isempty(stage_times)
+    SOphase_stages = interp1(stage_times, stage_vals, SOphase_times, 'previous');
+else
+    SOphase_stages = true;
 end
 
-
+end

@@ -28,7 +28,7 @@ addOptional(p,'smoothing_param', 60*5, @(x) validateattributes(x,{'numeric'},{'n
 addOptional(p,'interp_times',[], @(x) validateattributes(x,{'numeric', 'vector'},{'real'}));
 addOptional(p,'verbose',false, @(x) validateattributes(x,{'logical'},{}));
 parse(p,varargin{:});
-parser_results = struct2cell(p.Results);
+parser_results = struct2cell(p.Results); %#ok<NASGU>
 field_names = fieldnames(p.Results);
 
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
