@@ -1,18 +1,18 @@
-function [stats_table, hist_peakidx, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times, SOpower, SOpower_goodstages] = runTFPeakSOHistograms(varargin)
-% RUNTFPEAKSOHISTOGRAMS: Run watershed algorithm to extract time-frequency peaks from 
+function [stats_table, hist_peakidx, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpower_times] = runTFPeakSOHistograms(varargin)
+% RUNTFPEAKSOHISTOGRAMS: Run watershed algorithm to extract time-frequency peaks from
 %                        spectrogram of data, then compute Slow-Oscillation power and phase histograms
 %
 %   Usage:
-%       [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm,... 
+%       [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm,...
 %       SOpow_times, boundaries] = runTFPeakSOHistograms(data, Fs, stage_times, stage_vals)
 %
 %   Inputs:
 %       data (req):                [1xn] double - timeseries data to be analyzed
 %       Fs (req):                  double - sampling frequency of data (Hz)
-%       stage_times (req):         [1xm] double - timestamps of stage_vals
 %       stage_vals (req):          [1xm] double - sleep stage values at eaach time in
 %                                  stage_times. Note the staging convention: 0=unidentified, 1=N3,
 %                                  2=N2, 3=N1, 4=REM, 5=WAKE
+%       stage_times (req):         [1xm] double - timestamps of stage_vals
 %       t_data (opt):              [1xn] double - timestamps for data. Default = (0:length(data)-1)/Fs;
 %       time_range (opt):          [1x2] double - section of EEG to use in analysis
 %                                  (seconds). Default = [min(t_data), max(t_data)]
@@ -20,6 +20,7 @@ function [stats_table, hist_peakidx, SOpow_mat, SOphase_mat, SOpow_bins, SOphase
 %                                  filters to be used for artifact detection
 %       stages_include (opt):      [1xp] double - which stages to include in the SO-power and
 %                                  SO-phase histograms. Default = [1,2,3,4]
+%                                  W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
 %       lightsonoff_mins (opt):    double - minutes before first non-wake
 %                                  stage and after last non-wake stage to include in watershed
 %                                  baseline removal. Default = 5
@@ -48,7 +49,7 @@ function [stats_table, hist_peakidx, SOpow_mat, SOphase_mat, SOpow_bins, SOphase
 %       sfreqs:       1D double - frequency bin center values for dimension 1 of
 %                     spect
 %       SOpower_norm: 1D double - normalized SO-power used to compute histogram
-%       SOpow_times:  1D double - SO-power times
+%       SOpower_times:  1D double - SO-power times
 %
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
@@ -66,8 +67,8 @@ p = inputParser;
 
 addRequired(p, 'data', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric', 'vector'}, {'real','nonempty'}));
 addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric', 'vector'}, {'real','nonempty'}));
+addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric', 'vector'}, {'real','nonempty'}));
 addOptional(p, 't_data', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'time_range', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'downsample_spect', [],  @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
@@ -157,7 +158,7 @@ df = taper_params(1)/time_window_params(1)*2;
 dur_min = time_window_params(1)/2;
 bw_min = df/2;
 
-%Max duration and bandwidth are set to be large values 
+%Max duration and bandwidth are set to be large values
 dur_max = 5; % second
 bw_max = 15; % Hz
 
@@ -178,17 +179,8 @@ else
 end
 stimes = stimes + t_data(1); % adjust the time axis to t_data
 
-%% Make sure stages are at t_data timepoint resolution
-if length(stage_times) ~= length(t_data)
-    stages_t_data = interp1(stage_times, single(stage_vals), t_data, 'previous');
-elseif ~all(stage_times == t_data)
-    stages_t_data = interp1(stage_times, single(stage_vals), t_data, 'previous');
-else
-    stages_t_data = stage_vals;
-end
-
 %% Artifcact Detection
-if verbose 
+if verbose
     disp('Performing artifact rejection...');
 end
 
@@ -231,19 +223,16 @@ stats_table.PeakStage(logical(interp1(t_data, double(artifacts), stats_table.Pea
 stats_table.Properties.VariableDescriptions{'PeakStage'} = 'Stage: 6 = Artifact, 5 = W, 4 = R, 3 = N1, 2 = N2, 1 = N3, 0 = Unknown';
 stats_table.Properties.VariableUnits{'PeakStage'} = 'Stage #';
 
-%% Compute SO-power and SO-phase histograms
-% Exclude time-frequency peaks during specified stages from histograms
-stage_exclude = ~ismember(stages_t_data, stages_include);
-
 %% Compute SO-power histogram
 if verbose
     disp('Computing SO-power histogram...');
 end
 
 % use (...,'plot_flag', true) to plot directly from this function call
-[SOpow_mat, freq_bins, SOpow_bins, ~, ~, stats_table.SOpower, hist_peakidx, SOpower_norm, ~, SOpow_times,...
-    SOpower, SOpower_goodstages] = SOpowerHistogram(data, Fs, stats_table.PeakFrequency, stats_table.PeakTime, 't_data', t_data,...
-                    'stage_exclude', stage_exclude, 'artifacts', artifacts, 'norm_method', SOpower_norm_method);
+[SOpow_mat, freq_bins, SOpow_bins, ~, ~, stats_table.SOpower, hist_peakidx, SOpower_norm, SOpower_times] =...
+    SOpowerHistogram(data, Fs, stats_table.PeakFrequency, stats_table.PeakTime,...
+    'norm_method', SOpower_norm_method, 'stage_vals', single(stage_vals), 'stage_times', stage_times,...
+    'EEG_times', t_data, 'SOPH_stages', stages_include, 'isexcluded', artifacts);
 
 stats_table.Properties.VariableDescriptions{'SOpower'} = 'Slow-oscillation power at peak time';
 switch SOpower_norm_method
@@ -264,7 +253,10 @@ if verbose
 end
 
 % use (..., 'plot_flag', true) to plot directly from this function call
-[SOphase_mat, ~, SOphase_bins, ~, ~, stats_table.SOphase] = SOphaseHistogram(data, Fs, stats_table.PeakFrequency, stats_table.PeakTime, 't_data', t_data, 'stage_exclude', stage_exclude, 'artifacts', artifacts);
+[SOphase_mat, ~, SOphase_bins, ~, ~, stats_table.SOphase] = SOphaseHistogram(data, Fs,...
+     stats_table.PeakFrequency, stats_table.PeakTime, 'stage_vals', single(stage_vals), 'stage_times', stage_times,...
+    'EEG_times', t_data, 'SOPH_stages', stages_include, 'isexcluded', artifacts);
+
 stats_table.Properties.VariableDescriptions{'SOphase'} = 'Slow-oscillation phase at peak time';
 stats_table.Properties.VariableUnits{'SOphase'} = 'rad';
 

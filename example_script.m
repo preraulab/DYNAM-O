@@ -76,8 +76,8 @@ switch data_range
 end
 
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
-[stats_table, hist_peakidx, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times] = ...
-    runTFPeakSOHistograms(data, Fs, stage_times, stage_vals, 'time_range', time_range, 'quality_setting', quality_setting, 'SOpower_norm_method', SOpower_norm_method);
+[stats_table, hist_peakidx, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpower_times] = ...
+    runTFPeakSOHistograms(data, Fs, stage_vals, stage_times, 'time_range', time_range, 'quality_setting', quality_setting, 'SOpower_norm_method', SOpower_norm_method);
 
 %% COMPUTE SPECTROGRAM FOR DISPLAY
 [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(data, Fs, [4,25], [15 29], [30 15], [],'linear',[],false,false);
@@ -137,7 +137,7 @@ xlim(time_range/3600)
 
 % Plot SO-Power trace
 axes(hypn_spect_ax(3))
-plot(SOpow_times/3600,SOpower_norm,'linewidth',2)
+plot(SOpower_times/3600,SOpower_norm,'linewidth',2)
 xlim(time_range/3600)
 min_SOP = min(SOpower_norm);
 max_SOP = max(SOpower_norm);
@@ -247,9 +247,8 @@ set(th,'fontsize',15)
 %% PRINT OUTPUT
 if save_output_image
     %Output filename
-    if isempty(output_fname)
+    if isempty(output_fname) %#ok<UNRCH>
         output_fname = 'TFpeakDynamics.png'
     end
     print(fh,'-dpng','-r200',output_fname);
 end
-
