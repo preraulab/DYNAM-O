@@ -1,5 +1,5 @@
 function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds, SOpower, SOpower_times] = SOpowerHistogram(v1,v2,varargin)
-% SOPOWERHISTOGRAM computes slow-oscillation power matrix
+% SOPOWERHISTOGRAM computes slow-oscillation power histogram matrix
 % Usage:
 %   [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds] = ...
 %                                 SOpowerHistogram(EEG, Fs, TFpeak_times, TFpeak_freqs, <options>)
@@ -9,8 +9,8 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_n
 %       EEG: 1xN double - timeseries EEG data --required
 %       Fs: numerical - sampling frequency of EEG (Hz) --required
 %                   OR
-%       SOpower: 1xN double - timeseries SO power data --required
-%       SOpower_times: 1xN double - timeseries SO power times --required
+%       SOpower: 1xM double - timeseries SO power data --required
+%       SOpower_times: 1xM double - timeseries SO power times --required
 %
 %       TFpeak_freqs: Px1 - frequency each TF peak occurs (Hz) --required
 %       TFpeak_times: Px1 - times each TF peak occurs (s) --required
@@ -47,7 +47,7 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_n
 %                                  be NaN. Default = 1.
 %       EEG_times: 1xN double - times for each EEG sample. Default = (0:length(EEG)-1)/Fs
 %       time_range: 1x2 double - min and max times for which to include TFpeaks. Also used to normalize
-%                   SO power. Default = [EEG_times(1), EEG_times(end)]
+%                   SOpower. Default = [EEG_times(1), EEG_times(end)]
 %       isexcluded: 1xN logical - marks each timestep of EEG as artifact or non-artifact. Default = all false.
 %
 %       plot_on: logical - SO power histogram plots. Default = false
@@ -99,11 +99,11 @@ p = inputParser;
 addRequired(p, 'TFpeak_freqs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addRequired(p, 'TFpeak_times', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 
-addOptional(p, 'TFpeak_stages',[], @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
+addOptional(p, 'TFpeak_stages', [], @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
 
 %Stage info
 addOptional(p, 'stage_vals', [], @(x) validateattributes(x, {'double', 'single'}, {'real'}));
-addOptional(p, 'stage_times',[], @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
+addOptional(p, 'stage_times', [], @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
 
 %SOPH settings
 addOptional(p, 'freq_range', [0,40], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
@@ -135,13 +135,7 @@ eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 
 %Handle EEG/Fs input
 if ~isempty(EEG)
-    if isempty(isexcluded) %#ok<*NODEF>
-        isexcluded = false(size(EEG,2),1);
-    else
-        assert(length(isexcluded) == size(EEG,2),'isexcluded must be the same length as EEG');
-    end
-
-    if isempty(EEG_times)
+    if isempty(EEG_times) %#ok<*NODEF>
         EEG_times = (0:length(EEG)-1)/Fs;
     else
         assert(length(EEG_times) == size(EEG,2), 'EEG_times must be the same length as EEG');
@@ -151,6 +145,12 @@ if ~isempty(EEG)
         time_range = [min(EEG_times), max(EEG_times)];
     else
         assert( (time_range(1) >= min(EEG_times)) & (time_range(2) <= max(EEG_times) ), 'lightsonoff_times cannot be outside of the time range described by "EEG_times"');
+    end
+    
+    if isempty(isexcluded)
+        isexcluded = false(size(EEG,2),1);
+    else
+        assert(length(isexcluded) == size(EEG,2),'isexcluded must be the same length as EEG');
     end
     
 %Handle SOpower/SOpower_times input
