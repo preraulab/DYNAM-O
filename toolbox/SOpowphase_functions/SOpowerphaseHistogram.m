@@ -1,0 +1,172 @@
+function [SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, peak_SOpower, peak_SOphase, peak_selection_inds, SOpower, SOpower_times, SOphase, SOphase_times] = SOpowerphaseHistogram(EEG,Fs,varargin)
+% SOPOWERPHASEHISTOGRAM computes slow-oscillation power and phase histogram matrices
+% Usage:
+%   [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds] = ...
+%                                 SOpowerphaseHistogram(EEG, Fs, TFpeak_times, TFpeak_freqs, <options>)
+%
+%  Inputs:
+%   REQUIRED:
+%       EEG: 1xN double - timeseries EEG data --required
+%       Fs: numerical - sampling frequency of EEG (Hz) --required
+%       TFpeak_freqs: Px1 - frequency each TF peak occurs (Hz) --required
+%       TFpeak_times: Px1 - times each TF peak occurs (s) --required
+%
+%   OPTIONAL:
+%       TFpeak_stages: Px1 - sleep stage each TF peak occurs 5=W,4=R,3=N1,2=N2,1=N3
+%       stage_vales: 1xS double - numeric stage values 5=W,4=R,3=N1,2=N2,1=N3
+%       stage_times: 1xS double - stage times
+%       freq_range: 1x2 double - min and max frequencies of TF peak to include in the histograms
+%                   (Hz). Default = [0,40]
+%       freq_binsizestep: 1x2 double - [size, step] frequency bin size and bin step for frequency
+%                         axis of SO power/phase histograms (Hz). Default = [1, 0.2]
+%       SO_freqrange: 1x2 double - min and max frequencies (Hz) considered to be "slow oscillation".
+%                     Default = [0.3, 1.5]
+%       SOPH_stages: stages in which to restrict the SOPHs. Default: 1:3 (NREM only)
+%                    W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
+%       compute_rate: logical - histogram output in terms of TFpeaks/min instead of count. 
+%                               Default = true.
+%       SOpower_outlier_threshold: double - cutoff threshold in standard deviation for excluding outlier SOpower values. 
+%                                  Default = 3. 
+%       SOpower_norm_method: char - normalization method for SOpower. Options:'pNshiftS', 'percent', 'proportion', 'none'. Default: 'p2shift1234'
+%                         For shift, it follows the format pNshiftS where N is the percentile and S is the list of stages (5=W,4=R,3=N1,2=N2,1=N3).
+%                         (e.g. p2shift1234 = use the 2nd percentile of stages N3, N2, N1, and REM,
+%                               p5shift123 = use the 5th percentile of stages N3, N2 and N1)%
+%       SOpower_min_time_in_bin: numerical - time (minutes) required in each SO power bin to include
+%                                  in SOpower analysis. Otherwise all values in that SO power bin will
+%                                  be NaN. Default = 1.
+%       SOphase_filter: 1xF double - custom filter that will be used to estimate SOphase
+%       EEG_times: 1xN double - times for each EEG sample. Default = (0:length(EEG)-1)/Fs
+%       time_range: 1x2 double - min and max times for which to include TFpeaks. Also used to normalize
+%                   SOpower. Default = [EEG_times(1), EEG_times(end)]
+%       isexcluded: 1xN logical - marks each timestep of EEG as artifact or non-artifact. Default = all false.
+%
+%       plot_on: logical - SO power histogram plots. Default = false
+%       verbose: logical - Verbose output. Default = true
+%
+%  Outputs:
+%       SOpow_mat:    2D double - SO power histogram data
+%       SOphase_mat:  2D double - SO phase histogram data
+%       SOpow_bins:   1D double - SO power bin center values for dimension 1 of SOpow_mat
+%       SOphase_bins: 1D double - SO phase bin center values for dimension 1 of SOphase_mat
+%       freq_bins:    1D double - frequency bin center values for dimension 2
+%                     of SOpow_mat and SOphase_mat
+%       peak_SOpower: 1xP double - normalized slow oscillation power at each TFpeak
+%       peak_SOphase: 1xP double - slow oscillation phase at each TFpeak
+%       peak_selection_inds: 1xP logical - which TFpeaks are valid given the isexcluded and stage_exclusion
+%       SOpower: 1xM double - timeseries SO power data --required
+%       SOpower_times: 1xM double - timeseries SO power times --required
+%       SOphase: 1xN double - timeseries SO phase data
+%       SOphase_times: 1xN double - timeseries SO phase times
+%
+%   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
+%   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
+%   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
+%
+%   Please provide the following citation for all use:
+%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
+%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification,
+%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%**********************************************************************
+
+%% Parse input
+
+p = inputParser;
+
+%TF-peak info
+addRequired(p, 'TFpeak_freqs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
+addRequired(p, 'TFpeak_times', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
+
+addOptional(p, 'TFpeak_stages', [], @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
+
+%Stage info
+addOptional(p, 'stage_vals', [], @(x) validateattributes(x, {'double', 'single'}, {'real'}));
+addOptional(p, 'stage_times', [], @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
+
+%SOPH settings
+addOptional(p, 'freq_range', [0,40], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
+addOptional(p, 'freq_binsizestep', [1, 0.2], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
+addOptional(p, 'SO_freqrange', [0.3, 1.5], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan'}));
+addOptional(p, 'SOPH_stages', 1:3, @(x) validateattributes(x, {'numeric', 'vector'}, {'real'})); % W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
+addOptional(p, 'compute_rate', true, @(x) validateattributes(x,{'logical'},{}));
+
+addOptional(p, 'SOpower_outlier_threshold', 3, @(x) validateattributes(x,{'numeric'},{'scalar'}));
+addOptional(p, 'SOpower_norm_method', 'p2shift1234', @(x) validateattributes(x, {'char', 'numeric'},{}));
+addOptional(p, 'SOpower_min_time_in_bin', 1, @(x) validateattributes(x,{'numeric'},{'scalar','real','finite','nonnan','nonnegative','integer'}));
+
+addOptional(p, 'SOphase_filter', []);
+
+%EEG time settings
+addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
+addOptional(p, 'time_range', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
+addOptional(p, 'isexcluded', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
+
+addOptional(p, 'plot_on', false, @(x) validateattributes(x,{'logical'},{}));
+addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{}));
+
+parse(p,varargin{:});
+parser_results = struct2cell(p.Results); %#ok<NASGU>
+field_names = fieldnames(p.Results);
+
+eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
+
+%Handle EEG/Fs input
+if ~isempty(EEG)
+    if isempty(EEG_times) %#ok<*NODEF>
+        EEG_times = (0:length(EEG)-1)/Fs;
+    else
+        assert(length(EEG_times) == size(EEG,2), 'EEG_times must be the same length as EEG');
+    end
+
+    if isempty(time_range)
+        time_range = [min(EEG_times), max(EEG_times)];
+    else
+        assert( (time_range(1) >= min(EEG_times)) & (time_range(2) <= max(EEG_times) ), 'lightsonoff_times cannot be outside of the time range described by "EEG_times"');
+    end
+    
+    if isempty(isexcluded)
+        isexcluded = false(size(EEG,2),1);
+    else
+        assert(length(isexcluded) == size(EEG,2),'isexcluded must be the same length as EEG');
+    end
+end
+
+%% Compute SO-power and SO-phase
+[SOpower, SOpower_times] = computeSOpower(EEG, Fs, time_range, isexcluded, EEG_times, SOpower_norm_method, SO_freqrange, stage_vals, stage_times, SOpower_outlier_threshold);
+[SOphase, SOphase_times] = computeSOphase(EEG, Fs, isexcluded, EEG_times, SOphase_filter, SO_freqrange, stage_vals, stage_times);
+
+% mask using the continuous metric with coarser resolution, in this case SOpower
+SOphase(isnan(interp1(SOpower_times, SOpower, SOphase_times))) = nan;
+
+% To use a custom precomputed SO phase filter, use the SOphase_filter argument
+% custom_SOphase_filter = designfilt('bandpassfir', 'StopbandFrequency1', 0.1, 'PassbandFrequency1', 0.4, ...
+%                        'PassbandFrequency2', 1.75, 'StopbandFrequency2', 2.05, 'StopbandAttenuation1', 60, ...
+%                        'PassbandRipple', 1, 'StopbandAttenuation2', 60, 'SampleRate', 256);
+
+%% Compute SO-power histogram
+if verbose
+    disp('Computing SO-power histogram...');
+end
+
+[SOpow_mat, freq_bins, SOpow_bins, ~, ~, peak_SOpower, hist_peakidx_SOpower, SOpower, SOpower_times] =...
+    SOpowerHistogram(SOpower, SOpower_times, TFpeak_freqs, TFpeak_times,...
+    'TFpeak_stages', TFpeak_stages, 'stage_vals', single(stage_vals), 'stage_times', stage_times,...
+    'freq_range', freq_range, 'freq_binsizestep', freq_binsizestep, 'SO_freqrange', SO_freqrange, 'SOPH_stages', SOPH_stages, 'compute_rate', compute_rate,...
+    'min_time_in_bin', SOpower_min_time_in_bin, 'plot_on', plot_on, 'verbose', verbose);
+
+%% Compute SO-phase histogram
+if verbose
+    disp('Computing SO-phase histogram...');
+end
+
+[SOphase_mat, ~, SOphase_bins, ~, ~, peak_SOphase, hist_peakidx_SOphase, SOphase, SOphase_times] =...
+    SOphaseHistogram(SOphase, SOphase_times, TFpeak_freqs, TFpeak_times,...
+    'TFpeak_stages', TFpeak_stages, 'stage_vals', single(stage_vals), 'stage_times', stage_times,...
+    'freq_range', freq_range, 'freq_binsizestep', freq_binsizestep, 'SO_freqrange', SO_freqrange, 'SOPH_stages', SOPH_stages, 'compute_rate', compute_rate,...
+    'plot_on', plot_on, 'verbose', verbose);
+
+%% Verify that the same TF peaks are included in the two histograms 
+assert(all(hist_peakidx_SOpower == hist_peakidx_SOphase), 'SOpower and SOphase histograms used different TF peaks.')
+peak_selection_inds = hist_peakidx_SOpower;
+
+end
