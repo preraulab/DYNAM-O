@@ -16,6 +16,7 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_n
 %       TFpeak_times: Px1 - times each TF peak occurs (s) --required
 %
 %   OPTIONAL:
+%       TFpeak_stages: Px1 - sleep stage each TF peak occurs 5=W,4=R,3=N1,2=N2,1=N3
 %       stage_vales: 1xS double - numeric stage values 5=W,4=R,3=N1,2=N2,1=N3
 %       stage_times: 1xS double - stage times
 %       freq_range: 1x2 double - min and max frequencies of TF peak to include in the histogram
@@ -30,18 +31,20 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_n
 %                            (SO_range(2)-SOrange(1))/100
 %       SO_freqrange: 1x2 double - min and max frequencies (Hz) considered to be "slow oscillation".
 %                     Default = [0.3, 1.5]
-%       norm_method: char - normalization method for SO-power. Options:'pNshiftS', 'percent', 'proportion', 'none'. Default: 'p2shift1234'
-%                         For shift, it follows the format pNshiftS where N is the percentile and S is the list of stages (5=W,4=R,3=N1,2=N2,1=N3).
-%                         (e.g. p2shift1234 = use the second percentile of stages N3, N2, N1, and REM,
-%                           p5shift123 = use the 5th percentile of stages N3, N2 and N1)
 %       SOPH_stages: stages in which to restrict the SOPH. Default: 1:3 (NREM only)
 %                    W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
-%       min_time_in_bin: numerical - time (minutes) required in each SO power bin to include
-%                              in SO power analysis. Otherwise all values in that SO power bin will
-%                              be NaN. Default = 1.
 %       norm_dim: double - histogram dimension to normalize, not related to norm_method (default: 0 = no normalization)
-%       compute_rate: logical - histogram output in terms of TFpeaks/min instead of count. Default = true.
-%
+%       compute_rate: logical - histogram output in terms of TFpeaks/min instead of count. 
+%                               Default = true.
+%       SOpower_outlier_threshold: double - cutoff threshold in standard deviation for excluding outlier SOpower values. 
+%                                  Default = 3. 
+%       norm_method: char - normalization method for SOpower. Options:'pNshiftS', 'percent', 'proportion', 'none'. Default: 'p2shift1234'
+%                         For shift, it follows the format pNshiftS where N is the percentile and S is the list of stages (5=W,4=R,3=N1,2=N2,1=N3).
+%                         (e.g. p2shift1234 = use the 2nd percentile of stages N3, N2, N1, and REM,
+%                               p5shift123 = use the 5th percentile of stages N3, N2 and N1)%
+%       min_time_in_bin: numerical - time (minutes) required in each SO power bin to include
+%                                  in SOpower analysis. Otherwise all values in that SO power bin will
+%                                  be NaN. Default = 1.
 %       EEG_times: 1xN double - times for each EEG sample. Default = (0:length(EEG)-1)/Fs
 %       time_range: 1x2 double - min and max times for which to include TFpeaks. Also used to normalize
 %                   SO power. Default = [EEG_times(1), EEG_times(end)]
@@ -170,11 +173,12 @@ else % Compute the normalized SOpower
     [SOpower, SOpower_times, SOpower_stages, norm_method] = computeSOpower(EEG, Fs, time_range, isexcluded, EEG_times, norm_method, SO_freqrange, stage_vals, stage_times, SOpower_outlier_threshold);
 end
 
-% Get SOpower times step size
+% Get SOpower_times step size
 SOpower_times_step = SOpower_times(2) - SOpower_times(1);
 
-% Obtain SOpower at peak time points
-peak_SOpower_norm = interp1(SOpower_times, SOpower, TFpeak_times);
+% Interpolate SOpower to peak time points
+peak_SOpower_norm = interp1([SOpower_times(1)-SOpower_times_step, SOpower_times, SOpower_times(end)+SOpower_times_step],...
+    [SOpower(1), SOpower, SOpower(end)], TFpeak_times);
 
 %% Get valid peak indices
 % Compute TF-peak stages if not included

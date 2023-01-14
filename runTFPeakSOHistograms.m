@@ -24,6 +24,8 @@ function [stats_table, hist_peakidx, SOpow_mat, SOphase_mat, SOpow_bins, SOphase
 %       lightsonoff_mins (opt):    double - minutes before first non-wake
 %                                  stage and after last non-wake stage to include in watershed
 %                                  baseline removal. Default = 5
+%       SO_freqrange (opt):        [1x2] double - min and max frequencies (Hz) considered to be "slow oscillation".
+%                                  Default = [0.3, 1.5]
 %       SOpower_norm_method (opt): character - normalization method for SO-power
 %                                  Options: 'p5shift'(default), 'percent', 'proportion', 'none'
 %       verbose (opt):             logical - display extra info. Default = true
@@ -75,6 +77,7 @@ addOptional(p, 'downsample_spect', [],  @(x) validateattributes(x,{'numeric', 'v
 addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'struct'},{}));
 addOptional(p, 'stages_include', [1,2,3,4], @(x) validateattributes(x,{'numeric', 'vector'}, {'real', 'nonempty'}))
 addOptional(p, 'lightsonoff_mins', 5, @(x) validateattributes(x,{'numeric'},{'real','nonempty', 'nonnan'}));
+addOptional(p, 'SO_freqrange', [0.3, 1.5], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan'}));
 addOptional(p, 'SOpower_norm_method', 'p5shift', @(x) validateattributes(x, {'char', 'numeric'},{}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'quality_setting', 'fast', @(x) validateattributes(x,{'char','numeric'},{}));
@@ -223,6 +226,13 @@ stats_table.PeakStage(logical(interp1(t_data, double(artifacts), stats_table.Pea
 stats_table.Properties.VariableDescriptions{'PeakStage'} = 'Stage: 6 = Artifact, 5 = W, 4 = R, 3 = N1, 2 = N2, 1 = N3, 0 = Unknown';
 stats_table.Properties.VariableUnits{'PeakStage'} = 'Stage #';
 
+%% Compute SO-power and SO-phase
+[SOpower, SOpower_times] = computeSOpower(data, Fs, [], artifacts, t_data, SOpower_norm_method, SO_freqrange, single(stage_vals), stage_times);
+[SOphase, SOphase_times] = computeSOphase(data, Fs, artifacts, t_data, [], SO_freqrange, single(stage_vals), stage_times);
+
+% mask by the continuous metric with coarser resolution, in this case SOpower
+SOphase(isnan(interp1(SOpower_times, SOpower, SOphase_times))) = nan;
+
 %% Compute SO-power histogram
 if verbose
     disp('Computing SO-power histogram...');
@@ -230,9 +240,8 @@ end
 
 % use (...,'plot_flag', true) to plot directly from this function call
 [SOpow_mat, freq_bins, SOpow_bins, ~, ~, stats_table.SOpower, hist_peakidx, SOpower_norm, SOpower_times] =...
-    SOpowerHistogram(data, Fs, stats_table.PeakFrequency, stats_table.PeakTime,...
-    'norm_method', SOpower_norm_method, 'stage_vals', single(stage_vals), 'stage_times', stage_times,...
-    'EEG_times', t_data, 'SOPH_stages', stages_include, 'isexcluded', artifacts);
+    SOpowerHistogram(SOpower, SOpower_times, stats_table.PeakFrequency, stats_table.PeakTime,...
+    'stage_vals', single(stage_vals), 'stage_times', stage_times, 'SOPH_stages', stages_include);
 
 stats_table.Properties.VariableDescriptions{'SOpower'} = 'Slow-oscillation power at peak time';
 switch SOpower_norm_method
@@ -253,12 +262,14 @@ if verbose
 end
 
 % use (..., 'plot_flag', true) to plot directly from this function call
-[SOphase_mat, ~, SOphase_bins, ~, ~, stats_table.SOphase] = SOphaseHistogram(data, Fs,...
-     stats_table.PeakFrequency, stats_table.PeakTime, 'stage_vals', single(stage_vals), 'stage_times', stage_times,...
-    'EEG_times', t_data, 'SOPH_stages', stages_include, 'isexcluded', artifacts);
+[SOphase_mat, ~, SOphase_bins, ~, ~, stats_table.SOphase, hist_peakidx_SOphase] =...
+    SOphaseHistogram(SOphase, SOphase_times, stats_table.PeakFrequency, stats_table.PeakTime,...
+    'stage_vals', single(stage_vals), 'stage_times', stage_times, 'SOPH_stages', stages_include);
 
 stats_table.Properties.VariableDescriptions{'SOphase'} = 'Slow-oscillation phase at peak time';
 stats_table.Properties.VariableUnits{'SOphase'} = 'rad';
+
+assert(all(hist_peakidx == hist_peakidx_SOphase), 'SOpower and SOphase histograms used different TF peaks.')
 
 % To use a custom precomputed SO phase filter, use the SOphase_filter argument
 % custom_SOphase_filter = designfilt('bandpassfir', 'StopbandFrequency1', 0.1, 'PassbandFrequency1', 0.4, ...

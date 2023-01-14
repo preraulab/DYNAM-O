@@ -4,6 +4,12 @@ if ~exist('SOpower_outlier_threshold', 'var') || isempty(SOpower_outlier_thresho
     SOpower_outlier_threshold = 3;
 end
 
+if isempty(time_range)
+    time_range = [min(EEG_times), max(EEG_times)];
+else
+    assert( (time_range(1) >= min(EEG_times)) & (time_range(2) <= max(EEG_times) ), 'lightsonoff_times cannot be outside of the time range described by "EEG_times"');
+end
+
 % Replace artifact timepoints with NaNs
 nanEEG = EEG;
 nanEEG(isexcluded) = nan;

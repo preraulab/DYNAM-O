@@ -16,6 +16,7 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOphase, 
 %       TFpeak_times: Px1 - times each TF peak occurs (s) --required
 %
 %   OPTIONAL:
+%       TFpeak_stages: Px1 - sleep stage each TF peak occurs 5=W,4=R,3=N1,2=N2,1=N3
 %       stage_vales: 1xS double - numeric stage values 5=W,4=R,3=N1,2=N2,1=N3
 %       stage_times: 1xS double - stage times
 %       freq_range: 1x2 double - min and max frequencies of TF peak to include in the histogram
@@ -30,12 +31,12 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOphase, 
 %                            (SO_range(2)-SOrange(1))/100
 %       SO_freqrange: 1x2 double - min and max frequencies (Hz) considered to be "slow oscillation".
 %                     Default = [0.3, 1.5]
-%       SOphase_filter: 1xF double - custom filter that will be used to estimate SO phase
 %       SOPH_stages: stages in which to restrict the SOPH. Default: 1:3 (NREM only)
 %                    W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
 %       norm_dim: double - histogram dimension to normalize (default: 1 = normalize across each frequency)
-%       compute_rate: logical - histogram output in terms of TFpeaks/min instead of count. Default = true.
-%
+%       compute_rate: logical - histogram output in terms of TFpeaks/min instead of count. 
+%                               Default = true.
+%       SOphase_filter: 1xF double - custom filter that will be used to estimate SO phase
 %       EEG_times: 1xN double - times for each EEG sample. Default = (0:length(EEG)-1)/Fs
 %       time_range: 1x2 double - min and max times for which to include TFpeaks.
 %                                Default = [EEG_times(1), EEG_times(end)]
@@ -164,11 +165,12 @@ else % Compute the SOphase
     [SOphase, SOphase_times, SOphase_stages] = computeSOphase(EEG, Fs, isexcluded, EEG_times, SOphase_filter, SO_freqrange, stage_vals, stage_times);
 end
 
-% Get SOphase times step size
+% Get SOphase_times step size
 SOphase_times_step = SOphase_times(2) - SOphase_times(1);
 
-% Obtain SOphase at peak time points
-peak_SOphase = interp1(SOphase_times, SOphase, TFpeak_times);
+% Interpolate SOphase to peak time points
+peak_SOphase = interp1([SOphase_times(1)-SOphase_times_step, SOphase_times, SOphase_times(end)+SOphase_times_step],...
+    [SOphase(1), SOphase, SOphase(end)], TFpeak_times);
 
 % Re-wrap phases to be between -pi and pi
 peak_SOphase = mod(peak_SOphase, 2*pi) - pi;
