@@ -53,7 +53,9 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOphase, 
 %       prop_in_bin: 1xT - proportion of total time (all stages) in each bin spent in
 %                          the selected stages
 %       peak_SOphase: 1xP double - slow oscillation phase at each TFpeak
-%       peak_selection_inds: 1xP logical - which TFpeaks are valid given the isexcluded and stage_exclusion
+%       peak_selection_inds: 1xP logical - which TFpeaks are counted in the histogram
+%       SOphase: 1xN double - timeseries SO phase data
+%       SOphase_times: 1xN double - timeseries SO phase times
 %
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
@@ -87,10 +89,9 @@ end
 
 p = inputParser;
 
-%TF-peak info
+%TFpeak info
 addRequired(p, 'TFpeak_freqs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addRequired(p, 'TFpeak_times', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-
 addOptional(p, 'TFpeak_stages', [], @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
 
 %Stage info
@@ -107,6 +108,7 @@ addOptional(p, 'SOPH_stages', 1:3, @(x) validateattributes(x, {'numeric', 'vecto
 addOptional(p, 'norm_dim', 1, @(x) validateattributes(x,{'numeric'},{'scalar'}));
 addOptional(p, 'compute_rate', true, @(x) validateattributes(x,{'logical'},{}));
 
+%SOphase specific settings
 addOptional(p, 'SOphase_filter', []);
 
 %EEG time settings
@@ -114,6 +116,7 @@ addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric', 'vector'}
 addOptional(p, 'time_range', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'isexcluded', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
 
+%Display settings
 addOptional(p, 'plot_on', false, @(x) validateattributes(x,{'logical'},{}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{}));
 
