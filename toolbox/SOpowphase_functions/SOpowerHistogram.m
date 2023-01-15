@@ -1,4 +1,4 @@
-function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds, SOpower, SOpower_times] = SOpowerHistogram(v1,v2,varargin)
+function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower, peak_selection_inds, SOpower, SOpower_times] = SOpowerHistogram(v1,v2,varargin)
 % SOPOWERHISTOGRAM computes slow-oscillation power histogram matrix
 % Usage:
 %   [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds] = ...
@@ -60,8 +60,10 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_n
 %       time_in_bin: 1xT double - minutes spent in each power bin for all selected stages
 %       prop_in_bin: 1xT double - proportion of total time (all stages) in each bin spent in
 %                          the selected stages
-%       peak_SOpower_norm: 1xP double - normalized slow oscillation power at each TFpeak
-%       peak_selection_inds: 1xP logical - which TFpeaks are valid given the isexcluded and stage_exclusion
+%       peak_SOpower: 1xP double - normalized slow oscillation power at each TFpeak
+%       peak_selection_inds: 1xP logical - which TFpeaks are counted in the histogram
+%       SOpower: 1xM double - timeseries SO power data
+%       SOpower_times: 1xM double - timeseries SO power times
 %
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
@@ -95,10 +97,9 @@ end
 
 p = inputParser;
 
-%TF-peak info
+%TFpeak info
 addRequired(p, 'TFpeak_freqs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addRequired(p, 'TFpeak_times', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-
 addOptional(p, 'TFpeak_stages', [], @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
 
 %Stage info
@@ -115,6 +116,7 @@ addOptional(p, 'SOPH_stages', 1:3, @(x) validateattributes(x, {'numeric', 'vecto
 addOptional(p, 'norm_dim', 0, @(x) validateattributes(x,{'numeric'},{'scalar'}));
 addOptional(p, 'compute_rate', true, @(x) validateattributes(x,{'logical'},{}));
 
+%SOpower specific settings
 addOptional(p, 'SOpower_outlier_threshold', 3, @(x) validateattributes(x,{'numeric'},{'scalar'}));
 addOptional(p, 'norm_method', 'p2shift1234', @(x) validateattributes(x, {'char', 'numeric'},{}));
 addOptional(p, 'min_time_in_bin', 1, @(x) validateattributes(x,{'numeric'},{'scalar','real','finite','nonnan','nonnegative','integer'}));
@@ -124,6 +126,7 @@ addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric', 'vector'}
 addOptional(p, 'time_range', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'isexcluded', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
 
+%Display settings
 addOptional(p, 'plot_on', false, @(x) validateattributes(x,{'logical'},{}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{}));
 
@@ -168,7 +171,7 @@ end
 %% Compute SO power
 if ~isempty(SOpower) % SOpower is directly provided
     assert(~isempty(SOpower_times), 'SOpower input only but no SOpower_times received.')
-    norm_method = 'SOpower direct input';
+    norm_method = 'direct SOpower input';
 else % Compute the normalized SOpower
     [SOpower, SOpower_times, SOpower_stages, norm_method] = computeSOpower(EEG, Fs, time_range, isexcluded, EEG_times, norm_method, SO_freqrange, stage_vals, stage_times, SOpower_outlier_threshold);
 end
@@ -177,7 +180,7 @@ end
 SOpower_times_step = SOpower_times(2) - SOpower_times(1);
 
 % Interpolate SOpower to peak time points
-peak_SOpower_norm = interp1([SOpower_times(1)-SOpower_times_step, SOpower_times, SOpower_times(end)+SOpower_times_step],...
+peak_SOpower = interp1([SOpower_times(1)-SOpower_times_step, SOpower_times, SOpower_times(end)+SOpower_times_step],...
     [SOpower(1), SOpower, SOpower(end)], TFpeak_times);
 
 %% Get valid peak indices
@@ -192,7 +195,7 @@ if ~isempty(TFpeak_stages)
 else
     stage_inds_peaks = true(size(TFpeak_times));
 end
-nanSOpower_inds_peaks = ~isnan(peak_SOpower_norm);
+nanSOpower_inds_peaks = ~isnan(peak_SOpower);
 timerange_inds_peaks = TFpeak_times>=time_range(1) & TFpeak_times<=time_range(2);
 peak_selection_inds = stage_inds_peaks & nanSOpower_inds_peaks & timerange_inds_peaks;
 
@@ -225,7 +228,7 @@ if isempty(SO_binsizestep)
 end
 
 [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin] = TFpeakHistogram(SOpower, SOpower_stages, SOpower_times_step, SOpower_valid,...
-    SOpower_valid_allstages, TFpeak_freqs(peak_selection_inds), peak_SOpower_norm(peak_selection_inds),...
+    SOpower_valid_allstages, TFpeak_freqs(peak_selection_inds), peak_SOpower(peak_selection_inds),...
     'norm_method', norm_method, 'min_time_in_bin', min_time_in_bin,... # specific to SOpower histogram
     'Cmetric_label', 'SO-Power', 'C_range', SO_range, 'C_binsizestep', SO_binsizestep, 'freq_range', freq_range, 'freq_binsizestep', freq_binsizestep,...
     'norm_dim', norm_dim, 'compute_rate', compute_rate, 'plot_on', plot_on, 'xlabel_text', 'SO Power (normalized)', 'verbose', verbose);
