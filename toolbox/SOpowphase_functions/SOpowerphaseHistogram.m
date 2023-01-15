@@ -135,7 +135,8 @@ end
 [SOphase, SOphase_times] = computeSOphase(EEG, Fs, isexcluded, EEG_times, SOphase_filter, SO_freqrange, stage_vals, stage_times);
 
 % mask SOphase with SOpower nan values to use the same periods in the histograms
-SOphase(isnan(interp1(SOpower_times, SOpower, SOphase_times))) = nan;
+SOpower_times_step = SOpower_times(2) - SOpower_times(1);
+SOphase(isnan(interp1([SOpower_times(1)-SOpower_times_step, SOpower_times, SOpower_times(end)+SOpower_times_step], [SOpower(1), SOpower, SOpower(end)], SOphase_times))) = nan;
 
 % To use a custom precomputed SO phase filter, use the SOphase_filter argument
 % custom_SOphase_filter = designfilt('bandpassfir', 'StopbandFrequency1', 0.1, 'PassbandFrequency1', 0.4, ...
