@@ -48,7 +48,7 @@ function [stats_table, hist_peakidx, SOpow_mat, SOphase_mat, SOpow_bins, SOphase
 %       sfreqs:       1D double - frequency bin center values for dimension 1 of
 %                     spect
 %       SOpower_norm: 1D double - normalized SO-power used to compute histogram
-%       SOpower_times:  1D double - SO-power times
+%       SOpower_times:1D double - SO-power times
 %
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.

@@ -32,8 +32,8 @@ function [SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, peak_SOpo
 %                         (e.g. p2shift1234 = use the 2nd percentile of stages N3, N2, N1, and REM,
 %                               p5shift123 = use the 5th percentile of stages N3, N2 and N1)%
 %       SOpower_min_time_in_bin: numerical - time (minutes) required in each SO power bin to include
-%                                  in SOpower analysis. Otherwise all values in that SO power bin will
-%                                  be NaN. Default = 1.
+%                                          in SOpower analysis. Otherwise all values in that SO power bin will
+%                                          be NaN. Default = 1.
 %       SOphase_filter: 1xF double - custom filter that will be used to estimate SOphase
 %       EEG_times: 1xN double - times for each EEG sample. Default = (0:length(EEG)-1)/Fs
 %       time_range: 1x2 double - min and max times for which to include TFpeaks. Also used to normalize
@@ -52,9 +52,9 @@ function [SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, peak_SOpo
 %                     of SOpow_mat and SOphase_mat
 %       peak_SOpower: 1xP double - normalized slow oscillation power at each TFpeak
 %       peak_SOphase: 1xP double - slow oscillation phase at each TFpeak
-%       peak_selection_inds: 1xP logical - which TFpeaks are valid given the isexcluded and stage_exclusion
-%       SOpower: 1xM double - timeseries SO power data --required
-%       SOpower_times: 1xM double - timeseries SO power times --required
+%       peak_selection_inds: 1xP logical - which TFpeaks are counted in the histogram
+%       SOpower: 1xM double - timeseries SO power data
+%       SOpower_times: 1xM double - timeseries SO power times
 %       SOphase: 1xN double - timeseries SO phase data
 %       SOphase_times: 1xN double - timeseries SO phase times
 %
@@ -73,10 +73,9 @@ function [SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, peak_SOpo
 
 p = inputParser;
 
-%TF-peak info
+%TFpeak info
 addRequired(p, 'TFpeak_freqs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addRequired(p, 'TFpeak_times', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-
 addOptional(p, 'TFpeak_stages', [], @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
 
 %Stage info
@@ -90,10 +89,10 @@ addOptional(p, 'SO_freqrange', [0.3, 1.5], @(x) validateattributes(x, {'numeric'
 addOptional(p, 'SOPH_stages', 1:3, @(x) validateattributes(x, {'numeric', 'vector'}, {'real'})); % W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
 addOptional(p, 'compute_rate', true, @(x) validateattributes(x,{'logical'},{}));
 
+%SOpower/phase specific settings
 addOptional(p, 'SOpower_outlier_threshold', 3, @(x) validateattributes(x,{'numeric'},{'scalar'}));
 addOptional(p, 'SOpower_norm_method', 'p2shift1234', @(x) validateattributes(x, {'char', 'numeric'},{}));
 addOptional(p, 'SOpower_min_time_in_bin', 1, @(x) validateattributes(x,{'numeric'},{'scalar','real','finite','nonnan','nonnegative','integer'}));
-
 addOptional(p, 'SOphase_filter', []);
 
 %EEG time settings
@@ -101,6 +100,7 @@ addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric', 'vector'}
 addOptional(p, 'time_range', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'isexcluded', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
 
+%Display settings
 addOptional(p, 'plot_on', false, @(x) validateattributes(x,{'logical'},{}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{}));
 
@@ -110,7 +110,6 @@ field_names = fieldnames(p.Results);
 
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 
-%Handle EEG/Fs input
 if ~isempty(EEG)
     if isempty(EEG_times) %#ok<*NODEF>
         EEG_times = (0:length(EEG)-1)/Fs;
@@ -135,7 +134,7 @@ end
 [SOpower, SOpower_times] = computeSOpower(EEG, Fs, time_range, isexcluded, EEG_times, SOpower_norm_method, SO_freqrange, stage_vals, stage_times, SOpower_outlier_threshold);
 [SOphase, SOphase_times] = computeSOphase(EEG, Fs, isexcluded, EEG_times, SOphase_filter, SO_freqrange, stage_vals, stage_times);
 
-% mask using the continuous metric with coarser resolution, in this case SOpower
+% mask SOphase with SOpower nan values to use the same periods in the histograms
 SOphase(isnan(interp1(SOpower_times, SOpower, SOphase_times))) = nan;
 
 % To use a custom precomputed SO phase filter, use the SOphase_filter argument
@@ -166,7 +165,7 @@ end
     'plot_on', plot_on, 'verbose', verbose);
 
 %% Verify that the same TF peaks are included in the two histograms 
-assert(all(hist_peakidx_SOpower == hist_peakidx_SOphase), 'SOpower and SOphase histograms used different TF peaks.')
+assert(all(hist_peakidx_SOpower == hist_peakidx_SOphase), 'SOpower and SOphase histograms included different TF peaks.')
 peak_selection_inds = hist_peakidx_SOpower;
 
 end
