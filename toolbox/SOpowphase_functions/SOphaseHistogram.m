@@ -165,7 +165,8 @@ assert(SO_binsizestep(1) < 2*pi, 'SO-phase bin size must be less than 2*pi')
 if ~isempty(SOphase) % SOphase is directly provided
     assert(~isempty(SOphase_times), 'SOphase input only but no SOphase_times received.')
 else % Compute the SOphase
-    [SOphase, SOphase_times, SOphase_stages] = computeSOphase(EEG, Fs, isexcluded, EEG_times, SOphase_filter, SO_freqrange, stage_vals, stage_times);
+    [SOphase, SOphase_times, SOphase_stages] = computeSOphase(EEG, Fs, 'stage_vals', stage_vals, 'stage_times', stage_times,...
+        'SO_freqrange', SO_freqrange, 'SOphase_filter', SOphase_filter, 'EEG_times', EEG_times, 'isexcluded', isexcluded);
 end
 
 % Get SOphase_times step size

@@ -131,8 +131,11 @@ if ~isempty(EEG)
 end
 
 %% Compute SO-power and SO-phase
-[SOpower, SOpower_times] = computeSOpower(EEG, Fs, time_range, isexcluded, EEG_times, SOpower_norm_method, SO_freqrange, stage_vals, stage_times, SOpower_outlier_threshold);
-[SOphase, SOphase_times] = computeSOphase(EEG, Fs, isexcluded, EEG_times, SOphase_filter, SO_freqrange, stage_vals, stage_times);
+[SOpower, SOpower_times] = computeSOpower(EEG, Fs, 'stage_vals', stage_vals, 'stage_times', stage_times,...
+    'SO_freqrange', SO_freqrange, 'SOpower_outlier_threshold', SOpower_outlier_threshold, 'norm_method', SOpower_norm_method,...
+    'EEG_times', EEG_times, 'time_range', time_range, 'isexcluded', isexcluded);
+[SOphase, SOphase_times] = computeSOphase(EEG, Fs, 'stage_vals', stage_vals, 'stage_times', stage_times,...
+    'SO_freqrange', SO_freqrange, 'SOphase_filter', SOphase_filter, 'EEG_times', EEG_times, 'isexcluded', isexcluded);
 
 % mask SOphase with SOpower nan values to use the same periods in the histograms
 SOpower_times_step = SOpower_times(2) - SOpower_times(1);
