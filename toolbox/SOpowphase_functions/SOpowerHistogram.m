@@ -173,7 +173,9 @@ if ~isempty(SOpower) % SOpower is directly provided
     assert(~isempty(SOpower_times), 'SOpower input only but no SOpower_times received.')
     norm_method = 'direct SOpower input';
 else % Compute the normalized SOpower
-    [SOpower, SOpower_times, SOpower_stages, norm_method] = computeSOpower(EEG, Fs, time_range, isexcluded, EEG_times, norm_method, SO_freqrange, stage_vals, stage_times, SOpower_outlier_threshold);
+    [SOpower, SOpower_times, SOpower_stages, norm_method] = computeSOpower(EEG, Fs, 'stage_vals', stage_vals, 'stage_times', stage_times,...
+        'SO_freqrange', SO_freqrange, 'SOpower_outlier_threshold', SOpower_outlier_threshold, 'norm_method', norm_method,...
+        'EEG_times', EEG_times, 'time_range', time_range, 'isexcluded', isexcluded);
 end
 
 % Get SOpower_times step size

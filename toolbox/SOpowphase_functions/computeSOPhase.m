@@ -1,14 +1,42 @@
-function [SOphase, SOphase_times, SOphase_stages] = computeSOphase(EEG, Fs, isexcluded, EEG_times, filter, SO_freqrange, stage_vals, stage_times)
+function [SOphase, SOphase_times, SOphase_stages] = computeSOphase(EEG, Fs, varargin)
 % COMPUTESOPHASE computes slow-oscillation phase
-if ~exist('SO_freqrange', 'var') || isempty(SO_freqrange)
-    SO_freqrange = [0.3, 1.5];
+
+%% Parse input
+%Input Error handling
+p = inputParser;
+
+%Stage info
+addOptional(p, 'stage_vals', [], @(x) validateattributes(x, {'double', 'single'}, {'real'}));
+addOptional(p, 'stage_times', [], @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
+
+%SOphase settings
+addOptional(p, 'SO_freqrange', [0.3, 1.5], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan'}));
+addOptional(p, 'SOphase_filter', []);
+
+%EEG time settings
+addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
+addOptional(p, 'isexcluded', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
+
+parse(p,varargin{:});
+parser_results = struct2cell(p.Results); %#ok<NASGU>
+field_names = fieldnames(p.Results);
+
+eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
+
+if isempty(EEG_times) %#ok<*NODEF>
+    EEG_times = (0:length(EEG)-1)/Fs;
+else
+    assert(length(EEG_times) == size(EEG,2), 'EEG_times must be the same length as EEG');
 end
 
-if ~exist('filter', 'var') || isempty(filter)
-    filter = [];
+if isempty(isexcluded)
+    isexcluded = false(size(EEG,2),1);
+else
+    assert(length(isexcluded) == size(EEG,2),'isexcluded must be the same length as EEG');
 end
 
-if isempty(filter)
+%% Compute SO phase
+if isempty(SOphase_filter)
 
     SOphase_filter_path = 'SOphase_filters.mat';
     filter_name = ['filter_', num2str(Fs), 'Hz_', strrep(num2str(SO_freqrange(1)),'.','dot'), '_', strrep(num2str(SO_freqrange(2)),'.','dot')];
@@ -38,7 +66,7 @@ if isempty(filter)
     end
 
 else
-    d = filter;
+    d = SOphase_filter;
 end
 
 filtdata = filtfilt(d,double(EEG));
