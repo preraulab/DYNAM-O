@@ -1,4 +1,4 @@
-function [C_mat, freq_cbins, C_cbins, time_in_bin, prop_in_bin] = TFpeakHistogram(varargin)
+function [C_mat, freq_cbins, C_cbins, time_in_bin, prop_in_bin] = TFPeakHistogram(varargin)
 % TFPEAKHISTOGRAM computes 2D histogram values for TFpeaks frequency
 % (y-axis) against an arbitrary C metric (x-axis)
 

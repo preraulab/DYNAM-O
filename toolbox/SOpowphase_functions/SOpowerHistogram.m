@@ -57,7 +57,7 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower, 
 %       SO_mat: SO power histogram (SOpower x frequency)
 %       freq_cbins: 1xF double - centers of the frequency bins
 %       SO_cbins: 1xPO double - centers of the power SO bins
-%       time_in_bin: 1xT double - minutes spent in each power bin for all selected stages
+%       time_in_bin: 1xTx5 double - minutes spent in each power bin for each stage
 %       prop_in_bin: 1xT double - proportion of total time (all stages) in each bin spent in
 %                          the selected stages
 %       peak_SOpower: 1xP double - normalized slow oscillation power at each TFpeak
@@ -229,7 +229,7 @@ if isempty(SO_binsizestep)
     SO_binsizestep(2) = (SO_range(2) - SO_range(1)) / 100;
 end
 
-[SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin] = TFpeakHistogram(SOpower, SOpower_stages, SOpower_times_step, SOpower_valid,...
+[SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin] = TFPeakHistogram(SOpower, SOpower_stages, SOpower_times_step, SOpower_valid,...
     SOpower_valid_allstages, TFpeak_freqs(peak_selection_inds), peak_SOpower(peak_selection_inds),...
     'norm_method', norm_method, 'min_time_in_bin', min_time_in_bin,... # specific to SOpower histogram
     'Cmetric_label', 'SO-Power', 'C_range', SO_range, 'C_binsizestep', SO_binsizestep, 'freq_range', freq_range, 'freq_binsizestep', freq_binsizestep,...
