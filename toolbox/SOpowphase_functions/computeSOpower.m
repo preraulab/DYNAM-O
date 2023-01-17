@@ -1,7 +1,36 @@
-function [SOpower_norm, SOpower_times, SOpower_stages, norm_method, ptile] = computeSOpower(EEG, Fs, time_range, isexcluded, EEG_times, norm_method, SO_freqrange, stage_vals, stage_times, SOpower_outlier_threshold)
+function [SOpower_norm, SOpower_times, SOpower_stages, norm_method, ptile] = computeSOpower(EEG, Fs, varargin)
 % COMPUTESOPOWER computes slow-oscillation power
-if ~exist('SOpower_outlier_threshold', 'var') || isempty(SOpower_outlier_threshold)
-    SOpower_outlier_threshold = 3;
+
+%% Parse input
+%Input Error handling
+p = inputParser;
+
+%Stage info
+addOptional(p, 'stage_vals', [], @(x) validateattributes(x, {'double', 'single'}, {'real'}));
+addOptional(p, 'stage_times', [], @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
+
+%SOpower settings
+addOptional(p, 'SO_freqrange', [0.3, 1.5], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan'}));
+addOptional(p, 'SOpower_outlier_threshold', 3, @(x) validateattributes(x,{'numeric'}, {'scalar'}));
+addOptional(p, 'norm_method', 'p2shift1234', @(x) validateattributes(x, {'char', 'numeric'},{}));
+addOptional(p, 'tapers', [15 29], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
+addOptional(p, 'window_params', [30 15], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
+
+%EEG time settings
+addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
+addOptional(p, 'time_range', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
+addOptional(p, 'isexcluded', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
+
+parse(p,varargin{:});
+parser_results = struct2cell(p.Results); %#ok<NASGU>
+field_names = fieldnames(p.Results);
+
+eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
+
+if isempty(EEG_times) %#ok<*NODEF>
+    EEG_times = (0:length(EEG)-1)/Fs;
+else
+    assert(length(EEG_times) == size(EEG,2), 'EEG_times must be the same length as EEG');
 end
 
 if isempty(time_range)
@@ -10,12 +39,19 @@ else
     assert( (time_range(1) >= min(EEG_times)) & (time_range(2) <= max(EEG_times) ), 'lightsonoff_times cannot be outside of the time range described by "EEG_times"');
 end
 
+if isempty(isexcluded)
+    isexcluded = false(size(EEG,2),1);
+else
+    assert(length(isexcluded) == size(EEG,2),'isexcluded must be the same length as EEG');
+end
+
+%% Compute SO power
 % Replace artifact timepoints with NaNs
 nanEEG = EEG;
 nanEEG(isexcluded) = nan;
 
 % Now compute SOpower
-[SOpower, SOpower_times] = computeMTSpectPower(nanEEG, Fs, 'freq_range', SO_freqrange);
+[SOpower, SOpower_times] = computeMTSpectPower(nanEEG, Fs, 'freq_range', SO_freqrange, 'tapers', tapers, 'window_params', window_params);
 SOpower_times = SOpower_times + EEG_times(1); % adjust the time axis to EEG_times
 
 % Compute SOpower stage
