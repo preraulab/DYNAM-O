@@ -49,7 +49,7 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOphase, 
 %       SO_mat: SO phase histogram (SOphase x frequency)
 %       freq_cbins: 1xF double - centers of the frequency bins
 %       SO_cbins: 1xPH - centers of the SO phase bins
-%       time_in_bin: 1xT - minutes spent in each phase bin for all selected stages
+%       time_in_bin: 1xTx5 - minutes spent in each phase bin for each stage
 %       prop_in_bin: 1xT - proportion of total time (all stages) in each bin spent in
 %                          the selected stages
 %       peak_SOphase: 1xP double - slow oscillation phase at each TFpeak
@@ -214,7 +214,7 @@ SOphase_valid_allstages = SOphase_excluded_valid & SOphase_times_valid;
 clear SOphase_stages_valid SOphase_excluded_valid SOphase_times_valid
 
 %% Compute the SO phase histogram
-[SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin] = TFpeakHistogram(SOphase, SOphase_stages, SOphase_times_step, SOphase_valid,...
+[SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin] = TFPeakHistogram(SOphase, SOphase_stages, SOphase_times_step, SOphase_valid,...
     SOphase_valid_allstages, TFpeak_freqs(peak_selection_inds), peak_SOphase(peak_selection_inds),...
     'circular_Cmetric', true,... # specific to SOphase histogram
     'Cmetric_label', 'SO-Phase', 'C_range', SO_range, 'C_binsizestep', SO_binsizestep, 'freq_range', freq_range, 'freq_binsizestep', freq_binsizestep,...
