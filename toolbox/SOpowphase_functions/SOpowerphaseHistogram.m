@@ -40,7 +40,8 @@ function [SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, SOpow_TIB
 %       SOpower_norm_method: char - normalization method for SOpower. Options:'pNshiftS', 'percent', 'proportion', 'none'. Default: 'p2shift1234'
 %                         For shift, it follows the format pNshiftS where N is the percentile and S is the list of stages (5=W,4=R,3=N1,2=N2,1=N3).
 %                         (e.g. p2shift1234 = use the 2nd percentile of stages N3, N2, N1, and REM,
-%                               p5shift123 = use the 5th percentile of stages N3, N2 and N1)%
+%                               p5shift123 = use the 5th percentile of stages N3, N2 and N1)
+%       SOpower_retain_Fs: logical - whether to upsample calculated SOpower to the sampling rate of EEG. Default = true
 %       SOpower_min_time_in_bin: numerical - time (minutes) required in each SO power bin to include
 %                                          in SOpower analysis. Otherwise all values in that SO power bin will
 %                                          be NaN. Default = 1.
@@ -108,6 +109,7 @@ addOptional(p, 'compute_rate', true, @(x) validateattributes(x,{'logical'},{}));
 %SOpower/phase specific settings
 addOptional(p, 'SOpower_outlier_threshold', 3, @(x) validateattributes(x,{'numeric'},{'scalar'}));
 addOptional(p, 'SOpower_norm_method', 'p2shift1234', @(x) validateattributes(x, {'char', 'numeric'},{}));
+addOptional(p, 'SOpower_retain_Fs', true, @(x) validateattributes(x,{'logical'},{}));
 addOptional(p, 'SOpower_min_time_in_bin', 1, @(x) validateattributes(x,{'numeric'},{'scalar','real','finite','nonnan','nonnegative','integer'}));
 addOptional(p, 'SOphase_filter', []);
 
@@ -149,11 +151,11 @@ end
 %% Compute SO-power and SO-phase
 [SOpower, SOpower_times] = computeSOpower(EEG, Fs, 'stage_vals', stage_vals, 'stage_times', stage_times,...
     'SO_freqrange', SO_freqrange, 'SOpower_outlier_threshold', SOpower_outlier_threshold, 'norm_method', SOpower_norm_method,...
-    'EEG_times', EEG_times, 'time_range', time_range, 'isexcluded', isexcluded);
+    'retain_Fs', SOpower_retain_Fs, 'EEG_times', EEG_times, 'time_range', time_range, 'isexcluded', isexcluded);
 [SOphase, SOphase_times] = computeSOphase(EEG, Fs, 'stage_vals', stage_vals, 'stage_times', stage_times,...
     'SO_freqrange', SO_freqrange, 'SOphase_filter', SOphase_filter, 'EEG_times', EEG_times, 'isexcluded', isexcluded);
 
-% mask SOphase with SOpower nan values to use the same periods in the histograms
+% % mask SOphase with SOpower nan values to use the same periods in the histograms
 SOpower_times_step = SOpower_times(2) - SOpower_times(1);
 SOphase(isnan(interp1([SOpower_times(1)-SOpower_times_step, SOpower_times, SOpower_times(end)+SOpower_times_step], [SOpower(1), SOpower, SOpower(end)], SOphase_times))) = nan;
 

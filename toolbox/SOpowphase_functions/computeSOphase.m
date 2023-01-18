@@ -73,13 +73,10 @@ filtdata = filtfilt(d,double(EEG));
 
 data_analytic = hilbert(filtdata);
 SOphase = unwrap(angle(data_analytic)-pi);
-SOphase_times = (0:length(EEG)-1)/Fs;
+SOphase_times = EEG_times;
 
 % Replace excluded times with nans
 SOphase(isexcluded) = nan;
-
-% Adjust the time axis to EEG_times
-SOphase_times = SOphase_times + EEG_times(1); % adjust the time axis to EEG_times
 
 % Compute SOphase stage
 if ~isempty(stage_vals) && ~isempty(stage_times)

@@ -82,7 +82,7 @@ end
 %% COMPUTE SPECTROGRAM FOR DISPLAY
 [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(data, Fs, [4,25], [15 29], [30 15], [],'linear',[],false,false);
 
-% Plot only TFpeaks that contribute to SO-power/phase histograms 
+% Plot only TFpeaks that contribute to SO-power/phase histograms
 stats_table_SOPH = stats_table(hist_peakidx, :);
 
 % PLOT RESULTS FIGURE

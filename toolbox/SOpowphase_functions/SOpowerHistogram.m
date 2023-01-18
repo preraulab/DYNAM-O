@@ -41,7 +41,8 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower, 
 %       norm_method: char - normalization method for SOpower. Options:'pNshiftS', 'percent', 'proportion', 'none'. Default: 'p2shift1234'
 %                         For shift, it follows the format pNshiftS where N is the percentile and S is the list of stages (5=W,4=R,3=N1,2=N2,1=N3).
 %                         (e.g. p2shift1234 = use the 2nd percentile of stages N3, N2, N1, and REM,
-%                               p5shift123 = use the 5th percentile of stages N3, N2 and N1)%
+%                               p5shift123 = use the 5th percentile of stages N3, N2 and N1)
+%       retain_Fs: logical - whether to upsample calculated SOpower to the sampling rate of EEG. Default = true
 %       min_time_in_bin: numerical - time (minutes) required in each SO power bin to include
 %                                  in SOpower analysis. Otherwise all values in that SO power bin will
 %                                  be NaN. Default = 1.
@@ -119,6 +120,7 @@ addOptional(p, 'compute_rate', true, @(x) validateattributes(x,{'logical'},{}));
 %SOpower specific settings
 addOptional(p, 'SOpower_outlier_threshold', 3, @(x) validateattributes(x,{'numeric'},{'scalar'}));
 addOptional(p, 'norm_method', 'p2shift1234', @(x) validateattributes(x, {'char', 'numeric'},{}));
+addOptional(p, 'retain_Fs', true, @(x) validateattributes(x,{'logical'},{}));
 addOptional(p, 'min_time_in_bin', 1, @(x) validateattributes(x,{'numeric'},{'scalar','real','finite','nonnan','nonnegative','integer'}));
 
 %EEG time settings
@@ -175,7 +177,7 @@ if ~isempty(SOpower) % SOpower is directly provided
 else % Compute the normalized SOpower
     [SOpower, SOpower_times, SOpower_stages, norm_method] = computeSOpower(EEG, Fs, 'stage_vals', stage_vals, 'stage_times', stage_times,...
         'SO_freqrange', SO_freqrange, 'SOpower_outlier_threshold', SOpower_outlier_threshold, 'norm_method', norm_method,...
-        'EEG_times', EEG_times, 'time_range', time_range, 'isexcluded', isexcluded);
+        'retain_Fs', retain_Fs, 'EEG_times', EEG_times, 'time_range', time_range, 'isexcluded', isexcluded);
 end
 
 % Get SOpower_times step size

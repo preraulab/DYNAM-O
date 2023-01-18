@@ -13,6 +13,7 @@ addOptional(p, 'stage_times', [], @(x) validateattributes(x, {'numeric', 'vector
 addOptional(p, 'SO_freqrange', [0.3, 1.5], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan'}));
 addOptional(p, 'SOpower_outlier_threshold', 3, @(x) validateattributes(x,{'numeric'}, {'scalar'}));
 addOptional(p, 'norm_method', 'p2shift1234', @(x) validateattributes(x, {'char', 'numeric'},{}));
+addOptional(p, 'retain_Fs', false, @(x) validateattributes(x,{'logical'},{}));
 addOptional(p, 'tapers', [15 29], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
 addOptional(p, 'window_params', [30 15], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
 
@@ -138,5 +139,19 @@ end
 
 % Make the output SOpower_norm a row vector 
 SOpower_norm = SOpower_norm';
+
+%% (Optional) Upsample to EEG sampling rate 
+if retain_Fs
+    SOpower_norm_notnan = SOpower_norm(~isnan(SOpower_norm));
+    SOpower_norm = interp1([EEG_times(1), SOpower_times(~isnan(SOpower_norm)), EEG_times(end)],...
+       [SOpower_norm_notnan(1), SOpower_norm_notnan, SOpower_norm_notnan(end)], EEG_times);
+    SOpower_norm(isexcluded) = nan;
+    SOpower_times = EEG_times;
+    if ~isempty(stage_vals) && ~isempty(stage_times)
+        SOpower_stages = interp1(stage_times, stage_vals, SOpower_times, 'previous');
+    else
+        SOpower_stages = true;
+    end
+end
 
 end
