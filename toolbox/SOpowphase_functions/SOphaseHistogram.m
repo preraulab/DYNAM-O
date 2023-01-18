@@ -24,11 +24,9 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOphase, 
 %       freq_binsizestep: 1x2 double - [size, step] frequency bin size and bin step for frequency
 %                         axis of SO phase histograms (Hz). Default = [1, 0.2]
 %       SO_range: 1x2 double - min and max SO phase values (radians) to consider in SO phase analysis.
-%                 Default calculated using min and max of SO phase
+%                              Default is [-pi, pi]
 %       SO_binsizestep: 1x2 double - [size, step] SO phase bin size and step for SO phase axis
-%                            of histogram. Units are radians. Default
-%                            size is (SO_range(2)-SOrange(1))/5, default step is
-%                            (SO_range(2)-SOrange(1))/100
+%                       of histogram. Units are radians. Default size is 2*pi/5, default step is 2*pi/100
 %       SO_freqrange: 1x2 double - min and max frequencies (Hz) considered to be "slow oscillation".
 %                     Default = [0.3, 1.5]
 %       SOPH_stages: stages in which to restrict the SOPH. Default: 1:3 (NREM only)
