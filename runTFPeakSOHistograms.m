@@ -16,7 +16,7 @@ function [stats_table, hist_peakidx, SOpow_mat, SOphase_mat, SOpow_bins, SOphase
 %       t_data (opt):              [1xn] double - timestamps for data. Default = (0:length(data)-1)/Fs;
 %       time_range (opt):          [1x2] double - section of EEG to use in analysis
 %                                  (seconds). Default = [min(t_data), max(t_data)]
-%       artifact_filters (opt):    struct with 3 digitalFilter fields "hpFilt_high","hpFilt_broad","detrend_filt" -
+%       artifact_filters (opt):    struct with 2 digitalFilter fields "hpFilt_high","hpFilt_broad" -
 %                                  filters to be used for artifact detection
 %       stages_include (opt):      [1xp] double - which stages to include in the SO-power and
 %                                  SO-phase histograms. Default = [1,2,3,4]
@@ -96,7 +96,6 @@ end
 if isempty(artifact_filters)
     artifact_filters.hpFilt_high = [];
     artifact_filters.hpFilt_broad = [];
-    artifact_filters.detrend_filt = [];
 end
 
 %Save total time
@@ -183,8 +182,7 @@ if verbose
     disp('Performing artifact rejection...');
 end
 
-artifacts = detect_artifacts(data, Fs, [],[],[],[],[],[],[],[],[], ...
-    artifact_filters.hpFilt_high, artifact_filters.hpFilt_broad, artifact_filters.detrend_filt);
+artifacts = detect_artifacts(data, Fs, [],[],[],[],[], [],[],[], [],[],[], artifact_filters.hpFilt_high, artifact_filters.hpFilt_broad);
 artifacts_stimes = logical(interp1(t_data, double(artifacts), stimes, 'nearest')); % get artifacts occurring at spectrogram times
 
 %% Compute baseline spectrum used to flatten data spectrum
