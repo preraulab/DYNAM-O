@@ -27,7 +27,7 @@ addOptional(p, 'C_binsizestep', [], @(x) validateattributes(x, {'numeric', 'vect
 addOptional(p, 'freq_range', [0,40], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'freq_binsizestep', [1, 0.2], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
 addOptional(p, 'norm_dim', 0, @(x) validateattributes(x,{'numeric'},{'scalar'}));
-addOptional(p, 'compute_rate', true, @(x) validateattributes(x,{'logical'},{}));
+addOptional(p, 'compute_rate', false, @(x) validateattributes(x,{'logical'},{}));
 
 addOptional(p, 'norm_method', [], @(x) validateattributes(x, {'char', 'numeric'},{}));
 addOptional(p, 'min_time_in_bin', 0, @(x) validateattributes(x,{'numeric'},{'scalar','real','finite','nonnan','nonnegative','integer'}));
@@ -88,20 +88,24 @@ for s = 1:num_Cbins
         % Check for bins that need to be wrapped because Cmetric is circular
         if (C_bin_edges(1,s) <= circular_low) % Lower limit should be wrapped
             wrapped_edge_lowlim = C_bin_edges(1,s) + circular_range;
-
+            
             if compute_TIB
                 TIB_inds = (Cmetric >= wrapped_edge_lowlim) | (Cmetric < C_bin_edges(2,s));
-                inCbin_inds = (peak_Cmetric >= wrapped_edge_lowlim) | (peak_Cmetric < C_bin_edges(2,s));
             end
+            inCbin_inds = (peak_Cmetric >= wrapped_edge_lowlim) | (peak_Cmetric < C_bin_edges(2,s));
+            
         elseif (C_bin_edges(2,s) >= circular_high) % Upper limit should be wrapped
             wrapped_edge_highlim = C_bin_edges(2,s) - circular_range;
-
+            
             if compute_TIB
                 TIB_inds = (Cmetric < wrapped_edge_highlim) | (Cmetric >= C_bin_edges(1,s));
-                inCbin_inds = (peak_Cmetric < wrapped_edge_highlim) | (peak_Cmetric >= C_bin_edges(1,s));
             end
-        elseif compute_TIB % Both limits are within circular_bounds, no wrapping necessary
-            TIB_inds = (Cmetric >= C_bin_edges(1,s)) & (Cmetric < C_bin_edges(2,s));
+            inCbin_inds = (peak_Cmetric < wrapped_edge_highlim) | (peak_Cmetric >= C_bin_edges(1,s));
+            
+        else % Both limits are within circular_bounds, no wrapping necessary
+            if compute_TIB 
+                TIB_inds = (Cmetric >= C_bin_edges(1,s)) & (Cmetric < C_bin_edges(2,s));
+            end
             inCbin_inds = (peak_Cmetric >= C_bin_edges(1,s)) & (peak_Cmetric < C_bin_edges(2,s));
         end
 
@@ -117,19 +121,17 @@ for s = 1:num_Cbins
     end
 
     % Get time in bin (min) and proportion of time in bin
-    for stage = 1:5
-        if ~islogical(Cmetric_stages)
-            Cmetric_stages_ind = Cmetric_stages == stage;
-        end
-        if compute_TIB
+    if compute_TIB
+        for stage = 1:5
+            if ~islogical(Cmetric_stages)
+                Cmetric_stages_ind = Cmetric_stages == stage;
+            end
             time_in_bin(s,stage) = (sum(TIB_inds & Cmetric_valid & Cmetric_stages_ind) * Cmetric_times_step) / 60;
         end
-    end
-
-    if compute_TIB
+        
         time_in_bin_allstages = (sum(TIB_inds & Cmetric_valid_allstages) * Cmetric_times_step) / 60;
         prop_in_bin(s,:) = time_in_bin(s,:) / time_in_bin_allstages;
-
+        
         % if less than threshold time in C bin, nan the whole column of CPH
         if sum(time_in_bin(s,:)) < min_time_in_bin
             continue
