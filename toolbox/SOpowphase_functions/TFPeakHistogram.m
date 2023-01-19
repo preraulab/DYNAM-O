@@ -27,7 +27,7 @@ addOptional(p, 'C_binsizestep', [], @(x) validateattributes(x, {'numeric', 'vect
 addOptional(p, 'freq_range', [0,40], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'freq_binsizestep', [1, 0.2], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
 addOptional(p, 'norm_dim', 0, @(x) validateattributes(x,{'numeric'},{'scalar'}));
-addOptional(p, 'compute_rate', false, @(x) validateattributes(x,{'logical'},{}));
+addOptional(p, 'compute_rate', true, @(x) validateattributes(x,{'logical'},{}));
 
 addOptional(p, 'norm_method', [], @(x) validateattributes(x, {'char', 'numeric'},{}));
 addOptional(p, 'min_time_in_bin', 0, @(x) validateattributes(x,{'numeric'},{'scalar','real','finite','nonnan','nonnegative','integer'}));
@@ -53,6 +53,10 @@ if circular_Cmetric
     circular_range = diff(circular_bounds);
 end
 
+%Compute TIB if any of these conditions are true
+compute_TIB = compute_rate || nargout >= 3 || min_time_in_bin > 0;
+
+
 %% Settings for the histogram
 % Get frequency bins
 [freq_bin_edges, freq_cbins] = create_bins(freq_range, freq_binsizestep(1), freq_binsizestep(2), 'partial');
@@ -73,68 +77,81 @@ display_soph_setting(verbose, Cmetric_label, C_range, C_binsizestep, freq_range,
 C_mat = nan(num_Cbins, num_freqbins);
 
 % Initialize time in bin
-time_in_bin = zeros(num_Cbins, 5);
-prop_in_bin = zeros(num_Cbins, 5);
+if compute_TIB
+    time_in_bin = zeros(num_Cbins, 5);
+    prop_in_bin = zeros(num_Cbins, 5);
+end
 
 for s = 1:num_Cbins
-    
+
     if circular_Cmetric
         % Check for bins that need to be wrapped because Cmetric is circular
         if (C_bin_edges(1,s) <= circular_low) % Lower limit should be wrapped
             wrapped_edge_lowlim = C_bin_edges(1,s) + circular_range;
-            TIB_inds = (Cmetric >= wrapped_edge_lowlim) | (Cmetric < C_bin_edges(2,s));
-            inCbin_inds = (peak_Cmetric >= wrapped_edge_lowlim) | (peak_Cmetric < C_bin_edges(2,s));
-            
+
+            if compute_TIB
+                TIB_inds = (Cmetric >= wrapped_edge_lowlim) | (Cmetric < C_bin_edges(2,s));
+                inCbin_inds = (peak_Cmetric >= wrapped_edge_lowlim) | (peak_Cmetric < C_bin_edges(2,s));
+            end
         elseif (C_bin_edges(2,s) >= circular_high) % Upper limit should be wrapped
             wrapped_edge_highlim = C_bin_edges(2,s) - circular_range;
-            TIB_inds = (Cmetric < wrapped_edge_highlim) | (Cmetric >= C_bin_edges(1,s));
-            inCbin_inds = (peak_Cmetric < wrapped_edge_highlim) | (peak_Cmetric >= C_bin_edges(1,s));
-            
-        else % Both limits are within circular_bounds, no wrapping necessary
+
+            if compute_TIB
+                TIB_inds = (Cmetric < wrapped_edge_highlim) | (Cmetric >= C_bin_edges(1,s));
+                inCbin_inds = (peak_Cmetric < wrapped_edge_highlim) | (peak_Cmetric >= C_bin_edges(1,s));
+            end
+        elseif compute_TIB % Both limits are within circular_bounds, no wrapping necessary
             TIB_inds = (Cmetric >= C_bin_edges(1,s)) & (Cmetric < C_bin_edges(2,s));
             inCbin_inds = (peak_Cmetric >= C_bin_edges(1,s)) & (peak_Cmetric < C_bin_edges(2,s));
         end
-        
+
     else
-        % Get indices of Cmetric that occur in this Cmetric bin
-        TIB_inds = (Cmetric >= C_bin_edges(1,s)) & (Cmetric < C_bin_edges(2,s));
-        
+        if compute_TIB
+            % Get indices of Cmetric that occur in this Cmetric bin
+            TIB_inds = (Cmetric >= C_bin_edges(1,s)) & (Cmetric < C_bin_edges(2,s));
+        end
+
         % Get indices of valid TFpeaks that occur in this Cmetric bin
         inCbin_inds = (peak_Cmetric >= C_bin_edges(1,s)) & (peak_Cmetric < C_bin_edges(2,s));
-        
+
     end
-    
+
     % Get time in bin (min) and proportion of time in bin
     for stage = 1:5
         if ~islogical(Cmetric_stages)
             Cmetric_stages_ind = Cmetric_stages == stage;
         end
-        time_in_bin(s,stage) = (sum(TIB_inds & Cmetric_valid & Cmetric_stages_ind) * Cmetric_times_step) / 60;
+        if compute_TIB
+            time_in_bin(s,stage) = (sum(TIB_inds & Cmetric_valid & Cmetric_stages_ind) * Cmetric_times_step) / 60;
+        end
     end
-    time_in_bin_allstages = (sum(TIB_inds & Cmetric_valid_allstages) * Cmetric_times_step) / 60;
-    prop_in_bin(s,:) = time_in_bin(s,:) / time_in_bin_allstages;
-    
-    % if less than threshold time in C bin, nan the whole column of CPH
-    if sum(time_in_bin(s,:)) < min_time_in_bin
-        continue
+
+    if compute_TIB
+        time_in_bin_allstages = (sum(TIB_inds & Cmetric_valid_allstages) * Cmetric_times_step) / 60;
+        prop_in_bin(s,:) = time_in_bin(s,:) / time_in_bin_allstages;
+
+        % if less than threshold time in C bin, nan the whole column of CPH
+        if sum(time_in_bin(s,:)) < min_time_in_bin
+            continue
+        end
     end
-    
+
     if sum(inCbin_inds) >= 1
         for f = 1:num_freqbins
             % Get indices of TFpeaks that occur in this freq bin
             infreqbin_inds = (TFpeak_freqs >= freq_bin_edges(1,f)) & (TFpeak_freqs < freq_bin_edges(2,f));
-            
+
             % Fill histogram with count of peaks in this freq/Cpow bin
             C_mat(s, f) = sum(inCbin_inds & infreqbin_inds);
         end
     else
         C_mat(s,:) = 0;
     end
-    
+
     if compute_rate
         C_mat(s,:) = C_mat(s,:) / sum(time_in_bin(s,:));
     end
-    
+
 end
 
 % Normalize along a dimension if desired
@@ -162,23 +179,23 @@ function display_soph_setting(verbose, Cmetric_label, C_range, C_binsizestep, fr
 % Display CPH settings
 if ischar(verbose)
     disp(verbose)
-    
+
 elseif verbose
     display_message = ['  ', Cmetric_label,  ' Histogram Settings', newline, ...
         '    Frequency Window Size: ' num2str(freq_binsizestep(1)) ' Hz, Window Step: ' num2str(freq_binsizestep(2)) ' Hz', newline,...
         '    Frequency Range: ', num2str(freq_range(1)) '-' num2str(freq_range(2)) ' Hz', newline,...
         '    ', Cmetric_label, ' Window Size: ' num2str(C_binsizestep(1)) ', Window Step: ' num2str(C_binsizestep(2)), newline,...
         '    ', Cmetric_label, ' Range: ', num2str(C_range(1)), '-', num2str(C_range(2)),  newline];
-    
+
     if ~isempty(norm_method)
         display_message = [display_message, '    Normalization Method: ', num2str(norm_method), newline];
     end
-    
+
     if min_time_in_bin > 0
         display_message = [display_message,...
             '    Minimum time required in each ', Cmetric_label, ' bin: ', num2str(min_time_in_bin), 'min', newline];
     end
-    
+
     disp(display_message)
-    
+
 end
