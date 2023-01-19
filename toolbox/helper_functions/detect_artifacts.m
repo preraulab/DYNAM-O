@@ -1,5 +1,6 @@
-function [ artifacts ] = detect_artifacts(data, Fs, crit_units, hf_crit, hf_pass, bb_crit, bb_pass, smooth_duration, ...
-    verbose, histogram_plot, return_filts_only, hpFilt_high, hpFilt_broad, detrend_duration)
+function [ artifacts ] = detect_artifacts(data, Fs, crit_units, hf_crit, hf_pass, bb_crit, bb_pass,...
+    smooth_duration, detrend_duration, buffer_duration,...
+    verbose, histogram_plot, return_filts_only, hpFilt_high, hpFilt_broad)
 %DETECT_ARTIFACTS  Detect artifacts in the time domain by iteratively removing data above a given z-score criterion
 %
 %   Usage:
@@ -16,14 +17,14 @@ function [ artifacts ] = detect_artifacts(data, Fs, crit_units, hf_crit, hf_pass
 %   bb_crit: double - broadband criterion - number of stds/MAD above the mean to remove (default: 3.5)
 %   bb_pass: double - broadband pass band - frequency for high pass filter in Hz (default: .1 Hz)
 %   smooth_duration: double - time (in seconds) to smooth the time series (default: 2 seconds)
+%   detrend_duration: double - time (in seconds) to use for detrending (default: 300 seconds)
+%   buffer_duration: double - time (in seconds) to mask on both sides of detected artifacts (default: 0 second)
 %   verbose: logical - verbose output (default: false)
 %   histogram_plot: logical - plot histograms for debugging (default: false)
 %   return_filts_only: logical - return 3 digitalFilter objects and nothing else [1x3] (order is hpFilt_high, hpFilt_broad, detrend_filt)
 %                                for use in this function (default: false)
-%   hpFilt_high: digitalFilter - Includes parameters to use for the high frequency high pass filter
+%   hpFilt_high: digitalFilter - Includes parameters to use for the high frequency high pass filte
 %   hpFilt_broad: digitalFilter - Includes parameters to use for the broadband high pass filter
-%   detrend_duration: double - Time in seconds to use for detrending
-%   (default: 300)
 %
 %   Output:
 %   artifacts: 1xT logical of times flagged as artifacts (logical OR of hf and bb artifacts)
@@ -41,11 +42,11 @@ if ~iscolumn(data)
 end
 
 %Force to double
-if ~isa(data,'double')
+if ~isa(data, 'double')
     data = double(data);
 end
 
-if nargin<2
+if nargin < 2
     error('Data vector and sampling rate required');
 end
 
@@ -73,33 +74,37 @@ if nargin < 8 || isempty(smooth_duration)
     smooth_duration = 2;
 end
 
-if nargin < 9 || isempty(verbose)
+if nargin < 9 || isempty(detrend_duration)
+    detrend_duration = 5*60; % default is 5min
+end
+
+if nargin < 10 || isempty(buffer_duration)
+    buffer_duration = 0;
+end
+
+if nargin < 11 || isempty(verbose)
     verbose = false;
 end
 
-if nargin < 10 || isempty(histogram_plot)
+if nargin < 12 || isempty(histogram_plot)
     histogram_plot = false;
 end
 
-if nargin < 11 || isempty(return_filts_only)
+if nargin < 13 || isempty(return_filts_only)
     return_filts_only = false;
 end
 
 %% Create filters if none are provided
-if nargin < 12 || isempty(hpFilt_high)
+if nargin < 14 || isempty(hpFilt_high)
     hpFilt_high = designfilt('highpassiir','FilterOrder',4, ...
         'PassbandFrequency',hf_pass,'PassbandRipple',0.2, ...
         'SampleRate',Fs);
 end
 
-if nargin < 13 || isempty(hpFilt_broad)
+if nargin < 15 || isempty(hpFilt_broad)
     hpFilt_broad = designfilt('highpassiir','FilterOrder',4, ...
         'PassbandFrequency',bb_pass,'PassbandRipple',0.2, ...
         'SampleRate',Fs);
-end
-
-if nargin < 14 || isempty(detrend_duration)
-    detrend_duration = 5*60; % default is 5min
 end
 
 %% If desired, return filter parameters only
@@ -146,7 +151,18 @@ bb_artifacts = compute_artifacts(hpFilt_broad, detrend_duration, bb_crit, data_f
 
 %% Join artifacts from different frequency bands
 artifacts = hf_artifacts | bb_artifacts;
-% sanity check before outputting
+
+%% Add buffer on both sides of detected artifacts 
+if buffer_duration > 0
+    [cons, inds] = consecutive(artifacts);
+    for ii = 1:length(cons)
+        buffer_start_idx = max(0, inds{ii}(1)-buffer_duration*Fs);
+        buffer_end_idx = min(length(artifacts), inds{ii}(end)+buffer_duration*Fs);
+        artifacts(buffer_start_idx:buffer_end_idx) = true;
+    end
+end
+
+%% Sanity check before outputting
 assert(length(artifacts) == length(data), 'Data vector length is inconsistent. Please check.')
 
 
@@ -166,13 +182,13 @@ else
     size_inds = clen>=min_size;
     clen = clen(size_inds);
     cind = cind(size_inds);
-
+    
     flat_inds = cell(1,length(clen));
-
+    
     for ii = 1:length(clen)
         flat_inds{ii} = cind(ii):(cind(ii)+(clen(ii)-1));
     end
-
+    
     inds = cat(2,flat_inds{:});
 end
 
@@ -208,7 +224,7 @@ y_smooth = movmean(y_hilbert, smooth_duration*Fs);
 % We should smooth then take log
 y_log = log(y_smooth);
 
-% Detrend data via filter
+% Detrend data
 y_detrend = y_log - movmedian(y_log, Fs*detrend_duration);
 % y_detrend = spline_detrend(y_log, Fs, [], 60);
 % y_detrend = filter(detrend_filt, y_log);
@@ -242,24 +258,24 @@ switch lower(crit_units)
     case {'median', 'std'}
         %Keep removing until all values under criterion
         over_crit = abs(y_signal)>crit & ~detected_artifacts';
-
+        
         %Loop until nothing over criterion
         count = 1;
         while any(over_crit)
-
+            
             %Update the detected artifact time points
             detected_artifacts(over_crit) = true;
-
+            
             %Compute modified z-score
             ysig = y_signal(~detected_artifacts);
             ymid = mean(ysig);
             ystd = std(ysig);
-
+            
             y_signal = (y_signal - ymid)/ystd;
-
+            
             %Find new criterion
             over_crit = abs(y_signal)>crit & ~detected_artifacts';
-
+            
             if histogram_plot
                 axes(ah);
                 histogram(y_signal(~detected_artifacts), 100);
@@ -269,14 +285,14 @@ switch lower(crit_units)
             end
             count = count + 1;
         end
-
+        
         if verbose
             disp(['     Ran ' num2str(num_iters) ' iterations']);
         end
     case {'outlier', 'mad'}
         y_signal(isoutlier(y_signal,'thresholdfactor',crit)) = nan;
         detected_artifacts = isnan(y_signal);
-
+        
         if histogram_plot
             axes(ah);
             histogram(y_signal(~detected_artifacts),100);
@@ -284,7 +300,7 @@ switch lower(crit_units)
             drawnow;
             pause(0.1);
         end
-
+        
     otherwise
         error('Invalid crit_units');
 end
