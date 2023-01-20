@@ -149,7 +149,7 @@ if ~isempty(EEG)
     if isempty(time_range)
         time_range = [min(EEG_times), max(EEG_times)];
     else
-        assert( (time_range(1) >= min(EEG_times)) & (time_range(2) <= max(EEG_times) ), 'lightsonoff_times cannot be outside of the time range described by "EEG_times"');
+        assert( (time_range(1) >= min(EEG_times)) & (time_range(2) <= max(EEG_times)), 'time_range cannot be outside of the time range described by "EEG_times"');
     end
     
     if isempty(isexcluded)
@@ -159,8 +159,13 @@ if ~isempty(EEG)
     end
     
 %Handle SOpower/SOpower_times input
-else 
-    time_range = [min(SOpower_times), max(SOpower_times)];
+else
+    SOpower_times_step = SOpower_times(2) - SOpower_times(1);
+    if isempty(time_range)
+        time_range = [min(SOpower_times)-SOpower_times_step, max(SOpower_times)+SOpower_times_step];
+    else
+        assert( (time_range(1) >= min(SOpower_times)-SOpower_times_step) & (time_range(2) <= max(SOpower_times)+SOpower_times_step), 'time_range cannot be outside of the time range described by "SOpower_times"');
+    end
     
     % Compute SOpower stage
     if ~isempty(stage_vals) && ~isempty(stage_times)
