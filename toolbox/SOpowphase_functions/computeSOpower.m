@@ -13,7 +13,7 @@ addOptional(p, 'stage_times', [], @(x) validateattributes(x, {'numeric', 'vector
 addOptional(p, 'SO_freqrange', [0.3, 1.5], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan'}));
 addOptional(p, 'SOpower_outlier_threshold', 3, @(x) validateattributes(x,{'numeric'}, {'scalar'}));
 addOptional(p, 'norm_method', 'p2shift1234', @(x) validateattributes(x, {'char', 'numeric'},{}));
-addOptional(p, 'retain_Fs', false, @(x) validateattributes(x,{'logical'},{}));
+addOptional(p, 'retain_Fs', true, @(x) validateattributes(x,{'logical'},{}));
 addOptional(p, 'tapers', [15 29], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
 addOptional(p, 'window_params', [30 15], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
 
@@ -37,7 +37,7 @@ end
 if isempty(time_range)
     time_range = [min(EEG_times), max(EEG_times)];
 else
-    assert( (time_range(1) >= min(EEG_times)) & (time_range(2) <= max(EEG_times) ), 'lightsonoff_times cannot be outside of the time range described by "EEG_times"');
+    assert( (time_range(1) >= min(EEG_times)) & (time_range(2) <= max(EEG_times)), 'time_range cannot be outside of the time range described by "EEG_times"');
 end
 
 if isempty(isexcluded)

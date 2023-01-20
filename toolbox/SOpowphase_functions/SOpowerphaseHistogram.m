@@ -138,7 +138,7 @@ if ~isempty(EEG)
     if isempty(time_range)
         time_range = [min(EEG_times), max(EEG_times)];
     else
-        assert( (time_range(1) >= min(EEG_times)) & (time_range(2) <= max(EEG_times) ), 'lightsonoff_times cannot be outside of the time range described by "EEG_times"');
+        assert( (time_range(1) >= min(EEG_times)) & (time_range(2) <= max(EEG_times)), 'time_range cannot be outside of the time range described by "EEG_times"');
     end
     
     if isempty(isexcluded)
