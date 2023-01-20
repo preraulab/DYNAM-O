@@ -56,7 +56,6 @@ end
 %Compute TIB if any of these conditions are true
 compute_TIB = compute_rate || nargout >= 3 || min_time_in_bin > 0;
 
-
 %% Settings for the histogram
 % Get frequency bins
 [freq_bin_edges, freq_cbins] = create_bins(freq_range, freq_binsizestep(1), freq_binsizestep(2), 'partial');
@@ -143,7 +142,7 @@ for s = 1:num_Cbins
             % Get indices of TFpeaks that occur in this freq bin
             infreqbin_inds = (TFpeak_freqs >= freq_bin_edges(1,f)) & (TFpeak_freqs < freq_bin_edges(2,f));
 
-            % Fill histogram with count of peaks in this freq/Cpow bin
+            % Fill histogram with count of peaks in this freq/Cmetric bin
             C_mat(s, f) = sum(inCbin_inds & infreqbin_inds);
         end
     else
