@@ -135,7 +135,7 @@ if ~isempty(EEG)
     if isempty(time_range)
         time_range = [min(EEG_times), max(EEG_times)];
     else
-        assert( (time_range(1) >= min(EEG_times)) & (time_range(2) <= max(EEG_times) ), 'lightsonoff_times cannot be outside of the time range described by "EEG_times"');
+        assert( (time_range(1) >= min(EEG_times)) & (time_range(2) <= max(EEG_times)), 'time_range cannot be outside of the time range described by "EEG_times"');
     end
     
     if isempty(isexcluded)
@@ -146,7 +146,12 @@ if ~isempty(EEG)
     
 %Handle SOphase/SOphase_times input
 else
-    time_range = [min(SOphase_times), max(SOphase_times)];
+    SOphase_times_step = SOphase_times(2) - SOphase_times(1);
+    if isempty(time_range)
+        time_range = [min(SOphase_times)-SOphase_times_step, max(SOphase_times)+SOphase_times_step];
+    else
+        assert( (time_range(1) >= min(SOphase_times)-SOphase_times_step) & (time_range(2) <= max(SOphase_times)+SOphase_times_step), 'time_range cannot be outside of the time range described by "SOphase_times"');
+    end
     
     % Compute SOphase stage
     if ~isempty(stage_vals) && ~isempty(stage_times)
