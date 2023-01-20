@@ -182,7 +182,7 @@ if verbose
     disp('Performing artifact rejection...');
 end
 
-artifacts = detect_artifacts(data, Fs, [],[],[],[],[], [],[],[], [],[],[], artifact_filters.hpFilt_high, artifact_filters.hpFilt_broad);
+artifacts = detect_artifacts(data, Fs, [],[],[],[],[], [],[],5, [],[],[], artifact_filters.hpFilt_high, artifact_filters.hpFilt_broad);
 artifacts_stimes = logical(interp1(t_data, double(artifacts), stimes, 'nearest')); % get artifacts occurring at spectrogram times
 
 %% Compute baseline spectrum used to flatten data spectrum
