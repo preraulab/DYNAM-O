@@ -1,6 +1,10 @@
-# Transient Oscillation Dynamics (TOD) Toolbox v1.0 - Prerau Laboratory ([sleepEEG.org](https://prerau.bwh.harvard.edu/))
+<p align="center">
+<img src=https://user-images.githubusercontent.com/78376124/214062562-4f8fc73b-5a0a-4cf7-b219-9d0de101528d.png>
+</p>
 
-#### This repository contains the updated and optimized toolbox code for extracting time-frequency peaks from EEG data and creating slow-oscillation power and phase histograms. 
+## DYNAM-O: The Dynamic Oscillation Toolbox - Prerau Laboratory ([sleepEEG.org](https://prerau.bwh.harvard.edu/))
+
+#### This repository contains the updated and optimized MATLAB toolbox code for extracting time-frequency peaks from EEG data and creating slow-oscillation power and phase histograms. 
 
 ## Citations
 ### Paper and Toolbox
@@ -8,7 +12,7 @@ Please cite the following paper when using this package:
 > Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach, Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis for Electroencephalographic Phenotyping and Biomarker Identification, Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
 
 The toolbox can be referred to in the text as:
-> Transient Oscillation Dynamics (TOD) Toolbox v1.0 (sleepEEG.org/transient-oscillations-dynamics)
+> Prerau Lab's Dynamic Oscillation Toolbox (DYNAM-O) v1.0 (sleepEEG.org/)
 
 The paper is available open access at https://doi.org/10.1093/sleep/zsac223
 
@@ -169,7 +173,7 @@ save_peak_properties = 0;
 The main function to run is run_watershed_SOpowphase.m
 
 ``` matlab
-run_watershed_SOpowphase(data, Fs, stage_times, stage_vals, 'time_range', time_range, 'quality_setting', 
+runTFPeakSOHistograms(data, Fs, stage_times, stage_vals, 'time_range', time_range, 'quality_setting', 
                          quality_setting, 'SOpower_norm_method', SOpower_norm_method);
 ```
 It uses the following basic inputs:
@@ -191,9 +195,9 @@ It uses the following basic inputs:
 The main outputs are:
 ``` matlab
 %       stats_table:   table - feature data for each TFpeak
-%       SOpow_mat:    2D double - SO power histogram data
+%       SOpower_mat:    2D double - SO power histogram data
 %       SOphase_mat:  2D double - SO phase histogram data
-%       SOpow_bins:   1D double - SO power bin center values for dimension 1 of SOpow_mat
+%       SOpower_bins:   1D double - SO power bin center values for dimension 1 of SOpow_mat
 %       SOphase_bins: 1D double - SO phase bin center values for dimension
 %                     1 of SOphase_mat
 %       freq_bins:    1D double - frequency bin center values for dimension 2
@@ -204,7 +208,9 @@ The main outputs are:
 %       sfreqs:       1D double - frequency bin center values for dimension 1 of
 %                     spect
 %       SOpower_norm: 1D double - normalized SO-power used to compute histogram
-%       SOpow_times:  1D double - SO-power times
+%       SOpower_times:  1D double - SO-power times
+%       SOphase: 1D double - normalized SO-power used to compute histogram
+%       SOphase_times:  1D double - SO-power times
 ```
 
 View the full documentation for all parameters and outputs.
@@ -288,8 +294,7 @@ The contents of the "toolbox" folder is organized as follows, with key functions
     ├── SOphase_filters/   
     │         - SOphase_filters.mat: File containing precomputed digital filters used in the SO-Phase calculation.  
     ├── SOpowphase_functions/
-    │         - SOpowerHistogram.m: Compute SO-Power histogram
-    │         - SOphaseHistogram.m: Compute SO-Phase histogram 
+    │         - SOpowerphaseHistogram.m: Compute SO-power and SO-phase histograms 
     ├── TFpeak_functions/
     │          - extractTFpeaks.m: Top level function to run the watershed pipeline on a given spectrogram,
     │              including baseline removal, image segmentation, peak merging, trimming, and statistics.  
