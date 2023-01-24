@@ -1,9 +1,9 @@
-function [stats_table, hist_peakidx, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpower_times] = runTFPeakSOHistograms(varargin)
+function [stats_table, hist_peakidx, SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpower_times, SOphase, SOphase_times] = runTFPeakSOHistograms(varargin)
 % RUNTFPEAKSOHISTOGRAMS: Run watershed algorithm to extract time-frequency peaks from
 %                        spectrogram of data, then compute Slow-Oscillation power and phase histograms
 %
 %   Usage:
-%       [peak_props, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm,...
+%       [peak_props, SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm,...
 %       SOpow_times, boundaries] = runTFPeakSOHistograms(data, Fs, stage_times, stage_vals)
 %
 %   Inputs:
@@ -36,12 +36,12 @@ function [stats_table, hist_peakidx, SOpow_mat, SOphase_mat, SOpow_bins, SOphase
 %       stats_table:  table - time, frequency, height, SOpower, and SOphase
 %                     for each TFpeak
 %       hist_peakidx: 1D logical - indices for TFpeaks included in histograms
-%       SOpow_mat:    2D double - SO power histogram data
+%       SOpower_mat:  2D double - SO power histogram data
 %       SOphase_mat:  2D double - SO phase histogram data
-%       SOpow_bins:   1D double - SO power bin center values for dimension 1 of SOpow_mat
+%       SOpower_bins: 1D double - SO power bin center values for dimension 1 of SOpower_mat
 %       SOphase_bins: 1D double - SO phase bin center values for dimension 1 of SOphase_mat
 %       freq_bins:    1D double - frequency bin center values for dimension 2
-%                     of SOpow_mat and SOphase_mat
+%                     of SOpower_mat and SOphase_mat
 %       spect:        2D double - spectrogram of data
 %       stimes:       1D double - timestamp bin center values for dimension 2 of
 %                     spect
@@ -49,6 +49,8 @@ function [stats_table, hist_peakidx, SOpow_mat, SOphase_mat, SOpow_bins, SOphase
 %                     spect
 %       SOpower_norm: 1D double - normalized SO-power used to compute histogram
 %       SOpower_times:1D double - SO-power times
+%       SOphase:      1D double - SO-phase used to compute histogram
+%       SOphase_times:1D double - SO-phase times
 %
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
@@ -221,8 +223,8 @@ stats_table.Properties.VariableDescriptions{'PeakStage'} = 'Stage: 6 = Artifact,
 stats_table.Properties.VariableUnits{'PeakStage'} = 'Stage #';
 
 %% Compute SO-power and SO-phase histograms
-[SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins,...
-    ~, ~, stats_table.SOpower, stats_table.SOphase, hist_peakidx, SOpower_norm, SOpower_times] = SOpowerphaseHistogram(...
+[SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins,...
+    ~, ~, stats_table.SOpower, stats_table.SOphase, hist_peakidx, SOpower_norm, SOpower_times, SOphase, SOphase_times] = SOpowerphaseHistogram(...
     data, Fs, stats_table.PeakFrequency, stats_table.PeakTime,...
     'stage_vals', single(stage_vals), 'stage_times', stage_times, 'SOPH_stages', stages_include,...
     'SOpower_norm_method', SOpower_norm_method, 'EEG_times', t_data, 'isexcluded', artifacts, 'verbose', verbose);

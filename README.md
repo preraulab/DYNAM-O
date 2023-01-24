@@ -21,7 +21,7 @@ Included in this package are versions of a rainbow and "gouldian" colormap, desi
 > Peter Kovesi. Good Colour Maps: How to Design Them. arXiv:1509.03700 [cs.GR] 2015 https://arxiv.org/abs/1509.03700
 --- 
 ## Tutorial
-A full description of the toolbox and tutorial [can be found on the Prerau Lab site](https://prerau.bwh.harvard.edu/transient-oscillation-dynamics/)
+A full description of the toolbox and tutorial [can be found on the Prerau Lab site](https://prerau.bwh.harvard.edu/DYNAM-O/)
 
 ## Table of Contents
 * [Overview](#overview)
@@ -59,7 +59,7 @@ Next, instead of looking at the waveforms in terms of fixed sleep stages (i.e., 
 
 ## Quick Start: Using the Toolbox
 
-An [example script](https://github.com/preraulab/watershed_TFpeaks_toolbox/blob/master/example_script.m) is provided in the repository that takes an excerpt of a single channel of [example sleep EEG data](https://github.com/preraulab/watershed_TFpeaks_toolbox/blob/master/example_data/example_data.mat) and runs the TF-peak detection watershed algorithm and the SO-power and SO-phase analyses, plotting the resulting hypnogram, spectrogram, TF-peak scatterplot, SO-power histogram, and SO-phase histogram (shown below). 
+An [example script](https://github.com/preraulab/DYNAM-O/blob/main_public/example_script.m) is provided in the repository that takes an excerpt of a single channel of [example sleep EEG data](https://github.com/preraulab/DYNAM-O/blob/main_public/example_data/example_data.mat) and runs the TF-peak detection watershed algorithm and the SO-power and SO-phase analyses, plotting the resulting hypnogram, spectrogram, TF-peak scatterplot, SO-power histogram, and SO-phase histogram (shown below). 
 
 After installing the package, execute the example script on the command line:
 
@@ -112,7 +112,7 @@ This should produce the following output:
 <figure><img src="https://prerau.bwh.harvard.edu/wp-content/uploads/2022/09/TFpeakDynamics.png" alt="full night example" style="width:40%"> <figcaption align = "center"><b>Output from the example full night of data provided with the toolbox.</b></figcaption></figure>
 <br/><br/>
 
-For more in-depth information and documentation on the Transient Oscillation Dynamics algorithms visit [the Prerau Lab website.](https://prerau.bwh.harvard.edu/transient-oscillations-dynamics)
+For more in-depth information and documentation on the Transient Oscillation Dynamics algorithms visit [the Prerau Lab website.](https://prerau.bwh.harvard.edu/DYNAM-O)
 <br/><br/>
 
 ### Changing the Quality Settings
@@ -136,7 +136,7 @@ quality_setting = 'draft';
 
 There are also multiple normalization schemes that can be used for the SO-power.
 
--	'none': No normalization. The unaltered SO-power in dB.
+- 'none': No normalization. The unaltered SO-power in dB.
 - 'p5shift':	Percentile shifted. The Nth percentile of artifact free SO-power during sleep (non-wake) times is computed and subtracted. We use the 5th percentile by default, as it roughly corresponds with aligning subjects by N1 power. This is the recommended normalization for any multi-subject comparisons.
 - 'percent': %SO-power. SO-power is scaled between 1st and 99th percentile of artifact free data during sleep (non-wake) times. This this only appropriate for within-night comparisons or when it is known all subjects reach the same stage of sleep.
 - 'proportional': The ratio of slow to total SO-power.
@@ -170,7 +170,7 @@ save_peak_properties = 0;
 ```
 
 ## Running Your Own Data
-The main function to run is run_watershed_SOpowphase.m
+The main function to run is runTFPeakSOHistograms.m
 
 ``` matlab
 runTFPeakSOHistograms(data, Fs, stage_times, stage_vals, 'time_range', time_range, 'quality_setting', 
@@ -209,15 +209,15 @@ The main outputs are:
 %                     spect
 %       SOpower_norm: 1D double - normalized SO-power used to compute histogram
 %       SOpower_times:  1D double - SO-power times
-%       SOphase: 1D double - normalized SO-power used to compute histogram
-%       SOphase_times:  1D double - SO-power times
+%       SOphase: 1D double - SO-phase used to compute histogram
+%       SOphase_times:  1D double - SO-phase times
 ```
 
 View the full documentation for all parameters and outputs.
 
 # Documentation and Tutorials
 
-For more comprehensive documentation see [this tutorial on the Prerau Lab site](https://prerau.bwh.harvard.edu/transient-oscillation-dynamics/)
+For more comprehensive documentation see [this tutorial on the Prerau Lab site](https://prerau.bwh.harvard.edu/DYNAM-O/)
 
 ## Algorithm Summary
 Here we provide a brief summary of the steps for the TF-peak detection as well as for the SO-power histogram. 
@@ -273,7 +273,7 @@ Inputs: Raw EEG timeseries and TF-peak frequencies and times
 4. Normalize each frequency row of histogram so that row integration adds to 1
  
 ## Optimizations 
-This code is an optimized version of what was used in Stokes et. al., 2022. The following is a list of the changes made during optimization. The original unoptimized paper code can be found [here](https://github.com/preraulab/watershed_TFpeaks_toolbox/tree/transient_oscillation_paper).
+This code is an optimized version of what was used in Stokes et. al., 2022. The following is a list of the changes made during optimization. The original unoptimized paper code can be found [here](https://github.com/preraulab/DYNAM-O/tree/transient_oscillation_paper).
 * Candidate TF-Peak regions that are below the duration and bandwidth cutoffs are now removed prior to trimming and peak property calculations
 * Empty regions that come out of the merge procedure are now removed prior to trimming and peak property calculations
 * Watershed and the merging procedure now run on a lower resolution spectrogram (downsampled from the input spectrogram using decimation) to get the rough watershed regions, which are then mapped back onto the high-resolution spectrogram, from which trimming and peak property calculations are done.

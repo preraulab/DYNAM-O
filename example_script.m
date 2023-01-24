@@ -76,7 +76,7 @@ switch data_range
 end
 
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
-[stats_table, hist_peakidx, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpower_times] = ...
+[stats_table, hist_peakidx, SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpower_times] = ...
     runTFPeakSOHistograms(data, Fs, stage_vals, stage_times, 'time_range', time_range, 'quality_setting', quality_setting, 'SOpower_norm_method', SOpower_norm_method);
 
 %% COMPUTE SPECTROGRAM FOR DISPLAY
@@ -184,7 +184,7 @@ xlim(time_range/3600)
 
 % Plot SO-power histogram
 axes(ax(2))
-imagesc(SOpow_bins, freq_bins, SOpow_mat');
+imagesc(SOpower_bins, freq_bins, SOpower_mat');
 axis xy;
 colormap(ax(2), gouldian);
 
