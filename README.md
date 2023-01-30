@@ -2,9 +2,9 @@
 <img src=https://user-images.githubusercontent.com/78376124/214062562-4f8fc73b-5a0a-4cf7-b219-9d0de101528d.png>
 </p>
 
-## DYNAM-O: The Dynamic Oscillation Toolbox - Prerau Laboratory ([sleepEEG.org](https://prerau.bwh.harvard.edu/))
+## DYNAM-O: The Dynamic Oscillation Toolbox for MATLAB - Prerau Laboratory ([sleepEEG.org](https://prerau.bwh.harvard.edu/))
 
-#### This repository contains the updated and optimized MATLAB toolbox code for extracting time-frequency peaks from EEG data and creating slow-oscillation power and phase histograms. 
+#### This repository contains the updated and optimized MATLAB toolbox code for extracting time-frequency peaks from EEG data and creating slow-oscillation power and phase histograms. [Our Python port, pyDYNAM-O is available here.](https://github.com/preraulab/pyDYNAM-O)
 
 ## Citations
 ### Paper and Toolbox
