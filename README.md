@@ -2,9 +2,9 @@
 <img src=https://user-images.githubusercontent.com/78376124/214062562-4f8fc73b-5a0a-4cf7-b219-9d0de101528d.png>
 </p>
 
-## DYNAM-O: The Dynamic Oscillation Toolbox - Prerau Laboratory ([sleepEEG.org](https://prerau.bwh.harvard.edu/))
+## DYNAM-O: The Dynamic Oscillation Toolbox for MATLAB - Prerau Laboratory ([sleepEEG.org](https://prerau.bwh.harvard.edu/))
 
-#### This repository contains the updated and optimized MATLAB toolbox code for extracting time-frequency peaks from EEG data and creating slow-oscillation power and phase histograms. 
+#### This repository contains the updated and optimized MATLAB toolbox code for extracting time-frequency peaks from EEG data and creating slow-oscillation power and phase histograms. [Our Python port, pyDYNAM-O is available here.](https://github.com/preraulab/pyDYNAM-O)
 
 ## Citations
 ### Paper and Toolbox
@@ -21,7 +21,7 @@ Included in this package are versions of a rainbow and "gouldian" colormap, desi
 > Peter Kovesi. Good Colour Maps: How to Design Them. arXiv:1509.03700 [cs.GR] 2015 https://arxiv.org/abs/1509.03700
 --- 
 ## Tutorial
-A full description of the toolbox and tutorial [can be found on the Prerau Lab site](https://prerau.bwh.harvard.edu/DYNAM-O/)
+A full description of the toolbox and tutorial [can be found on the Prerau Lab site](https://prerau.bwh.harvard.edu/DYNAM-O/).
 
 ## Table of Contents
 * [Overview](#overview)
@@ -109,7 +109,7 @@ Once the segment has succesfully completed, you can run the full night of data b
 data_range = 'night';
 ```
 This should produce the following output:
-<figure><img src="https://prerau.bwh.harvard.edu/wp-content/uploads/2022/09/TFpeakDynamics.png" alt="full night example" style="width:40%"> <figcaption align = "center"><b>Output from the example full night of data provided with the toolbox.</b></figcaption></figure>
+<figure><img src="https://prerau.bwh.harvard.edu/wp-content/uploads/2022/09/TFpeakDynamics.png" alt="full night example" style="width:40%"> <figcaption><b>Output from the example full night of data provided with the toolbox.</b></figcaption></figure>
 <br/><br/>
 
 For more in-depth information and documentation on the Transient Oscillation Dynamics algorithms visit [the Prerau Lab website.](https://prerau.bwh.harvard.edu/DYNAM-O)
@@ -284,7 +284,7 @@ This code is an optimized version of what was used in Stokes et. al., 2022. The 
 The contents of the "toolbox" folder is organized as follows, with key functions:
 
 ```
-.TOOLBOX ROOT
+.REPO_ROOT
 ├── example_script.m:         Quick start example, computes the SO-Power and SO-Phase histograms, and plots a summary 
 │                                 figure. Uses example data contained in example_data folder.
 ├── runTFPeakSOHistograms.m : Main quick start function that calls all of the TF-peak extraction and SOPH functions
@@ -296,8 +296,8 @@ The contents of the "toolbox" folder is organized as follows, with key functions
     ├── SOpowphase_functions/
     │         - SOpowerphaseHistogram.m: Compute SO-power and SO-phase histograms 
     ├── TFpeak_functions/
-    │          - extractTFpeaks.m: Top level function to run the watershed pipeline on a given spectrogram,
+    │         - extractTFpeaks.m: Top level function to run the watershed pipeline on a given spectrogram,
     │              including baseline removal, image segmentation, peak merging, trimming, and statistics.  
     └── helper_functions/
-                - Contains various utility functions for spectral estimation and plotting
+              - Contains various utility functions for spectral estimation and plotting
 ```
