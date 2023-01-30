@@ -21,7 +21,7 @@ Included in this package are versions of a rainbow and "gouldian" colormap, desi
 > Peter Kovesi. Good Colour Maps: How to Design Them. arXiv:1509.03700 [cs.GR] 2015 https://arxiv.org/abs/1509.03700
 --- 
 ## Tutorial
-A full description of the toolbox and tutorial [can be found on the Prerau Lab site](https://prerau.bwh.harvard.edu/DYNAM-O/)
+A full description of the toolbox and tutorial [can be found on the Prerau Lab site](https://prerau.bwh.harvard.edu/DYNAM-O/).
 
 ## Table of Contents
 * [Overview](#overview)
