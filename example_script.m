@@ -146,7 +146,7 @@ set(hypn_spect_ax(3),'YTick',[round(min_SOP, 2, 'significant') round((max_SOP+mi
 set(hypn_spect_ax(3),'yticklabel',num2str(get(hypn_spect_ax(3),'ytick')','%.1f'))
 switch SOpower_norm_method
     case {'p5shift', 'none'}
-        ylab = 'SOP(dB)';
+        ylab = 'SOP (dB)';
     case 'percent'
         ylab = '%SOP';
     case 'proportion'
