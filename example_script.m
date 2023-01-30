@@ -23,7 +23,7 @@ addpath(genpath('./toolbox'))
 data_fname = 'example_data/example_data.mat';
 
 %Select 'segment' or 'night' for example data range
-data_range = 'night'; %Only works for example data provide
+data_range = 'segment'; %Only works for provided example data
 
 %% ALGORITHM SETTINGS
 %Quality settings for the algorithm:
