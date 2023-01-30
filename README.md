@@ -109,7 +109,7 @@ Once the segment has succesfully completed, you can run the full night of data b
 data_range = 'night';
 ```
 This should produce the following output:
-<figure><img src="https://prerau.bwh.harvard.edu/wp-content/uploads/2022/09/TFpeakDynamics.png" alt="full night example" style="width:40%"> <figcaption align = "center"><b>Output from the example full night of data provided with the toolbox.</b></figcaption></figure>
+<figure><img src="https://prerau.bwh.harvard.edu/wp-content/uploads/2022/09/TFpeakDynamics.png" alt="full night example" style="width:40%"> <figcaption><b>Output from the example full night of data provided with the toolbox.</b></figcaption></figure>
 <br/><br/>
 
 For more in-depth information and documentation on the Transient Oscillation Dynamics algorithms visit [the Prerau Lab website.](https://prerau.bwh.harvard.edu/DYNAM-O)
@@ -284,7 +284,7 @@ This code is an optimized version of what was used in Stokes et. al., 2022. The 
 The contents of the "toolbox" folder is organized as follows, with key functions:
 
 ```
-.TOOLBOX ROOT
+.REPO_ROOT
 ├── example_script.m:         Quick start example, computes the SO-Power and SO-Phase histograms, and plots a summary 
 │                                 figure. Uses example data contained in example_data folder.
 ├── runTFPeakSOHistograms.m : Main quick start function that calls all of the TF-peak extraction and SOPH functions
@@ -296,8 +296,8 @@ The contents of the "toolbox" folder is organized as follows, with key functions
     ├── SOpowphase_functions/
     │         - SOpowerphaseHistogram.m: Compute SO-power and SO-phase histograms 
     ├── TFpeak_functions/
-    │          - extractTFpeaks.m: Top level function to run the watershed pipeline on a given spectrogram,
+    │         - extractTFpeaks.m: Top level function to run the watershed pipeline on a given spectrogram,
     │              including baseline removal, image segmentation, peak merging, trimming, and statistics.  
     └── helper_functions/
-                - Contains various utility functions for spectral estimation and plotting
+              - Contains various utility functions for spectral estimation and plotting
 ```
