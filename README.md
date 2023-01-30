@@ -69,7 +69,7 @@ After installing the package, execute the example script on the command line:
 
 Once a parallel pool has started (if applicable), the following result should be generated: 
 
-<figure ><img src="https://prerau.bwh.harvard.edu/wp-content/uploads/2022/09/TFpeakDynamics_segment.png" alt="example segment" width="40%;">
+<figure ><img src="https://prerau.bwh.harvard.edu/images/TFpeakDynamics_segment.png" alt="example segment" width="40%;">
 <figcaption><b>Output from the example segment of data provided with the toolbox.</b></figcaption></figure>
 <br/><br/>
 
@@ -109,7 +109,7 @@ Once the segment has succesfully completed, you can run the full night of data b
 data_range = 'night';
 ```
 This should produce the following output:
-<figure><img src="https://prerau.bwh.harvard.edu/wp-content/uploads/2022/09/TFpeakDynamics.png" alt="full night example" style="width:40%"> <figcaption><b>Output from the example full night of data provided with the toolbox.</b></figcaption></figure>
+<figure><img src="https://prerau.bwh.harvard.edu/images/TFpeakDynamics.png" alt="full night example" style="width:40%"> <figcaption><b>Output from the example full night of data provided with the toolbox.</b></figcaption></figure>
 <br/><br/>
 
 For more in-depth information and documentation on the Transient Oscillation Dynamics algorithms visit [the Prerau Lab website.](https://prerau.bwh.harvard.edu/DYNAM-O)
