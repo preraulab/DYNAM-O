@@ -76,7 +76,7 @@ SOpower(abs(nanzscore(SOpower)) >= SOpower_outlier_threshold) = nan;
 if strcmpi(norm_method,'shift')
     shift_ptile = 2;
     shift_stages = 1:4;
-elseif regexp(norm_method,'p[0-9]+shift*')
+elseif regexp(norm_method,'p*+shift*')
     shift_ptile = str2double(norm_method(2:strfind(norm_method,'shift')-1));
     shift_stages = unique((norm_method(strfind(norm_method,'shift')+5:end)) - '0');
 
