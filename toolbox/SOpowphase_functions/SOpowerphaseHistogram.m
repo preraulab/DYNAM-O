@@ -46,6 +46,7 @@ function [SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, SOpow_TIB
 %                                          in SOpower analysis. Otherwise all values in that SO power bin will
 %                                          be NaN. Default = 1.
 %       SOphase_filter: 1xF double - custom filter that will be used to estimate SOphase
+%       SOphase_norm_dim: integer - which dimension of the SOphase histogram to normalize to add to 1. Default = 1
 %       EEG_times: 1xN double - times for each EEG sample. Default = (0:length(EEG)-1)/Fs
 %       time_range: 1x2 double - min and max times for which to include TFpeaks. Also used to normalize
 %                   SOpower. Default = [EEG_times(1), EEG_times(end)]
@@ -112,6 +113,7 @@ addOptional(p, 'SOpower_norm_method', 'p2shift1234', @(x) validateattributes(x, 
 addOptional(p, 'SOpower_retain_Fs', true, @(x) validateattributes(x,{'logical'},{}));
 addOptional(p, 'SOpower_min_time_in_bin', 1, @(x) validateattributes(x,{'numeric'},{'scalar','real','finite','nonnan','nonnegative','integer'}));
 addOptional(p, 'SOphase_filter', []);
+addOptional(p, 'SOphase_norm_dim', 1, @(x) validateattributes(x,{'numeric'},{'scalar','real','finite','nonnan','nonnegative','integer'}));
 
 %EEG time settings
 addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
@@ -185,7 +187,7 @@ end
     SOphaseHistogram(SOphase, SOphase_times, TFpeak_freqs, TFpeak_times,...
     'TFpeak_stages', TFpeak_stages, 'stage_vals', single(stage_vals), 'stage_times', stage_times,...
     'freq_range', freq_range, 'freq_binsizestep', freq_binsizestep, 'SO_range', SOphase_range, 'SO_binsizestep', SOphase_binsizestep, ...
-    'SO_freqrange', SO_freqrange, 'SOPH_stages', SOPH_stages, 'compute_rate', compute_rate,...
+    'SO_freqrange', SO_freqrange, 'SOPH_stages', SOPH_stages, 'norm_dim', SOphase_norm_dim, 'compute_rate', compute_rate,...
     'plot_on', plot_on, 'verbose', verbose);
 
 %% Verify that the same TF peaks are included in the two histograms
