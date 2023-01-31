@@ -315,7 +315,16 @@ if f_verb > 0
 end
 
 %Create the peak stats table
-stats_table = computePeakStatsTable(regions, bndry, img, x, y, num_segment);
+%Select properties for speed
+properties = {'Area', 'Bandwidth', 'Duration', 'Height', 'PeakFrequency', 'PeakTime','Volume'};
+
+%To include all properties swap out with the line below
+%properties = 'all';
+%or select from:
+%properties = {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData',... 
+%                     'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'}
+
+stats_table = computePeakStatsTable(regions, bndry, img, x, y, num_segment, properties);
 
 seq_time = (now-t_start)/datenum([0 0 0 0 0 1]);
 if f_verb > 0
