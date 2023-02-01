@@ -16,8 +16,8 @@ function [stats_table, hist_peakidx, SOpower_mat, SOphase_mat, SOpower_bins, SOp
 %       t_data (opt):              [1xn] double - timestamps for data. Default = (0:length(data)-1)/Fs;
 %       time_range (opt):          [1x2] double - section of EEG to use in analysis
 %                                  (seconds). Default = [min(t_data), max(t_data)]
-%       features (opt):            [1xp] char or cell array of char -
-%                                  features to be extracted from each peak region. can be any subset of
+%       features (opt):            [1xf] char or cell array of char -
+%                                  features to be extracted from each peak region. Can be any subset of
 %                                  {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData', 
 %                                   'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. Default = 'all'
 %       artifact_filters (opt):    struct with 2 digitalFilter fields "hpFilt_high","hpFilt_broad" -

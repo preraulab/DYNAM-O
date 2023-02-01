@@ -12,9 +12,8 @@ function stats_table = computePeakStatsTable(regions,boundaries,data,xvalues,yva
 %   yvalues      -- y axis of image data. default 1:size(data,1).
 %   segment_num  -- segment number if data comes from larger image. default 1.
 %   features   -- cell array of features to include, can be any subset of
-%                   {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData', 
-%                     'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'}
-%                   or 'all', (default: 'all')
+%                 {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData', 
+%                  'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. default 'all'
 %
 % OUTPUTS:
 %   stats_table   -- Table of peak statistics

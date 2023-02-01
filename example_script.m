@@ -44,7 +44,7 @@ SOpower_norm_method = 'p5shift';
 %features = 'all';
 %or select from:
 %features = {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData',...
-%              'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'}
+%            'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'}
 features = {'Area', 'Bandwidth', 'Duration', 'Height', 'PeakFrequency', 'PeakTime', 'Volume'};
 
 %Save figure image
