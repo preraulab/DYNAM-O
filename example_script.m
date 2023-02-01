@@ -39,6 +39,14 @@ quality_setting = 'fast';
 %   'none': No normalization. Raw dB power
 SOpower_norm_method = 'p5shift';
 
+%Select features for speed:
+%To include all features swap out with the line below
+%features = 'all';
+%or select from:
+%features = {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData',...
+%              'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'}
+features = {'Area', 'Bandwidth', 'Duration', 'Height', 'PeakFrequency', 'PeakTime', 'Volume'};
+
 %Save figure image
 save_output_image = false;
 output_fname = [];
@@ -77,7 +85,7 @@ end
 
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
 [stats_table, hist_peakidx, SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpower_times] = ...
-    runTFPeakSOHistograms(data, Fs, stage_vals, stage_times, 'time_range', time_range, 'quality_setting', quality_setting, 'SOpower_norm_method', SOpower_norm_method);
+    runTFPeakSOHistograms(data, Fs, stage_vals, stage_times, 'time_range', time_range, 'features', features, 'quality_setting', quality_setting, 'SOpower_norm_method', SOpower_norm_method);
 
 %% COMPUTE SPECTROGRAM FOR DISPLAY
 [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(data, Fs, [4,25], [15 29], [30 15], [],'linear',[],false,false);
