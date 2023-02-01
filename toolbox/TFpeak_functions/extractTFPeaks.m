@@ -1,4 +1,4 @@
-function stats_table = extractTFPeaks(img,x,y,num_segment,conn_wshed,...
+function stats_table = extractTFPeaks(img,x,y,features,num_segment,conn_wshed,...
     merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,conn_stats,...
     bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
 % EXTRACTTFPEAKS Determines the peak regions within a spectral topography and extracts a set of features for each
@@ -9,9 +9,12 @@ function stats_table = extractTFPeaks(img,x,y,num_segment,conn_wshed,...
 %       bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
 %
 % INPUTS:
-%   img         -- 2D matrix of image data. defaults to peaks(100).
+%   img          -- 2D matrix of image data. defaults to peaks(100).
 %   x            -- x axis of image data. default 1:size(data,2).
 %   y            -- y axis of image data. default 1:size(data,1).
+%   features     -- cell array of features to include, can be any subset of
+%                   {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData', 
+%                    'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. default 'all'
 %   num_segment  -- segment number if data comes from larger image. default 1.
 %   conn_wshed   -- pixel connection to be used by peaksWShed. default 8.
 %   merge_thresh -- threshold weight value for when to stop merge rule. default 8.
@@ -64,57 +67,60 @@ end
 if nargin < 3
     y = [];
 end
-if nargin < 4
-    num_segment = [];
+if nargin < 4 || isempty(features)
+    features = 'all';
 end
 if nargin < 5
-    conn_wshed = [];
+    num_segment = [];
 end
 if nargin < 6
-    merge_thresh = [];
+    conn_wshed = [];
 end
 if nargin < 7
-    max_merges = [];
+    merge_thresh = [];
 end
 if nargin < 8
+    max_merges = [];
+end
+if nargin < 9
     downsample_spect = [];
 end
 
-if nargin < 9 || isempty(dur_min)
+if nargin < 10 || isempty(dur_min)
     %Min TF-peak duration
     dur_min = 0;
 end
 
-if nargin < 10 || isempty(bw_min)
+if nargin < 11 || isempty(bw_min)
     %Min TF-peak bandwidth
     bw_min = 0;
 end
 
-if nargin < 11
+if nargin < 12
     trim_vol = [];
 end
-if nargin < 12
+if nargin < 13
     trim_shift = [];
 end
-if nargin < 13
+if nargin < 14
     conn_trim = [];
 end
-if nargin < 14
+if nargin < 15
     conn_stats = [];
 end
-if nargin < 15
+if nargin < 16
     bl_thresh = [];
 end
-if nargin < 16
+if nargin < 17
     merge_rule = [];
 end
-if nargin < 17
+if nargin < 18
     f_verb = [];
 end
-if nargin < 18
+if nargin < 19
     verb_pref = [];
 end
-if nargin < 19
+if nargin < 20
     f_disp = [];
 end
 
@@ -315,7 +321,7 @@ if f_verb > 0
 end
 
 %Create the peak stats table
-stats_table = computePeakStatsTable(regions, bndry, img, x, y, num_segment);
+stats_table = computePeakStatsTable(regions, bndry, img, x, y, num_segment, features);
 
 seq_time = (now-t_start)/datenum([0 0 0 0 0 1]);
 if f_verb > 0
