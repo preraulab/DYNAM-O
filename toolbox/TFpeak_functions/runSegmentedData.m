@@ -23,8 +23,7 @@ function stats_table = ...
 %   downsample_spect   --  2x1 double indicating number of rows and columns to downsize spect to.
 %   features     -- cell array of features to include, can be any subset of
 %                   {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData', 
-%                    'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'}
-%                   or 'all', (default: 'all')
+%                    'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. default 'all'
 %   dur_min      -- minimum duration allowed
 %   bw_min       -- minimum bandwidth allowed
 %   conn_wshed   -- pixel connection to be used by peaksWShed. default 8.

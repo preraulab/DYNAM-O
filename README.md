@@ -152,7 +152,7 @@ To change this, change `SOpower_norm_method` to the appropriate value.
 SOpower_norm_method = 'p5shift';
 ```
 
-### Changing Features Extracted
+### Changing Extracted Features
 
 There are multiple different features that can be extracted for each peak region during the watershed pipeline (see table above).
 
@@ -164,7 +164,7 @@ To change this, adjust `features` to include the names of interested features.
 %features = 'all';
 %or select from:
 %features = {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData',...
-%              'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'}
+%            'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'}
 features = {'Area', 'Bandwidth', 'Duration', 'Height', 'PeakFrequency', 'PeakTime', 'Volume'};
 ```
 

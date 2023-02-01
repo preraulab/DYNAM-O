@@ -14,8 +14,7 @@ function stats_table = extractTFPeaks(img,x,y,features,num_segment,conn_wshed,..
 %   y            -- y axis of image data. default 1:size(data,1).
 %   features     -- cell array of features to include, can be any subset of
 %                   {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData', 
-%                    'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'}
-%                   or 'all', (default: 'all')
+%                    'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. default 'all'
 %   num_segment  -- segment number if data comes from larger image. default 1.
 %   conn_wshed   -- pixel connection to be used by peaksWShed. default 8.
 %   merge_thresh -- threshold weight value for when to stop merge rule. default 8.
