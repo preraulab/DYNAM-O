@@ -17,7 +17,7 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOphase, 
 %
 %   OPTIONAL:
 %       TFpeak_stages: Px1 - sleep stage each TF peak occurs 5=W,4=R,3=N1,2=N2,1=N3
-%       stage_vales: 1xS double - numeric stage values 5=W,4=R,3=N1,2=N2,1=N3
+%       stage_vals:  1xS double - numeric stage values 5=W,4=R,3=N1,2=N2,1=N3
 %       stage_times: 1xS double - stage times
 %       freq_range: 1x2 double - min and max frequencies of TF peak to include in the histogram
 %                   (Hz). Default = [0,40]
