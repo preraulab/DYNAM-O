@@ -152,6 +152,22 @@ To change this, change `SOpower_norm_method` to the appropriate value.
 SOpower_norm_method = 'p5shift';
 ```
 
+### Changing Extracted Features
+
+There are multiple different features that can be extracted for each peak region during the watershed pipeline (see table above).
+
+To change this, adjust `features` to include the names of interested features.
+
+``` matlab
+%Select features for speed:
+%To include all features swap out with the line below
+%features = 'all';
+%or select from:
+%features = {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData',...
+%            'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'}
+features = {'Area', 'Bandwidth', 'Duration', 'Height', 'PeakFrequency', 'PeakTime', 'Volume'};
+```
+
 ## Saving Output
 You can save the image output by adjusting these lines: 
 ``` matlab
