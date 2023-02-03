@@ -34,6 +34,9 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOphase, 
 %       norm_dim: double - histogram dimension to normalize (default: 1 = normalize across each frequency)
 %       compute_rate: logical - histogram output in terms of TFpeaks/min instead of count. 
 %                               Default = true.
+%       min_time_in_bin: numerical - time (minutes) required in each SO power bin to include
+%                                  in SOpower analysis. Otherwise all values in that SO power bin will
+%                                  be NaN. Default = 1.
 %       SOphase_filter: 1xF double - custom filter that will be used to estimate SOphase
 %       EEG_times: 1xN double - times for each EEG sample. Default = (0:length(EEG)-1)/Fs
 %       time_range: 1x2 double - min and max times for which to include TFpeaks.
@@ -105,6 +108,7 @@ addOptional(p, 'SO_freqrange', [0.3, 1.5], @(x) validateattributes(x, {'numeric'
 addOptional(p, 'SOPH_stages', 1:3, @(x) validateattributes(x, {'numeric', 'vector'}, {'real'})); % W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
 addOptional(p, 'norm_dim', 1, @(x) validateattributes(x,{'numeric'},{'scalar'}));
 addOptional(p, 'compute_rate', true, @(x) validateattributes(x,{'logical'},{}));
+addOptional(p, 'min_time_in_bin', 0, @(x) validateattributes(x,{'numeric'},{'scalar','real','finite','nonnan','nonnegative','integer'}));
 
 %SOphase specific settings
 addOptional(p, 'SOphase_filter', []);
@@ -221,6 +225,6 @@ clear SOphase_stages_valid SOphase_excluded_valid SOphase_times_valid
     SOphase_valid_allstages, TFpeak_freqs(peak_selection_inds), peak_SOphase(peak_selection_inds),...
     'circular_Cmetric', true,... # specific to SOphase histogram
     'Cmetric_label', 'SO-Phase', 'C_range', SO_range, 'C_binsizestep', SO_binsizestep, 'freq_range', freq_range, 'freq_binsizestep', freq_binsizestep,...
-    'norm_dim', norm_dim, 'compute_rate', compute_rate, 'plot_on', plot_on, 'xlabel_text', 'SO Phase (radians)', 'verbose', verbose);
+    'norm_dim', norm_dim, 'compute_rate', compute_rate, 'min_time_in_bin', min_time_in_bin, 'plot_on', plot_on, 'xlabel_text', 'SO Phase (radians)', 'verbose', verbose);
 
 end
