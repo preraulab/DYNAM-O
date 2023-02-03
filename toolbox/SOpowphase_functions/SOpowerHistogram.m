@@ -36,6 +36,9 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower, 
 %       norm_dim: double - histogram dimension to normalize, not related to norm_method (default: 0 = no normalization)
 %       compute_rate: logical - histogram output in terms of TFpeaks/min instead of count. 
 %                               Default = true.
+%       min_time_in_bin: numerical - time (minutes) required in each SO power bin to include
+%                                  in SOpower analysis. Otherwise all values in that SO power bin will
+%                                  be NaN. Default = 1.
 %       SOpower_outlier_threshold: double - cutoff threshold in standard deviation for excluding outlier SOpower values. 
 %                                  Default = 3. 
 %       norm_method: char - normalization method for SOpower. Options:'pNshiftS', 'percent', 'proportion', 'none'. Default: 'p2shift1234'
@@ -43,9 +46,6 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower, 
 %                         (e.g. p2shift1234 = use the 2nd percentile of stages N3, N2, N1, and REM,
 %                               p5shift123 = use the 5th percentile of stages N3, N2 and N1)
 %       retain_Fs: logical - whether to upsample calculated SOpower to the sampling rate of EEG. Default = true
-%       min_time_in_bin: numerical - time (minutes) required in each SO power bin to include
-%                                  in SOpower analysis. Otherwise all values in that SO power bin will
-%                                  be NaN. Default = 1.
 %       EEG_times: 1xN double - times for each EEG sample. Default = (0:length(EEG)-1)/Fs
 %       time_range: 1x2 double - min and max times for which to include TFpeaks. Also used to normalize
 %                   SOpower. Default = [EEG_times(1), EEG_times(end)]
@@ -116,12 +116,12 @@ addOptional(p, 'SO_freqrange', [0.3, 1.5], @(x) validateattributes(x, {'numeric'
 addOptional(p, 'SOPH_stages', 1:3, @(x) validateattributes(x, {'numeric', 'vector'}, {'real'})); % W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
 addOptional(p, 'norm_dim', 0, @(x) validateattributes(x,{'numeric'},{'scalar'}));
 addOptional(p, 'compute_rate', true, @(x) validateattributes(x,{'logical'},{}));
+addOptional(p, 'min_time_in_bin', 1, @(x) validateattributes(x,{'numeric'},{'scalar','real','finite','nonnan','nonnegative','integer'}));
 
 %SOpower specific settings
 addOptional(p, 'SOpower_outlier_threshold', 3, @(x) validateattributes(x,{'numeric'},{'scalar'}));
 addOptional(p, 'norm_method', 'p2shift1234', @(x) validateattributes(x, {'char', 'numeric'},{}));
 addOptional(p, 'retain_Fs', true, @(x) validateattributes(x,{'logical'},{}));
-addOptional(p, 'min_time_in_bin', 1, @(x) validateattributes(x,{'numeric'},{'scalar','real','finite','nonnan','nonnegative','integer'}));
 
 %EEG time settings
 addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
@@ -238,8 +238,8 @@ end
 
 [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin] = TFPeakHistogram(SOpower, SOpower_stages, SOpower_times_step, SOpower_valid,...
     SOpower_valid_allstages, TFpeak_freqs(peak_selection_inds), peak_SOpower(peak_selection_inds),...
-    'norm_method', norm_method, 'min_time_in_bin', min_time_in_bin,... # specific to SOpower histogram
+    'norm_method', norm_method,... # specific to SOpower histogram
     'Cmetric_label', 'SO-Power', 'C_range', SO_range, 'C_binsizestep', SO_binsizestep, 'freq_range', freq_range, 'freq_binsizestep', freq_binsizestep,...
-    'norm_dim', norm_dim, 'compute_rate', compute_rate, 'plot_on', plot_on, 'xlabel_text', 'SO Power (normalized)', 'verbose', verbose);
+    'norm_dim', norm_dim, 'compute_rate', compute_rate, 'min_time_in_bin', min_time_in_bin, 'plot_on', plot_on, 'xlabel_text', 'SO Power (normalized)', 'verbose', verbose);
 
 end
