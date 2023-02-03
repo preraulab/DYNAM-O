@@ -188,15 +188,11 @@ elseif verbose
         '    ', Cmetric_label, ' Window Size: ' num2str(C_binsizestep(1)) ', Window Step: ' num2str(C_binsizestep(2)), newline,...
         '    ', Cmetric_label, ' Range: ', num2str(C_range(1)), '-', num2str(C_range(2)),  newline...
         '    Normalized Histogram Dimension: ', num2str(norm_dim), newline,...
-        '    Compute Rate: ', char(string(compute_rate)), newline];
+        '    Compute Rate: ', char(string(compute_rate)), newline,...
+        '    Minimum time required in each ', Cmetric_label, ' bin: ', num2str(min_time_in_bin), ' min', newline];
 
     if ~isempty(norm_method)
         display_message = [display_message, '    Normalization Method: ', num2str(norm_method), newline];
-    end
-
-    if min_time_in_bin > 0
-        display_message = [display_message,...
-            '    Minimum time required in each ', Cmetric_label, ' bin: ', num2str(min_time_in_bin), 'min', newline];
     end
 
     disp(display_message)
