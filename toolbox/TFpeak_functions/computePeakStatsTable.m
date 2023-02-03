@@ -103,8 +103,8 @@ boundaries = boundaries(good_indices);
 %% Compute statistics
 %Bounding Box
 if any(strcmpi(features,'BoundingBox')) || any(strcmpi(features,'Duration')) || any(strcmpi(features,'Bandwidth'))
-    stats_table.BoundingBox(:,1) = stats_table.BoundingBox(:,3)*dx + seg_startx;
-    stats_table.BoundingBox(:,2) = stats_table.BoundingBox(:,4)*dy + seg_starty;
+    stats_table.BoundingBox(:,1) = stats_table.BoundingBox(:,1)*dx + seg_startx;
+    stats_table.BoundingBox(:,2) = stats_table.BoundingBox(:,2)*dy + seg_starty;
     stats_table.BoundingBox(:,3) = stats_table.BoundingBox(:,3)*dx;
     stats_table.BoundingBox(:,4) = stats_table.BoundingBox(:,4)*dy;
     stats_table.Properties.VariableDescriptions{'BoundingBox'} = 'Bounding Box: (top left time, top left freq, width, height)';
@@ -180,15 +180,18 @@ if any(strcmpi(features,'HeightData'))
     stats_table.Properties.VariableNames{'PixelValues'} = 'HeightData';
     stats_table.Properties.VariableDescriptions{'HeightData'} = 'Height of all pixels within peak region';
     stats_table.Properties.VariableUnits{'HeightData'} = 'μV^2/Hz';
-else
+elseif any(cellfun(@(prop) strcmp(prop, 'PixelValues'), r_props))
     stats_table.PixelValues = [];
 end
 
 %Remove bounding box if not used
-if ~any(strcmpi(features,'BoundingBox'))
+if ~any(strcmpi(features,'BoundingBox')) && any(cellfun(@(prop) strcmp(prop, 'BoundingBox'), r_props))
     stats_table.BoundingBox = [];
 end
 
 %Remove weighted centroid, since it is embedded in time and frequency columns
-stats_table.WeightedCentroid = [];
+if any(cellfun(@(prop) strcmp(prop, 'WeightedCentroid'), r_props))
+    stats_table.WeightedCentroid = [];
+end
+
 end

@@ -82,10 +82,10 @@ These tables have the following features for each peak:
 | **Feature**   | **Description**                                                  | **Units**       |
 |---------------|------------------------------------------------------------------|-----------------|
 | Area          | Time-frequency area of peak                                      | sec*Hz          |
-| BoundingBox   | Bounding Box: (top-left, time top-left, freq, width, height)         | (sec, Hz, sec, Hz) |
+| BoundingBox   | Bounding Box: (top-left time, top-left freq, width, height)      | (sec, Hz, sec, Hz) |
 | HeightData    | Height of all pixels within peak region                          | μV^2/Hz         |
 | Volume        | Time-frequency volume of peak in s*μV^2                          | sec*μV^2        |
-| Boundaries    | (time, frequency) of peak region boundary pixels                  | (seconds Hz)    |
+| Boundaries    | (time, frequency) of peak region boundary pixels                 | (seconds Hz)    |
 | PeakTime      | Peak time based on weighted centroid                             | sec             |
 | PeakFrequency | Peak frequency based on weighted centroid                        | Hz              |
 | Height        | Peak height above baseline                                       | μV^2/Hz         |
