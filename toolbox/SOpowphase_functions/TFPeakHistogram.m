@@ -69,7 +69,7 @@ end
 num_Cbins = length(C_cbins);
 
 % Display the CPH settings
-display_soph_setting(verbose, Cmetric_label, C_range, C_binsizestep, freq_range, freq_binsizestep, norm_method, min_time_in_bin, compute_rate, norm_dim)
+display_soph_setting(verbose, Cmetric_label, C_range, C_binsizestep, freq_range, freq_binsizestep, norm_method, min_time_in_bin, norm_dim, compute_rate)
 
 %% Create the histogram
 % Intialize Cmetric * freq matrix
@@ -176,7 +176,7 @@ if plot_on
     ylabel('Frequency (Hz)');
 end
 
-function display_soph_setting(verbose, Cmetric_label, C_range, C_binsizestep, freq_range, freq_binsizestep, norm_method, min_time_in_bin, compute_rate, norm_dim)
+function display_soph_setting(verbose, Cmetric_label, C_range, C_binsizestep, freq_range, freq_binsizestep, norm_method, min_time_in_bin, norm_dim, compute_rate)
 % Display CPH settings
 if ischar(verbose)
     disp(verbose)
@@ -187,7 +187,8 @@ elseif verbose
         '    Frequency Range: ', num2str(freq_range(1)) '-' num2str(freq_range(2)) ' Hz', newline,...
         '    ', Cmetric_label, ' Window Size: ' num2str(C_binsizestep(1)) ', Window Step: ' num2str(C_binsizestep(2)), newline,...
         '    ', Cmetric_label, ' Range: ', num2str(C_range(1)), '-', num2str(C_range(2)),  newline...
-        '    ', 'Compute Rate: ', compute_rate, ', norm_dim: ', norm_dim];
+        '    Normalized Histogram Dimension: ', num2str(norm_dim), newline,...
+        '    Compute Rate: ', char(string(compute_rate)), newline];
 
     if ~isempty(norm_method)
         display_message = [display_message, '    Normalization Method: ', num2str(norm_method), newline];
