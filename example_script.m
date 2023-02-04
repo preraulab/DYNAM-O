@@ -85,7 +85,7 @@ end
 
 %% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
 [stats_table, hist_peakidx, SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpower_times] = ...
-    runTFPeakSOHistograms(data, Fs, stage_vals, stage_times, 'time_range', time_range, 'features', features, 'quality_setting', quality_setting, 'SOpower_norm_method', SOpower_norm_method);
+    runTFPeakSOHistograms(data, Fs, stage_vals, stage_times, 'time_range', time_range, 'features', features, 'SOpower_norm_method', SOpower_norm_method, 'quality_setting', quality_setting);
 
 %% COMPUTE SPECTROGRAM FOR DISPLAY
 [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(data, Fs, [4,25], [15 29], [30 15], [],'linear',[],false,false);
