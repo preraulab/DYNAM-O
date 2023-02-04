@@ -76,7 +76,7 @@ addOptional(p, 't_data', [], @(x) validateattributes(x,{'numeric', 'vector'},{'r
 addOptional(p, 'time_range', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'downsample_spect', [],  @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'features', 'all',  @(x) validateattributes(x,{'char', 'cell'},{}));
-addOptional(p, 'artifacts', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
+addOptional(p, 'artifacts', [], @(x) validateattributes(x,{'logical'},{'real','finite','nonnan'}));
 addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'struct'},{}));
 addOptional(p, 'stages_include', [1,2,3,4], @(x) validateattributes(x,{'numeric', 'vector'}, {'real', 'nonempty'}))
 addOptional(p, 'SOpower_norm_method', 'p5shift', @(x) validateattributes(x, {'char', 'numeric'},{}));
