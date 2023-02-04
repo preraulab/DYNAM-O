@@ -189,8 +189,8 @@ save_peak_properties = 0;
 The main function to run is runTFPeakSOHistograms.m
 
 ``` matlab
-runTFPeakSOHistograms(data, Fs, stage_times, stage_vals, 'time_range', time_range, 'quality_setting', 
-                         quality_setting, 'SOpower_norm_method', SOpower_norm_method);
+runTFPeakSOHistograms(data, Fs, stage_times, stage_vals, 'time_range', time_range, 'SOpower_norm_method', 
+                      SOpower_norm_method, 'quality_setting', quality_setting);
 ```
 It uses the following basic inputs:
 ``` matlab
