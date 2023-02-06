@@ -156,8 +156,8 @@ artifacts = hf_artifacts | bb_artifacts;
 if buffer_duration > 0
     [cons, inds] = consecutive(artifacts);
     for ii = 1:length(cons)
-        buffer_start_idx = max(1, inds{ii}(1)-buffer_duration*Fs);
-        buffer_end_idx = min(length(artifacts), inds{ii}(end)+buffer_duration*Fs);
+        buffer_start_idx = ceil(max(1, inds{ii}(1)-buffer_duration*Fs));
+        buffer_end_idx = ceil(min(length(artifacts), inds{ii}(end)+buffer_duration*Fs));
         artifacts(buffer_start_idx:buffer_end_idx) = true;
     end
 end
