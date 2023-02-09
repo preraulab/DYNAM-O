@@ -10,12 +10,6 @@ function ydB = nanpow2db(y)
 %   Copyright 2006-2014 The MathWorks, Inc.
 % EDITED BY MJP 2/7/2020
 
-%#codegenr
-% cond = all(y(:)>=0);
-% if ~cond
-%     coder.internal.assert(cond,'signal:pow2db:InvalidInput');
-% end
-
 %ydB = 10*log10(y);
 %ydB = db(y,'power');
 % We want to guarantee that the result is an integer
