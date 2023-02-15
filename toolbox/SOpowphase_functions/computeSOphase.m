@@ -1,4 +1,4 @@
-function [SOphase, SOphase_times, SOphase_stages] = computeSOphase(EEG, Fs, varargin)
+function [SOphase, SOphase_times, SOphase_stages, filtdata] = computeSOphase(EEG, Fs, varargin)
 % COMPUTESOPHASE computes slow-oscillation phase
 
 %% Parse input
@@ -76,6 +76,7 @@ SOphase = unwrap(angle(data_analytic)-pi);
 SOphase_times = EEG_times;
 
 % Replace excluded times with nans
+filtdata(isexcluded) = nan;
 SOphase(isexcluded) = nan;
 
 % Compute SOphase stage
