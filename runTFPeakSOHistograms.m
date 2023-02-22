@@ -188,7 +188,7 @@ if isempty(artifacts)
         disp('Performing artifact rejection...');
     end
     
-    artifacts = detect_artifacts(data, Fs, [],[],[],[],[], [],[],[], [],[],[], artifact_filters.hpFilt_high, artifact_filters.hpFilt_broad);
+    artifacts = detect_artifacts(data, Fs, 'hpFilt_high', artifact_filters.hpFilt_high, 'hpFilt_broad', artifact_filters.hpFilt_broad);
 else
     artifacts = artifacts(time_range_inds); % apply time_range selection
 end
