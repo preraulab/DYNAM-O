@@ -36,7 +36,7 @@ eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 %% Compute SO-power
 %Compute power using the MTS (data, Fs, frequency_range, taper_params, window_params, min_NFFT, detrend_opt, weighting, plot_on, verbose)
 
-[SO_spect, stimes, sfreqs] = multitaper_spectrogram_mex(data, Fs, freq_range, tapers, window_params, [], 0, [], false, verbose);
+[SO_spect, stimes, sfreqs] = multitaper_spectrogram_mex(data, Fs, freq_range, tapers, window_params, [], 'linear', [], false, verbose);
 
 %Compute dt
 dt = stimes(2) - stimes(1);
