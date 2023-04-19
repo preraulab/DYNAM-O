@@ -109,7 +109,7 @@ assert(shift_ptile >= 0 && shift_ptile <= 100, 'Shift percentile must be between
 
 switch norm_method
     case {'proportion', 'normalized'}
-        [proppower, ~] = computeMTSpectPower(nanEEG, Fs, 'freq_range', [freq_range(1), freq_range(2)]);
+        [proppower, ~] = computeMTSpectPower(nanEEG, Fs, 'freq_range', [0.3, 40]);
         SOpower_norm = db2pow(SOpower)./db2pow(proppower);
         ptile = [];
 
