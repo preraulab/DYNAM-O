@@ -85,14 +85,15 @@ elseif regexp(norm_method,'p*+shift*')
     end
 
     norm_method = 'shift';
+
+    %Check shift
+    assert(shift_ptile >= 0 && shift_ptile <= 100, 'Shift percentile must be between 0 and 100');
 end
 
-%Check shift
-assert(shift_ptile >= 0 && shift_ptile <= 100, 'Shift percentile must be between 0 and 100');
 
 % Note: right now the stage selection is only applied to the 'shift'
 % method. If we were to use proportion, percentile, ALL stages will be
-% used. Is this what we want? 
+% used. Is this what we want?
 
 % Note: two other cases coded in SOpower_histogram_allstageTIB() is now
 % removed:
@@ -109,7 +110,7 @@ assert(shift_ptile >= 0 && shift_ptile <= 100, 'Shift percentile must be between
 
 switch norm_method
     case {'proportion', 'normalized'}
-        [proppower, ~] = computeMTSpectPower(nanEEG, Fs, 'freq_range', [freq_range(1), freq_range(2)]);
+        [proppower, ~] = computeMTSpectPower(nanEEG, Fs, 'freq_range', [0.3, 40], 'tapers', tapers, 'window_params', window_params);
         SOpower_norm = db2pow(SOpower)./db2pow(proppower);
         ptile = [];
 

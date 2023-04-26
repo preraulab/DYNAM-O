@@ -1,4 +1,4 @@
-function [stats_table, hist_peakidx, SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpower_times, SOphase, SOphase_times] = runTFPeakSOHistograms(varargin)
+function [stats_table, hist_peakidx, SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpower_times, SOphase, SOphase_times, SOdata] = runTFPeakSOHistograms(varargin)
 % RUNTFPEAKSOHISTOGRAMS: Run watershed algorithm to extract time-frequency peaks from
 %                        spectrogram of data, then compute Slow-Oscillation power and phase histograms
 %
@@ -20,14 +20,12 @@ function [stats_table, hist_peakidx, SOpower_mat, SOphase_mat, SOpower_bins, SOp
 %                                  features to be extracted from each peak region. Can be any subset of
 %                                  {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData', 
 %                                   'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. Default = 'all'
+%       artifacts (opt):           [1xn] logical - boolean indicating artifact time points. Default = [], run detect_artifacts()
 %       artifact_filters (opt):    struct with 2 digitalFilter fields "hpFilt_high","hpFilt_broad" -
 %                                  filters to be used for artifact detection
 %       stages_include (opt):      [1xp] double - which stages to include in the SO-power and
 %                                  SO-phase histograms. Default = [1,2,3,4]
 %                                  W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
-%       lightsonoff_mins (opt):    double - minutes before first non-wake
-%                                  stage and after last non-wake stage to include in watershed
-%                                  baseline removal. Default = 5
 %       SOpower_norm_method (opt): character - normalization method for SO-power
 %                                  Options: 'p5shift'(default), 'percent', 'proportion', 'none'
 %       verbose (opt):             logical - display extra info. Default = true
@@ -78,9 +76,9 @@ addOptional(p, 't_data', [], @(x) validateattributes(x,{'numeric', 'vector'},{'r
 addOptional(p, 'time_range', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'downsample_spect', [],  @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'features', 'all',  @(x) validateattributes(x,{'char', 'cell'},{}));
+addOptional(p, 'artifacts', [], @(x) validateattributes(x,{'logical'},{'real','finite','nonnan'}));
 addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'struct'},{}));
 addOptional(p, 'stages_include', [1,2,3,4], @(x) validateattributes(x,{'numeric', 'vector'}, {'real', 'nonempty'}))
-addOptional(p, 'lightsonoff_mins', 5, @(x) validateattributes(x,{'numeric'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'SOpower_norm_method', 'p5shift', @(x) validateattributes(x, {'char', 'numeric'},{}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'quality_setting', 'fast', @(x) validateattributes(x,{'char','numeric'},{}));
@@ -185,11 +183,15 @@ end
 stimes = stimes + t_data(1); % adjust the time axis to t_data
 
 %% Artifcact Detection
-if verbose
-    disp('Performing artifact rejection...');
+if isempty(artifacts)
+    if verbose
+        disp('Performing artifact rejection...');
+    end
+    
+    artifacts = detect_artifacts(data, Fs, 'hpFilt_high', artifact_filters.hpFilt_high, 'hpFilt_broad', artifact_filters.hpFilt_broad);
+else
+    artifacts = artifacts(time_range_inds); % apply time_range selection
 end
-
-artifacts = detect_artifacts(data, Fs, [],[],[],[],[], [],[],[], [],[],[], artifact_filters.hpFilt_high, artifact_filters.hpFilt_broad);
 artifacts_stimes = logical(interp1(t_data, double(artifacts), stimes, 'nearest')); % get artifacts occurring at spectrogram times
 
 %% Compute baseline spectrum used to flatten data spectrum
@@ -229,7 +231,7 @@ stats_table.Properties.VariableUnits{'PeakStage'} = 'Stage #';
 
 %% Compute SO-power and SO-phase histograms
 [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins,...
-    ~, ~, stats_table.SOpower, stats_table.SOphase, hist_peakidx, SOpower_norm, SOpower_times, SOphase, SOphase_times] = SOpowerphaseHistogram(...
+    ~, ~, stats_table.SOpower, stats_table.SOphase, hist_peakidx, SOpower_norm, SOpower_times, SOphase, SOphase_times, SOdata] = SOpowerphaseHistogram(...
     data, Fs, stats_table.PeakFrequency, stats_table.PeakTime,...
     'stage_vals', single(stage_vals), 'stage_times', stage_times, 'SOPH_stages', stages_include,...
     'SOpower_norm_method', SOpower_norm_method, 'EEG_times', t_data, 'isexcluded', artifacts, 'verbose', verbose);
