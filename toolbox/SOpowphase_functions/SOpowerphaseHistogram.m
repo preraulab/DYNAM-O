@@ -44,7 +44,7 @@ function [SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, SOpow_TIB
 %       SOpower_retain_Fs: logical - whether to upsample calculated SOpower to the sampling rate of EEG. Default = true
 %       SOpower_min_time_in_bin: numerical - time (minutes) required in each SO power bin to include
 %                                          in SOpower analysis. Otherwise all values in that SO power bin will
-%                                          be NaN. Default = 1.
+%                                          be NaN. Default = 10.
 %       SOphase_filter: 1xF double - custom filter that will be used to estimate SOphase
 %       SOphase_norm_dim: integer - which dimension of the SOphase histogram to normalize to add to 1. Default = 1
 %       EEG_times: 1xN double - times for each EEG sample. Default = (0:length(EEG)-1)/Fs
