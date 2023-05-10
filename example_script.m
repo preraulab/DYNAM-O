@@ -23,7 +23,7 @@ addpath(genpath('./toolbox'))
 data_fname = 'example_data/example_data.mat';
 
 %Select 'segment' or 'night' for example data range
-data_range = 'segment'; %Only works for provided example data
+data_range = 'night'; %Only works for provided example data
 
 %% ALGORITHM SETTINGS
 verbose = true;
@@ -47,6 +47,9 @@ SOpower_norm_method = 'p5shift';
 %features = {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData',...
 %            'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'}
 features = {'Area', 'Bandwidth', 'Duration', 'Height', 'PeakFrequency', 'PeakTime', 'Volume'};
+
+%Stages in which to restrict the SOPHs.
+stages_include = [1,2,3,4];
 
 %Save figure image
 save_output_image = false;
@@ -84,10 +87,10 @@ switch data_range
         disp(['Running full night', newline])
 end
 
-%% Compute TF Peaks 
 %Save total time
 ttotal = tic;
-[stats_table, spect, stimes, sfreqs,t_data,artifacts]= computeTFPeaks(data,Fs,stage_vals,stage_times,'time_range', time_range, ...
+%% Compute TF Peaks 
+[stats_table, spect, stimes, sfreqs,data_used,t_data,artifacts]= computeTFPeaks(data,Fs,stage_vals,stage_times,'time_range', time_range, ...
     'features', features,'quality_setting', quality_setting);
 %% COMPUTE SO-POWER/PHASE HISTOGRAMS
 % See SOpowerphaseHistogram() for a full list of optional arguments for
@@ -95,9 +98,10 @@ ttotal = tic;
 
 [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins,...
             ~, ~, stats_table.SOpower, stats_table.SOphase, hist_peakidx, SOpower_norm, SOpower_times, SOphase, SOphase_times, SOdata] = SOpowerphaseHistogram(...
-            data, Fs, stats_table.PeakFrequency, stats_table.PeakTime,...
-            'stage_vals', single(stage_vals), 'stage_times', stage_times, 'SOPH_stages','SOpower_norm_method', SOpower_norm_method, ...
+            data_used, Fs, stats_table.PeakFrequency, stats_table.PeakTime,...
+            'stage_vals', single(stage_vals), 'stage_times', stage_times,'SOPH_stages', stages_include,'SOpower_norm_method', SOpower_norm_method, ...
             'EEG_times', t_data, 'isexcluded', artifacts,'verbose', verbose);
+
 % Update table column headers
 stats_table.Properties.VariableDescriptions{'SOpower'} = 'Slow-oscillation power at peak time';
 switch SOpower_norm_method
