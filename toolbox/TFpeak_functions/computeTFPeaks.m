@@ -1,4 +1,4 @@
-function [stats_table, spect, stimes, sfreqs,t_data,artifacts]= computeTFPeaks(data,Fs,stage_vals,stage_times,varargin)
+function [stats_table, spect, stimes, sfreqs,data,t_data,artifacts]= computeTFPeaks(varargin)
 % COMPUTETFPKEAKS:
 %
 %   Usage:
@@ -39,7 +39,8 @@ function [stats_table, spect, stimes, sfreqs,t_data,artifacts]= computeTFPeaks(d
 %                     spect
 %       sfreqs:       1D double - frequency bin center values for dimension 1 of
 %                     spect
-%       t_data:       [1xn] double - timestamps for data.
+%       data:         [1xn] double - timeseries data in time_range
+%       t_data:       [1xn] double - timestamps for data in time_range
 %       artifacts:    1xT logical of times flagged as artifacts (logical OR of hf and bb artifacts)
 %
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
