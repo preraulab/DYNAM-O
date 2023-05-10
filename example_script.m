@@ -23,7 +23,7 @@ addpath(genpath('./toolbox'))
 data_fname = 'example_data/example_data.mat';
 
 %Select 'segment' or 'night' for example data range
-data_range = 'night'; %Only works for provided example data
+data_range = 'segment'; %Only works for provided example data
 
 %% ALGORITHM SETTINGS
 verbose = true;
@@ -90,7 +90,7 @@ end
 %Save total time
 ttotal = tic;
 %% Compute TF Peaks 
-[stats_table, spect, stimes, sfreqs,data_used,t_data,artifacts]= computeTFPeaks(data,Fs,stage_vals,stage_times,'time_range', time_range, ...
+[stats_table, spect, stimes, sfreqs,data_trunc,t_data,artifacts]= computeTFPeaks(data,Fs,stage_vals,stage_times,'time_range', time_range, ...
     'features', features,'quality_setting', quality_setting);
 %% COMPUTE SO-POWER/PHASE HISTOGRAMS
 % See SOpowerphaseHistogram() for a full list of optional arguments for
@@ -98,7 +98,7 @@ ttotal = tic;
 
 [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins,...
             ~, ~, stats_table.SOpower, stats_table.SOphase, hist_peakidx, SOpower_norm, SOpower_times, SOphase, SOphase_times, SOdata] = SOpowerphaseHistogram(...
-            data_used, Fs, stats_table.PeakFrequency, stats_table.PeakTime,...
+            data_trunc, Fs, stats_table.PeakFrequency, stats_table.PeakTime,...
             'stage_vals', single(stage_vals), 'stage_times', stage_times,'SOPH_stages', stages_include,'SOpower_norm_method', SOpower_norm_method, ...
             'EEG_times', t_data, 'isexcluded', artifacts,'verbose', verbose);
 
