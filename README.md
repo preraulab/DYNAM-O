@@ -186,50 +186,128 @@ save_peak_properties = 0;
 ```
 
 ## Running Your Own Data
-The main function to run is runTFPeakSOHistograms.m
+The two main functions to run are computeTFPeaks() and SOpowerphaseHistogram().
 
+The first function applys the watershed algorithm to extract time-frequency peaks
 ``` matlab
-runTFPeakSOHistograms(data, Fs, stage_times, stage_vals, 'time_range', time_range, 'SOpower_norm_method', 
-                      SOpower_norm_method, 'quality_setting', quality_setting);
+computeTFPeaks(data, Fs, stage_vals, stage_times, <options>);
 ```
-It uses the following basic inputs:
+It uses the following inputs:
 ``` matlab
 %       data (req):                [1xn] double - timeseries data to be analyzed
 %       Fs (req):                  double - sampling frequency of data (Hz)
-%       stage_times (req):         [1xm] double - timestamps of stage_vals
 %       stage_vals (req):          [1xm] double - sleep stage values at eaach time in
 %                                  stage_times. Note the staging convention: 0=unidentified, 1=N3,
 %                                  2=N2, 3=N1, 4=REM, 5=WAKE
+%       stage_times (req):         [1xm] double - timestamps of stage_vals
 %       t_data (opt):              [1xn] double - timestamps for data. Default = (0:length(data)-1)/Fs;
 %       time_range (opt):          [1x2] double - section of EEG to use in analysis
-%                                  (seconds). Default = [0, max(t)]
-%       stages_include (opt):      [1xp] double - which stages to include in the SOpower and
-%                                  SOphase analyses. Default = [1,2,3,4]
-%       SOpower_norm_method (opt): character - normalization method for SO-power
+%                                  (seconds). Default = [min(t_data), max(t_data)]
+%       downsample_spect(opt):     2x1 double indicating number of rows and columns to downsize spect to
+%       features (opt):            [1xf] char or cell array of char -
+%                                  features to be extracted from each peak region. Can be any subset of
+%                                  {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData', 
+%                                   'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. Default = 'all'
+%       artifacts (opt):           [1xn] logical - boolean indicating artifact time points. Default = [], run detect_artifacts()
+%       artifact_filters (opt):    struct with 2 digitalFilter fields "hpFilt_high","hpFilt_broad" -
+%                                  filters to be used for artifact detection
+%       stages_include (opt):      [1xp] double - which stages to include in the SO-power and
+%                                  SO-phase histograms. Default = [1,2,3,4]
+%                                  W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
+%       verbose (opt):             logical - display extra info. Default = true
+%       quality_setting (opt):     charcater - Quality settings for the algorithm:
+%                                       'precision': high res settings
+%                                       'fast' (default): speed-up with minimal impact on results *suggested*
+%                                       'draft': faster speed-up with increased high frequency TF-peaks, *not recommended for analyzing SOphase*
 ```
-
-The main outputs are:
+The outputs are:
 ``` matlab
-%       stats_table:   table - feature data for each TFpeak
-%       SOpower_mat:    2D double - SO power histogram data
-%       SOphase_mat:  2D double - SO phase histogram data
-%       SOpower_bins:   1D double - SO power bin center values for dimension 1 of SOpow_mat
-%       SOphase_bins: 1D double - SO phase bin center values for dimension
-%                     1 of SOphase_mat
-%       freq_bins:    1D double - frequency bin center values for dimension 2
-%                     of SOpow_mat and SOphase_mat
+%       stats_table:  table - time, frequency, height, SOpower, and SOphase
+%                     for each TFpeak
 %       spect:        2D double - spectrogram of data
 %       stimes:       1D double - timestamp bin center values for dimension 2 of
 %                     spect
 %       sfreqs:       1D double - frequency bin center values for dimension 1 of
 %                     spect
-%       SOpower_norm: 1D double - normalized SO-power used to compute histogram
-%       SOpower_times:  1D double - SO-power times
-%       SOphase: 1D double - SO-phase used to compute histogram
-%       SOphase_times:  1D double - SO-phase times
+%       data_trunc:   [1xn] double - timeseries data in time_range
+%       t_data_trunc: [1xn] double - timestamps for data in time_range
+%       artifacts:    1xT logical of times flagged as artifacts (logical OR of hf and bb artifacts)
 ```
 
-View the full documentation for all parameters and outputs.
+The second function works in tandem with the first and computes slow-oscillation power and phase histograms
+``` matlab
+SOpowerphaseHistogram(data_trunc, Fs, stats_table.PeakFrequency, stats_table.PeakTime, <options>);
+```
+It uses the following inputs:
+``` matlab
+%    REQUIRED:
+%       EEG: 1xN double - timeseries EEG data --required
+%       Fs: numerical - sampling frequency of EEG (Hz) --required
+%       TFpeak_freqs: Px1 - frequency each TF peak occurs (Hz) --required
+%       TFpeak_times: Px1 - times each TF peak occurs (s) --required
+%
+%    OPTIONAL:
+%       TFpeak_stages: Px1 - sleep stage each TF peak occurs 5=W,4=R,3=N1,2=N2,1=N3
+%       stage_vals:  1xS double - numeric stage values 5=W,4=R,3=N1,2=N2,1=N3
+%       stage_times: 1xS double - stage times
+%       freq_range: 1x2 double - min and max frequencies of TF peak to include in the histograms
+%                   (Hz). Default = [0,40]
+%       freq_binsizestep: 1x2 double - [size, step] frequency bin size and bin step for frequency
+%                         axis of SO power/phase histograms (Hz). Default = [1, 0.2]
+%       SOpower_range: 1x2 double - min and max SO power values to consider in SO power analysis.
+%                      Default calculated using min and max of SO power
+%       SOpower_binsizestep: 1x2 double - [size, step] SO power bin size and step for SO power axis
+%                            of histogram. Units are radians. Default
+%                            size is (SOpower_range(2)-SOpower_range(1))/5, default step is
+%                            (SOpower_range(2)-SOpower_range(1))/100
+%       SOphase_range: 1x2 double - min and max SO phase values (radians) to consider in SO phase analysis.
+%                                   Default is [-pi, pi]
+%       SOphase_binsizestep: 1x2 double - [size, step] SO phase bin size and step for SO phase axis
+%                            of histogram. Units are radians. Default size is 2*pi/5, default step is 2*pi/100
+%       SO_freqrange: 1x2 double - min and max frequencies (Hz) considered to be "slow oscillation".
+%                     Default = [0.3, 1.5]
+%       SOPH_stages: stages in which to restrict the SOPHs. Default: 1:3 (NREM only)
+%                    W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
+%       compute_rate: logical - histogram output in terms of TFpeaks/min instead of count.
+%                               Default = true.
+%       SOpower_outlier_threshold: double - cutoff threshold in standard deviation for excluding outlier SOpower values.
+%                                  Default = 3.
+%       SOpower_norm_method: char - normalization method for SOpower. Options:'pNshiftS', 'percent', 'proportion', 'none'. Default: 'p2shift1234'
+%                         For shift, it follows the format pNshiftS where N is the percentile and S is the list of stages (5=W,4=R,3=N1,2=N2,1=N3).
+%                         (e.g. p2shift1234 = use the 2nd percentile of stages N3, N2, N1, and REM,
+%                               p5shift123 = use the 5th percentile of stages N3, N2 and N1)
+%       SOpower_retain_Fs: logical - whether to upsample calculated SOpower to the sampling rate of EEG. Default = true
+%       SOpower_min_time_in_bin: numerical - time (minutes) required in each SO power bin to include
+%                                          in SOpower analysis. Otherwise all values in that SO power bin will
+%                                          be NaN. Default = 10.
+%       SOphase_filter: 1xF double - custom filter that will be used to estimate SOphase
+%       SOphase_norm_dim: integer - which dimension of the SOphase histogram to normalize to add to 1. Default = 1
+%       EEG_times: 1xN double - times for each EEG sample. Default = (0:length(EEG)-1)/Fs
+%       time_range: 1x2 double - min and max times for which to include TFpeaks. Also used to normalize
+%                   SOpower. Default = [EEG_times(1), EEG_times(end)]
+%       isexcluded: 1xN logical - marks each timestep of EEG as artifact or non-artifact. Default = all false.
+%
+%       plot_on: logical - SO power histogram plots. Default = false
+%       verbose: logical - Verbose output. Default = true
+```
+The outputs are:
+``` matlab
+%       SOpow_mat:    2D double - SO power histogram data
+%       SOphase_mat:  2D double - SO phase histogram data
+%       SOpow_bins:   1D double - SO power bin center values for dimension 1 of SOpow_mat
+%       SOphase_bins: 1D double - SO phase bin center values for dimension 1 of SOphase_mat
+%       freq_bins:    1D double - frequency bin center values for dimension 2
+%                     of SOpow_mat and SOphase_mat
+%       SOpow_TIB:    1xT double - time (minutes) in each SOpower bin for all stages 1-5 (0min if not in SOPH_stages)
+%       SOphase_TIB:  1xT double - time (minutes) in each SOphase bin for all stages 1-5 (0min if not in SOPH_stages)
+%       peak_SOpower: 1xP double - normalized slow oscillation power at each TFpeak
+%       peak_SOphase: 1xP double - slow oscillation phase at each TFpeak
+%       peak_selection_inds: 1xP logical - which TFpeaks are counted in the histogram
+%       SOpower: 1xM double - timeseries SO power data
+%       SOpower_times: 1xM double - timeseries SO power times
+%       SOphase: 1xN double - timeseries SO phase data
+%       SOphase_times: 1xN double - timeseries SO phase times
+```
 
 # Documentation and Tutorials
 
@@ -302,18 +380,15 @@ The contents of the "toolbox" folder is organized as follows, with key functions
 ```
 .REPO_ROOT
 ├── example_script.m:         Quick start example, computes the SO-Power and SO-Phase histograms, and plots a summary 
-│                                 figure. Uses example data contained in example_data folder.
-├── runTFPeakSOHistograms.m : Main quick start function that calls all of the TF-peak extraction and SOPH functions
-│   
+│                                 figure. Uses example data contained in example_data folder.│   
 ├── example_data/  CONTAINS EXAMPLE DATA
 └── toolbox/       MAIN TOOLBOX FOLDER  
     ├── SOphase_filters/   
-    │         - SOphase_filters.mat: File containing precomputed digital filters used in the SO-Phase calculation.  
+    │         - SOphase_filters.mat: File containing precomputed digital filters used in the SO-Phase calculation
     ├── SOpowphase_functions/
     │         - SOpowerphaseHistogram.m: Compute SO-power and SO-phase histograms 
     ├── TFpeak_functions/
-    │         - extractTFpeaks.m: Top level function to run the watershed pipeline on a given spectrogram,
-    │              including baseline removal, image segmentation, peak merging, trimming, and statistics.  
+    │         - computeTFPeaks.m: Run watershed pipeline on spectrogram to extract time-frequency peaks  
     └── helper_functions/
               - Contains various utility functions for spectral estimation and plotting
 ```

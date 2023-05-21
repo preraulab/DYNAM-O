@@ -1,17 +1,18 @@
 function [SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, SOpow_TIB, SOphase_TIB, peak_SOpower, peak_SOphase, peak_selection_inds, SOpower, SOpower_times, SOphase, SOphase_times, SOdata] = SOpowerphaseHistogram(EEG,Fs,varargin)
-% SOPOWERPHASEHISTOGRAM computes slow-oscillation power and phase histogram matrices
-% Usage:
-%   [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds] = ...
-%                                 SOpowerphaseHistogram(EEG, Fs, TFpeak_times, TFpeak_freqs, <options>)
+% SOPOWERPHASEHISTOGRAM: Computes slow-oscillation power and phase histogram matrices
 %
-%  Inputs:
-%   REQUIRED:
+%   Usage:
+%       [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds] = ...
+%                                 SOpowerphaseHistogram(EEG, Fs, TFpeak_freqs, TFpeak_times, <options>)
+%
+%   Inputs:
+%    REQUIRED:
 %       EEG: 1xN double - timeseries EEG data --required
 %       Fs: numerical - sampling frequency of EEG (Hz) --required
 %       TFpeak_freqs: Px1 - frequency each TF peak occurs (Hz) --required
 %       TFpeak_times: Px1 - times each TF peak occurs (s) --required
 %
-%   OPTIONAL:
+%    OPTIONAL:
 %       TFpeak_stages: Px1 - sleep stage each TF peak occurs 5=W,4=R,3=N1,2=N2,1=N3
 %       stage_vals:  1xS double - numeric stage values 5=W,4=R,3=N1,2=N2,1=N3
 %       stage_times: 1xS double - stage times
@@ -55,7 +56,7 @@ function [SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, SOpow_TIB
 %       plot_on: logical - SO power histogram plots. Default = false
 %       verbose: logical - Verbose output. Default = true
 %
-%  Outputs:
+%   Outputs:
 %       SOpow_mat:    2D double - SO power histogram data
 %       SOphase_mat:  2D double - SO phase histogram data
 %       SOpow_bins:   1D double - SO power bin center values for dimension 1 of SOpow_mat
@@ -83,8 +84,7 @@ function [SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, SOpow_TIB
 %       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
 %**********************************************************************
 
-%% Parse input
-
+%% Parse inputs
 p = inputParser;
 
 %TFpeak info
