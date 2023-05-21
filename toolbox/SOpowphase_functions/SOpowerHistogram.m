@@ -38,7 +38,7 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower, 
 %                               Default = true.
 %       min_time_in_bin: numerical - time (minutes) required in each SO power bin to include
 %                                  in SOpower analysis. Otherwise all values in that SO power bin will
-%                                  be NaN. Default = 1.
+%                                  be NaN. Default = 10.
 %       SOpower_outlier_threshold: double - cutoff threshold in standard deviation for excluding outlier SOpower values. 
 %                                  Default = 3. 
 %       norm_method: char - normalization method for SOpower. Options:'pNshiftS', 'percent', 'proportion', 'none'. Default: 'p2shift1234'
@@ -116,7 +116,7 @@ addOptional(p, 'SO_freqrange', [0.3, 1.5], @(x) validateattributes(x, {'numeric'
 addOptional(p, 'SOPH_stages', 1:3, @(x) validateattributes(x, {'numeric', 'vector'}, {'real'})); % W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
 addOptional(p, 'norm_dim', 0, @(x) validateattributes(x,{'numeric'},{'scalar'}));
 addOptional(p, 'compute_rate', true, @(x) validateattributes(x,{'logical'},{}));
-addOptional(p, 'min_time_in_bin', 1, @(x) validateattributes(x,{'numeric'},{'scalar','real','finite','nonnan','nonnegative','integer'}));
+addOptional(p, 'min_time_in_bin', 10, @(x) validateattributes(x,{'numeric'},{'scalar','real','finite','nonnan','nonnegative','integer'}));
 
 %SOpower specific settings
 addOptional(p, 'SOpower_outlier_threshold', 3, @(x) validateattributes(x,{'numeric'},{'scalar'}));
