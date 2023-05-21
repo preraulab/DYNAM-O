@@ -34,9 +34,9 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOphase, 
 %       norm_dim: double - histogram dimension to normalize (default: 1 = normalize across each frequency)
 %       compute_rate: logical - histogram output in terms of TFpeaks/min instead of count. 
 %                               Default = true.
-%       min_time_in_bin: numerical - time (minutes) required in each SO power bin to include
-%                                  in SOpower analysis. Otherwise all values in that SO power bin will
-%                                  be NaN. Default = 1.
+%       min_time_in_bin: numerical - time (minutes) required in each SO phase bin to include
+%                                  in SOphase analysis. Otherwise all values in that SO phase bin will
+%                                  be NaN. Default = 0.
 %       SOphase_filter: 1xF double - custom filter that will be used to estimate SOphase
 %       EEG_times: 1xN double - times for each EEG sample. Default = (0:length(EEG)-1)/Fs
 %       time_range: 1x2 double - min and max times for which to include TFpeaks.
