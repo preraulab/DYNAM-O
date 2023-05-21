@@ -3,8 +3,9 @@
 % Files
 %   cell2Ldata            - takes rgn matrix and converts to labeled 2D form
 %   computeMergeWeights   - determines the weights of directed adjacencies between regions
-%   computePeakStatsTable - Creates a table of the region properties for the peaks 
-%   extractTFPeaks        - Determines the peak regions within a spectral topography and extracts a set of features for each
+%   computePeakStatsTable - creates a table of the region properties for the peaks
+%   computeTFPeaks        - [Main function] run watershed pipeline to extract time-frequency peaks
+%   extractTFPeaks        - determines the peak regions within a spectral topography and extracts a set of features for each
 %   filterStatsTable      - gets indices of peaks that pass the BW, duration,
 %   Ldata2graph           - label region border pixels and determine region adjacencies.
 %   mergeRegions          - updates the pixel lists in rgn and borders and the adjacencies in 

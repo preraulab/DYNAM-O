@@ -20,12 +20,15 @@ addpath(genpath('./toolbox'))
 
 %% DATA SETTINGS
 %Location of example data
-data_fname = '/Users/Mike/PycharmProjects/pyTOD/chunk_data.mat';
+data_fname = 'example_data/example_data.mat';
 
 %Select 'segment' or 'night' for example data range
-data_range = 'night'; %Only works for example data provide
+data_range = 'segment'; %Only works for provided example data
 
 %% ALGORITHM SETTINGS
+%Verbose setting in subfunctions
+verbose = true;
+
 %Quality settings for the algorithm:
 %   'precision': high res settings
 %   'fast': speed-up with minimal impact on results *suggested*
@@ -38,6 +41,17 @@ quality_setting = 'fast';
 %   'proportion': ratio of SO-power to total power
 %   'none': No normalization. Raw dB power
 SOpower_norm_method = 'p5shift';
+
+%Select features for speed:
+%To include all features swap out with the line below
+%features = 'all';
+%or select from:
+%features = {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData',...
+%            'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'}
+features = {'Area', 'Bandwidth', 'Duration', 'Height', 'PeakFrequency', 'PeakTime', 'Volume'};
+
+%Stages in which to restrict the SOPHs.
+stages_include = [1,2,3,4];
 
 %Save figure image
 save_output_image = false;
@@ -53,7 +67,7 @@ end
 
 %% LOAD DATA
 %Load example EEG data
-load(data_fname);%, 'data', 'stage_vals', 'stage_times', 'Fs');
+load(data_fname, 'data', 'stage_vals', 'stage_times', 'Fs');
 
 %STAGE NOTATION (in order of sleep depth)
 % W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
@@ -61,30 +75,65 @@ load(data_fname);%, 'data', 'stage_vals', 'stage_times', 'Fs');
 % Add necessary functions to path
 addpath(genpath('./toolbox'))
 
-% switch data_range
-%     case 'segment'
-%         % Choose an example segment from the data
-%         time_range = [8420 13446];
-%         disp(['Running example segment', newline])
-%     case 'night'
-%         wake_buffer = 5*60; %5 minute buffer before/after first/last wake
-%         start_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'first')) - wake_buffer;
-%         end_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'last')+1) + wake_buffer;
+switch data_range
+    case 'segment'
+        % Choose an example segment from the data
+        time_range = [8420 13446];
+        disp(['Running example segment', newline])
+    case 'night'
+        wake_buffer = 5*60; %5 minute buffer before/after first/last wake
+        start_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'first')) - wake_buffer;
+        end_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'last')+1) + wake_buffer;
 
-%         time_range = [start_time end_time];
-%         disp(['Running full night', newline])
-% end
-t = (0:length(data)-1)/Fs;
-time_range = t([1,end]);
+        time_range = [start_time end_time];
+        disp(['Running full night', newline])
+end
 
-%% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
-[stats_table, hist_peakidx, SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpow_times] = ...
-    runTFPeakSOHistograms(data, Fs, stage_times, stage_vals, 'time_range', time_range, 'quality_setting', quality_setting, 'SOpower_norm_method', SOpower_norm_method);
+%Start a timer
+ttotal = tic;
+
+%% COMPUTE TIME-FREQUENCY PEAKS
+% See computeTFPeaks() for a full list of optional arguments for finer
+% control of watershed extraction of Time-Frequency Peaks
+
+[stats_table, spect, stimes, sfreqs, data_trunc, t_data, artifacts]= computeTFPeaks(data, Fs, stage_vals, stage_times,...
+    'time_range', time_range, 'features', features, 'quality_setting', quality_setting);
+
+%% COMPUTE SO-POWER/PHASE HISTOGRAMS
+% See SOpowerphaseHistogram() for a full list of optional arguments for
+% finer control of Histogram generation
+
+[SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins,...
+    ~, ~, stats_table.SOpower, stats_table.SOphase, hist_peakidx,...
+    SOpower_norm, SOpower_times, SOphase, SOphase_times, SOdata] = SOpowerphaseHistogram(...
+    data_trunc, Fs, stats_table.PeakFrequency, stats_table.PeakTime,...
+    'stage_vals', single(stage_vals), 'stage_times', stage_times,'SOPH_stages', stages_include,...
+    'SOpower_norm_method', SOpower_norm_method, 'EEG_times', t_data, 'isexcluded', artifacts, 'verbose', verbose);
+
+% Update table column headers
+stats_table.Properties.VariableDescriptions{'SOpower'} = 'Slow-oscillation power at peak time';
+switch SOpower_norm_method
+    case {'p5shift', 'none'}
+        pow_units = 'dB';
+    case 'percent'
+        pow_units = '%';
+    case 'proportion'
+        pow_units = 'proportion';
+    otherwise
+        pow_units = 'dB';
+end
+stats_table.Properties.VariableUnits{'SOpower'} = pow_units;
+stats_table.Properties.VariableDescriptions{'SOphase'} = 'Slow-oscillation phase at peak time';
+stats_table.Properties.VariableUnits{'SOphase'} = 'rad';
+
+if verbose
+    disp([newline, 'Total time: ' datestr(seconds(toc(ttotal)),'HH:MM:SS')]);
+end
 
 %% COMPUTE SPECTROGRAM FOR DISPLAY
 [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(data, Fs, [4,25], [15 29], [30 15], [],'linear',[],false,false);
 
-% Plot only TFpeaks that contribute to SO-power/phase histograms 
+% Plot only TFpeaks that contribute to SO-power/phase histograms
 stats_table_SOPH = stats_table(hist_peakidx, :);
 
 % PLOT RESULTS FIGURE
@@ -139,7 +188,7 @@ xlim(time_range/3600)
 
 % Plot SO-Power trace
 axes(hypn_spect_ax(3))
-plot(SOpow_times/3600,SOpower_norm,'linewidth',2)
+plot(SOpower_times/3600,SOpower_norm,'linewidth',2)
 xlim(time_range/3600)
 min_SOP = min(SOpower_norm);
 max_SOP = max(SOpower_norm);
@@ -148,7 +197,7 @@ set(hypn_spect_ax(3),'YTick',[round(min_SOP, 2, 'significant') round((max_SOP+mi
 set(hypn_spect_ax(3),'yticklabel',num2str(get(hypn_spect_ax(3),'ytick')','%.1f'))
 switch SOpower_norm_method
     case {'p5shift', 'none'}
-        ylab = 'SOP(dB)';
+        ylab = 'SOP (dB)';
     case 'percent'
         ylab = '%SOP';
     case 'proportion'
@@ -186,14 +235,15 @@ xlim(time_range/3600)
 
 % Plot SO-power histogram
 axes(ax(2))
-imagesc(SOpow_bins, freq_bins, SOpow_mat');
+imagesc(SOpower_bins, freq_bins, SOpower_mat');
 axis xy;
 colormap(ax(2), gouldian);
 
 %Keep color scales consistent across different settings
 %Run the climscale for different data
 if any(strcmpi(data_range,{'night', 'segment'}))
-    caxis([0 8.5]);
+    c_ptiles = prctile(SOpower_mat(:), [5, 98]);
+    caxis([c_ptiles(1) c_ptiles(2)]);
 else
     climscale([],[],false);
 end
@@ -224,10 +274,9 @@ colormap(ax(3), 'magma');
 
 %Keep color scales consistent across different settings
 %Run the climscale for different data
-if strcmpi(data_range,'night')
-    caxis([0.0085    0.0118]);
-elseif strcmpi(data_range,'segment')
-    caxis([0.0064    0.0145]);
+if any(strcmpi(data_range,{'night', 'segment'}))
+    c_ptiles = prctile(SOphase_mat(:), [5, 98]);
+    caxis([c_ptiles(1) c_ptiles(2)]);
 else
     climscale([],[],false);
 end
@@ -249,9 +298,8 @@ set(th,'fontsize',15)
 %% PRINT OUTPUT
 if save_output_image
     %Output filename
-    if isempty(output_fname)
+    if isempty(output_fname) %#ok<UNRCH>
         output_fname = 'TFpeakDynamics.png'
     end
     print(fh,'-dpng','-r200',output_fname);
 end
-

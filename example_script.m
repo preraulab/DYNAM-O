@@ -26,6 +26,9 @@ data_fname = 'example_data/example_data.mat';
 data_range = 'segment'; %Only works for provided example data
 
 %% ALGORITHM SETTINGS
+%Verbose setting in subfunctions
+verbose = true;
+
 %Quality settings for the algorithm:
 %   'precision': high res settings
 %   'fast': speed-up with minimal impact on results *suggested*
@@ -46,6 +49,9 @@ SOpower_norm_method = 'p5shift';
 %features = {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData',...
 %            'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'}
 features = {'Area', 'Bandwidth', 'Duration', 'Height', 'PeakFrequency', 'PeakTime', 'Volume'};
+
+%Stages in which to restrict the SOPHs.
+stages_include = [1,2,3,4];
 
 %Save figure image
 save_output_image = false;
@@ -83,9 +89,46 @@ switch data_range
         disp(['Running full night', newline])
 end
 
-%% RUN WATERSHED AND COMPUTE SO-POWER/PHASE HISTOGRAMS
-[stats_table, hist_peakidx, SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpower_times] = ...
-    runTFPeakSOHistograms(data, Fs, stage_vals, stage_times, 'time_range', time_range, 'features', features, 'SOpower_norm_method', SOpower_norm_method, 'quality_setting', quality_setting);
+%Start a timer
+ttotal = tic;
+
+%% COMPUTE TIME-FREQUENCY PEAKS
+% See computeTFPeaks() for a full list of optional arguments for finer
+% control of watershed extraction of Time-Frequency Peaks
+
+[stats_table, spect, stimes, sfreqs, data_trunc, t_data, artifacts]= computeTFPeaks(data, Fs, stage_vals, stage_times,...
+    'time_range', time_range, 'features', features, 'quality_setting', quality_setting);
+
+%% COMPUTE SO-POWER/PHASE HISTOGRAMS
+% See SOpowerphaseHistogram() for a full list of optional arguments for
+% finer control of Histogram generation
+
+[SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins,...
+    ~, ~, stats_table.SOpower, stats_table.SOphase, hist_peakidx,...
+    SOpower_norm, SOpower_times, SOphase, SOphase_times, SOdata] = SOpowerphaseHistogram(...
+    data_trunc, Fs, stats_table.PeakFrequency, stats_table.PeakTime,...
+    'stage_vals', single(stage_vals), 'stage_times', stage_times, 'SOPH_stages', stages_include,...
+    'SOpower_norm_method', SOpower_norm_method, 'EEG_times', t_data, 'isexcluded', artifacts, 'verbose', verbose);
+
+% Update table column headers
+stats_table.Properties.VariableDescriptions{'SOpower'} = 'Slow-oscillation power at peak time';
+switch SOpower_norm_method
+    case {'p5shift', 'none'}
+        pow_units = 'dB';
+    case 'percent'
+        pow_units = '%';
+    case 'proportion'
+        pow_units = 'proportion';
+    otherwise
+        pow_units = 'dB';
+end
+stats_table.Properties.VariableUnits{'SOpower'} = pow_units;
+stats_table.Properties.VariableDescriptions{'SOphase'} = 'Slow-oscillation phase at peak time';
+stats_table.Properties.VariableUnits{'SOphase'} = 'rad';
+
+if verbose
+    disp([newline, 'Total time: ' datestr(seconds(toc(ttotal)),'HH:MM:SS')]);
+end
 
 %% COMPUTE SPECTROGRAM FOR DISPLAY
 [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(data, Fs, [4,25], [15 29], [30 15], [],'linear',[],false,false);

@@ -6,5 +6,5 @@
 %   computeSOphase        - computes slow-oscillation phase
 %   SOphaseHistogram      - computes slow-oscillation phase matrix 
 %   SOpowerHistogram      - computes slow-oscillation power matrix
-%   SOpowerphaseHistogram - computes slow-oscillation phase and power matrices that use the same periods and TFpeaks
+%   SOpowerphaseHistogram - [Main function] computes slow-oscillation phase and power matrices that use the same periods and TFpeaks
 %   TFpeakHistogram.m     - computes histogram of TFpeaks

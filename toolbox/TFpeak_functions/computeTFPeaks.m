@@ -1,10 +1,10 @@
-function [stats_table, hist_peakidx, SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm, SOpower_times, SOphase, SOphase_times, SOdata] = runTFPeakSOHistograms(varargin)
-% RUNTFPEAKSOHISTOGRAMS: Run watershed algorithm to extract time-frequency peaks from
-%                        spectrogram of data, then compute Slow-Oscillation power and phase histograms
+function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifacts] = computeTFPeaks(varargin)
+% COMPUTETFPKEAKS: Run watershed algorithm to extract time-frequency peaks
+%                  from spectrogram of data
 %
 %   Usage:
-%       [peak_props, SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, spect, stimes, sfreqs, SOpower_norm,...
-%       SOpow_times, boundaries] = runTFPeakSOHistograms(data, Fs, stage_times, stage_vals)
+%       [stats_table, spect, stimes, sfreqs, data, t_data, artifacts] = ...
+%               computeTFPeaks(data, Fs, stage_times, stage_vals, <options>)
 %
 %   Inputs:
 %       data (req):                [1xn] double - timeseries data to be analyzed
@@ -16,6 +16,7 @@ function [stats_table, hist_peakidx, SOpower_mat, SOphase_mat, SOpower_bins, SOp
 %       t_data (opt):              [1xn] double - timestamps for data. Default = (0:length(data)-1)/Fs;
 %       time_range (opt):          [1x2] double - section of EEG to use in analysis
 %                                  (seconds). Default = [min(t_data), max(t_data)]
+%       downsample_spect(opt):     2x1 double indicating number of rows and columns to downsize spect to
 %       features (opt):            [1xf] char or cell array of char -
 %                                  features to be extracted from each peak region. Can be any subset of
 %                                  {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData', 
@@ -26,8 +27,6 @@ function [stats_table, hist_peakidx, SOpower_mat, SOphase_mat, SOpower_bins, SOp
 %       stages_include (opt):      [1xp] double - which stages to include in the SO-power and
 %                                  SO-phase histograms. Default = [1,2,3,4]
 %                                  W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
-%       SOpower_norm_method (opt): character - normalization method for SO-power
-%                                  Options: 'p5shift'(default), 'percent', 'proportion', 'none'
 %       verbose (opt):             logical - display extra info. Default = true
 %       quality_setting (opt):     charcater - Quality settings for the algorithm:
 %                                       'precision': high res settings
@@ -37,22 +36,14 @@ function [stats_table, hist_peakidx, SOpower_mat, SOphase_mat, SOpower_bins, SOp
 %   Outputs:
 %       stats_table:  table - time, frequency, height, SOpower, and SOphase
 %                     for each TFpeak
-%       hist_peakidx: 1D logical - indices for TFpeaks included in histograms
-%       SOpower_mat:  2D double - SO power histogram data
-%       SOphase_mat:  2D double - SO phase histogram data
-%       SOpower_bins: 1D double - SO power bin center values for dimension 1 of SOpower_mat
-%       SOphase_bins: 1D double - SO phase bin center values for dimension 1 of SOphase_mat
-%       freq_bins:    1D double - frequency bin center values for dimension 2
-%                     of SOpower_mat and SOphase_mat
 %       spect:        2D double - spectrogram of data
 %       stimes:       1D double - timestamp bin center values for dimension 2 of
 %                     spect
 %       sfreqs:       1D double - frequency bin center values for dimension 1 of
 %                     spect
-%       SOpower_norm: 1D double - normalized SO-power used to compute histogram
-%       SOpower_times:1D double - SO-power times
-%       SOphase:      1D double - SO-phase used to compute histogram
-%       SOphase_times:1D double - SO-phase times
+%       data_trunc:   [1xn] double - timeseries data in time_range
+%       t_data_trunc: [1xn] double - timestamps for data in time_range
+%       artifacts:    1xT logical of times flagged as artifacts (logical OR of hf and bb artifacts)
 %
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
@@ -65,7 +56,7 @@ function [stats_table, hist_peakidx, SOpower_mat, SOphase_mat, SOpower_bins, SOp
 %       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
 %**********************************************************************
 
-%% Parse Inputs
+%% Parse inputs
 p = inputParser;
 
 addRequired(p, 'data', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
@@ -79,7 +70,6 @@ addOptional(p, 'features', 'all',  @(x) validateattributes(x,{'char', 'cell'},{}
 addOptional(p, 'artifacts', [], @(x) validateattributes(x,{'logical'},{'real','finite','nonnan'}));
 addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'struct'},{}));
 addOptional(p, 'stages_include', [1,2,3,4], @(x) validateattributes(x,{'numeric', 'vector'}, {'real', 'nonempty'}))
-addOptional(p, 'SOpower_norm_method', 'p5shift', @(x) validateattributes(x, {'char', 'numeric'},{}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'quality_setting', 'fast', @(x) validateattributes(x,{'char','numeric'},{}));
 
@@ -88,7 +78,6 @@ parser_results = struct2cell(p.Results); %#ok<NASGU>
 field_names = fieldnames(p.Results);
 
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
-
 
 if isempty(t_data) %#ok<*NODEF>
     t_data = (0:length(data)-1)/Fs;
@@ -103,13 +92,10 @@ if isempty(artifact_filters)
     artifact_filters.hpFilt_broad = [];
 end
 
-%Save total time
-ttotal = tic;
-
 %% Truncate data to time range
-time_range_inds = t_data >= time_range(1) & t_data <= time_range(2);
-data = data(time_range_inds);
-t_data = t_data(time_range_inds);
+time_range_inds = t_data_trunc >= time_range(1) & t_data_trunc <= time_range(2);
+data_trunc = data(time_range_inds);
+t_data_trunc = t_data_trunc(time_range_inds);
 
 %% Compute spectrogram
 % For more information on the multitaper spectrogram parameters and
@@ -175,24 +161,23 @@ if verbose
 end
 
 if exist(['multitaper_spectrogram_coder_mex.' mexext],'file')
-    [spect,stimes,sfreqs] = multitaper_spectrogram_mex(data, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
+    [spect,stimes,sfreqs] = multitaper_spectrogram_mex(data_trunc, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
 else
-    [spect,stimes,sfreqs] = multitaper_spectrogram(data, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
+    [spect,stimes,sfreqs] = multitaper_spectrogram(data_trunc, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
     warning(sprintf('Unable to use mex version of multitaper_spectrogram. Using compiled multitaper spectrogram function will greatly increase the speed of this computaton. \n\nFind mex code at:\n    https://github.com/preraulab/multitaper_toolbox')); %#ok<SPWRN>
 end
-stimes = stimes + t_data(1); % adjust the time axis to t_data
+stimes = stimes + t_data_trunc(1); % adjust the time axis to t_data
 
 %% Artifcact Detection
 if isempty(artifacts)
     if verbose
         disp('Performing artifact rejection...');
     end
-    
-    artifacts = detect_artifacts(data, Fs, 'hpFilt_high', artifact_filters.hpFilt_high, 'hpFilt_broad', artifact_filters.hpFilt_broad);
+    artifacts = detect_artifacts(data_trunc, Fs, 'hpFilt_high', artifact_filters.hpFilt_high, 'hpFilt_broad', artifact_filters.hpFilt_broad);
 else
     artifacts = artifacts(time_range_inds); % apply time_range selection
 end
-artifacts_stimes = logical(interp1(t_data, double(artifacts), stimes, 'nearest')); % get artifacts occurring at spectrogram times
+artifacts_stimes = logical(interp1(t_data_trunc, double(artifacts), stimes, 'nearest')); % get artifacts occurring at spectrogram times
 
 %% Compute baseline spectrum used to flatten data spectrum
 % Exclude segments with artifacts during baseline computation
@@ -225,34 +210,8 @@ end
 
 %% Get peak stages
 stats_table.PeakStage = interp1(stage_times, single(stage_vals), stats_table.PeakTime, 'previous');
-stats_table.PeakStage(logical(interp1(t_data, double(artifacts), stats_table.PeakTime, 'nearest'))) = 6;
+stats_table.PeakStage(logical(interp1(t_data_trunc, double(artifacts), stats_table.PeakTime, 'nearest'))) = 6;
 stats_table.Properties.VariableDescriptions{'PeakStage'} = 'Stage: 6 = Artifact, 5 = W, 4 = R, 3 = N1, 2 = N2, 1 = N3, 0 = Unknown';
 stats_table.Properties.VariableUnits{'PeakStage'} = 'Stage #';
 
-%% Compute SO-power and SO-phase histograms
-[SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins,...
-    ~, ~, stats_table.SOpower, stats_table.SOphase, hist_peakidx, SOpower_norm, SOpower_times, SOphase, SOphase_times, SOdata] = SOpowerphaseHistogram(...
-    data, Fs, stats_table.PeakFrequency, stats_table.PeakTime,...
-    'stage_vals', single(stage_vals), 'stage_times', stage_times, 'SOPH_stages', stages_include,...
-    'SOpower_norm_method', SOpower_norm_method, 'EEG_times', t_data, 'isexcluded', artifacts, 'verbose', verbose);
-
-% Update table column headers
-stats_table.Properties.VariableDescriptions{'SOpower'} = 'Slow-oscillation power at peak time';
-switch SOpower_norm_method
-    case {'p5shift', 'none'}
-        pow_units = 'dB';
-    case 'percent'
-        pow_units = '%';
-    case 'proportion'
-        pow_units = 'proportion';
-    otherwise
-        pow_units = 'dB';
-end
-stats_table.Properties.VariableUnits{'SOpower'} = pow_units;
-stats_table.Properties.VariableDescriptions{'SOphase'} = 'Slow-oscillation phase at peak time';
-stats_table.Properties.VariableUnits{'SOphase'} = 'rad';
-
-%% EOF
-if verbose
-    disp([newline, 'Total time: ' datestr(seconds(toc(ttotal)),'HH:MM:SS')]);
 end
