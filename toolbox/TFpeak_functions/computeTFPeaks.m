@@ -95,7 +95,7 @@ end
 %% Truncate data to time range
 time_range_inds = t_data >= time_range(1) & t_data <= time_range(2);
 data_trunc = data(time_range_inds);
-t_data_trunc = t_data_trunc(time_range_inds);
+t_data_trunc = t_data(time_range_inds);
 
 %% Compute spectrogram
 % For more information on the multitaper spectrogram parameters and
