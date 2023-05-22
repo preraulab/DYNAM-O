@@ -93,7 +93,7 @@ if isempty(artifact_filters)
 end
 
 %% Truncate data to time range
-time_range_inds = t_data_trunc >= time_range(1) & t_data_trunc <= time_range(2);
+time_range_inds = t_data >= time_range(1) & t_data <= time_range(2);
 data_trunc = data(time_range_inds);
 t_data_trunc = t_data_trunc(time_range_inds);
 
