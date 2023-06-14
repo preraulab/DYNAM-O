@@ -196,12 +196,12 @@ ylim([min_SOP-(0.1*abs(min_SOP)), max_SOP+(0.1*abs(max_SOP))])
 set(hypn_spect_ax(3),'YTick',[round(min_SOP, 2, 'significant') round((max_SOP+min_SOP)/2, 2, 'significant') round(max_SOP, 2, 'significant')]);
 set(hypn_spect_ax(3),'yticklabel',num2str(get(hypn_spect_ax(3),'ytick')','%.1f'))
 switch SOpower_norm_method
-    case {'p5shift', 'none'}
-        ylab = 'SOP (dB)';
     case 'percent'
         ylab = '%SOP';
     case 'proportion'
         ylab = 'SO Prop.';
+    otherwise
+        ylab = 'SOP (dB)';
 end
 ylabel(ylab);
 
@@ -254,12 +254,12 @@ c.Label.Rotation = -90;
 c.Label.VerticalAlignment = "bottom";
   
 switch SOpower_norm_method
-    case {'p5shift', 'none'}
-        xlab = 'SO-Power (dB)';
     case 'percent'
         xlab = '% SO-Power';
     case 'proportion'
         xlab = 'SO-Power Proportion';
+    otherwise
+        xlab = 'SO-Power (dB)';
 end
 xlabel(xlab);
 ylabel('Frequency (Hz)');
