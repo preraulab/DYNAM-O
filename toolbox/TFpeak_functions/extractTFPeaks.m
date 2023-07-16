@@ -1,5 +1,5 @@
 function stats_table = extractTFPeaks(img,x,y,features,num_segment,conn_wshed,...
-    merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,conn_stats,...
+    merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,...
     bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
 % EXTRACTTFPEAKS Determines the peak regions within a spectral topography and extracts a set of features for each
 %
@@ -27,7 +27,6 @@ function stats_table = extractTFPeaks(img,x,y,features,num_segment,conn_wshed,..
 %   trim_shift   -- value to be subtracted from image prior to evaulation of trim volume.
 %                   default min(min(img_data)).
 %   conn_trim    -- pixel connection to be used by trimRegionsWShed. default 8.
-%   conn_stats   -- pixel connection to be used by peaksWShedStats_LData. default 8.
 %   bl_thresh    -- power threshold used to cut off low power data to speed
 %                   up computation. Default = [];
 %   merge_rule   --
@@ -106,21 +105,18 @@ if nargin < 14
     conn_trim = [];
 end
 if nargin < 15
-    conn_stats = [];
-end
-if nargin < 16
     bl_thresh = [];
 end
-if nargin < 17
+if nargin < 16
     merge_rule = [];
 end
-if nargin < 18
+if nargin < 17
     f_verb = [];
 end
-if nargin < 19
+if nargin < 18
     verb_pref = [];
 end
-if nargin < 20
+if nargin < 29
     f_disp = [];
 end
 
@@ -168,10 +164,7 @@ end
 if isempty(conn_trim)
     conn_trim = 8;
 end
-% connection parameter used in peak stats evaluation
-if isempty(conn_stats)
-    conn_stats = 8;
-end
+% for use if there is a baseline threshold
 if isempty(bl_thresh)
     bl_thresh = [];
 end
@@ -206,7 +199,7 @@ end
 %************************************
 %   Run watershed and create graph  *
 %************************************
-t_start = now;
+t_start = tic;
 if f_verb > 0
     disp([verb_pref 'Computing watershed and building graph...']);
     ttic = tic;
@@ -323,7 +316,7 @@ end
 %Create the peak stats table
 stats_table = computePeakStatsTable(regions, bndry, img, x, y, num_segment, features);
 
-seq_time = (now-t_start)/datenum([0 0 0 0 0 1]);
+seq_time = toc(t_start);
 if f_verb > 0
     disp([verb_pref '    stats took: ' num2str(toc(ttic)) ' seconds.']);
     disp([verb_pref 'Sequence took ' num2str(seq_time/60) ' minutes.']);
