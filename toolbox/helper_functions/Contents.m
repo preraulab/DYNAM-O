@@ -4,7 +4,6 @@
 %   climscale                  - Rescale the color limits of an image to remove outliers with percentiles
 %   colorbar_noresize          - Makes a colorbar that does not resize the axis
 %   detect_artifacts           - Detect artifacts in the time domain by iteratively removing data above a given z-score criterion
-%   getchunks                  - Get the number of repetitions that occur in consecutive chunks.
 %   gouldian                   - colormap
 %   hypnoplot                  - Make a pretty plot of a hypnogram
 %   magma                      - colormap

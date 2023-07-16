@@ -61,8 +61,8 @@ if isempty(data) || isempty(rgn) || isempty(rgn_lbls) || isempty(amatr)
     disp('WARNING: insufficient inputs to regionWeightedEdges');
 else
     e_wts = zeros(size(amatr,1),1);
-    if isempty(merge_rule)
-        merge_rule = 'default';
+    if isempty(merge_rule) %For future implementation of extra merge rules
+        merge_rule = 'default'; %#ok<NASGU>
     end
     if isempty(f_verb)
         f_verb = 0;
@@ -93,7 +93,7 @@ else
                 tmp_bnds = bwboundaries(ldata_ii>0,4,'holes');
                 bnds_ii = [];
                 for kk = 1:length(tmp_bnds)
-                    bnds_ii = [bnds_ii; sub2ind(size(data),tmp_bnds{kk}(:,1),tmp_bnds{kk}(:,2))];
+                    bnds_ii = [bnds_ii; sub2ind(size(data),tmp_bnds{kk}(:,1),tmp_bnds{kk}(:,2))]; %#ok<*AGROW>
                 end
                 ldata_jj = zeros(size(data));
                 ldata_jj(rgn_jj) = amatr(ii,2);
