@@ -31,7 +31,7 @@ for m = 1:3
     peak_props = peak_props_all{m};
     for p = 1:4
         count = count + 1;
-        axes(ax(count));
+        axes(ax(count)); %#ok<*LAXES>
         histogram(peak_props{:,ismember(peak_props.Properties.VariableNames,peak_prop_strs{p})});
         ylim(ylim_list{p});
         xlim(xlim_list{p});

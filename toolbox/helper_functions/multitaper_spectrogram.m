@@ -168,7 +168,7 @@ if xyflip; mt_spectrogram = mt_spectrogram'; end
 %Show timing if verbose
 if verbose
     disp(' ');
-    disp(['Estimation time: ' datestr(toc(start_time)*datenum([0 0 0 0 0 1]), 'HH:MM:SS.FFF')]);
+    disp(['Estimation time: ' char(datetime('now') - start_time)]);
 end
 
 %Plot the spectrogram
