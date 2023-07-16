@@ -100,12 +100,12 @@ if plot_on
     figure
     subplot(211)
     imagesc(img);
-    cx = caxis;
+    cx = clim;
     title(['Original: ' sprintf('%d x %d', size(img))])
 
     subplot(212)
     imagesc(img_downsampled);
-    caxis(cx);
+    clim(cx);
     title(['Downsampled: ' sprintf('%d x %d', size(img_downsampled))])
 end
 

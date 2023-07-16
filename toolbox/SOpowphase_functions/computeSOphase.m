@@ -44,7 +44,7 @@ if isempty(SOphase_filter)
     if ~isempty(who('-file', SOphase_filter_path, filter_name))
 
         load(SOphase_filter_path, filter_name)
-        eval(['d = ', filter_name,';']);
+        eval(['d = ', filter_name,';']); %#ok<EVLEQ>
 
     else
 
@@ -72,7 +72,7 @@ end
 filtdata = filtfilt(d,double(EEG));
 
 data_analytic = hilbert(filtdata);
-SOphase = unwrap(angle(data_analytic));  % phase of the real projection (cosine wave)
+SOphase = unwrap(angle(data_analytic)-pi);
 SOphase_times = EEG_times;
 
 % Replace excluded times with nans

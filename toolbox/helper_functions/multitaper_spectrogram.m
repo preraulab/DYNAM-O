@@ -77,7 +77,7 @@ mt_spectrogram = zeros(sum(freq_inds), num_windows, data_type);
 data_segments = data(window_idxs)';
 
 %Start timing
-start_time = tic;
+start_time = datetime('now');
 
 %% COMPUTE THE MULTITAPER SPECTROGRAM
 %

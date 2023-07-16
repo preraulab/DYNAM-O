@@ -143,7 +143,7 @@ elseif size(adj_list,2)==2
 else
     % The adjacency matrix of inappropiate shape. This is an erroneous condition.
     ematr = [];
-    f_valid_inputs = false;
+    % f_valid_inputs = false;
     disp(['WARNING: adjacency matrix (' num2str(size(adj_list,1)) ' x ' ...
         num2str(size(adj_list,2)) ') has too few or too many columns. Returning original regions.' ]);
 

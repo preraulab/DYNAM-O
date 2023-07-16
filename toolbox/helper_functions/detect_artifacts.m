@@ -141,7 +141,7 @@ artifacts = hf_artifacts | bb_artifacts;
 
 %% Add buffer on both sides of detected artifacts 
 if buffer_duration > 0
-    [cons, inds] = consecutive(artifacts);
+    [cons, inds] = consecutive_runs(artifacts);
     for ii = 1:length(cons)
         buffer_start_idx = ceil(max(1, inds{ii}(1)-buffer_duration*Fs));
         buffer_end_idx = ceil(min(length(artifacts), inds{ii}(end)+buffer_duration*Fs));
@@ -264,7 +264,7 @@ switch lower(crit_units)
             over_crit = abs(y_signal)>crit & ~detected_artifacts;
             
             if histogram_plot
-                axes(ah);
+                axes(ah); %#ok<*LAXES>
                 histogram(y_signal(~detected_artifacts), 100);
                 title(['Outliers Removed: iteration ', num2str(count)]);
                 drawnow;

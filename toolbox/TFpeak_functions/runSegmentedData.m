@@ -1,7 +1,7 @@
 function stats_table = ...
     runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, features, ...
     dur_min, bw_min, conn_wshed, merge_thresh, max_merges, trim_vol, trim_shift, conn_trim, ...
-    conn_stats, bl_thresh_flag, CI_upper_bl, merge_rule, f_verb, verb_pref, f_disp)
+    bl_thresh_flag, CI_upper_bl, merge_rule, f_verb, verb_pref, f_disp)
 %RUNSEGMENTEDDATA wrapper that runs 1) baseline subtraction, 2) spectrogram
 %segmentation, 3) TFpeak extraction (watershed, merging, trimming, stats), 4)TFpeak statistics packaging and saving
 %
@@ -34,7 +34,6 @@ function stats_table = ...
 %   trim_shift   -- value to be subtracted from image prior to evaulation of trim volume.
 %                   default min(min(img_data)).
 %   conn_trim    -- pixel connection to be used by trimRegionsWShed. default 8.
-%   conn_stats   -- pixel connection to be used by peaksWShedStats_LData. default 8.
 %   bl_thresh_flag  -- flag indicating use of baseline thresholding to reduce volume of data
 %                   being run through watershed and merging. Default = []
 %   CI_upper_bl  -- upper confidence interval of the baseline, used to
@@ -119,31 +118,27 @@ if nargin < 15 || isempty(conn_trim)
     conn_trim = 8;
 end
 
-if nargin < 16 || isempty(conn_stats)
-    conn_stats = 8;
-end
-
-if nargin < 17 || isempty(bl_thresh_flag)
+if nargin < 16 || isempty(bl_thresh_flag)
     bl_thresh_flag = false;
 end
 
-if nargin < 18 || isempty(CI_upper_bl)
+if nargin < 17 || isempty(CI_upper_bl)
     CI_upper_bl = [];
 end
 
-if nargin < 19 || isempty(merge_rule)
+if nargin < 18 || isempty(merge_rule)
     merge_rule = 'default';
 end
 
-if nargin < 20 || isempty(f_verb)
+if nargin < 19 || isempty(f_verb)
     f_verb = 1;
 end
 
-if nargin < 21 || isempty(verb_pref)
+if nargin < 20 || isempty(verb_pref)
     verb_pref = '';
 end
 
-if nargin < 22 || isempty(f_disp)
+if nargin < 21 || isempty(f_disp)
     f_disp = 0;
 end
 
@@ -196,7 +191,7 @@ parfor ii = 1:n_segs
         continue
     end
     
-    stats_tables{ii} = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,conn_stats,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
+    stats_tables{ii} = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
     
     % Update loading bar
     if haspar

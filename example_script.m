@@ -90,7 +90,7 @@ switch data_range
 end
 
 %Start a timer
-ttotal = tic;
+ttotal = datetime('now');
 
 %% COMPUTE TIME-FREQUENCY PEAKS
 % See computeTFPeaks() for a full list of optional arguments for finer
@@ -127,7 +127,7 @@ stats_table.Properties.VariableDescriptions{'SOphase'} = 'Slow-oscillation phase
 stats_table.Properties.VariableUnits{'SOphase'} = 'rad';
 
 if verbose
-    disp([newline, 'Total time: ' datestr(seconds(toc(ttotal)),'HH:MM:SS')]);
+    disp([newline, 'Total time: ' char(datetime('now')-ttotal)]);
 end
 
 %% COMPUTE SPECTROGRAM FOR DISPLAY
@@ -243,7 +243,7 @@ colormap(ax(2), gouldian);
 %Run the climscale for different data
 if any(strcmpi(data_range,{'night', 'segment'}))
     c_ptiles = prctile(SOpower_mat(:), [5, 98]);
-    caxis([c_ptiles(1) c_ptiles(2)]);
+    clim([c_ptiles(1) c_ptiles(2)]);
 else
     climscale([],[],false);
 end
@@ -276,7 +276,7 @@ colormap(ax(3), 'magma');
 %Run the climscale for different data
 if any(strcmpi(data_range,{'night', 'segment'}))
     c_ptiles = prctile(SOphase_mat(:), [5, 98]);
-    caxis([c_ptiles(1) c_ptiles(2)]);
+    clim([c_ptiles(1) c_ptiles(2)]);
 else
     climscale([],[],false);
 end
