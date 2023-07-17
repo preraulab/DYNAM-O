@@ -48,7 +48,7 @@ SOpower_norm_method = 'p5shift';
 %or select from:
 %features = {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData',...
 %            'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'}
-features = {'Area', 'Bandwidth', 'Duration', 'Height', 'PeakFrequency', 'PeakTime', 'Volume'};
+features = {'BoundingBox', 'Area', 'Bandwidth', 'Duration', 'Height', 'PeakFrequency', 'PeakTime', 'Volume'};
 
 %Stages in which to restrict the SOPHs.
 stages_include = [1,2,3,4];
@@ -243,7 +243,7 @@ colormap(ax(2), gouldian);
 %Run the climscale for different data
 if any(strcmpi(data_range,{'night', 'segment'}))
     c_ptiles = prctile(SOpower_mat(:), [5, 98]);
-    clim([c_ptiles(1) c_ptiles(2)]);
+    set(gca,'CLim',[c_ptiles(1) c_ptiles(2)]); 
 else
     climscale([],[],false);
 end

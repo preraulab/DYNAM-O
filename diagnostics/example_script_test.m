@@ -243,7 +243,7 @@ colormap(ax(2), gouldian);
 %Run the climscale for different data
 if any(strcmpi(data_range,{'night', 'segment'}))
     c_ptiles = prctile(SOpower_mat(:), [5, 98]);
-    clim([c_ptiles(1) c_ptiles(2)]);
+    set(gca,'CLim',[c_ptiles(1) c_ptiles(2)]);
 else
     climscale([],[],false);
 end
@@ -276,7 +276,7 @@ colormap(ax(3), 'magma');
 %Run the climscale for different data
 if any(strcmpi(data_range,{'night', 'segment'}))
     c_ptiles = prctile(SOphase_mat(:), [5, 98]);
-    clim([c_ptiles(1) c_ptiles(2)]);
+    set(gca,'CLim',[c_ptiles(1) c_ptiles(2)]);
 else
     climscale([],[],false);
 end
