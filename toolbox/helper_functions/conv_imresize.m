@@ -31,12 +31,12 @@ if plot_on
     figure
     subplot(211)
     imagesc(img);
-    cx = clim;
+    cx = get(gca,'CLim');
     title(['Original: ' sprintf('%d x %d', size(img))])
 
     subplot(212)
     imagesc(img_rescaled);
-    clim(cx);
+    set(gca,'CLim',cx);
     title(['Rescaled: ' sprintf('%d x %d', size(img_rescaled))])
 end
 
