@@ -44,7 +44,7 @@ field_names = fieldnames(p.Results);
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 
 if islogical(Cmetric_stages) && Cmetric_stages
-    Cmetric_stages_ind = true(size(Cmetric_valid));
+    Cmetric_stages = true(size(Cmetric_valid));
 end
 
 if circular_Cmetric
@@ -122,9 +122,9 @@ for s = 1:num_Cbins
     % Get time in bin (min) and proportion of time in bin
     if compute_TIB
         for stage = 1:5
-            if ~islogical(Cmetric_stages)
-                Cmetric_stages_ind = Cmetric_stages == stage;
-            end
+            
+            Cmetric_stages_ind = Cmetric_stages == stage;
+            
             time_in_bin(s,stage) = (sum(TIB_inds & Cmetric_valid & Cmetric_stages_ind) * Cmetric_times_step) / 60;
         end
         
