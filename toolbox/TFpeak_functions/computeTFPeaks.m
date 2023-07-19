@@ -101,7 +101,7 @@ t_data_trunc = t_data(time_range_inds);
 % For more information on the multitaper spectrogram parameters and
 % implementation visit: https://github.com/preraulab/multitaper
 
-time_window_params = [1,0.05]; % [time window, time step] in seconds
+time_window_params = [2,0.05]; % [time window, time step] in seconds
 dsfreqs = 0.1; % For consistency with our results we expect a df of 0.1 Hz or less
 
 if isnumeric(quality_setting) % If spect_settings is numeric use it, and don't downsample
@@ -133,7 +133,7 @@ else
 end
 
 freq_range = [0,30]; % frequency range to compute spectrum over (Hz)
-taper_params = [2,3]; % [time halfbandwidth product, number of tapers]
+taper_params = [1,1]; % [time halfbandwidth product, number of tapers]
 nfft = 2^(nextpow2(Fs/dsfreqs)); % zero pad data to this minimum value for fft
 detrend = 'constant'; % do not detrend
 weight = 'unity'; % each taper is weighted the same
@@ -154,7 +154,7 @@ bw_max = 15; % Hz
 %Set minimal peak height based on confidence interval lower bound of MTS
 chi2_df = 2 * taper_params(2);
 alpha = 0.95;
-ht_db_min = -pow2db(chi2_df / chi2inv(alpha/2 + 0.5, chi2_df)) * 2;
+ht_db_min = -pow2db(chi2_df / chi2inv(alpha/2 + 0.5, chi2_df)) * 2 * 2.5; % added a multiplier here
 
 if verbose
     disp('Computing TF-peak spectrogram...');
