@@ -72,7 +72,7 @@ end
 filtdata = filtfilt(d,double(EEG));
 
 data_analytic = hilbert(filtdata);
-SOphase = unwrap(angle(data_analytic)-pi);
+SOphase = unwrap(angle(data_analytic));  % phase of the real projection (cosine wave)
 SOphase_times = EEG_times;
 
 % Replace excluded times with nans
