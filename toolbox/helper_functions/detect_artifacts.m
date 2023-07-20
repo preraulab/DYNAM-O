@@ -121,7 +121,8 @@ end
 
 %% Get bad indicies
 %Get bad indices
-bad_inds = isnan(data) | isinf(data) | find_flat(data);
+[~, ~, ~, is_flat] = get_chunks(data,100);
+bad_inds = isnan(data) | isinf(data) | is_flat;
 bad_inds = find_outlier_noise(data, bad_inds);
 
 %Interpolate big gaps in data
@@ -151,37 +152,6 @@ end
 
 %% Sanity check before outputting
 assert(length(artifacts) == length(data), 'Data vector length is inconsistent. Please check.')
-
-
-%Find all the flat areas in the data
-function binds = find_flat(data, min_size)
-if nargin<2
-    min_size = 100;
-end
-
-%Get consecutive values equal values
-[clen, cind] = getchunks(data);
-
-%Return indices
-if isempty(clen)
-    inds = [];
-else
-    size_inds = clen>=min_size;
-    clen = clen(size_inds);
-    cind = cind(size_inds);
-    
-    flat_inds = cell(1,length(clen));
-    
-    for ii = 1:length(clen)
-        flat_inds{ii} = cind(ii):(cind(ii)+(clen(ii)-1));
-    end
-    
-    inds = cat(2,flat_inds{:});
-end
-
-binds = false(size(data));
-binds(inds) = true;
-
 
 %Find all time points that have outlier high or low noise
 function bad_inds = find_outlier_noise(data, bad_inds)
