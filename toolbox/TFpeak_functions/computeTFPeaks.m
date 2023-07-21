@@ -151,36 +151,54 @@ end
     dur_min, bw_min, dur_max, bw_max, ht_db_min] = compute_spectrogram([1,1], [2,0.05], data_trunc, Fs, quality_setting, verbose);
 stimes = stimes + t_data_trunc(1); % adjust the time axis to t_data
 
-% Update artifact vector
-artifacts_stimes = logical(interp1(t_data_trunc, double(artifacts), stimes, 'nearest')); % get artifacts occurring at spectrogram times
+frequency_refine = false;
+use_boundary = true;
 
-% Re-compute baseline spectrum
-spect_bl = spect;
-spect_bl(:,artifacts_stimes) = NaN; % turn artifact times into NaNs for percentile computation
-spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
-baseline = prctile(spect_bl, baseline_ptile, 2); % get baseline
-
-% Mask the spectrogram using extracted TFpeaks from the first round of watershed
-spect_masked = maskSpectrogram(spect, stimes, sfreqs, stats_table);
-
-% Compute time-frequency peaks
-if verbose
-    disp('[2nd] Extracting TF-peaks from the spectrogram...');
-    tfp = tic;
-end
-
-stats_table = runSegmentedData(spect_masked, stimes, sfreqs, baseline, seg_time, downsample_spect, features, dur_min, bw_min, [], merge_thresh);
-
-if verbose
-    disp(['[2nd] TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
-end
-
-% Filter stats_table based on duration, bandwidth, frequency, and height
-filter_idx = filterStatsTable(stats_table, [dur_min, dur_max], [bw_min, bw_max], [-inf inf], ht_db_min, verbose);
-stats_table = stats_table(filter_idx, :);
-
-if isempty(stats_table)
-    error('No TFpeaks found');
+if frequency_refine % simply use the new spectrogram to refine frequency estimate in the extracted TFpeaks
+    for ii = 1:height(stats_table)
+        pos =  stats_table.BoundingBox(ii,:);
+        fmin = pos(2);
+        fmax = fmin+pos(4);
+        
+        sfreqs_idx = sfreqs >= fmin & sfreqs <= fmax;
+        [~, s_idx] = min(abs(stimes - stats_table.PeakTime(ii)));
+        [~, f_idx] = max(spect(sfreqs_idx, s_idx));
+        sfreqs_ii = sfreqs(sfreqs_idx);
+        stats_table.PeakFrequency(ii) = sfreqs_ii(f_idx);
+    end
+    
+else % Run a second round of watershed and TFpeak extraction including all processing steps as in the first round
+    % Update artifact vector
+    artifacts_stimes = logical(interp1(t_data_trunc, double(artifacts), stimes, 'nearest')); % get artifacts occurring at spectrogram times
+    
+    % Re-compute baseline spectrum
+    spect_bl = spect;
+    spect_bl(:,artifacts_stimes) = NaN; % turn artifact times into NaNs for percentile computation
+    spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
+    baseline = prctile(spect_bl, baseline_ptile, 2); % get baseline
+    
+    % Mask the spectrogram using extracted TFpeaks from the first round of watershed
+    spect_masked = maskSpectrogram(spect, stimes, sfreqs, stats_table, use_boundary);
+    
+    % Compute time-frequency peaks
+    if verbose
+        disp('[2nd] Extracting TF-peaks from the spectrogram...');
+        tfp = tic;
+    end
+    
+    stats_table = runSegmentedData(spect_masked, stimes, sfreqs, baseline, seg_time, downsample_spect, features, dur_min, bw_min, [], merge_thresh);
+    
+    if verbose
+        disp(['[2nd] TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
+    end
+    
+    % Filter stats_table based on duration, bandwidth, frequency, and height
+    filter_idx = filterStatsTable(stats_table, [dur_min, dur_max], [bw_min, bw_max], [-inf inf], ht_db_min, verbose);
+    stats_table = stats_table(filter_idx, :);
+    
+    if isempty(stats_table)
+        error('No TFpeaks found');
+    end
 end
 
 %% Get peak stages
