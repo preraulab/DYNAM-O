@@ -125,7 +125,7 @@ if f_valid_inputs
     [num_rows,num_cols] = size(data);
     num_regions = length(regions);
     trimmed_regions = regions;
-    trimmed_borders = cell(num_regions,1);
+    trimmed_borders = cell(1, num_regions);
     
     % Shift data for determination of volume
     shift_data = data - shift_val;
@@ -283,6 +283,6 @@ else
     % Image data not provided for regions
     disp('         Returning original regions and empty boundaries.');
     trimmed_regions = regions;
-    trimmed_borders = cell(length(regions),1);
+    trimmed_borders = cell(1, length(regions));
 end
 

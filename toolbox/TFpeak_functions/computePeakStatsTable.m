@@ -127,7 +127,7 @@ end
 
 %Boundaries
 if any(strcmpi(features,'Boundaries'))
-    [a,b] = cellfun(@(x)ind2sub(size(data),x),boundaries,'UniformOutput',false);
+    [a,b] = cellfun(@(x)ind2sub(size(data),x),boundaries','UniformOutput',false);
     stats_table.Boundaries = cellfun(@(a,b)[(b-1)*dx+seg_startx, (a-1)*dy+seg_starty], a, b, 'Uniform', 0); % a,b in pixel indices
     stats_table.Properties.VariableDescriptions{'Boundaries'} = '(time, frequency) of peak region boundary pixels';
     stats_table.Properties.VariableUnits{'Boundaries'} = '(seconds, Hz)';
