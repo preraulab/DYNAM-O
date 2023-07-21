@@ -20,7 +20,7 @@ for ii = 1:height(stats_table)
     tmax = tmin+pos(3);
     fmax = fmin+pos(4);
     
-    % Extract the BoundingBox region on SST spectrum
+    % Extract the BoundingBox region on SST spectrogram
     t_indices = t >= tmin & t <= tmax;
     f_indices = sst_freqs >= fmin & sst_freqs <= fmax;
     t_ii = t(t_indices);
