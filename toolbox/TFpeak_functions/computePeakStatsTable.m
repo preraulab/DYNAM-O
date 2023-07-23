@@ -60,7 +60,7 @@ assert(isnumeric(data) && ismatrix(data) && min(size(data))>1,'Data must be an M
 %% Convert data to labeled data
 Ldata = zeros(size(data));
 for ii = 1:length(regions)
-    Ldata(regions{ii}) = ii;
+    Ldata(regions{ii}(~isnan(data(regions{ii})))) = ii;
 end
 
 %Compute the stats table

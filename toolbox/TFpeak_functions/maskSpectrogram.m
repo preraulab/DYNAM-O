@@ -11,10 +11,14 @@ end
 % Create a mask
 mask = false(size(spect));
 mask_size = size(mask);
+mask_indices = cell(1, height(stats_table));
+
+BoundingBox = stats_table.BoundingBox;
+Boundaries = stats_table.Boundaries;
 
 % Loop through existing TFpeak events
-for ii = 1:height(stats_table)
-    pos =  stats_table.BoundingBox(ii,:);
+parfor ii = 1:height(stats_table)
+    pos =  BoundingBox(ii,:);
     tmin = pos(1);
     fmin = pos(2);
     tmax = tmin+pos(3);
@@ -23,21 +27,24 @@ for ii = 1:height(stats_table)
     % Extract the BoundingBox region on spectrogram
     sfreqs_idx = find(sfreqs >= fmin & sfreqs <= fmax);
     stimes_idx = find(stimes >= tmin & stimes <= tmax);
+    sfreqs_indices = repelem(sfreqs_idx, length(stimes_idx));
+    stimes_indices = repmat(stimes_idx, 1, length(sfreqs_idx));
     
     if use_boundary
-        % Use the Boundaries for masking
-        sfreqs_indices = repelem(sfreqs_idx, length(stimes_idx));
-        stimes_indices = repmat(stimes_idx, 1, length(sfreqs_idx));
-        [in, on] = inpolygon(stimes(stimes_indices), sfreqs(sfreqs_indices), stats_table.Boundaries{ii}(:,1), stats_table.Boundaries{ii}(:,2));
+        % Use Boundaries for masking
+        [in, on] = inpolygon(stimes(stimes_indices), sfreqs(sfreqs_indices), Boundaries{ii}(:,1), Boundaries{ii}(:,2));
         valid_idx = in | on;
-        mask(sub2ind(mask_size, sfreqs_indices(valid_idx), stimes_indices(valid_idx))) = true;
+        mask_idx = sub2ind(mask_size, sfreqs_indices(valid_idx), stimes_indices(valid_idx));
     else
-        % Use the BoundingBox for masking
-        mask(sfreqs_idx, stimes_idx) = true;
+        % Use BoundingBox for masking
+        mask_idx = sub2ind(mask_size, sfreqs_indices, stimes_indices);
     end
+    
+    mask_indices{ii} = mask_idx;
 end
 
-spect(~mask(:)) = 0;
+mask(cat(2, mask_indices{:})) = true;
+spect(~mask(:)) = nan;
 
 end
 
