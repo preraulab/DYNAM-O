@@ -277,9 +277,10 @@ if dur_min>0 || bw_min>0
     df = y(2)-y(1);
     dt = x(2)-x(1);
 
-    [f_inds,t_inds]=cellfun(@(x)ind2sub(size(img),x),regions,'UniformOutput',false);
+    [f_inds,t_inds] = cellfun(@(x)ind2sub(size(img),x),regions,'UniformOutput',false);
     good_inds = cellfun(@(x)(max(x)-min(x))*dt>dur_min,t_inds) & cellfun(@(x)(max(x)-min(x))*df>bw_min,f_inds);
     regions = regions(good_inds);
+    bndry = bndry(good_inds);
 end
 
 %Return if empty stats table
@@ -301,7 +302,15 @@ if trim_vol < 1
     if f_verb > 0
         disp([verb_pref '    trim took: ' num2str(toc(ttic)) ' seconds.']);
     end
-
+    
+    % Remove regions that now fall below the removal criteria after trimming
+    if dur_min>0 || bw_min>0
+        [f_inds,t_inds] = cellfun(@(x)ind2sub(size(img),x),trim_rgn,'UniformOutput',false);
+        good_inds = cellfun(@(x)~isempty(max(x))&&((max(x)-min(x))*dt>dur_min),t_inds) & cellfun(@(x)~isempty(max(x))&&((max(x)-min(x))*df>bw_min),f_inds);
+        trim_rgn = trim_rgn(good_inds);
+        trim_bndry = trim_bndry(good_inds);
+    end
+    
     %Return if empty stats table
     if isempty(trim_rgn)
         stats_table = table;

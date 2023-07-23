@@ -130,7 +130,7 @@ if verbose
     tfp = tic;
 end
 
-stats_table = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, features, dur_min, bw_min, [], merge_thresh, [], .9);
+stats_table = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, features, dur_min, bw_min, [], merge_thresh);
 
 if verbose
     disp(['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
@@ -178,6 +178,9 @@ else % Run a second round of watershed and TFpeak extraction including all proce
     baseline = prctile(spect_bl, baseline_ptile, 2); % get baseline
     
     % Mask the spectrogram using extracted TFpeaks from the first round of watershed
+    if verbose
+        disp('Masking the spectrogram using TF-peaks...');
+    end
     spect_masked = maskSpectrogram(spect, stimes, sfreqs, stats_table, use_boundary);
     
     % Compute time-frequency peaks
@@ -186,7 +189,7 @@ else % Run a second round of watershed and TFpeak extraction including all proce
         tfp = tic;
     end
     
-    stats_table = runSegmentedData(spect_masked, stimes, sfreqs, baseline, seg_time, downsample_spect, features, dur_min, bw_min, [], merge_thresh, [], .99);
+    stats_table = runSegmentedData(spect_masked, stimes, sfreqs, baseline, seg_time, downsample_spect, features, dur_min, bw_min, [], merge_thresh, [], 1);  % no trimming
     
     if verbose
         disp(['[2nd] TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
