@@ -44,7 +44,7 @@ parfor ii = 1:height(stats_table)
 end
 
 mask(cat(2, mask_indices{:})) = true;
-spect(~mask(:)) = nan;
+spect(~mask(:)) = nan;  % regions not within Boundaries are marked as NaN
 
 end
 
