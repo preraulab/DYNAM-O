@@ -255,7 +255,7 @@ bw_max = 15; % Hz
 %Set minimal peak height based on confidence interval lower bound of MTS
 chi2_df = 2 * taper_params(2);
 alpha = 0.95;
-ht_db_min = -pow2db(chi2_df / chi2inv(alpha/2 + 0.5, chi2_df)) * 2; % added a multiplier here
+ht_db_min = -pow2db(chi2_df / chi2inv(alpha/2 + 0.5, chi2_df)) * 2;
 
 if verbose
     disp('Computing TF-peak spectrogram...');
