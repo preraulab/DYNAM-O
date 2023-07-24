@@ -1,9 +1,9 @@
 %CLIMSCALE Rescale the color limits of an image to remove outliers with percentiles
 %
 %   Usage:
-%       clim = climscale(hObj, ptiles, outliers)
-%       clim(outliers)
-%       clim(ptiles)
+%       clims_new = climscale(hObj, ptiles, outliers)
+%       climscale(outliers)
+%       climscale(ptiles)
 %
 %   Input:
 %       hObj: handle to axis or image object -- required
@@ -11,20 +11,19 @@
 %       outliers: logical - remove outliers prior to scaling using isoutlier (default: true)
 %
 %   Output:
-%       clims: 1x2 double - scaled caxis limits
+%       clims_new: 1x2 double - scaled caxis limits
 %
 %   Example:
 %      ax = gca;
 %      imagesc(peaks(500);
 %      climscale;
 %
-%   Copyright 2021 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
+%   Copyright 2023 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %
-%   Last modified 10/23/2020
 %% ********************************************************************
-function clim = climscale(hObj, ptiles, outliers)
+function clims_new = climscale(hObj, ptiles, outliers)
 if nargin == 1
     if isa(hObj,'matlab.graphics.primitive.Image') || isa(hObj,'matlab.graphics.axis.Axes')
         ptiles =[5 98];
@@ -93,11 +92,11 @@ else %Remove outliers if selected
 end
 
 %Compute color limits
-clim = prctile(data(~bad_inds), ptiles);
+clims_new = prctile(data(~bad_inds), ptiles);
 
-if clim(1) == clim(2)
+if clims_new(1) == clims_new(2)
     return;
 end
 
 %Update axis scale
-set(hAx,'clim',clim);
+set(hAx,'CLim',clims_new);

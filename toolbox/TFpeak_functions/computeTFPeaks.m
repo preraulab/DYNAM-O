@@ -191,13 +191,13 @@ baseline = prctile(spect_bl, baseline_ptile, 2); % get baseline
 %% Compute time-frequency peaks
 if verbose
     disp('Extracting TF-peaks from the spectrogram...');
-    tfp = tic;
+    tfp = datetime('now');
 end
 
 stats_table = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, features, dur_min, bw_min, [], merge_thresh);
 
 if verbose
-    disp(['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
+    disp(['TF-peak extraction took ' char(datetime('now')-tfp), newline]);
 end
 
 %% Filter stats_table based on duration, bandwidth, frequency, and height

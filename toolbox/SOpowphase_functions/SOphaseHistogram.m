@@ -184,8 +184,8 @@ peak_SOphase = interp1([SOphase_times(1)-SOphase_times_step, SOphase_times, SOph
     [SOphase(1), SOphase, SOphase(end)], TFpeak_times);
 
 % Re-wrap phases to be between -pi and pi
-peak_SOphase = mod(peak_SOphase, 2*pi) - pi;
-SOphase = mod(SOphase, 2*pi) - pi;
+peak_SOphase = wrapToPi(peak_SOphase);
+SOphase = wrapToPi(SOphase);
 
 %% Get valid peak indices
 % Compute TF-peak stages if not included

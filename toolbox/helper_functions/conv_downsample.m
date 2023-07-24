@@ -25,29 +25,29 @@ function img_downsampled = conv_downsample(img, scale_factor, method, plot_on)
 %         figure
 %         subplot(221)
 %         imagesc(img);
-%         cx = caxis;
+%         cx = get(gca,'CLim');
 %         title(['Original: ' sprintf('%d x %d', size(img))])
 %         
 %         subplot(222)
 %         img_downsampled = conv_downsample(img, scale_factor, 'mean');
 %         imagesc(img_downsampled);
 %         title(['Mean Downsampled: ' sprintf('%d x %d', size(img_downsampled))])
-%         caxis(cx);
+%         set(gca,'CLim',cx);
 %         
 %         subplot(223)
 %         img_downsampled = conv_downsample(img, scale_factor, 'median');
 %         imagesc(img_downsampled);
 %         title(['Median Downsampled: ' sprintf('%d x %d', size(img_downsampled))])
-%         caxis(cx);
+%         set(gca,'CLim',cx);
 %         
 %         subplot(224)
 %         img_downsampled = conv_downsample(img, scale_factor, 'max');
 %         imagesc(img_downsampled);
 %         title(['Max Downsampled: ' sprintf('%d x %d', size(img_downsampled))])
-%         caxis(cx);
+%         set(gca,'CLim',cx);
 %
 %
-%   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
+%   Copyright 2023 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 
@@ -100,12 +100,12 @@ if plot_on
     figure
     subplot(211)
     imagesc(img);
-    cx = caxis;
+    cx = get(gca,'CLim');
     title(['Original: ' sprintf('%d x %d', size(img))])
 
     subplot(212)
     imagesc(img_downsampled);
-    caxis(cx);
+    set(gca,'CLim',cx);
     title(['Downsampled: ' sprintf('%d x %d', size(img_downsampled))])
 end
 

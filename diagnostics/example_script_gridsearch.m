@@ -102,7 +102,7 @@ for w = 1:length(downsample_spect1)
         ylimits = [4,25];
 
         % Plot hypnogram
-        axes(hypn_spect_ax(1));
+        axes(hypn_spect_ax(1)); %#ok<*LAXES>
         hypnoplot(stage_times/3600,stage_vals);
         xlim(time_range/3600)
         ylim(hypn_spect_ax(1),[.3 5.1])
