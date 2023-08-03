@@ -232,7 +232,7 @@ if isempty(SO_range)
     SO_range(2) = max(SOpower(SOpower_valid));
 end
 if isempty(SO_binsizestep)
-    SO_binsizestep(1) = (SO_range(2) - SO_range(1)) / 5;
+    SO_binsizestep(1) = (SO_range(2) - SO_range(1)) / 10;
     SO_binsizestep(2) = (SO_range(2) - SO_range(1)) / 100;
 end
 
