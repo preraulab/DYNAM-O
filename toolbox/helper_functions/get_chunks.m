@@ -24,19 +24,19 @@ function [run_lengths, run_inds, run_values, filtered_vector] = get_chunks(data,
 %
 % Examples:
 %   x = [2 2 5 5 5 6 6 6 6 4 7 2 2 2];
-%   [lengths, runs] = get_chunks(x, 2, 4, 1)
+%   [lengths, runs] = get_chunks(x, 2, 4)
 %
-%   % returns lengths = [ 2 3 4 3] and run_inds =  {[1 2]} {[3 4 5]} {[6 7 8 9]} {[12 13 14]}.
+%   % returns lengths = [2 3 4 3] and run_inds =  {[1 2]} {[3 4 5]} {[6 7 8 9]} {[12 13 14]}.
 %
 %    Copyright 2023 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
 %    Authors: Michael J. Prerau
 
 %Default lengths impose no filtering
-if nargin <2
+if nargin<2
     min_len=1;
 end
 
-if nargin <3
+if nargin<3
     max_len=inf;
 end
 
@@ -60,12 +60,12 @@ cur_run = 0;
 cur_len = 0;
 
 last_val = data(1);
-% Iterate through binary vector
+% Iterate through data vector
 for ii = 1:len
-    if data(ii)==last_val
+    if isequaln(data(ii), last_val)
         % Increment current run
         cur_len = cur_len + 1;
-    elseif ii>1 && data(ii)~=last_val
+    else
         if cur_len >= min_len && cur_len <= max_len
             % End current run
             cur_run = cur_run + 1;
@@ -80,8 +80,8 @@ for ii = 1:len
     end
 end
 
-if data(len) && cur_len >= min_len && cur_len <= max_len
-    % End current run
+% End last run
+if cur_len >= min_len && cur_len <= max_len
     cur_run = cur_run + 1;
     runs_start = (len - cur_len + 1);
     runs_end = (len);
@@ -94,15 +94,14 @@ run_inds = run_inds(1:cur_run);
 run_lengths = run_lengths(1:cur_run);
 
 %Get the values for each run
-if nargout >= 3
-    run_values =  cellfun(@(y)data(y(1)),run_inds);
+if nargout>=3
+    run_values = cellfun(@(y)data(y(1)),run_inds);
 end
 
 %Create the filtered binary vector if needed
-if nargout == 4
+if nargout==4
     filtered_vector = zeros(size(data));
     filtered_vector([run_inds{:}]) = 1;
 end
 
 end
-
