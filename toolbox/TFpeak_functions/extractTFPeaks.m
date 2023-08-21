@@ -319,6 +319,17 @@ if trim_vol < 1
 
     regions = trim_rgn;
     bndry = trim_bndry;
+
+
+if dur_min>0 || bw_min>0
+    df = y(2)-y(1);
+    dt = x(2)-x(1);
+
+    [f_inds,t_inds]=cellfun(@(x)ind2sub(size(img),x),regions,'UniformOutput',false);
+    good_inds = cellfun(@(x)(max(x)-min(x))*dt>dur_min,t_inds) & cellfun(@(x)(max(x)-min(x))*df>bw_min,f_inds);
+    regions = regions(good_inds);
+end
+
 end
 
 %***********************************
