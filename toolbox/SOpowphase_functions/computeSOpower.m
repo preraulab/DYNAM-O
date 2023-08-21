@@ -72,11 +72,17 @@ SOpower(abs(nanzscore(SOpower)) >= SOpower_outlier_threshold) = nan;
 
 %% Normalize SO power
 
+% Define the regular expression pattern for a valid shift string
+pattern = '^p(0*[0-9]|[1-9][0-9]|100)shift[1-5]+$';
+
+% Check if the input string matches the pattern
+isValidShiftstr = ~isempty(regexp(norm_method, pattern, 'once'));
+
 %Handle shift inputs
 if strcmpi(norm_method,'shift')
     shift_ptile = 2;
     shift_stages = 1:4;
-elseif regexp(norm_method,'p*+shift*')
+elseif isValidShiftstr
     shift_ptile = str2double(norm_method(2:strfind(norm_method,'shift')-1));
     shift_stages = unique((norm_method(strfind(norm_method,'shift')+5:end)) - '0');
 
