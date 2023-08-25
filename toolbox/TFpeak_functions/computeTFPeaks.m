@@ -104,7 +104,7 @@ t_data_trunc = t_data(time_range_inds);
     dur_min, bw_min, dur_max, bw_max, ht_db_min] = compute_spectrogram([2,3], [1,0.05], data_trunc, Fs, quality_setting, verbose);
 stimes = stimes + t_data_trunc(1); % adjust the time axis to t_data
 
-%% Artifcact Detection
+%% Artifact Detection
 if isempty(artifacts)
     if verbose
         disp('Performing artifact rejection...');
