@@ -44,7 +44,7 @@ if isempty(SOphase_filter)
     if ~isempty(who('-file', SOphase_filter_path, filter_name))
 
         load(SOphase_filter_path, filter_name)
-        eval(['d = ', filter_name,';']);
+        eval(['d = ', filter_name,';']); %#ok<EVLEQ>
 
     else
 
