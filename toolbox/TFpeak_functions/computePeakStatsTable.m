@@ -64,10 +64,7 @@ for ii = 1:length(regions)
 end
 
 %Compute the stats table
-r_props = {};
-if any(strcmpi(features,'Area'))
-    r_props = cat(2,r_props,'Area');
-end
+r_props = {'Area'};
 
 if any(strcmpi(features,'BoundingBox')) || any(strcmpi(features,'Bandwidth')) || any(strcmpi(features,'Duration'))
     r_props = cat(2,r_props,'BoundingBox');
@@ -92,10 +89,7 @@ seg_startx = xvalues(1);
 seg_starty = yvalues(1);
 
 %Remove dead rows
-if any(strcmpi(features,'Area'))
-    good_indices = stats_table.Area > 0;
-end
-
+good_indices = stats_table.Area > 0;
 stats_table = stats_table(good_indices,:);
 boundaries = boundaries(good_indices);
 % regions = regions(good_indices);
@@ -116,6 +110,8 @@ if any(strcmpi(features,'Area'))
     stats_table.Area = stats_table.Area*dx*dy;
     stats_table.Properties.VariableDescriptions{'Area'} = 'Time-frequency area of peak';
     stats_table.Properties.VariableUnits{'Area'} = 'sec*Hz';
+else
+    stats_table.Area = [];
 end
 
 %Volume

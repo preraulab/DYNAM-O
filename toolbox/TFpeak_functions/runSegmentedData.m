@@ -220,6 +220,6 @@ end
 %% Assembles peaks stats for all segs into single table and sorts by peak time
 stats_table = cat(1,stats_tables{:});
 peaktimes_ind = find(strcmpi(stats_table.Properties.VariableNames, 'PeakTime'));
-stats_table = sortrows(stats_table, peaktimes_ind,'ascend');
+stats_table = sortrows(stats_table, peaktimes_ind, 'ascend');
  
 end
