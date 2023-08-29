@@ -13,7 +13,7 @@ function stats_table = extractTFPeaks(img,x,y,features,num_segment,conn_wshed,..
 %   x            -- x axis of image data. default 1:size(data,2).
 %   y            -- y axis of image data. default 1:size(data,1).
 %   features     -- cell array of features to include, can be any subset of
-%                   {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData', 
+%                   {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData',
 %                    'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. default 'all'
 %   num_segment  -- segment number if data comes from larger image. default 1.
 %   conn_wshed   -- pixel connection to be used by peaksWShed. default 8.
@@ -46,11 +46,11 @@ function stats_table = extractTFPeaks(img,x,y,features,num_segment,conn_wshed,..
 %   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
-%      
+%
 %   Please provide the following citation for all use:
-%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach, 
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis 
-%       for Electroencephalographic Phenotyping and Biomarker Identification, 
+%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
+%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification,
 %       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
 %
 %**********************************************************************
@@ -256,7 +256,7 @@ if ~isempty(downsample_spect)
             Ldata(ii_pixels)=ii;
         end
     end
-
+    
     %Resize image
     LdataHR = imresize(Ldata,size(img),'nearest');
     
@@ -265,7 +265,7 @@ if ~isempty(downsample_spect)
     for ii = 1:num_regions
         rgn_HR{ii} = find(LdataHR == ii);
     end
-
+    
     regions = rgn_HR;
 end
 
@@ -276,7 +276,7 @@ end
 if dur_min>0 || bw_min>0
     df = y(2)-y(1);
     dt = x(2)-x(1);
-
+    
     [f_inds,t_inds] = cellfun(@(x)ind2sub(size(img),x),regions,'UniformOutput',false);
     good_inds = cellfun(@(x)(max(x)-min(x))*dt>dur_min,t_inds) & cellfun(@(x)(max(x)-min(x))*df>bw_min,f_inds);
     regions = regions(good_inds);
@@ -316,20 +316,19 @@ if trim_vol < 1
         stats_table = table;
         return;
     end
-
+    
     regions = trim_rgn;
     bndry = trim_bndry;
-
-
-if dur_min>0 || bw_min>0
-    df = y(2)-y(1);
-    dt = x(2)-x(1);
-
-    [f_inds,t_inds]=cellfun(@(x)ind2sub(size(img),x),regions,'UniformOutput',false);
-    good_inds = cellfun(@(x)(max(x)-min(x))*dt>dur_min,t_inds) & cellfun(@(x)(max(x)-min(x))*df>bw_min,f_inds);
-    regions = regions(good_inds);
-end
-
+    
+    if dur_min>0 || bw_min>0
+        df = y(2)-y(1);
+        dt = x(2)-x(1);
+        
+        [f_inds,t_inds]=cellfun(@(x)ind2sub(size(img),x),regions,'UniformOutput',false);
+        good_inds = cellfun(@(x)(max(x)-min(x))*dt>dur_min,t_inds) & cellfun(@(x)(max(x)-min(x))*df>bw_min,f_inds);
+        regions = regions(good_inds);
+    end
+    
 end
 
 %***********************************
