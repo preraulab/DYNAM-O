@@ -79,6 +79,9 @@ if f_verb > 0
     disp([verb_pref 'Running watershed...']);
 end
 
+% Handle NaN values
+nan_idx = isnan(data(:));
+data(nan_idx) = 0;
 
 % Run watershed
 if isempty(bl_thresh)
@@ -104,6 +107,8 @@ else %EXPERIMENTAL: Threshold the data prior to running
         end
     end
 end
+
+Ldata(nan_idx) = 0;
 
 if f_disp
     RGB2 = label2rgb(Ldata, 'jet', 'c', 'shuffle');

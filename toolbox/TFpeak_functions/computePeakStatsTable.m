@@ -60,14 +60,11 @@ assert(isnumeric(data) && ismatrix(data) && min(size(data))>1,'Data must be an M
 %% Convert data to labeled data
 Ldata = zeros(size(data));
 for ii = 1:length(regions)
-    Ldata(regions{ii}) = ii;
+    Ldata(regions{ii}(~isnan(data(regions{ii})))) = ii;
 end
 
 %Compute the stats table
-r_props = {};
-if any(strcmpi(features,'Area'))
-    r_props = cat(2,r_props,'Area');
-end
+r_props = {'Area'};
 
 if any(strcmpi(features,'BoundingBox')) || any(strcmpi(features,'Bandwidth')) || any(strcmpi(features,'Duration'))
     r_props = cat(2,r_props,'BoundingBox');
@@ -92,10 +89,7 @@ seg_startx = xvalues(1);
 seg_starty = yvalues(1);
 
 %Remove dead rows
-if any(strcmpi(features,'Area'))
-    good_indices = stats_table.Area > 0;
-end
-
+good_indices = stats_table.Area > 0;
 stats_table = stats_table(good_indices,:);
 boundaries = boundaries(good_indices);
 % regions = regions(good_indices);
@@ -116,6 +110,8 @@ if any(strcmpi(features,'Area'))
     stats_table.Area = stats_table.Area*dx*dy;
     stats_table.Properties.VariableDescriptions{'Area'} = 'Time-frequency area of peak';
     stats_table.Properties.VariableUnits{'Area'} = 'sec*Hz';
+else
+    stats_table.Area = [];
 end
 
 %Volume
@@ -127,7 +123,7 @@ end
 
 %Boundaries
 if any(strcmpi(features,'Boundaries'))
-    [a,b] = cellfun(@(x)ind2sub(size(data),x),boundaries,'UniformOutput',false);
+    [a,b] = cellfun(@(x)ind2sub(size(data),x),boundaries','UniformOutput',false);
     stats_table.Boundaries = cellfun(@(a,b)[(b-1)*dx+seg_startx, (a-1)*dy+seg_starty], a, b, 'Uniform', 0); % a,b in pixel indices
     stats_table.Properties.VariableDescriptions{'Boundaries'} = '(time, frequency) of peak region boundary pixels';
     stats_table.Properties.VariableUnits{'Boundaries'} = '(seconds, Hz)';

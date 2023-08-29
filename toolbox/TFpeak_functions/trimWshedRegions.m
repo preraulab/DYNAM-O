@@ -125,7 +125,7 @@ if f_valid_inputs
     [num_rows,num_cols] = size(data);
     num_regions = length(regions);
     trimmed_regions = regions;
-    trimmed_borders = cell(num_regions,1);
+    trimmed_borders = cell(1, num_regions);
     
     % Shift data for determination of volume
     shift_data = data - shift_val;
@@ -168,7 +168,7 @@ if f_valid_inputs
             % Find cutoff and trim *
             %***********************
             % Get total region volume and cutoff index
-            total_volume = sum(list_vals);
+            total_volume = sum(list_vals,'omitnan');
             jj = find(cumsum(list_vals)/total_volume >= (1-vol_thresh),1);
             
             % Check for constant region, one pixel region, or impossible threshold
@@ -187,7 +187,7 @@ if f_valid_inputs
                 tmp_cc = bwconncomp(tmp_data,conn);
                 
                 % Use largest connected component as trimmed region
-                trimmed_vols = cellfun(@(x)sum(shift_data(x)),tmp_cc.PixelIdxList);
+                trimmed_vols = cellfun(@(x)sum(shift_data(x),'omitnan'),tmp_cc.PixelIdxList);
                 [~,idx] = max(trimmed_vols);
                 
                 % Get linear pixel indices of trimmed region in subimage
@@ -248,8 +248,8 @@ if f_valid_inputs
                         tmp4((aa-1)*length(pad_row)+bb) = tmp3+pad_col(aa)*size(data,1)+pad_row(bb);
                     end
                 end
-                trimmed_regions{ii} = intersect(list_pixels,tmp4); % []; %
-                trimmed_borders{ii} = setdiff(trimmed_regions{ii},tmp3); % []; %
+                trimmed_regions{ii} = intersect(list_pixels,tmp4); % [];
+                trimmed_borders{ii} = setdiff(trimmed_regions{ii},tmp3); % [];
             end
         else
             % Region is empty
@@ -283,6 +283,6 @@ else
     % Image data not provided for regions
     disp('         Returning original regions and empty boundaries.');
     trimmed_regions = regions;
-    trimmed_borders = cell(length(regions),1);
+    trimmed_borders = cell(1, length(regions));
 end
 
