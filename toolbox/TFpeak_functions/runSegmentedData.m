@@ -186,7 +186,7 @@ end
 %MAIN LOOP ACROSS SEGMENTS
 parfor ii = 1:n_segs
     % Check for valid segments
-    if all(~data_segs{ii}(:)) || all(isnan(data_segs{ii}(:))) || length(x_segs{ii}) <= 1
+    if all(data_segs{ii}(:) == 0) || all(isnan(data_segs{ii}(:))) || length(x_segs{ii}) <= 1
         stats_tables{ii} = table;
         continue
     end
@@ -215,6 +215,6 @@ end
 %% Assembles peaks stats for all segs into single table and sorts by peak time
 stats_table = cat(1,stats_tables{:});
 peaktimes_ind = find(strcmpi(stats_table.Properties.VariableNames, 'PeakTime'));
-stats_table = sortrows(stats_table, peaktimes_ind,'ascend');
+stats_table = sortrows(stats_table, peaktimes_ind, 'ascend');
  
 end

@@ -44,7 +44,7 @@ if f_verb > 0
     disp('Removing baseline...');
 end
 
-% Remove baseline. Subtraction in dB equivalent to subtraction in non-dB.
+% Remove baseline. Subtraction in dB equivalent to division in non-dB.
 spect = spect./repmat(baseline,1,size(spect,2));
 
 if ~isempty(bl_thresh) && bl_thresh ~= 0  % Get threshold used to remove low pow data

@@ -24,7 +24,7 @@ function [SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, SOpow_TIB
 %                      Default calculated using min and max of SO power
 %       SOpower_binsizestep: 1x2 double - [size, step] SO power bin size and step for SO power axis
 %                            of histogram. Units are radians. Default
-%                            size is (SOpower_range(2)-SOpower_range(1))/5, default step is
+%                            size is (SOpower_range(2)-SOpower_range(1))/10, default step is
 %                            (SOpower_range(2)-SOpower_range(1))/100
 %       SOphase_range: 1x2 double - min and max SO phase values (radians) to consider in SO phase analysis.
 %                                   Default is [-pi, pi]
