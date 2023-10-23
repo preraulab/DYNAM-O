@@ -73,6 +73,8 @@ addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'struct'},{}))
 addOptional(p, 'double_watershed', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'quality_setting', 'fast', @(x) validateattributes(x,{'char','numeric'},{}));
+addOptional(p, 'taper_params', [], @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan'}));
+addOptional(p, 'time_window_params', [], @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -98,6 +100,14 @@ if isempty(artifact_filters)
     artifact_filters.hpFilt_broad = [];
 end
 
+if isempty(taper_params)
+    taper_params = [[2,3];[1,1]];
+end
+
+if isempty(time_window_params)
+    time_window_params = [[1,0.05];[2,0.05]];
+end
+
 %% Truncate data to time range
 time_range_inds = t_data >= time_range(1) & t_data <= time_range(2);
 data_trunc = data(time_range_inds);
@@ -109,7 +119,7 @@ t_data_trunc = t_data(time_range_inds);
 
 [spect, stimes, sfreqs,...
     downsample_spect, seg_time, merge_thresh,...
-    dur_min, bw_min, dur_max, bw_max, ht_db_min] = compute_spectrogram([2,3], [1,0.05], data_trunc, Fs, quality_setting, verbose);
+    dur_min, bw_min, dur_max, bw_max, ht_db_min] = compute_spectrogram(taper_params(1,:), time_window_params(1,:), data_trunc, Fs, quality_setting, verbose);
 stimes = stimes + t_data_trunc(1); % adjust the time axis to t_data
 
 %% Artifact Detection
@@ -165,7 +175,7 @@ if double_watershed
     % Compute multitaper spectrogram using new parameters with smaller spectral resolution
     [spect, stimes, sfreqs,...
         downsample_spect, seg_time, merge_thresh,...
-        dur_min, bw_min, dur_max, bw_max, ht_db_min] = compute_spectrogram([1,1], [2,0.05], data_trunc, Fs, quality_setting, verbose);
+        dur_min, bw_min, dur_max, bw_max, ht_db_min] = compute_spectrogram(taper_params(2,:), time_window_params(2,:), data_trunc, Fs, quality_setting, verbose);
     stimes = stimes + t_data_trunc(1); % adjust the time axis to t_data
     
     % Update artifact vector
