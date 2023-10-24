@@ -33,6 +33,10 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %                                       'precision': high res settings
 %                                       'fast' (default): speed-up with minimal impact on results *suggested*
 %                                       'draft': faster speed-up with increased high frequency TF-peaks, *not recommended for analyzing SOphase*
+%       taper_params (opt):        [1x2] or [2x2] double - taper parameters used to compute the spectrogram in 
+%                                       single or double watershed (1x2 if single, 2x2 if double). Default = [[2,3];[1,1]]
+%       time_window_params (opt):  [1x2] or [2x2] double - time window parameters used to compute the spectrogram in 
+%                                       single or double watershed (1x2 if single, 2x2 if double). Default = [[1,0.05];[2,0.05]]
 %
 %   Outputs:
 %       stats_table:  table - time, frequency, height, SOpower, and SOphase
