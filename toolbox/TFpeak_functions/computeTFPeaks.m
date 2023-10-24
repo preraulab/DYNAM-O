@@ -82,6 +82,14 @@ field_names = fieldnames(p.Results);
 
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 
+if size(taper_params,1)==1 && double_watershed==1
+    error('Double watershed requested but only one set of taper parameters was given.');
+end
+
+if size(time_window_params,1)==1 && double_watershed==1
+    error('Double watershed requested but only one set of window parameters was given.');
+end
+
 if isempty(t_data) %#ok<*NODEF>
     t_data = (0:length(data)-1)/Fs;
 end
