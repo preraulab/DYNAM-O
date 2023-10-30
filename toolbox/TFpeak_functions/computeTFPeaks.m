@@ -37,6 +37,7 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %                                       single or double watershed (1x2 if single, 2x2 if double). Default = [[2,3];[1,1]]
 %       time_window_params (opt):  [1x2] or [2x2] double - time window parameters used to compute the spectrogram in 
 %                                       single or double watershed (1x2 if single, 2x2 if double). Default = [[1,0.05];[2,0.05]]
+%       double_watershed_hanning (opt): logical - whether to use hanning window for the second round of watershed. Default = false
 %
 %   Outputs:
 %       stats_table:  table - time, frequency, height, SOpower, and SOphase
@@ -79,6 +80,7 @@ addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','n
 addOptional(p, 'quality_setting', 'fast', @(x) validateattributes(x,{'char','numeric'},{}));
 addOptional(p, 'taper_params', [], @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan'}));
 addOptional(p, 'time_window_params', [], @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan'}));
+addOptional(p, 'double_watershed_hanning', false, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -184,11 +186,29 @@ end
 
 %% Do a second round of watershed with finer frequency resolution of spectrogram
 if double_watershed
+
+    % DPSS TAPERS
+    if double_watershed_hanning == false
     % Compute multitaper spectrogram using new parameters with smaller spectral resolution
-    [spect, stimes, sfreqs,...
-        downsample_spect, seg_time, merge_thresh,...
-        dur_min, bw_min, dur_max, bw_max, ht_db_min] = compute_spectrogram(taper_params(2,:), time_window_params(2,:), data_trunc, Fs, quality_setting, verbose);
-    stimes = stimes + t_data_trunc(1); % adjust the time axis to t_data
+        [spect, stimes, sfreqs,...
+            downsample_spect, seg_time, merge_thresh,...
+            ~, bw_min, dur_max, bw_max, ht_db_min] = compute_spectrogram(taper_params(2,:), time_window_params(2,:), data_trunc, Fs, quality_setting, verbose);
+        stimes = stimes + t_data_trunc(1); % adjust the time axis to t_data
+    % HANNING WINDOW
+    else
+        dsfreqs = 0.1; % For consistency with our results we expect a df of 0.1 Hz or less
+        freq_range = [0,30]; % frequency range to compute spectrum over (Hz)
+        nfft = 2^(nextpow2(Fs/dsfreqs)); % zero pad data to this minimum value for fft
+        detrend = 'constant'; % do not detrend
+        weight = 'unity'; % each taper is weighted the same
+        ploton = false; % do not plot out
+        mts_verbose = false; % suppress verbose messages
+    
+        taper_params = [1,1];
+        time_window_params = [4,.05];
+        [spect,stimes,sfreqs] = hanning_spectrogram(data_trunc, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
+
+    end
     
     % Update artifact vector
     artifacts_stimes = logical(interp1(t_data_trunc, double(artifacts), stimes, 'nearest')); % get artifacts occurring at spectrogram times
