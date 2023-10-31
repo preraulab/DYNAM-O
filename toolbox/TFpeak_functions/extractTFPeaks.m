@@ -286,6 +286,10 @@ end
 %***********************************************************
 % Trim merged regions if trim_vol parameter is less than 1 *
 %***********************************************************
+if trim_vol >= 1
+    trim_vol = 0.99; % force some trimming to clean up salt and pepper artifacts inside regions
+end
+
 if trim_vol < 1
     if f_verb > 0
         disp([verb_pref '  Starting trim to ' num2str(100*trim_vol) ' percent volume...']);

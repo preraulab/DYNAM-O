@@ -280,11 +280,6 @@ if f_disp
     title(ax(3),['Current weight merged: ' num2str(max_wt)]);
 end
 
-
-
 %Remove dead regions
 rgn = rgn(cellfun(@(x)~isempty(x),rgn));
 Lborders = Lborders(cellfun(@(x)~isempty(x),Lborders));
-
-
-
