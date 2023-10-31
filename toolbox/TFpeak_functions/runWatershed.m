@@ -109,6 +109,7 @@ else %EXPERIMENTAL: Threshold the data prior to running
 end
 
 Ldata(nan_idx) = 0;
+Ldata = bwlabel(Ldata);
 
 if f_disp
     RGB2 = label2rgb(Ldata, 'jet', 'c', 'shuffle');
