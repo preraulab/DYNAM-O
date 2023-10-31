@@ -38,6 +38,7 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %       time_window_params (opt):  [1x2] or [2x2] double - time window parameters used to compute the spectrogram in 
 %                                       single or double watershed (1x2 if single, 2x2 if double). Default = [[1,0.05];[2,0.05]]
 %       double_watershed_hanning (opt): logical - whether to use hanning window for the second round of watershed. Default = false
+%       trimming (opt):            logical - whether or not to use trimming for the second round of watershed. Default = false
 %
 %   Outputs:
 %       stats_table:  table - time, frequency, height, SOpower, and SOphase
@@ -81,6 +82,7 @@ addOptional(p, 'quality_setting', 'fast', @(x) validateattributes(x,{'char','num
 addOptional(p, 'taper_params', [], @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan'}));
 addOptional(p, 'time_window_params', [], @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan'}));
 addOptional(p, 'double_watershed_hanning', false, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
+addOptional(p, 'trimming', false, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -234,8 +236,15 @@ if double_watershed
     compute_features = unique([features, {'Duration', 'Bandwidth', 'PeakFrequency', 'Height'}]);
     if any(strcmpi(features, 'PeakStage')); compute_features = unique([compute_features, 'PeakTime']); end
     
-    stats_table = runSegmentedData(spect_masked, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, dur_min, bw_min, [], merge_thresh, [], 1);  % no trimming
-    
+    if trimming == false
+        % NO TRIMMING
+        stats_table = runSegmentedData(spect_masked, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, dur_min, bw_min, [], merge_thresh, [], 1);  % no trimming
+    else
+        % TRIMMING
+        stats_table = runSegmentedData(spect_masked, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, dur_min, bw_min, [], merge_thresh, []);  % trimming
+    end
+        
+
     if verbose
         disp(['[2nd] TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
     end
