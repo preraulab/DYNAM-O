@@ -165,7 +165,7 @@ if double_watershed
     % Compute multitaper spectrogram using new parameters with smaller spectral resolution
     [spect, stimes, sfreqs,...
         downsample_spect, seg_time, merge_thresh,...
-        dur_min, bw_min, dur_max, bw_max, ht_db_min] = compute_spectrogram([1,1], [2,0.05], data_trunc, Fs, quality_setting, verbose);
+        dur_min, bw_min, dur_max, bw_max, ht_db_min] = compute_spectrogram([2,3], [2,0.05], data_trunc, Fs, quality_setting, verbose);
     stimes = stimes + t_data_trunc(1); % adjust the time axis to t_data
     
     % Update artifact vector
@@ -192,7 +192,7 @@ if double_watershed
     compute_features = unique([features, {'Duration', 'Bandwidth', 'PeakFrequency', 'Height'}]);
     if any(strcmpi(features, 'PeakStage')); compute_features = unique([compute_features, 'PeakTime']); end
     
-    stats_table = runSegmentedData(spect_masked, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, dur_min, bw_min, [], merge_thresh, [], 1);  % no trimming
+    stats_table = runSegmentedData(spect_masked, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, dur_min, bw_min, [], merge_thresh, [], 0.99);
     
     if verbose
         disp(['[2nd] TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
