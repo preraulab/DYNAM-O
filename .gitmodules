@@ -1,0 +1,6 @@
+[submodule "submodules/multitaper"]
+	path = submodules/multitaper
+	url = git@github.com:preraulab/multitaper.git
+[submodule "submodules/multicomp_test"]
+	path = submodules/multicomp_test
+	url = git@github.com:preraulab/multicomp_test.git
