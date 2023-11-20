@@ -33,12 +33,6 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %                                       'precision': high res settings
 %                                       'fast' (default): speed-up with minimal impact on results *suggested*
 %                                       'draft': faster speed-up with increased high frequency TF-peaks, *not recommended for analyzing SOphase*
-%       taper_params (opt):        [1x2] or [2x2] double - taper parameters used to compute the spectrogram in 
-%                                       single or double watershed (1x2 if single, 2x2 if double). Default = [[2,3];[1,1]]
-%       time_window_params (opt):  [1x2] or [2x2] double - time window parameters used to compute the spectrogram in 
-%                                       single or double watershed (1x2 if single, 2x2 if double). Default = [[1,0.05];[2,0.05]]
-%       double_watershed_hanning (opt): logical - whether to use hanning window for the second round of watershed. Default = false
-%       trim_vol (opt):             double - fraction maximum trimmed volume (from 0 to 1), i.e. 1 means no trim. Default = 0.8
 %
 %   Outputs:
 %       stats_table:  table - time, frequency, height, SOpower, and SOphase
@@ -79,24 +73,12 @@ addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'struct'},{}))
 addOptional(p, 'double_watershed', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'quality_setting', 'fast', @(x) validateattributes(x,{'char','numeric'},{}));
-addOptional(p, 'taper_params', [], @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan'}));
-addOptional(p, 'time_window_params', [], @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan'}));
-addOptional(p, 'double_watershed_hanning', false, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
-addOptional(p, 'trim_vol', 0.8, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnan'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
 field_names = fieldnames(p.Results);
 
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
-
-if size(taper_params,1)==1 && double_watershed==1
-    error('Double watershed requested but only one set of taper parameters was given.');
-end
-
-if size(time_window_params,1)==1 && double_watershed==1
-    error('Double watershed requested but only one set of window parameters was given.');
-end
 
 if isempty(t_data) %#ok<*NODEF>
     t_data = (0:length(data)-1)/Fs;
@@ -114,14 +96,6 @@ end
 if isempty(artifact_filters)
     artifact_filters.hpFilt_high = [];
     artifact_filters.hpFilt_broad = [];
-end
-
-if isempty(taper_params)
-    taper_params = [[2,3];[1,1]];
-end
-
-if isempty(time_window_params)
-    time_window_params = [[1,0.05];[2,0.05]];
 end
 
 %% Truncate data to time range
@@ -219,7 +193,7 @@ if double_watershed
     compute_features = unique([features, {'Duration', 'Bandwidth', 'PeakFrequency', 'Height'}]);
     if any(strcmpi(features, 'PeakStage')); compute_features = unique([compute_features, 'PeakTime']); end
     
-    stats_table = runSegmentedData(spect_masked, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, dur_min, bw_min, [], merge_thresh, [], trim_vol);
+    stats_table = runSegmentedData(spect_masked, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, dur_min, bw_min, [], merge_thresh, [], 0.8);
     
     if verbose
         disp(['[2nd] TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
