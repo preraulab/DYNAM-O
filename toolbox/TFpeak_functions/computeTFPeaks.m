@@ -135,7 +135,7 @@ t_data_trunc = t_data(time_range_inds);
 
 [spect, stimes, sfreqs,...
     downsample_spect, seg_time, merge_thresh,...
-    dur_min, bw_min, dur_max, bw_max, ht_db_min] = compute_spectrogram(taper_params(1,:), time_window_params(1,:), data_trunc, Fs, quality_setting, verbose);
+    dur_min, bw_min, dur_max, bw_max, ht_db_min] = compute_spectrogram([2,3], [1,0.05], data_trunc, Fs, quality_setting, verbose);
 stimes = stimes + t_data_trunc(1); % adjust the time axis to t_data
 
 %% Artifact Detection
@@ -189,28 +189,12 @@ end
 %% Do a second round of watershed with finer frequency resolution of spectrogram
 if double_watershed
 
-    % DPSS TAPERS
-    if double_watershed_hanning == false
     % Compute multitaper spectrogram using new parameters with smaller spectral resolution
-        [spect, stimes, sfreqs,...
-            downsample_spect, seg_time, merge_thresh,...
-            ~, bw_min, dur_max, bw_max, ht_db_min] = compute_spectrogram(taper_params(2,:), time_window_params(2,:), data_trunc, Fs, quality_setting, verbose);
-        stimes = stimes + t_data_trunc(1); % adjust the time axis to t_data
-    
-    else
-        
-        taper_params_h = [1,1];
-        time_window_params_h = [4,0.05];
-        
-        bw_min = 4/time_window_params_h(1)/2;
-        
-        [spect, stimes, sfreqs,...
-            downsample_spect, seg_time, merge_thresh,...
-            ~, ~, dur_max, bw_max, ht_db_min] = compute_spectrogram_hanning(taper_params_h, time_window_params_h, data_trunc, Fs, quality_setting, verbose);
-        stimes = stimes + t_data_trunc(1); 
+    [spect, stimes, sfreqs,...
+        downsample_spect, seg_time, merge_thresh,...
+        ~, bw_min, dur_max, bw_max, ht_db_min] = compute_spectrogram([2,3], [2,0.05], data_trunc, Fs, quality_setting, verbose);
+    stimes = stimes + t_data_trunc(1); % adjust the time axis to t_data
 
-    end
-    
     % Update artifact vector
     artifacts_stimes = logical(interp1(t_data_trunc, double(artifacts), stimes, 'nearest')); % get artifacts occurring at spectrogram times
     
