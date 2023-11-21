@@ -40,6 +40,18 @@ if nargin<2 || isempty(baseline)
     error('Baseline must be specificied')
 end
 
+if nargin<3 || isempty(bl_thresh)
+    bl_thresh = [];
+end
+
+if nargin<4 || isempty(CI_upper_bl)
+    CI_upper_bl = [];
+end
+
+if nargin<5 || isempty(f_verb)
+    f_verb = 1;
+end
+
 if f_verb > 0
     disp('Removing baseline...');
 end
