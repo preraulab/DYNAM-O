@@ -33,6 +33,7 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %                                       'precision': high res settings
 %                                       'fast' (default): speed-up with minimal impact on results *suggested*
 %                                       'draft': faster speed-up with increased high frequency TF-peaks, *not recommended for analyzing SOphase*
+%       refinement (opt):          logical - perform 1Hz refinement on the spindle table from double watershed. Default = true
 %
 %   Outputs:
 %       stats_table:  table - time, frequency, height, SOpower, and SOphase
@@ -73,6 +74,7 @@ addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'struct'},{}))
 addOptional(p, 'double_watershed', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'quality_setting', 'fast', @(x) validateattributes(x,{'char','numeric'},{}));
+addOptional(p, 'refinement', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -219,6 +221,10 @@ end
 
 % Remove all features not requested to be extracted
 stats_table = removevars(stats_table, setdiff(stats_table.Properties.VariableNames, features));
+
+if refinement
+    stats_table = refine_TFpeaks(data,Fs,stats_table,false);
+end
 
 end
 
