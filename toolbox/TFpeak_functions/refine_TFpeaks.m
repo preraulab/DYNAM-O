@@ -3,7 +3,7 @@ function [spindle_table] = refine_TFpeaks(data,Fs,spindle_table,baseline_opt)
 %
 %   Usage:
 %   Direct input:
-%       [spindle_table] = refine_TFpeaks(data,Fs,t,spindle_table,baseline_opt,artifacts)
+%       [spindle_table] = refine_TFpeaks(data,Fs,t,spindle_table,baseline_opt)
 %
 %   Input:
 %       data: <number of samples> x 1  vector - time series data -- required
@@ -56,7 +56,7 @@ peak_freqs = NaN(height(spindle_table(event_times_inc,:)),1);
 %% RECOMPUTE BASELINE
 
 % If baseline removal is on
-if baseline_opt == true
+if baseline_opt
     spect_bl = spect;
     spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
 
