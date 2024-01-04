@@ -4,3 +4,9 @@
 [submodule "submodules/multicomp_test"]
 	path = submodules/multicomp_test
 	url = git@github.com:preraulab/multicomp_test.git
+[submodule "toolbox/helper_functions/multitaper_spectrogram"]
+	path = toolbox/helper_functions/multitaper_spectrogram
+	url = git@github.com:preraulab/multitaper.git
+[submodule "toolbox/helper_functions/statistical_tests"]
+	path = toolbox/helper_functions/statistical_tests
+	url = git@github.com:preraulab/multicomp_test.git
