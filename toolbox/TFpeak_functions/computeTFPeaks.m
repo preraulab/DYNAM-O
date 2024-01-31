@@ -224,6 +224,7 @@ stats_table = removevars(stats_table, setdiff(stats_table.Properties.VariableNam
 
 if refinement
     stats_table = refine_TFpeaks(data,Fs,stats_table,false);
+    stats_table(isnan(stats_table.PeakFrequency),:) = [];
 end
 
 end

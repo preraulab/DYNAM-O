@@ -1,26 +1,30 @@
-function [spindle_table] = refine_TFpeaks(data,Fs,spindle_table,baseline_opt,method)
-%REFINE_TFPEAKS  Compute a 1Hz spectrogram to refine the event table after performing the double watershed
+function [spindle_table] = refine_TFpeaks(data,Fs,spindle_table,baseline_opt,method, remove_edge)
+%REFINE_TFPEAKS  Compute a high res hanning spectrogram to refine the event table after performing the double watershed
 %
 %   Usage:
-%   Direct input:
-%       [spindle_table] = refine_TFpeaks(data,Fs,t,spindle_table,baseline_opt)
+%       [spindle_table] = refine_TFpeaks(data, Fs, spindle_table, baseline_opt, method, remove_edge)
 %
 %   Input:
 %       data: <number of samples> x 1  vector - time series data -- required
 %       Fs: double - sampling frequency in Hz  -- required
 %       spindle_table: table - list of events, including the peak times, peak frequencies,
 %                      and the bounding box -- required
-%       baseline_opt: logical - 1 to include baseline removal, 0 to exclude (default: 0)
+%       baseline_opt: logical - true to include baseline removal, false to exclude (default: false)
+%       method: char - method for refining peak frequencies ('spline_opt', 'spline_grid', 'spect_max') (default: 'spline_opt')
+%       remove_edge: logical - true to remove peaks at the boundaries, false to keep them (default: false)
 %
 %   Output:
 %       spindle_table: input spindle table with the Peak Frequency column updated following the 1Hz refinement
 %
-%
-%    Copyright 2023 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
+%    Copyright 2024 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
 %
 %% ********************************************************************
 if nargin<5
     method = 'spline_opt';
+end
+
+if nargin<6
+    remove_edge = false;
 end
 
 %% SPECTROGRAM PARAMS
@@ -73,7 +77,7 @@ end
 %% REFINE SPINDLE TABLE
 
 % Loop through each event
-for ii = 1:height(spindle_table(event_times_inc,:))
+parfor ii = 1:height(spindle_table(event_times_inc,:))
 
     % Get the bounding box frequencies detected from the original double watershed 231->232 spectrogram
     start_freq = bounding_box_lower(ii);
@@ -95,7 +99,7 @@ for ii = 1:height(spindle_table(event_times_inc,:))
             %Do a search for the min starting at the max value as a guess
             objectiveFunction = @(x) -fnval(spline_fit, x);
             options = optimset('Display', 'off');
-            peak_freq_max2 = fminsearch(@(x) constrainedObjective(x, objectiveFunction, start_freq, end_freq), freq_guess, options);
+            peak_freq_max = fminsearch(@(x) constrainedObjective(x, objectiveFunction, start_freq, end_freq), freq_guess, options);
 
         case 'spline_grid'
             % Use spline fit on a grid to have less descretized frequency result
@@ -110,14 +114,16 @@ for ii = 1:height(spindle_table(event_times_inc,:))
             idxs = sfreqs<=end_freq & sfreqs>=start_freq; % Find the indices of frequencies within the bounding box
             [~,idx] = max(curr(idxs)); % Find the index of the max within those bounds
             idx = idx + find(idxs,1,"first")-1; % Perform a find for the max index within bounds indices
-            peak_freq_max3 = sfreqs(idx); % Get final frequency location
+            peak_freq_max = sfreqs(idx); % Get final frequency location
     end
 
     % Update peak frequencies array with the final refined frequency
-    peak_freqs(ii) = peak_freq_max;
-
-    format long;
-    disp([peak_freq_max peak_freq_max2 peak_freq_max3])
+    % remove if at a boundary
+    if remove_edge && min(abs(peak_freq_max-[start_freq end_freq]))<1e-3
+         peak_freqs(ii) = nan;
+    else
+        peak_freqs(ii) = peak_freq_max;
+    end 
 
 end
 
