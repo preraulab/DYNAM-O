@@ -184,7 +184,7 @@ if f_verb > 0
 end
 
 %MAIN LOOP ACROSS SEGMENTS
-parfor ii = 1:n_segs
+for ii = 5%1:n_segs
     % Check for valid segments
     if all(data_segs{ii}(:) == 0) || all(isnan(data_segs{ii}(:))) || length(x_segs{ii}) <= 1
         stats_tables{ii} = table;
