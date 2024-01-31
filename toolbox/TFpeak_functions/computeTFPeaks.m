@@ -34,6 +34,9 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %                                       'fast' (default): speed-up with minimal impact on results *suggested*
 %                                       'draft': faster speed-up with increased high frequency TF-peaks, *not recommended for analyzing SOphase*
 %       refinement (opt):          logical - perform 1Hz refinement on the spindle table from double watershed. Default = true
+%       remove_edge (opt):         logical - remove refined peaks that fall
+%       on the edge of the bounds. Default = false
+%
 %
 %   Outputs:
 %       stats_table:  table - time, frequency, height, SOpower, and SOphase
@@ -47,7 +50,7 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %       t_data_trunc: [1xn] double - timestamps for data in time_range
 %       artifacts:    1xT logical of times flagged as artifacts (logical OR of hf and bb artifacts)
 %
-%   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
+%   Copyright 2024 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %
@@ -75,6 +78,7 @@ addOptional(p, 'double_watershed', true, @(x) validateattributes(x,{'logical'},{
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'quality_setting', 'fast', @(x) validateattributes(x,{'char','numeric'},{}));
 addOptional(p, 'refinement', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
+addOptional(p, 'remove_edge', false, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -223,7 +227,8 @@ end
 stats_table = removevars(stats_table, setdiff(stats_table.Properties.VariableNames, features));
 
 if refinement
-    stats_table = refine_TFpeaks(data,Fs,stats_table,false);
+    remove_edge = false; %Set to true to remove edges
+    stats_table = refine_TFpeaks(data,Fs,stats_table,false,'spline_opt',remove_edge);
     stats_table(isnan(stats_table.PeakFrequency),:) = [];
 end
 
