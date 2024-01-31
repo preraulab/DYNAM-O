@@ -80,11 +80,17 @@ for ii = 1:height(spindle_table(event_times_inc,:))
     % Take the spectrogram slice at that single timepoint
     curr = spect(:,ii);
 
-    % Calculate the location (frequency) of the max value within the slice and bounding box freqs
-    idxs = sfreqs<=end_freq & sfreqs>=start_freq; % Find the indices of frequencies within the bounding box
-    [~,idx] = max(curr(idxs)); % Find the index of the max within those bounds
-    idx = idx + find(idxs,1,"first")-1; % Perform a find for the max index within bounds indices
-    fin_freq_max = sfreqs(idx); % Get final frequency location
+    % Use spline fits to have less descretized frequency result
+    spline_fit = csapi(sfreqs, curr);
+    freq_interp = linspace(start_freq, end_freq, 1000);
+    [~,idx] = max(fnval(spline_fit, freq_interp));
+    fin_freq_max = freq_interp(idx);
+
+    % % Calculate the location (frequency) of the max value within the slice and bounding box freqs
+    % idxs = sfreqs<=end_freq & sfreqs>=start_freq; % Find the indices of frequencies within the bounding box
+    % [~,idx] = max(curr(idxs)); % Find the index of the max within those bounds
+    % idx = idx + find(idxs,1,"first")-1; % Perform a find for the max index within bounds indices
+    % fin_freq_max = sfreqs(idx); % Get final frequency location
 
     % Update peak frequencies array with the final refined frequency
      peak_freqs(ii) = fin_freq_max;
