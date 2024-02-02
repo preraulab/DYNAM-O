@@ -1,8 +1,8 @@
-function [spindle_table] = refine_TFpeaks(data,Fs,spindle_table,baseline_opt,method, remove_edge)
+function [spindle_table] = refine_TFpeaks(data,Fs,spindle_table,baseline_opt,method, remove_edge_peaks)
 %REFINE_TFPEAKS  Compute a high res hanning spectrogram to refine the event table after performing the double watershed
 %
 %   Usage:
-%       [spindle_table] = refine_TFpeaks(data, Fs, spindle_table, baseline_opt, method, remove_edge)
+%       [spindle_table] = refine_TFpeaks(data, Fs, spindle_table, baseline_opt, method)
 %
 %   Input:
 %       data: <number of samples> x 1  vector - time series data -- required
@@ -11,7 +11,6 @@ function [spindle_table] = refine_TFpeaks(data,Fs,spindle_table,baseline_opt,met
 %                      and the bounding box -- required
 %       baseline_opt: logical - true to include baseline removal, false to exclude (default: false)
 %       method: char - method for refining peak frequencies ('spline_opt', 'spline_grid', 'spect_max') (default: 'spline_opt')
-%       remove_edge: logical - true to remove peaks at the boundaries, false to keep them (default: false)
 %
 %   Output:
 %       spindle_table: input spindle table with the Peak Frequency column updated following the 1Hz refinement
@@ -24,7 +23,7 @@ if nargin<5
 end
 
 if nargin<6
-    remove_edge = false;
+    remove_edge_peaks = true;
 end
 
 %% SPECTROGRAM PARAMS
@@ -75,9 +74,11 @@ if baseline_opt
 end
 
 %% REFINE SPINDLE TABLE
+N_events = height(spindle_table(event_times_inc,:));
+peak_freqs = zeros(1,N_events);
 
 % Loop through each event
-parfor ii = 1:height(spindle_table(event_times_inc,:))
+parfor ii = 1:N_events
 
     % Get the bounding box frequencies detected from the original double watershed 231->232 spectrogram
     start_freq = bounding_box_lower(ii);
@@ -99,7 +100,7 @@ parfor ii = 1:height(spindle_table(event_times_inc,:))
             %Do a search for the min starting at the max value as a guess
             objectiveFunction = @(x) -fnval(spline_fit, x);
             options = optimset('Display', 'off');
-            peak_freq_max = fminsearch(@(x) constrainedObjective(x, objectiveFunction, start_freq, end_freq), freq_guess, options);
+            peak_freqs(ii) = fminsearch(@(x) constrainedObjective(x, objectiveFunction, start_freq, end_freq), freq_guess, options);
 
         case 'spline_grid'
             % Use spline fit on a grid to have less descretized frequency result
@@ -108,21 +109,19 @@ parfor ii = 1:height(spindle_table(event_times_inc,:))
 
             freq_interp = linspace(start_freq, end_freq, 1000);
             [~,idx] = max(fnval(spline_fit, freq_interp));
-            peak_freq_max = freq_interp(idx);
+            peak_freqs(ii) = freq_interp(idx);
         case 'spect_max'
             % Calculate the location (frequency) of the max value within the slice and bounding box freqs
             idxs = sfreqs<=end_freq & sfreqs>=start_freq; % Find the indices of frequencies within the bounding box
             [~,idx] = max(curr(idxs)); % Find the index of the max within those bounds
             idx = idx + find(idxs,1,"first")-1; % Perform a find for the max index within bounds indices
-            peak_freq_max = sfreqs(idx); % Get final frequency location
+            peak_freqs(ii) = sfreqs(idx); % Get final frequency location
     end
 
     % Update peak frequencies array with the final refined frequency
     % remove if at a boundary
-    if remove_edge && min(abs(peak_freq_max-[start_freq end_freq]))<1e-3
+    if remove_edge_peaks && min(abs(peak_freqs(ii)-[start_freq end_freq]))<1e-3
          peak_freqs(ii) = nan;
-    else
-        peak_freqs(ii) = peak_freq_max;
     end 
 
 end

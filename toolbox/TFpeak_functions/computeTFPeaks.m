@@ -18,7 +18,7 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %                                  (seconds). Default = [min(t_data), max(t_data)]
 %       features (opt):            [1xf] char or cell array of char -
 %                                  features to be extracted from each peak region. Can be any subset of
-%                                  {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData', 
+%                                  {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData',
 %                                   'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. Default = 'all'
 %       artifacts (opt):           [1xn] logical - boolean indicating artifact time points. Default = [], run detect_artifacts()
 %       artifact_filters (opt):    struct with 2 digitalFilter fields "hpFilt_high","hpFilt_broad" -
@@ -34,8 +34,6 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %                                       'fast' (default): speed-up with minimal impact on results *suggested*
 %                                       'draft': faster speed-up with increased high frequency TF-peaks, *not recommended for analyzing SOphase*
 %       refinement (opt):          logical - perform 1Hz refinement on the spindle table from double watershed. Default = true
-%       remove_edge (opt):         logical - remove refined peaks that fall
-%       on the edge of the bounds. Default = false
 %
 %
 %   Outputs:
@@ -78,7 +76,7 @@ addOptional(p, 'double_watershed', true, @(x) validateattributes(x,{'logical'},{
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'quality_setting', 'fast', @(x) validateattributes(x,{'char','numeric'},{}));
 addOptional(p, 'refinement', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
-addOptional(p, 'remove_edge', false, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
+addOptional(p, 'remove_edge_peaks', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -177,38 +175,38 @@ if double_watershed
 
     % Update artifact vector
     artifacts_stimes = logical(interp1(t_data_trunc, double(artifacts), stimes, 'nearest')); % get artifacts occurring at spectrogram times
-    
+
     % Re-compute baseline spectrum
     spect_bl = spect;
     spect_bl(:,artifacts_stimes) = NaN; % turn artifact times into NaNs for percentile computation
     spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
     baseline = prctile(spect_bl, baseline_ptile, 2); % get baseline
-    
+
     % Mask the spectrogram using extracted TFpeaks from the first round of watershed
     if verbose
         disp('Masking the spectrogram using TF-peaks...');
     end
     spect_masked = maskSpectrogram(spect, stimes, sfreqs, stats_table, true);
-    
+
     % Compute time-frequency peaks
     if verbose
         disp('[2nd] Extracting TF-peaks from the spectrogram...');
         tfp = tic;
     end
-    
+
     compute_features = unique([features, {'Duration', 'Bandwidth', 'PeakFrequency', 'Height'}]);
     if any(strcmpi(features, 'PeakStage')); compute_features = unique([compute_features, 'PeakTime']); end
-    
+
     stats_table = runSegmentedData(spect_masked, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, dur_min, bw_min, [], merge_thresh, [], 0.8);
-    
+
     if verbose
         disp(['[2nd] TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
     end
-    
+
     % Filter stats_table based on {Duration, Bandwidth, PeakFrequency, and Height}
     filter_idx = filterStatsTable(stats_table, [dur_min, dur_max], [bw_min, bw_max], [-inf inf], ht_db_min, verbose);
     stats_table = stats_table(filter_idx, :);
-    
+
     if isempty(stats_table)
         error('No TFpeaks found');
     end
@@ -227,9 +225,20 @@ end
 stats_table = removevars(stats_table, setdiff(stats_table.Properties.VariableNames, features));
 
 if refinement
-    remove_edge = false; %Set to true to remove edges
-    stats_table = refine_TFpeaks(data,Fs,stats_table,false,'spline_opt',remove_edge);
+    if verbose
+        if remove_edge_peaks
+            disp('Refining peaks and removing edge peaks...')
+        else
+            disp('Refining peaks...');
+        end
+    end
+    rft = tic;
+    stats_table = refine_TFpeaks(data,Fs,stats_table,false,'spline_opt',remove_edge_peaks);
     stats_table(isnan(stats_table.PeakFrequency),:) = [];
+    if verbose
+        disp(['TF-peak refinement took ' datestr(seconds(toc(rft)),'HH:MM:SS'), newline]);
+    end
+
 end
 
 end
