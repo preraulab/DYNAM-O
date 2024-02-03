@@ -77,6 +77,11 @@ end
 N_events = height(spindle_table(event_times_inc,:));
 peak_freqs = zeros(1,N_events);
 
+%Force max if spline fitting is unavailable
+if ~license('test', 'Curve_Fitting_Toolbox')
+    method = 'spect_max';
+end
+
 % Loop through each event
 parfor ii = 1:N_events
 
@@ -90,7 +95,7 @@ parfor ii = 1:N_events
     switch method
         case 'spline_opt'
             %Find the maximum with a search on the spline
-            idxs = sfreqs<=end_freq-1 & sfreqs>=start_freq;
+            idxs = sfreqs<=end_freq & sfreqs>=start_freq;
             spline_fit = csapi(sfreqs, curr);
 
             [~,idx] = max(curr(idxs)); % Find the index of the max within those bounds
@@ -101,11 +106,10 @@ parfor ii = 1:N_events
             objectiveFunction = @(x) -fnval(spline_fit, x);
             options = optimset('Display', 'off');
             peak_freqs(ii) = fminsearch(@(x) constrainedObjective(x, objectiveFunction, start_freq, end_freq), freq_guess, options);
-
         case 'spline_grid'
             % Use spline fit on a grid to have less descretized frequency result
             idxs = sfreqs<=end_freq-1 & sfreqs>=start_freq;
-            spline_fit = csapi(sfreqs(idxs), curr(idxs));
+            spline_fit = csapi(sfreqs, curr);
 
             freq_interp = linspace(start_freq, end_freq, 1000);
             [~,idx] = max(fnval(spline_fit, freq_interp));
@@ -120,9 +124,9 @@ parfor ii = 1:N_events
 
     % Update peak frequencies array with the final refined frequency
     % remove if at a boundary
-    if remove_edge_peaks && min(abs(peak_freqs(ii)-[start_freq end_freq]))<1e-3
-         peak_freqs(ii) = nan;
-    end 
+    if remove_edge_peaks && (min(abs(peak_freqs(ii)-[start_freq end_freq]))<1e-3 || peak_freqs(ii)>end_freq || end_freq<start_freq)
+        peak_freqs(ii) = nan;
+    end
 
 end
 
@@ -133,14 +137,14 @@ end
 
 % Define a function to enforce constraints
 function constrainedValue = constrainedObjective(x, objective_fcn, LB, UB)
-    % Penalize values outside the bounds
-    penalty = 1e6;
-    if x < LB || x > UB
-        constrainedValue = penalty;
-    else
-        % Evaluate the original objective function
-        constrainedValue = objective_fcn(x);
-    end
+% Penalize values outside the bounds
+penalty = 1e6;
+if x < LB || x > UB
+    constrainedValue = penalty;
+else
+    % Evaluate the original objective function
+    constrainedValue = objective_fcn(x);
+end
 end
 
 
