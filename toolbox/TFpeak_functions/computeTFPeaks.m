@@ -71,32 +71,36 @@ addOptional(p, 'time_range', [], @(x) validateattributes(x,{'numeric', 'vector'}
 addOptional(p, 'features', 'all',  @(x) validateattributes(x,{'char', 'cell'},{}));
 addOptional(p, 'artifacts', [], @(x) validateattributes(x,{'logical'},{'real','finite','nonnan'}));
 addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'struct'},{}));
-% addOptional(p, 'stages_include', [1,2,3,4], @(x) validateattributes(x,{'numeric', 'vector'}, {'real', 'nonempty'}))
 addOptional(p, 'double_watershed', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'quality_setting', 'fast', @(x) validateattributes(x,{'char','numeric'},{}));
 addOptional(p, 'refinement', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'remove_edge_peaks', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
+addOptional(p, 'refine_method', 'spline_interp', @(x) validatestring(x,{'spline_interp','spline_opt','spect_max'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
 field_names = fieldnames(p.Results);
 
+%Automatically add parser results to the workspace
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 
 if isempty(t_data) %#ok<*NODEF>
     t_data = (0:length(data)-1)/Fs;
 end
 
+%Set default time range
 if isempty(time_range)
     time_range = [min(t_data), max(t_data)];
 end
 
+%Set default features
 if any(strcmpi(features, 'all'))
     features = {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height',...
         'HeightData', 'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume', 'PeakStage'};
 end
 
+%Check if filters are passed in
 if isempty(artifact_filters)
     artifact_filters.hpFilt_high = [];
     artifact_filters.hpFilt_broad = [];
@@ -233,7 +237,7 @@ if refinement
         end
     end
     rft = tic;
-    stats_table = refine_TFpeaks(data,Fs,stats_table,false,'spline_opt',remove_edge_peaks);
+    stats_table = refine_TFpeaks(data,Fs,stats_table,false,refine_method,remove_edge_peaks);
     stats_table(isnan(stats_table.PeakFrequency),:) = [];
     if verbose
         disp(['TF-peak refinement took ' datestr(seconds(toc(rft)),'HH:MM:SS'), newline]);
