@@ -21,7 +21,7 @@ function [spect, bl_threshold] = removeBaseline(spect, baseline, bl_thresh, CI_u
 %   wshed_threshold: optional threhsold used to remove noise TFpeaks later
 %
 %
-%   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
+%   Copyright 2024 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %

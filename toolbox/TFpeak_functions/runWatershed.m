@@ -18,7 +18,7 @@ function Ldata = runWatershed(data, conn, bl_thresh, f_verb, verb_pref, f_disp)
 % OUTPUTS:
 %   Ldata: labeled region data
 %
-%   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
+%   Copyright 2024 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %      

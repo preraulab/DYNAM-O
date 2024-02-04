@@ -18,7 +18,7 @@
 %      imagesc(peaks(500);
 %      climscale;
 %
-%   Copyright 2023 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
+%   Copyright 2024 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %

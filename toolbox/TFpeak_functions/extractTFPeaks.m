@@ -42,7 +42,7 @@ function stats_table = extractTFPeaks(img,x,y,features,num_segment,conn_wshed,..
 % OUTPUTS:
 %   stats_table   -- Table of peak statistics. Each row is a peak.
 %
-%   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
+%   Copyright 2024 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %      

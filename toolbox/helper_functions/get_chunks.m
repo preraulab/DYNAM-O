@@ -28,7 +28,7 @@ function [run_lengths, run_inds, run_values, filtered_vector] = get_chunks(data,
 %
 %   % returns lengths = [ 2 3 4 3] and run_inds =  {[1 2]} {[3 4 5]} {[6 7 8 9]} {[12 13 14]}.
 %
-%    Copyright 2023 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
+%    Copyright 2024 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
 %    Authors: Michael J. Prerau
 
 %Default lengths impose no filtering
