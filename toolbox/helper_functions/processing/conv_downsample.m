@@ -47,7 +47,7 @@ function img_downsampled = conv_downsample(img, scale_factor, method, plot_on)
 %         set(gca,'CLim',cx);
 %
 %
-%   Copyright 2023 Prerau Lab - http://www.sleepEEG.org
+%   Copyright 2024 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 

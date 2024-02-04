@@ -27,7 +27,7 @@ function [rgn, Lborders] = mergeWshedSegment(data,rgn,rgn_lbls,Lborders,adj_list
 % OUTPUTS:
 %   rgn, Lborders -- versions of inputs after merger
 %
-%   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
+%   Copyright 2024 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %

@@ -21,7 +21,7 @@ function [hann_spectrogram,stimes,sfreqs] = hanning_spectrogram_optimized(vararg
 %       stimes: 1xT vector of times for the center of the spectral bins
 %       sfreqs: 1xF vector of frequency bins for the spectrogram
 %
-%    Copyright 2023 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
+%    Copyright 2024 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
 %    Authors: Michael J. Prerau, Ph.D., Mingjian He
 %
 %% ********************************************************************
