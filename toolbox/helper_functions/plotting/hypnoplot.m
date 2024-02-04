@@ -30,7 +30,7 @@ function sh = hypnoplot(time,stage,varargin)
 %         subplot(212)
 %         hypnoplot(time, stage,'HypnogramLabels', {'U','3','2','1','R','W','A'},'LabelPos','top');
 %
-%   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
+%   Copyright 2024 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %

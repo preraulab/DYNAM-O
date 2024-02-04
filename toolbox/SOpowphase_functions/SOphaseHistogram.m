@@ -58,7 +58,7 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOphase, 
 %       SOphase: 1xN double - timeseries SO phase data
 %       SOphase_times: 1xN double - timeseries SO phase times
 %
-%   Copyright 2022 Prerau Lab - http://www.sleepEEG.org
+%   Copyright 2024 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %

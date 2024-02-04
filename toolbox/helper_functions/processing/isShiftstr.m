@@ -21,7 +21,7 @@ function isValid = isShiftstr(str)
 %   Note:
 %   The regular expression pattern used to validate the string is '^p(0*[0-9]|[1-9][0-9]|100)shift[1-5]+$'.
 %
-%   Copyright 2023 Prerau Lab - http://www.sleepEEG.org
+%   Copyright 2024 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %
