@@ -26,6 +26,11 @@ if nargin<6
     remove_edge_peaks = true;
 end
 
+%Force max if spline fitting is unavailable
+if ~license('test', 'Curve_Fitting_Toolbox')
+    method = 'spect_max';
+end
+
 %% SPECTROGRAM PARAMS
 
 dsfreqs = 0.05; % With Fs = 200, this should make the nfft = 2^12
@@ -50,8 +55,7 @@ event_times_inc = event_times>=(0.5*window_size) & event_times<=data_len-(0.5*wi
 
 bounding_box_lower = spindle_table.BoundingBox(event_times_inc,2); % Element 2 of the bounding box corresponds to the lower bound frequency of the detected event
 bounding_box_height = spindle_table.BoundingBox(event_times_inc,4); % Element 4 of the bounding box gives the height of the bounding box
-% Pre-allocate space to store updated spindle values
-peak_freqs = NaN(height(spindle_table(event_times_inc,:)),1);
+
 
 %% SPECTROGRAM
 
@@ -75,12 +79,8 @@ end
 
 %% REFINE SPINDLE TABLE
 N_events = height(spindle_table(event_times_inc,:));
-peak_freqs = zeros(1,N_events);
-
-%Force max if spline fitting is unavailable
-if ~license('test', 'Curve_Fitting_Toolbox')
-    method = 'spect_max';
-end
+% Pre-allocate space to store updated spindle values
+peak_freqs = NaN(height(spindle_table(event_times_inc,:)),1);
 
 % Loop through each event
 parfor ii = 1:N_events
@@ -88,38 +88,33 @@ parfor ii = 1:N_events
     % Get the bounding box frequencies detected from the original double watershed 231->232 spectrogram
     start_freq = bounding_box_lower(ii);
     end_freq = bounding_box_lower(ii) + bounding_box_height(ii);
+    bounds_range = sfreqs<=end_freq & sfreqs>=start_freq;
 
     % Take the spectrogram slice at that single timepoint
     curr = spect(:,ii);
 
+    % Calculate the location (frequency) of the max value within the slice and bounding box freqs
+    max_val = max(curr(bounds_range)); % Find the index of the max within those bounds
+    max_freq = sfreqs(bounds_range & (curr' == max_val)); % Get final frequency location
+
     switch method
         case 'spline_opt'
             %Find the maximum with a search on the spline
-            idxs = sfreqs<=end_freq & sfreqs>=start_freq;
             spline_fit = csapi(sfreqs, curr);
-
-            [~,idx] = max(curr(idxs)); % Find the index of the max within those bounds
-            idx = idx + find(idxs,1,"first")-1; % Perform a find for the max index within bounds indices
-            freq_guess = sfreqs(idx); % Get final frequency location
 
             %Do a search for the min starting at the max value as a guess
             objectiveFunction = @(x) -fnval(spline_fit, x);
             options = optimset('Display', 'off');
-            peak_freqs(ii) = fminsearch(@(x) constrainedObjective(x, objectiveFunction, start_freq, end_freq), freq_guess, options);
+            peak_freqs(ii) = fminsearch(@(x) constrainedObjective(x, objectiveFunction, start_freq, end_freq), max_freq, options);
         case 'spline_grid'
             % Use spline fit on a grid to have less descretized frequency result
-            idxs = sfreqs<=end_freq-1 & sfreqs>=start_freq;
             spline_fit = csapi(sfreqs, curr);
 
             freq_interp = linspace(start_freq, end_freq, 1000);
             [~,idx] = max(fnval(spline_fit, freq_interp));
             peak_freqs(ii) = freq_interp(idx);
         case 'spect_max'
-            % Calculate the location (frequency) of the max value within the slice and bounding box freqs
-            idxs = sfreqs<=end_freq & sfreqs>=start_freq; % Find the indices of frequencies within the bounding box
-            [~,idx] = max(curr(idxs)); % Find the index of the max within those bounds
-            idx = idx + find(idxs,1,"first")-1; % Perform a find for the max index within bounds indices
-            peak_freqs(ii) = sfreqs(idx); % Get final frequency location
+            peak_freqs(ii) = max_freq;
     end
 
     % Update peak frequencies array with the final refined frequency
