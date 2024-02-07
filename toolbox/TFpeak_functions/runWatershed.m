@@ -108,6 +108,15 @@ else %EXPERIMENTAL: Threshold the data prior to running
     end
 end
 
+%{
+% Adding watershed borders to the image borders
+Ldata(1,:) = 0;
+Ldata(end,:) = 0;
+Ldata(:,1) = 0;
+Ldata(:,end) = 0;
+%}
+
+% Removing bad data
 Ldata(nan_idx) = 0;
 Ldata = bwlabel(Ldata);
 

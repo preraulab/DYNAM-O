@@ -18,6 +18,7 @@ function [filter_idx, dur_inds, bw_inds, pf_inds, ht_inds] = filterStatsTable(st
 
 %% Deal with Inputs
 assert(nargin > 1, 'Must provide stats table');
+assert(~isempty(stats_table),'Stats table is empty.');
 
 if nargin < 2 || isempty(dur_minmax)
     dur_minmax = [0.5, 5];
