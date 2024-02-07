@@ -1,28 +1,28 @@
-function [rgn, brdrs, ematr, pick_update] = mergeRegions(rgn,a,b,lbls,brdrs,ematr)
-%MERGEREGIONS updates the pixel lists in rgn and borders and the adjacencies in 
-% ematr according to mergion regions b into region a. It also returns an 
+function [regions, borders, adj_mat, pick_update] = mergeRegions(regions,a,b,lbls,borders,adj_mat)
+%MERGEREGIONS updates the pixel lists in region and borders and the adjacencies in 
+% adj_mat according to mergion regions b into region a. It also returns an 
 % indicator for what edge weights need to be updated
 %
 % Usage: 
-%   [rgn, brdrs, ematr, pick_update] = mergeRegions(rgn,a,b,lbls,brdrs,ematr)
+%   [regions, borders, adj_mat, pick_update] = mergeRegions(regions,a,b,lbls,borders,adj_mat)
 %
 % INPUTS: 
-%   rgn   -- a 1D cell array with each cell containing a vector of linear 
+%   regions   -- a 1D cell array with each cell containing a vector of linear 
 %            indices of the pixels in the region.
 %   a     -- region label to be merged into
 %   b     -- vector of region labels to be merged into a
-%   lbls  -- a vector, of same dimension as rgn, with labels for
+%   lbls  -- a vector, of same dimension as regions, with labels for
 %            corresponding regions.
-%   brdrs -- a 1D cell array, of same size as rgn, with each cell
+%   borders -- a 1D cell array, of same size as regions, with each cell
 %            containing the vector of linear indices of the boundary 
 %            pixels of the corresponding region.
-%   ematr -- a three-column matrix of directed region adjacency weights. 
+%   adj_mat -- a three-column matrix of directed region adjacency weights. 
 %            each row contains region lables of two adjacent regions.
 %            the first column are "to regions", the second column
 %            are "from regions, and the third column is the weight.
 %
 % OUTPUTS:
-%   rgns, brdrs, ematr -- versions of inputs after merger 
+%   regions, borders, adj_mat -- versions of inputs after merger 
 %   pick_update        -- logical vector indicating weights that need to be
 %                         updated
 %
@@ -39,80 +39,80 @@ function [rgn, brdrs, ematr, pick_update] = mergeRegions(rgn,a,b,lbls,brdrs,emat
 %**********************************************************************
 
 if nargin < 6
-    ematr = [];
+    adj_mat = [];
 end
 if nargin < 5
-    brdrs = [];
+    borders = [];
 end
 if nargin < 4
     lbls = [];
 end
 
 if isempty(lbls)
-   lbls = unique(rgn(:,2)); 
+   lbls = unique(regions(:,2)); 
 end
 
 a_lbl_idx = find(lbls==a);        
-if ~isempty(brdrs)
-    brdr_a = brdrs{a_lbl_idx};
+if ~isempty(borders)
+    border_a = borders{a_lbl_idx};
 end
 
 for ii = 1:length(b)
     b_lbl_idx = lbls==b(ii);
-    rgn_b_lidx = rgn{b_lbl_idx};
+    region_b_lidx = regions{b_lbl_idx};
     
-    rgn{a_lbl_idx} = unique([rgn{a_lbl_idx}; rgn_b_lidx]);
-    rgn{b_lbl_idx} = [];
+    regions{a_lbl_idx} = unique([regions{a_lbl_idx}; region_b_lidx]);
+    regions{b_lbl_idx} = [];
     
-    if ~isempty(brdrs)
-        brdr_b = brdrs{b_lbl_idx};
-        brdr_a = setxor(brdr_a,brdr_b);
-        brdrs{a_lbl_idx} = brdr_a;
-        brdrs{b_lbl_idx} = [];
+    if ~isempty(borders)
+        border_b = borders{b_lbl_idx};
+        border_a = setxor(border_a,border_b);
+        borders{a_lbl_idx} = border_a;
+        borders{b_lbl_idx} = [];
     end
     
-    if ~isempty(ematr)
-        cnx_b1 = ematr(:,1)==b(ii);
-        cnx_b2 = ematr(:,2)==b(ii);
-        ematr(cnx_b1,1) = a;
-        ematr(cnx_b2,2) = a;       
+    if ~isempty(adj_mat)
+        cnx_b1 = adj_mat(:,1)==b(ii);
+        cnx_b2 = adj_mat(:,2)==b(ii);
+        adj_mat(cnx_b1,1) = a;
+        adj_mat(cnx_b2,2) = a;       
 
 %***
 % Second version that looks for single-region holes
 %***
-        nbrs = [ematr(cnx_b1,2); ematr(cnx_b2,1)];
+        nbrs = [adj_mat(cnx_b1,2); adj_mat(cnx_b2,1)];
         nbrs = setdiff(unique(nbrs),a);
         for jj = 1:length(nbrs)
-            cnx1 = ematr(:,1)==nbrs(jj);
-            cnx2 = ematr(:,2)==nbrs(jj);
-            % tmp = unique([ematr(cnx1,2); ematr(cnx2,1)]);
-            if ~any(a~=ematr(cnx1,2)) && ~any(a~=ematr(cnx2,1))   % length(tmp)==1 && tmp(1)==a
+            cnx1 = adj_mat(:,1)==nbrs(jj);
+            cnx2 = adj_mat(:,2)==nbrs(jj);
+            % tmp = unique([adj_mat(cnx1,2); adj_mat(cnx2,1)]);
+            if ~any(a~=adj_mat(cnx1,2)) && ~any(a~=adj_mat(cnx2,1))   % length(tmp)==1 && tmp(1)==a
                 % disp(['filling hole: ' num2str(nbrs(ii)) ' into ' num2str(a)]);
                 
                 ii_lbl_idx = lbls==nbrs(jj);
-                rgn_ii_lidx = rgn{ii_lbl_idx};
-                rgn{a_lbl_idx} = unique([rgn{a_lbl_idx}; rgn_ii_lidx]);
-                rgn{ii_lbl_idx} = [];
-                brdr_ii = brdrs{ii_lbl_idx};
-                brdr_a = setxor(brdr_a,brdr_ii);
-                brdrs{a_lbl_idx} = brdr_a;
-                brdrs{ii_lbl_idx} = [];
+                region_ii_lidx = regions{ii_lbl_idx};
+                regions{a_lbl_idx} = unique([regions{a_lbl_idx}; region_ii_lidx]);
+                regions{ii_lbl_idx} = [];
+                border_ii = borders{ii_lbl_idx};
+                border_a = setxor(border_a,border_ii);
+                borders{a_lbl_idx} = border_a;
+                borders{ii_lbl_idx} = [];
                 
-                ematr(cnx1,1) = a;
-                ematr(cnx2,2) = a;
+                adj_mat(cnx1,1) = a;
+                adj_mat(cnx2,2) = a;
             end
             
         end 
     end
 end
 
-cnx_a = ematr(:,1)==a | ematr(:,2)==a;
-sub_ematr = ematr(cnx_a,:);
-sub_ematr(:,3) = NaN;
-sub_ematr = sub_ematr(sub_ematr(:,1)~=sub_ematr(:,2),:);
-[~,u_idx] = unique(sub_ematr(:,1:2),'rows');
-ematr = [ematr(~cnx_a,:); sub_ematr(u_idx,:)];
-pick_update = false(size(ematr(:,3)));
+cnx_a = adj_mat(:,1)==a | adj_mat(:,2)==a;
+sub_adj_mat = adj_mat(cnx_a,:);
+sub_adj_mat(:,3) = NaN;
+sub_adj_mat = sub_adj_mat(sub_adj_mat(:,1)~=sub_adj_mat(:,2),:);
+[~,u_idx] = unique(sub_adj_mat(:,1:2),'rows');
+adj_mat = [adj_mat(~cnx_a,:); sub_adj_mat(u_idx,:)];
+pick_update = false(size(adj_mat(:,3)));
 pick_update((end-length(u_idx)+1):end) = true;
 
 

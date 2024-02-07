@@ -1,17 +1,17 @@
-function [rgn, Lborders] = mergeWshedSegment(data,rgn,rgn_lbls,Lborders,adj_list,merge_thresh,max_merges,merge_rule,f_verb,verb_pref,f_disp)
+function [regions, borders] = mergeWshedSegment(data,regions,region_lbls,borders,adj_list,merge_thresh,max_merges,merge_rule,f_verb,verb_pref,f_disp)
 % MERGEWSHEDSEGMENT takes the labeled image, borders, and adjacencies output
 % from peaksWShed and merges the regions according to the desired rule. The
 % default rule is designed to form large, complete peaks. It calls
 % computeMergeWeights and mergeRegion.
 %
 % Usage:
-%   [rgn, Lborders] = mergeWshedSegment(data,rgn,rgn_lbls,Lborders,adj_list,merge_thresh,max_merges,merge_rule,f_verb,verb_pref,f_disp)
+%   [regions, borders] = mergeWshedSegment(data,regions,region_lbls,borders,adj_list,merge_thresh,max_merges,merge_rule,f_verb,verb_pref,f_disp)
 %
 % INPUTS:
 %   data         -- 2D matrix of image data. defaults to peaks(100).
-%   rgn          -- 1D cell array of vector lists of linear idx of all pixels for each region.
-%   rgn_lbls     -- vector of region labels.
-%   Lborders     -- 1D cell array of vector lists of linear idx of border pixels for each region
+%   regions          -- 1D cell array of vector lists of linear idx of all pixels for each region.
+%   region_lbls     -- vector of region labels.
+%   borders     -- 1D cell array of vector lists of linear idx of border pixels for each region
 %   adj_list        -- two-column matrix of region adjacencies.
 %                   each row contains region labels of two adjacent regions.
 %   merge_thresh -- threshold weight value for when to stop merge rule. default 8.
@@ -25,7 +25,7 @@ function [rgn, Lborders] = mergeWshedSegment(data,rgn,rgn_lbls,Lborders,adj_list
 %                   defaults to 0, unless using default data.
 %
 % OUTPUTS:
-%   rgn, Lborders -- versions of inputs after merger
+%   region, borders -- versions of inputs after merger
 %
 %   Copyright 2024 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
@@ -64,13 +64,13 @@ if nargin < 5
     adj_list = [];
 end
 if nargin < 4
-    Lborders = [];
+    borders = [];
 end
 if nargin < 3
-    rgn_lbls = [];
+    region_lbls = [];
 end
 if nargin < 2
-    rgn = [];
+    regions = [];
 end
 if nargin < 1 || isempty(data)
     error('Data must be specified')
@@ -101,28 +101,9 @@ if isempty(merge_thresh)
     merge_thresh = 8;
 end
 
-% %*************************
-% % Check necessary inputs *
-% %*************************
-% if isempty(data) && isempty(rgn) && isempty(rgn_lbls) && isempty(Lborders) && isempty(adj_list)
-%     [rgn, rgn_lbls, Lborders, adj_list, data] = Ldata2graph;
-%     f_valid_inputs = true;
-% elseif ~isempty(data) && ~isempty(rgn) && ~isempty(rgn_lbls) && ~isempty(Lborders) && ~isempty(adj_list)
-%     f_valid_inputs = true;
-% elseif ~isempty(data) && ~isempty(rgn) && ~isempty(rgn_lbls) && ~isempty(Lborders) && isempty(adj_list)
-%     f_valid_inputs = false;
-%     if f_verb > 1
-%         disp([verb_pref 'Caution: adj_list is empty, possibly indicative of a single region input to merge.']);
-%     end
-% else
-%     f_valid_inputs = false;
-%     disp('WARNING: data, rgn, Lborders, rgn_lbls, or amatr were not provided to mergeWshedSegment. Returning original regions.');
-% end
-
 %*************************
 % Check adjacency matrix *
 %*************************
-% if f_valid_inputs
 if size(adj_list,2)==3
     % Extract initial weights if provided in amatr
     if f_verb > 0
@@ -135,7 +116,7 @@ elseif size(adj_list,2)==2
         disp([verb_pref 'Computing initial edge weights...']);
         ttic = tic;
     end
-    e_wts = computeMergeWeights(rgn,data,rgn_lbls,Lborders,adj_list,merge_rule,f_verb-1,['  ' verb_pref]);
+    e_wts = computeMergeWeights(regions,data,region_lbls,borders,adj_list,merge_rule,f_verb-1,['  ' verb_pref]);
     if f_verb > 0
         disp([verb_pref '  Initial weighting took ' num2str(toc(ttic)) ' sec.']);
     end
@@ -146,20 +127,19 @@ else
     % f_valid_inputs = false;
     disp(['WARNING: adjacency matrix (' num2str(size(adj_list,1)) ' x ' ...
         num2str(size(adj_list,2)) ') has too few or too many columns. Returning original regions.' ]);
-
+    
 end
-% end
 
 %****************
 % Merge regions *
 %****************
-% if f_valid_inputs
 % Plot original image data
 if f_disp
     figure('units','normalized','position',[0.2299   -0.1778    0.9896    0.4789]);
-    ax(1) = subplot(1,3,1);
-    ax(2) = subplot(1,3,2);
-    ax(3) = subplot(1,3,3);
+    ax(1) = subplot(2,2,1);
+    ax(2) = subplot(2,2,2);
+    ax(3) = subplot(2,2,3);
+    ax(4) = subplot(2,2,4);
     if min(data(:)) < 0
         imagesc(ax(1),data);
     else
@@ -172,8 +152,8 @@ if f_disp
 end
 
 % Determine number of regions and maximum edge weight
-num_rgns = length(rgn);
-if num_rgns == 1
+num_regions = length(regions);
+if num_regions == 1
     return
 end
 [max_wt,max_idx] = max(ematr(:,3));
@@ -190,20 +170,20 @@ end
 %*************************
 %    MAIN MERGING LOOP   *
 %*************************
-while ~isempty(ematr) && max_wt > merge_thresh && num_merges < max_merges && num_rgns > 1
+while ~isempty(ematr) && max_wt > merge_thresh && num_merges < max_merges && num_regions > 1
     % Determine regions to merge
     mrg_to = ematr(max_idx(1),1);
     mrg_from = ematr(max_idx(1),2);
-
+    
     % Merge regions
-    [rgn, Lborders, ematr, pick_update] = mergeRegions(rgn,mrg_to,mrg_from,rgn_lbls,Lborders,ematr);
-
+    [regions, borders, ematr, pick_update] = mergeRegions(regions,mrg_to,mrg_from,region_lbls,borders,ematr);
+    
     % Update edge weights
     if ~isempty(find(pick_update,1))
-        e_wts = computeMergeWeights(rgn,data,rgn_lbls,Lborders,ematr(pick_update,1:2),merge_rule,f_verb-1,['  ' verb_pref]);
+        e_wts = computeMergeWeights(regions,data,region_lbls,borders,ematr(pick_update,1:2),merge_rule,f_verb-1,['  ' verb_pref]);
         ematr(pick_update,3) = e_wts;
     end
-
+    
     % Find new maximum weight and its index
     if ~isempty(ematr)
         [max_wt,max_idx] = max(ematr(:,3));
@@ -211,12 +191,12 @@ while ~isempty(ematr) && max_wt > merge_thresh && num_merges < max_merges && num
         max_wt = 0;
     end
     num_merges = num_merges + 1;
-    num_rgns = num_rgns - 1;
-
+    num_regions = num_regions - 1;
+    
     % Update region plot
     if f_disp && mod(num_merges,100)==1
         % Plot data with boundaries
-        tmp_Ldata = cell2Ldata(rgn,size(data),Lborders);
+        tmp_Ldata = cell2Ldata(regions,size(data),borders);
         tmp_data = data;
         tmp_data(tmp_Ldata==0)=-inf;
         imagesc(ax(2),tmp_data);
@@ -239,24 +219,58 @@ while ~isempty(ematr) && max_wt > merge_thresh && num_merges < max_merges && num
         axis(ax(3),'xy');
         title(ax(3),['Current weight merged: ' num2str(max_wt)]);
         drawnow;
+        axes(ax(4));
+        title("Borders");
+        temp_B_data = zeros(size(data));
+        for ii = 1:length(borders)
+            ii_pixels = borders{ii};
+            temp_B_data(ii_pixels)=ii;
+            if ~isempty(borders{ii})
+                temp_B_data(borders{ii}) = 0;
+            end
+        end
+        RGB2 = label2rgb(temp_B_data, 'jet', 'c', 'shuffle');
+        R = squeeze(RGB2(:,:,1));
+        G = squeeze(RGB2(:,:,2));
+        B = squeeze(RGB2(:,:,3));
+        R(~tmp_Ldata) = 100;
+        G(~tmp_Ldata) = 100;
+        B(~tmp_Ldata) = 100;
+        RGB2 = cat(3,R,G,B);
+        imagesc(ax(4),RGB2);
     end
-
+    
     if f_verb > 1
         disp([verb_pref '  Size of edge matrix: ' num2str(size(ematr,1)) '. Maximum weight: ' num2str(max_wt) '.']);
     end
-
+    
 end
+
+% Checks to see if only one region found that fills the entire area,
+% create a 1-pixel border around the entire region
+if num_regions==1 
+    [region_size, region_ind] = max(cellfun(@numel,regions));
+    if region_size==numel(data)
+        temp_border = zeros(size(data));
+        temp_border(1,:) = 1;
+        temp_border(:,1) = 1;
+        temp_border(end,:) = 1;
+        temp_border(:,end) = 1;
+        borders{region_ind} = find(temp_border==1);
+    end
+end
+
 
 if f_verb > 0
     disp([verb_pref '  Full merging took ' num2str(toc(ttic)) ' sec, ' num2str(num_merges) ' merges.']);
-    if isempty(ematr) || num_rgns <= 1
+    if isempty(ematr) || num_regions <= 1
         disp([verb_pref 'single region encountered in merge']);
     end
 end
 
 if f_disp
     % Plot data with boundaries
-    tmp_Ldata = cell2Ldata(rgn,size(data),Lborders);
+    tmp_Ldata = cell2Ldata(regions,size(data),borders);
     tmp_data = data;
     tmp_data(tmp_Ldata==0) = -inf;
     imagesc(ax(2),tmp_data);
@@ -281,5 +295,5 @@ if f_disp
 end
 
 %Remove dead regions
-rgn = rgn(cellfun(@(x)~isempty(x),rgn));
-Lborders = Lborders(cellfun(@(x)~isempty(x),Lborders));
+regions = regions(cellfun(@(x)~isempty(x),regions));
+borders = borders(cellfun(@(x)~isempty(x),borders));

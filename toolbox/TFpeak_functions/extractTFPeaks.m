@@ -208,7 +208,7 @@ end
 Ldata = runWatershed(img_LR,conn_wshed,bl_thresh,f_verb-1,['    ' verb_pref],f_disp);
 
 %Convert labeled region to graph
-[regions, rgn_lbls, Lborders, adj_list] = Ldata2graph(Ldata,[],f_disp);
+[regions, region_lbls, Lborders, adj_list] = Ldata2graph(Ldata,[],f_disp);
 
 if f_verb > 0
     disp([verb_pref '    watershed took: ' num2str(toc(ttic)) ' seconds.']);
@@ -222,14 +222,14 @@ if f_verb > 0
     ttic = tic;
 end
 
-[regions, bndry] = mergeWshedSegment(img_LR,regions,rgn_lbls,Lborders,adj_list,merge_thresh,max_merges,merge_rule,f_verb-1,['     ' verb_pref],f_disp);
+[regions, borders] = mergeWshedSegment(img_LR,regions,region_lbls,Lborders,adj_list,merge_thresh,max_merges,merge_rule,f_verb-1,['     ' verb_pref],f_disp);
 
 if f_verb > 0
     disp([verb_pref '    merge took: ' num2str(toc(ttic)) ' seconds.']);
 end
 
 %Return if empty stats table
-if isempty(regions)
+if isempty(regions) || isempty(borders)
     stats_table = table;
     return;
 end
@@ -254,12 +254,12 @@ if ~isempty(downsample_spect)
     LdataHR = imresize(Ldata,size(img),'nearest');
     
     %COMPUTE NEW REGIONS
-    rgn_HR = cell(1,num_regions);
+    regions_HR = cell(1,num_regions);
     for ii = 1:num_regions
-        rgn_HR{ii} = find(LdataHR == ii);
+        regions_HR{ii} = find(LdataHR == ii);
     end
     
-    regions = rgn_HR;
+    regions = regions_HR;
 end
 
 %%
@@ -273,7 +273,7 @@ if dur_min>0 || bw_min>0
     [f_inds,t_inds] = cellfun(@(x)ind2sub(size(img),x),regions,'UniformOutput',false);
     good_inds = cellfun(@(x)(max(x)-min(x))*dt>dur_min,t_inds) & cellfun(@(x)(max(x)-min(x))*df>bw_min,f_inds);
     regions = regions(good_inds);
-    bndry = bndry(good_inds);
+    borders = borders(good_inds);
 end
 
 %Return if empty stats table
@@ -295,27 +295,27 @@ if trim_vol < 1
         disp([verb_pref '  Starting trim to ' num2str(100*trim_vol) ' percent volume...']);
         ttic = tic;
     end
-    [trim_rgn, trim_bndry] = trimWshedRegions(img,regions,trim_vol,trim_shift,conn_trim,f_verb-1,['    ' verb_pref],f_disp);
+    [trim_regions, trim_borders] = trimWshedRegions(img,regions,trim_vol,trim_shift,conn_trim,f_verb-1,['    ' verb_pref],f_disp);
     if f_verb > 0
         disp([verb_pref '    trim took: ' num2str(toc(ttic)) ' seconds.']);
     end
     
     % Remove regions that now fall below the removal criteria after trimming
     if dur_min>0 || bw_min>0
-        [f_inds,t_inds] = cellfun(@(x)ind2sub(size(img),x),trim_rgn,'UniformOutput',false);
+        [f_inds,t_inds] = cellfun(@(x)ind2sub(size(img),x),trim_regions,'UniformOutput',false);
         good_inds = cellfun(@(x)~isempty(max(x))&&((max(x)-min(x))*dt>dur_min),t_inds) & cellfun(@(x)~isempty(max(x))&&((max(x)-min(x))*df>bw_min),f_inds);
-        trim_rgn = trim_rgn(good_inds);
-        trim_bndry = trim_bndry(good_inds);
+        trim_regions = trim_regions(good_inds);
+        trim_borders = trim_borders(good_inds);
     end
     
     %Return if empty stats table
-    if isempty(trim_rgn)
+    if isempty(trim_regions)
         stats_table = table;
         return;
     end
     
-    regions = trim_rgn;
-    bndry = trim_bndry;
+    regions = trim_regions;
+    borders = trim_borders;
     
     if dur_min>0 || bw_min>0
         df = y(2)-y(1);
@@ -337,7 +337,7 @@ if f_verb > 0
 end
 
 %Create the peak stats table
-stats_table = computePeakStatsTable(regions, bndry, img, x, y, num_segment, features);
+stats_table = computePeakStatsTable(regions, borders, img, x, y, num_segment, features);
 
 seq_time = toc(t_start);
 if f_verb > 0
