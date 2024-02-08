@@ -154,13 +154,14 @@ end
 [SOpower, SOpower_times] = computeSOpower(EEG, Fs, 'stage_vals', stage_vals, 'stage_times', stage_times,...
     'SO_freqrange', SO_freqrange, 'SOpower_outlier_threshold', SOpower_outlier_threshold, 'norm_method', SOpower_norm_method,...
     'retain_Fs', SOpower_retain_Fs, 'EEG_times', EEG_times, 'time_range', time_range, 'isexcluded', isexcluded);
-[SOphase, SOphase_times, ~, SOdata] = computeSOphase(EEG, Fs, 'stage_vals', stage_vals, 'stage_times', stage_times,...
+[SOphase, SOphase_times] = computeSOphase(EEG, Fs, 'stage_vals', stage_vals, 'stage_times', stage_times,...
     'SO_freqrange', SO_freqrange, 'SOphase_filter', SOphase_filter, 'EEG_times', EEG_times, 'isexcluded', isexcluded);
 
 % % mask SOphase with SOpower nan values to use the same periods in the histograms
 SOpower_times_step = SOpower_times(2) - SOpower_times(1);
 SOphase(isnan(interp1([SOpower_times(1)-SOpower_times_step, SOpower_times, SOpower_times(end)+SOpower_times_step], [SOpower(1), SOpower, SOpower(end)], SOphase_times))) = nan;
 
+%% Interpolate to peak times
 % Get SOpower_times step size
 SOpower_times_step = SOpower_times(2) - SOpower_times(1);
 
