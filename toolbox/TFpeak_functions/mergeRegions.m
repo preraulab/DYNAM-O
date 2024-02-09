@@ -41,29 +41,39 @@ function [regions, borders, adj_mat, pick_update] = mergeRegions(regions,a,b,lbl
 if nargin < 6
     adj_mat = [];
 end
+
 if nargin < 5
     borders = [];
 end
+
 if nargin < 4
     lbls = [];
 end
 
+%Creates labels if not present
 if isempty(lbls)
    lbls = unique(regions(:,2)); 
 end
 
+%Find the corresponding label for region a
 a_lbl_idx = find(lbls==a);        
 if ~isempty(borders)
     border_a = borders{a_lbl_idx};
 end
 
+%Loop through regions that are to be merged into region a
 for ii = 1:length(b)
+    %Find the label index
     b_lbl_idx = lbls==b(ii);
+
+    %Get the pixels in region b
     region_b_lidx = regions{b_lbl_idx};
     
+    %Update a to include all the b pixels
     regions{a_lbl_idx} = unique([regions{a_lbl_idx}; region_b_lidx]);
     regions{b_lbl_idx} = [];
     
+    %Update the borders
     if ~isempty(borders)
         border_b = borders{b_lbl_idx};
         border_a = setxor(border_a,border_b);
@@ -71,24 +81,25 @@ for ii = 1:length(b)
         borders{b_lbl_idx} = [];
     end
     
+    %Update the adjacency matrix
     if ~isempty(adj_mat)
+        %Connect b's neighbors to a
         cnx_b1 = adj_mat(:,1)==b(ii);
         cnx_b2 = adj_mat(:,2)==b(ii);
         adj_mat(cnx_b1,1) = a;
         adj_mat(cnx_b2,2) = a;       
 
-%***
-% Second version that looks for single-region holes
-%***
+        % Look for regions encircled by the merge
         nbrs = [adj_mat(cnx_b1,2); adj_mat(cnx_b2,1)];
+        %Get all the neighbors of a
         nbrs = setdiff(unique(nbrs),a);
         for jj = 1:length(nbrs)
             cnx1 = adj_mat(:,1)==nbrs(jj);
             cnx2 = adj_mat(:,2)==nbrs(jj);
-            % tmp = unique([adj_mat(cnx1,2); adj_mat(cnx2,1)]);
-            if ~any(a~=adj_mat(cnx1,2)) && ~any(a~=adj_mat(cnx2,1))   % length(tmp)==1 && tmp(1)==a
-                % disp(['filling hole: ' num2str(nbrs(ii)) ' into ' num2str(a)]);
-                
+
+            %Merge the encircled region with a
+            if ~any(a~=adj_mat(cnx1,2)) && ~any(a~=adj_mat(cnx2,1))   
+
                 ii_lbl_idx = lbls==nbrs(jj);
                 region_ii_lidx = regions{ii_lbl_idx};
                 regions{a_lbl_idx} = unique([regions{a_lbl_idx}; region_ii_lidx]);
@@ -100,18 +111,22 @@ for ii = 1:length(b)
                 
                 adj_mat(cnx1,1) = a;
                 adj_mat(cnx2,2) = a;
-            end
-            
+            end 
         end 
     end
 end
 
+% Update adjacency matrix to remove duplicate entries
 cnx_a = adj_mat(:,1)==a | adj_mat(:,2)==a;
 sub_adj_mat = adj_mat(cnx_a,:);
 sub_adj_mat(:,3) = NaN;
 sub_adj_mat = sub_adj_mat(sub_adj_mat(:,1)~=sub_adj_mat(:,2),:);
 [~,u_idx] = unique(sub_adj_mat(:,1:2),'rows');
+
+%Update the adjacency matrix with unique pairs
 adj_mat = [adj_mat(~cnx_a,:); sub_adj_mat(u_idx,:)];
+
+%Identify which edge weights need to be updated
 pick_update = false(size(adj_mat(:,3)));
 pick_update((end-length(u_idx)+1):end) = true;
 

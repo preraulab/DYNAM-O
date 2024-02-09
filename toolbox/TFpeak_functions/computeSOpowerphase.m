@@ -1,4 +1,4 @@
-function [SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, SOpow_TIB, SOphase_TIB, peak_SOpower, peak_SOphase, peak_selection_inds, SOpower, SOpower_times, SOphase, SOphase_times, SOdata] = SOpowerphaseHistogram(EEG,Fs,varargin)
+function [SOpower, SOpower_times, SOphase, SOphase_times,peak_SOpower, peak_SOphase] = computeSOpowerphase(EEG,Fs,varargin)
 % SOPOWERPHASEHISTOGRAM: Computes slow-oscillation power and phase histogram matrices
 %
 %   Usage:
@@ -120,9 +120,6 @@ addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric', 'vector'}
 addOptional(p, 'time_range', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'isexcluded', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
 
-addOptional(p, 'SOpower_tapers', [15 29], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
-addOptional(p, 'SOpower_window_params', [30 15], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
-
 %Display settings
 addOptional(p, 'plot_on', false, @(x) validateattributes(x,{'logical'},{}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{}));
@@ -156,45 +153,29 @@ end
 %% Compute SO-power and SO-phase
 [SOpower, SOpower_times] = computeSOpower(EEG, Fs, 'stage_vals', stage_vals, 'stage_times', stage_times,...
     'SO_freqrange', SO_freqrange, 'SOpower_outlier_threshold', SOpower_outlier_threshold, 'norm_method', SOpower_norm_method,...
-    'retain_Fs', SOpower_retain_Fs, 'EEG_times', EEG_times, 'time_range', time_range, 'isexcluded', isexcluded,'tapers',SOpower_tapers,'window_params',SOpower_window_params);
-[SOphase, SOphase_times, ~, SOdata] = computeSOphase(EEG, Fs, 'stage_vals', stage_vals, 'stage_times', stage_times,...
+    'retain_Fs', SOpower_retain_Fs, 'EEG_times', EEG_times, 'time_range', time_range, 'isexcluded', isexcluded);
+[SOphase, SOphase_times] = computeSOphase(EEG, Fs, 'stage_vals', stage_vals, 'stage_times', stage_times,...
     'SO_freqrange', SO_freqrange, 'SOphase_filter', SOphase_filter, 'EEG_times', EEG_times, 'isexcluded', isexcluded);
 
 % % mask SOphase with SOpower nan values to use the same periods in the histograms
 SOpower_times_step = SOpower_times(2) - SOpower_times(1);
 SOphase(isnan(interp1([SOpower_times(1)-SOpower_times_step, SOpower_times, SOpower_times(end)+SOpower_times_step], [SOpower(1), SOpower, SOpower(end)], SOphase_times))) = nan;
 
-% To use a custom precomputed SO phase filter, use the SOphase_filter argument
-% custom_SOphase_filter = designfilt('bandpassfir', 'StopbandFrequency1', 0.1, 'PassbandFrequency1', 0.4, ...
-%                        'PassbandFrequency2', 1.75, 'StopbandFrequency2', 2.05, 'StopbandAttenuation1', 60, ...
-%                        'PassbandRipple', 1, 'StopbandAttenuation2', 60, 'SampleRate', 256);
+%% Interpolate to peak times
+% Get SOpower_times step size
+SOpower_times_step = SOpower_times(2) - SOpower_times(1);
 
-%% Compute SO-power histogram
-if verbose
-    disp('Computing SO-power histogram...');
-end
+% Interpolate SOpower to peak time points
+peak_SOpower = interp1([SOpower_times(1)-SOpower_times_step, SOpower_times, SOpower_times(end)+SOpower_times_step],...
+    [SOpower(1), SOpower, SOpower(end)], TFpeak_times);
 
-[SOpow_mat, freq_bins, SOpow_bins, SOpow_TIB, ~, peak_SOpower, hist_peakidx_SOpower, SOpower, SOpower_times] =...
-    SOpowerHistogram(SOpower, SOpower_times, TFpeak_freqs, TFpeak_times,...
-    'TFpeak_stages', TFpeak_stages, 'stage_vals', single(stage_vals), 'stage_times', stage_times,...
-    'freq_range', freq_range, 'freq_binsizestep', freq_binsizestep, 'SO_range', SOpower_range, 'SO_binsizestep', SOpower_binsizestep,...
-    'SO_freqrange', SO_freqrange, 'SOPH_stages', SOPH_stages, 'compute_rate', compute_rate,...
-    'min_time_in_bin', SOpower_min_time_in_bin, 'plot_on', plot_on, 'verbose', verbose);
 
-%% Compute SO-phase histogram
-if verbose
-    disp('Computing SO-phase histogram...');
-end
+% Get SOphase_times step size
+SOphase_times_step = SOphase_times(2) - SOphase_times(1);
 
-[SOphase_mat, ~, SOphase_bins, SOphase_TIB, ~, peak_SOphase, hist_peakidx_SOphase, SOphase, SOphase_times] =...
-    SOphaseHistogram(SOphase, SOphase_times, TFpeak_freqs, TFpeak_times,...
-    'TFpeak_stages', TFpeak_stages, 'stage_vals', single(stage_vals), 'stage_times', stage_times,...
-    'freq_range', freq_range, 'freq_binsizestep', freq_binsizestep, 'SO_range', SOphase_range, 'SO_binsizestep', SOphase_binsizestep, ...
-    'SO_freqrange', SO_freqrange, 'SOPH_stages', SOPH_stages, 'norm_dim', SOphase_norm_dim, 'compute_rate', compute_rate,...
-    'plot_on', plot_on, 'verbose', verbose);
+% Interpolate SOphase to peak time points
+peak_SOphase = interp1([SOphase_times(1)-SOphase_times_step, SOphase_times, SOphase_times(end)+SOphase_times_step],...
+    [SOphase(1), SOphase, SOphase(end)], TFpeak_times);
 
-%% Verify that the same TF peaks are included in the two histograms
-assert(all(hist_peakidx_SOpower == hist_peakidx_SOphase), 'SOpower and SOphase histograms included different TF peaks.')
-peak_selection_inds = hist_peakidx_SOpower;
-
-end
+% Re-wrap phases to be between -pi and pi
+peak_SOphase = wrapToPi(peak_SOphase);
