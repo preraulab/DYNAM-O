@@ -59,6 +59,7 @@ end
 
 if isempty(data) || isempty(rgn) || isempty(rgn_lbls) || isempty(amatr)
     disp('WARNING: insufficient inputs to regionWeightedEdges');
+    return;
 else
     e_wts = zeros(size(amatr,1),1);
     if isempty(merge_rule) %For future implementation of extra merge rules

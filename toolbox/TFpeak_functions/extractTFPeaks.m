@@ -208,7 +208,7 @@ end
 Ldata = runWatershed(img_LR,conn_wshed,bl_thresh,f_verb-1,['    ' verb_pref],f_disp);
 
 %Convert labeled region to graph
-[regions, region_lbls, Lborders, adj_list] = Ldata2graph(Ldata,[],f_disp);
+[regions, region_lbls, borders, adj_list] = Ldata2graph(Ldata,[],f_disp);
 
 if f_verb > 0
     disp([verb_pref '    watershed took: ' num2str(toc(ttic)) ' seconds.']);
@@ -217,15 +217,25 @@ end
 %**************************************************
 % Merge watershed regions according to merge rule *
 %**************************************************
-if f_verb > 0
-    disp([verb_pref '  Starting merge...']);
-    ttic = tic;
-end
+if ~isempty(adj_list)
+    
+    if f_verb > 0
+        disp([verb_pref '  Starting merge...']);
+        ttic = tic;
+    end
 
-[regions, borders] = mergeWshedSegment(img_LR,regions,region_lbls,Lborders,adj_list,merge_thresh,max_merges,merge_rule,f_verb-1,['     ' verb_pref],f_disp);
+    [regions, borders] = mergeWshedSegment(img_LR,regions,region_lbls,borders,adj_list,merge_thresh,max_merges,merge_rule,f_verb-1,['     ' verb_pref],f_disp);
 
-if f_verb > 0
-    disp([verb_pref '    merge took: ' num2str(toc(ttic)) ' seconds.']);
+    if f_verb > 0
+        disp([verb_pref '    merge took: ' num2str(toc(ttic)) ' seconds.']);
+    end
+    
+else
+   
+    if f_verb > 0
+        disp('Nothing found to merge.');
+    end
+    
 end
 
 %Return if empty stats table
