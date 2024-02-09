@@ -120,6 +120,9 @@ addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric', 'vector'}
 addOptional(p, 'time_range', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'isexcluded', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
 
+addOptional(p, 'SOpower_tapers', [5 9], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
+addOptional(p, 'SOpower_window_params', [5 .5], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
+
 %Display settings
 addOptional(p, 'plot_on', false, @(x) validateattributes(x,{'logical'},{}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{}));
@@ -153,7 +156,7 @@ end
 %% Compute SO-power and SO-phase
 [SOpower, SOpower_times] = computeSOpower(EEG, Fs, 'stage_vals', stage_vals, 'stage_times', stage_times,...
     'SO_freqrange', SO_freqrange, 'SOpower_outlier_threshold', SOpower_outlier_threshold, 'norm_method', SOpower_norm_method,...
-    'retain_Fs', SOpower_retain_Fs, 'EEG_times', EEG_times, 'time_range', time_range, 'isexcluded', isexcluded);
+    'retain_Fs', SOpower_retain_Fs, 'EEG_times', EEG_times, 'time_range', time_range, 'isexcluded', isexcluded,'tapers',SOpower_tapers,'window_params',SOpower_window_params);
 [SOphase, SOphase_times, ~, SOdata] = computeSOphase(EEG, Fs, 'stage_vals', stage_vals, 'stage_times', stage_times,...
     'SO_freqrange', SO_freqrange, 'SOphase_filter', SOphase_filter, 'EEG_times', EEG_times, 'isexcluded', isexcluded);
 
