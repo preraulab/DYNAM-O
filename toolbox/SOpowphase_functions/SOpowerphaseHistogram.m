@@ -120,8 +120,8 @@ addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric', 'vector'}
 addOptional(p, 'time_range', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'isexcluded', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
 
-addOptional(p, 'SOpower_tapers', [5 9], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
-addOptional(p, 'SOpower_window_params', [5 .5], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
+addOptional(p, 'SOpower_tapers', [15 29], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
+addOptional(p, 'SOpower_window_params', [30 15], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
 
 %Display settings
 addOptional(p, 'plot_on', false, @(x) validateattributes(x,{'logical'},{}));
