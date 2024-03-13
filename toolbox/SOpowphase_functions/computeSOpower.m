@@ -119,7 +119,7 @@ switch norm_method
         high_val =  99;
         ptile = prctile(SOpower(SOpower_times>=time_range(1) & SOpower_times<=time_range(2)), [low_val, high_val]);
         SOpower_norm = SOpower-ptile(1);
-        SOpower_norm = SOpower_norm/(ptile(2) - ptile(1));  % Note: is this computation correct? 
+        SOpower_norm = SOpower_norm/(ptile(2) - ptile(1)); % Normalize between 1 and 0 
 
     case {'shift'}
         if islogical(SOpower_stages) && SOpower_stages
