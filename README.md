@@ -32,6 +32,9 @@ To clone the DYNAM_O_dev.git repository to your own computer or remote work stat
 
  ##### set to master branch for all submodules:
 	git submodule foreach --recursive git checkout master
+ 
+ ##### to update submodules:
+	git submodule update --remote
  --- 
 ## Tutorial
 A full description of the toolbox and tutorial [can be found on the Prerau Lab site](https://prerau.bwh.harvard.edu/DYNAM-O/).
