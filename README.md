@@ -22,7 +22,7 @@ Included in this package are versions of a rainbow and "gouldian" colormap, desi
 --- 
 ## Initial Clone 
 
-To clone the labcode_main.git repository to your own computer or remote work station (if you are on ERIS, you can directly access these codes through <private-path>), you need to create an empty folder to contain the repository. You can name it whatever you want and place it wherever you want. For a post on the subtle differences between different git versions on initial clone: https://stackoverflow.com/questions/3796927/how-to-git-clone-including-submodules 
+To clone the DYNAM_O_dev.git repository to your own computer or remote work station, you need to create an empty folder to contain the repository. You can name it whatever you want and place it wherever you want. For a post on the subtle differences between different git versions on initial clone: https://stackoverflow.com/questions/3796927/how-to-git-clone-including-submodules 
  
  ##### create an empty folder:
 	mkdir DYNAM_O_dev
