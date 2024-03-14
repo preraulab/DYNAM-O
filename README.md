@@ -20,6 +20,19 @@ The paper is available open access at https://doi.org/10.1093/sleep/zsac223
 Included in this package are versions of a rainbow and "gouldian" colormap, designed to be more perceptually uniform than jet and parula, respectively. If you use them, please cite:
 > Peter Kovesi. Good Colour Maps: How to Design Them. arXiv:1509.03700 [cs.GR] 2015 https://arxiv.org/abs/1509.03700
 --- 
+## Initial Clone 
+
+To clone the labcode_main.git repository to your own computer or remote work station (if you are on ERIS, you can directly access these codes through <private-path>), you need to create an empty folder to contain the repository. You can name it whatever you want and place it wherever you want. For a post on the subtle differences between different git versions on initial clone: https://stackoverflow.com/questions/3796927/how-to-git-clone-including-submodules 
+ 
+ ##### create an empty folder:
+	mkdir DYNAM_O_dev
+
+ ##### clone the repository to the folder you created:
+	git clone --recursive git@github.com:preraulab/DYNAM_O_dev.git DYNAM_O_dev
+
+ ##### set to master branch for all submodules:
+	git submodule foreach --recursive git checkout master
+ --- 
 ## Tutorial
 A full description of the toolbox and tutorial [can be found on the Prerau Lab site](https://prerau.bwh.harvard.edu/DYNAM-O/).
 
