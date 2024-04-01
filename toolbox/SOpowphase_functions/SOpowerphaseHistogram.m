@@ -84,6 +84,21 @@ function [SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, SOpow_TIB
 %       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
 %**********************************************************************
 
+% If a struct is input with the SOPH settings/params, detect and 
+% reformat it to work with the input parser below.
+ind = cellfun(@isstruct,varargin); % Get index of the struct
+opt_struct = varargin{ind}; % Store the struct
+varargin = {varargin{~ind}}; % Remove struct from the varargins
+argcell = namedargs2cell(opt_struct); % Convert the struct to cell array
+varargin = cat(2,varargin,argcell); % Add the new cell array with the params to the end of the varargins
+
+% Test to make sure that none of the additional parameters are already
+% being included in the struct (if input)
+str_cell = cellstr(varargin(cellfun(@(x)(ischar(x)|isstring(x)),varargin)));
+if length(str_cell)~=length(unique(str_cell))
+    error('Cannot include struct and duplicate parameters.');
+end
+
 %% Parse inputs
 p = inputParser;
 
@@ -95,6 +110,11 @@ addOptional(p, 'TFpeak_stages', [], @(x) validateattributes(x, {'numeric', 'vect
 %Stage info
 addOptional(p, 'stage_vals', [], @(x) validateattributes(x, {'double', 'single'}, {'real'}));
 addOptional(p, 'stage_times', [], @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
+
+%EEG time settings
+addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
+addOptional(p, 'time_range', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
+addOptional(p, 'isexcluded', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
 
 %SOPH settings
 addOptional(p, 'freq_range', [0,40], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
@@ -114,11 +134,6 @@ addOptional(p, 'SOpower_retain_Fs', true, @(x) validateattributes(x,{'logical'},
 addOptional(p, 'SOpower_min_time_in_bin', 10, @(x) validateattributes(x,{'numeric'},{'scalar','real','finite','nonnan','nonnegative','integer'}));
 addOptional(p, 'SOphase_filter', []);
 addOptional(p, 'SOphase_norm_dim', 1, @(x) validateattributes(x,{'numeric'},{'scalar','real','finite','nonnan','nonnegative','integer'}));
-
-%EEG time settings
-addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
-addOptional(p, 'time_range', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
-addOptional(p, 'isexcluded', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
 
 addOptional(p, 'SOpower_tapers', [15 29], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
 addOptional(p, 'SOpower_window_params', [30 15], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
