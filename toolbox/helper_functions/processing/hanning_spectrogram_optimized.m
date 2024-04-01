@@ -209,12 +209,9 @@ if isrow(data)
     data = data(:);
 end
 
-% Old Window start indices
-% [window_start] = findclosest(window_start_old, event_times*Fs-round(winsize_samples/2));
-% window_start = (round(event_times*Fs)-round(0.5*winsize_samples))';
-
+% Find index in the full signal where each window starts
 window_start = event_times - data_window_params(1)/2;
-window_start = floor(window_start*Fs)';
+window_start = max(floor(window_start*Fs)',1); % TEMPORARY UNTIL TESTED
 
 
 %Number of windows
