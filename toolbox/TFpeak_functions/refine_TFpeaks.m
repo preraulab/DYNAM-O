@@ -56,6 +56,9 @@ event_times = spindle_table.PeakTime;
 % the start/end of the data collected
 event_times_inc = event_times>=(0.5*window_size) & event_times<=data_len-(0.5*window_size);
 
+% POTENTIAL FIX:
+%event_times_inc(floor((event_times-(window_size/2))*Fs)==0) = 0;
+
 bounding_box_lower = spindle_table.BoundingBox(event_times_inc,2); % Element 2 of the bounding box corresponds to the lower bound frequency of the detected event
 bounding_box_height = spindle_table.BoundingBox(event_times_inc,4); % Element 4 of the bounding box gives the height of the bounding box
 
