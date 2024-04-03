@@ -84,21 +84,23 @@ function [SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, SOpow_TIB
 %       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
 %**********************************************************************
 
-% If a struct is input with the SOPH settings/params, detect and 
+% If a struct is input with the SOPH settings/params, detect and
 % reformat it to work with the input parser below.
-ind = cellfun(@isstruct,varargin); % Get index of the struct
-opt_struct = varargin{ind}; % Store the struct
-varargin = {varargin{~ind}}; % Remove struct from the varargins
-argcell = namedargs2cell(opt_struct); % Convert the struct to cell array
-varargin = cat(2,varargin,argcell); % Add the new cell array with the params to the end of the varargins
+struct_ind = cellfun(@isstruct,varargin); % Get index of the struct
+if any(struct_ind)
+    opt_struct = varargin{struct_ind}; % Store the struct
+    varargin = {varargin{~struct_ind}}; % Remove struct from the varargins
 
-% Test to make sure that none of the additional parameters are already
-% being included in the struct (if input)
-str_cell = cellstr(varargin(cellfun(@(x)(ischar(x)|isstring(x)),varargin)));
-if length(str_cell)~=length(unique(str_cell))
-    error('Cannot include struct and duplicate parameters.');
+    argcell = namedargs2cell(opt_struct); % Convert the struct to cell array
+    varargin = cat(2,varargin,argcell); % Add the new cell array with the params to the end of the varargins
+
+    % Test to make sure that none of the additional parameters are already
+    % being included in the struct (if input)
+    str_cell = cellstr(varargin(cellfun(@(x)(ischar(x)|isstring(x)),varargin)));
+    if length(str_cell)~=length(unique(str_cell))
+        error('Cannot include struct and duplicate parameters.');
+    end
 end
-
 %% Parse inputs
 p = inputParser;
 
@@ -154,13 +156,13 @@ if ~isempty(EEG)
     else
         assert(length(EEG_times) == size(EEG,2), 'EEG_times must be the same length as EEG');
     end
-    
+
     if isempty(time_range)
         time_range = [min(EEG_times), max(EEG_times)];
     else
         assert( (time_range(1) >= min(EEG_times)) & (time_range(2) <= max(EEG_times)), 'time_range cannot be outside of the time range described by "EEG_times"');
     end
-    
+
     if isempty(isexcluded)
         isexcluded = false(size(EEG,2),1);
     else
