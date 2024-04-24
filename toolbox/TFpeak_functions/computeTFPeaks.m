@@ -21,9 +21,13 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %                                  {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData',
 %                                   'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. Default = 'all'
 %       artifacts (opt):           [1xn] logical - boolean indicating artifact time points. Default = [], run detect_artifacts()
-%       baseline_stages (opt):     [1xp] double - which stages to include
+%       baseline_stages (opt):     [1xp] double - stages to include
 %                                  in spectrogram baseline computation. All timepoints outside these
 %                                  stages will be considered artifact
+%       baseline_trim (opt):       2D array representing start and stop
+%                                  times for baseline trimming OR integer representing buffer time (min) 
+%                                  around the first and last sleep period.
+%                                  Default = [-inf,inf]
 %       artifact_filters (opt):    struct with 2 digitalFilter fields "hpFilt_high","hpFilt_broad" -
 %                                  filters to be used for artifact detection
 %       stages_include (not used): [1xp] double - which stages to include in the SO-power and
@@ -74,6 +78,7 @@ addOptional(p, 'time_range', [], @(x) validateattributes(x,{'numeric', 'vector'}
 addOptional(p, 'features', 'all',  @(x) validateattributes(x,{'char', 'cell'},{}));
 addOptional(p, 'artifacts', [], @(x) validateattributes(x,{'logical'},{'real','finite','nonnan'}));
 addOptional(p, 'baseline_stages',[1,2,3,4,5],@(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
+addOptional(p, 'baseline_trim',[],@(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
 addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'struct'},{}));
 addOptional(p, 'double_watershed', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
@@ -110,6 +115,23 @@ if isempty(artifact_filters)
     artifact_filters.hpFilt_broad = [];
 end
 
+% Set baseline_range based on baseline_trim input
+% int
+if numel(baseline_trim) ==1
+    buffer = baseline_trim;
+    nonwake_stage_inds = ismember(stage_vals, [1,2,3,4]);
+    baseline_range(1) = max([ min(stage_times(nonwake_stage_inds))-buffer*60, 0]); % x minutes before first non-wake stage
+    baseline_range(2) = min([ max(stage_times(nonwake_stage_inds))+buffer*60, max(stage_times)]); % x minutes after last non-wake stage
+else
+    % Empty array 
+    if numel(baseline_trim)==0
+        baseline_range = [-inf,inf];
+    % % Nonempty 2D array of start, stop
+    elseif numel(baseline_trim) ==2
+        baseline_range = baseline_trim;
+    end
+
+end
 %% Truncate data to time range
 time_range_inds = t_data >= time_range(1) & t_data <= time_range(2);
 data_trunc = data(time_range_inds);
@@ -145,6 +167,11 @@ artifacts_stimes = logical(interp1(t_data_trunc, double(artifacts), stimes, 'nea
 spect_bl = spect;
 spect_bl(:,artifacts_stimes) = NaN; % turn artifact times into NaNs for percentile computation
 spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
+% Applying triming for baseline computation 
+
+baseline_range_inds = stimes>=baseline_range(1) & stimes<baseline_range(2);
+spect_bl = spect_bl(:,baseline_range_inds);
+
 
 baseline_ptile = 2; % using 2nd percentile of spectrogram as baseline
 baseline = prctile(spect_bl, baseline_ptile, 2); % get baseline
@@ -193,6 +220,8 @@ if double_watershed
     spect_bl = spect;
     spect_bl(:,artifacts_stimes) = NaN; % turn artifact times into NaNs for percentile computation
     spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
+    baseline_range_inds = stimes>=baseline_range(1) & stimes<baseline_range(2);
+    spect_bl = spect_bl(:,baseline_range_inds);
     baseline = prctile(spect_bl, baseline_ptile, 2); % get baseline
 
     % Mask the spectrogram using extracted TFpeaks from the first round of watershed
