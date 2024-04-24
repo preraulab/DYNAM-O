@@ -21,6 +21,9 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %                                  {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData',
 %                                   'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. Default = 'all'
 %       artifacts (opt):           [1xn] logical - boolean indicating artifact time points. Default = [], run detect_artifacts()
+%       baseline_stages (opt):     [1xp] double - which stages to include
+%                                  in spectrogram baseline computation. All timepoints outside these
+%                                  stages will be considered artifact
 %       artifact_filters (opt):    struct with 2 digitalFilter fields "hpFilt_high","hpFilt_broad" -
 %                                  filters to be used for artifact detection
 %       stages_include (not used): [1xp] double - which stages to include in the SO-power and
@@ -70,6 +73,7 @@ addOptional(p, 't_data', [], @(x) validateattributes(x,{'numeric', 'vector'},{'r
 addOptional(p, 'time_range', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'features', 'all',  @(x) validateattributes(x,{'char', 'cell'},{}));
 addOptional(p, 'artifacts', [], @(x) validateattributes(x,{'logical'},{'real','finite','nonnan'}));
+addOptional(p, 'baseline_stages',[1,2,3,4,5],@(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'struct'},{}));
 addOptional(p, 'double_watershed', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
@@ -129,6 +133,11 @@ if isempty(artifacts)
 else
     artifacts = artifacts(time_range_inds); % apply time_range selection
 end
+% Modify artifacts to include stages not in baseline_stages (useful for
+% excluding stage =0 in baseline computation
+exclude_idx = single(~ismember(stage_vals,baseline_stages));
+exclude_resamp = logical(interp1(stage_times, exclude_idx, t_data_trunc, 'previous'));
+artifacts = artifacts|exclude_resamp';
 artifacts_stimes = logical(interp1(t_data_trunc, double(artifacts), stimes, 'nearest')); % get artifacts occurring at spectrogram times
 
 %% Compute baseline spectrum used to flatten data spectrum
