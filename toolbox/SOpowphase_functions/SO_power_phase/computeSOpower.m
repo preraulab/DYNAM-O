@@ -65,6 +65,14 @@ end
 % Exclude outlier SOpower that usually reflect isexcluded
 SOpower(abs(nanzscore(SOpower)) >= SOpower_outlier_threshold) = nan;
 
+%Check for all nan SOpower
+if all(isnan(SOpower))
+    warning('SOpower is all Nan')
+   norm_method = nan;
+   ptile = nan;
+   return;
+end
+
 % % Remove single time points sandwiched between nan values
 % last_isnan = [0; isnan(SOpower(1:end-1))];
 % next_isnan = [isnan(SOpower(2:end)); 0];

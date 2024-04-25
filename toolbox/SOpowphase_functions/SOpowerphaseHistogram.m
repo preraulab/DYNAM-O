@@ -1,4 +1,5 @@
-function [SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, SOpow_TIB, SOphase_TIB, peak_SOpower, peak_SOphase, peak_selection_inds, SOpower, SOpower_times, SOphase, SOphase_times, SOdata] = SOpowerphaseHistogram(EEG,Fs,varargin)
+function [SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, SOpow_TIB, SOphase_TIB, peak_SOpower, peak_SOphase, peak_selection_inds, ...
+    SOpower, SOpower_times, SOphase, SOphase_times, SOdata] = SOpowerphaseHistogram(EEG,Fs,varargin)
 % SOPOWERPHASEHISTOGRAM: Computes slow-oscillation power and phase histogram matrices
 %
 %   Usage:
@@ -74,8 +75,6 @@ function [SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, SOpow_TIB
 %       SOphase_times: 1xN double - timeseries SO phase times
 %
 %   Copyright 2024 Prerau Lab - http://www.sleepEEG.org
-%   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
-%   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %
 %   Please provide the following citation for all use:
 %       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
@@ -136,7 +135,6 @@ addOptional(p, 'SOpower_retain_Fs', true, @(x) validateattributes(x,{'logical'},
 addOptional(p, 'SOpower_min_time_in_bin', 10, @(x) validateattributes(x,{'numeric'},{'scalar','real','finite','nonnan','nonnegative','integer'}));
 addOptional(p, 'SOphase_filter', []);
 addOptional(p, 'SOphase_norm_dim', 1, @(x) validateattributes(x,{'numeric'},{'scalar','real','finite','nonnan','nonnegative','integer'}));
-
 addOptional(p, 'SOpower_tapers', [15 29], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
 addOptional(p, 'SOpower_window_params', [30 15], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
 
