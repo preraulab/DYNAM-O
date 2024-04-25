@@ -25,7 +25,7 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %                                  in spectrogram baseline computation. All timepoints outside these
 %                                  stages will be considered artifact
 %       baseline_trim (opt):       2D array representing start and stop
-%                                  times for baseline trimming OR integer representing buffer time (min) 
+%                                  times for baseline trimming OR integer representing buffer time (min)
 %                                  around the first and last sleep period.
 %                                  Default = [-inf,inf]
 %       artifact_filters (opt):    struct with 2 digitalFilter fields "hpFilt_high","hpFilt_broad" -
@@ -73,19 +73,30 @@ addRequired(p, 'data', @(x) validateattributes(x, {'numeric', 'vector'}, {'real'
 addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric', 'vector'}, {'real','nonempty'}));
 addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric', 'vector'}, {'real','nonempty'}));
+
 addOptional(p, 't_data', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'time_range', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'features', 'all',  @(x) validateattributes(x,{'char', 'cell'},{}));
+
 addOptional(p, 'artifacts', [], @(x) validateattributes(x,{'logical'},{'real','finite','nonnan'}));
-addOptional(p, 'baseline_stages',[1,2,3,4,5],@(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-addOptional(p, 'baseline_trim',[],@(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
 addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'struct'},{}));
+
+%Baseline struct
+addOptional(p, 'baseline_stages',[1,2,3,4,5],@(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
+addOptional(p, 'baseline_ptile',2,@(x) validateattributes(x, {'numeric', 'scalar'}, {'real', 'nonempty'}));
+addOptional(p, 'baseline_trim',[],@(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
+
+%TF-peak struct
 addOptional(p, 'double_watershed', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
-addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
-addOptional(p, 'quality_setting', 'fast', @(x) validateattributes(x,{'char','numeric'},{}));
+addOptional(p, 'dsfreqs', 0.1, @(x) validateattributes(x,{'scalar','numeric'},{'real','nonempty', 'nonnan'}));
+addOptional(p, 'downsample_spect', [2 2], @(x) validateattributes(x,{'vector','numeric'},{}));
+addOptional(p, 'seg_time', 3, @(x) validateattributes(x,{'scalar','numeric'},{}));
+addOptional(p, 'merge_thresh', 11, @(x) validateattributes(x,{'scalar','numeric'},{}));
+addOptional(p, 'quality_setting', '', @(x) validateattributes(x,{'char','numeric'},{}));
 addOptional(p, 'refinement', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'remove_edge_peaks', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'refine_method', 'spline_interp', @(x) validatestring(x,{'spline_interp','spline_opt','spect_max'}));
+addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -117,20 +128,21 @@ end
 
 % Set baseline_range based on baseline_trim input
 % int
-if numel(baseline_trim) ==1
+if isscalar(baseline_trim)
     buffer = baseline_trim;
     nonwake_stage_inds = ismember(stage_vals, [1,2,3,4]);
     baseline_range(1) = max([ min(stage_times(nonwake_stage_inds))-buffer*60, 0]); % x minutes before first non-wake stage
     baseline_range(2) = min([ max(stage_times(nonwake_stage_inds))+buffer*60, max(stage_times)]); % x minutes after last non-wake stage
 else
-    % Empty array 
-    if numel(baseline_trim)==0
+    % Empty array
+    if isempty(baseline_trim)
         baseline_range = [-inf,inf];
-    % % Nonempty 2D array of start, stop
+        % % Nonempty 2D array of start, stop
     elseif numel(baseline_trim) ==2
         baseline_range = baseline_trim;
+    else
+        error('Invalid baseline range. Enter a start time or range.')
     end
-
 end
 %% Truncate data to time range
 time_range_inds = t_data >= time_range(1) & t_data <= time_range(2);
@@ -143,7 +155,7 @@ t_data_trunc = t_data(time_range_inds);
 
 [spect, stimes, sfreqs,...
     downsample_spect, seg_time, merge_thresh,...
-    dur_min, bw_min, dur_max, bw_max, ht_db_min] = compute_spectrogram([2,3], [1,0.05], data_trunc, Fs, quality_setting, verbose);
+    dur_min, bw_min, dur_max, bw_max, ht_db_min] = compute_spectrogram([2,3], [1,0.05], data_trunc, Fs, quality_setting, dsfreqs, verbose);
 stimes = stimes + t_data_trunc(1); % adjust the time axis to t_data
 
 %% Artifact Detection
@@ -167,13 +179,10 @@ artifacts_stimes = logical(interp1(t_data_trunc, double(artifacts), stimes, 'nea
 spect_bl = spect;
 spect_bl(:,artifacts_stimes) = NaN; % turn artifact times into NaNs for percentile computation
 spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
-% Applying triming for baseline computation 
+% Applying triming for baseline computation
 
 baseline_range_inds = stimes>=baseline_range(1) & stimes<baseline_range(2);
 spect_bl = spect_bl(:,baseline_range_inds);
-
-
-baseline_ptile = 2; % using 2nd percentile of spectrogram as baseline
 baseline = prctile(spect_bl, baseline_ptile, 2); % get baseline
 
 %% Compute time-frequency peaks
@@ -210,7 +219,7 @@ if double_watershed
     % Compute multitaper spectrogram using new parameters with smaller spectral resolution
     [spect, stimes, sfreqs,...
         downsample_spect, seg_time, merge_thresh,...
-        ~, bw_min, dur_max, bw_max, ht_db_min] = compute_spectrogram([2,3], [2,0.05], data_trunc, Fs, quality_setting, verbose);
+        ~, bw_min, dur_max, bw_max, ht_db_min] = compute_spectrogram([2,3], [2,0.05], data_trunc, Fs, quality_setting, dsfreqs, verbose);
     stimes = stimes + t_data_trunc(1); % adjust the time axis to t_data
 
     % Update artifact vector
@@ -285,7 +294,7 @@ end
 
 end
 
-function [spect, stimes, sfreqs, downsample_spect, seg_time, merge_thresh, dur_min, bw_min, dur_max, bw_max, ht_db_min] = compute_spectrogram(taper_params, time_window_params, data_trunc, Fs, quality_setting, verbose)
+function [spect, stimes, sfreqs, downsample_spect, seg_time, merge_thresh, dur_min, bw_min, dur_max, bw_max, ht_db_min] = compute_spectrogram(taper_params, time_window_params, data_trunc, Fs, quality_setting, dsfreqs, verbose)
 % Helper function to compute spectrogram and return various parameters
 
 if isempty(taper_params)
@@ -295,33 +304,33 @@ if isempty(time_window_params)
     time_window_params = [1,0.05]; % [time window, time step] in seconds
 end
 
-dsfreqs = 0.1; % For consistency with our results we expect a df of 0.1 Hz or less
-
-if isnumeric(quality_setting) % If quality_setting is numeric use it, and don't downsample
-    time_window_params = quality_setting(1:2);
-    dsfreqs = quality_setting(3);
-    downsample_spect = [];
-else
-    switch lower(quality_setting)
-        case {'paper'} %Matches SLEEP paper settings exactly
-            downsample_spect = [];
-            seg_time = 60;
-            merge_thresh = 8;
-        case {'precision'} %Matches SLEEP paper settings but smaller segments for speed
-            downsample_spect = [];
-            seg_time = 30;
-            merge_thresh = 8;
-        case {'fast'} %~speed improvement with little accuracy reduction
-            downsample_spect = [2 2];
-            seg_time = 30;
-            merge_thresh = 11;
-        case {'draft'} %greater speed improvement but increased high frequency peaks
-            downsample_spect = [5 1];
-            seg_time = 30;
-            merge_thresh = 13;
-            warning('The "draft" setting is not suitable for analyzing SO-phase, use "precision" or "fast" instead.')
-        otherwise
-            error('quality_setting must be ''precision'', ''fast'', ''draft'', or ''paper''')
+if ~isempty(quality_setting)
+    if iscell(quality_setting) % If quality_setting is a cell, define it this way
+        downsample_spect = quality_setting{1};
+        seg_time = quality_setting{2};
+        merge_thresh = quality_setting{3};
+    else
+        switch lower(quality_setting)
+            case {'paper'} %Matches SLEEP paper settings exactly
+                downsample_spect = [];
+                seg_time = 60;
+                merge_thresh = 8;
+            case {'precision'} %Matches SLEEP paper settings but smaller segments for speed
+                downsample_spect = [];
+                seg_time = 30;
+                merge_thresh = 8;
+            case {'fast'} %~speed improvement with little accuracy reduction
+                downsample_spect = [2 2];
+                seg_time = 30;
+                merge_thresh = 11;
+            case {'draft'} %greater speed improvement but increased high frequency peaks
+                downsample_spect = [5 1];
+                seg_time = 30;
+                merge_thresh = 13;
+                warning('The "draft" setting is not suitable for analyzing SO-phase, use "precision" or "fast" instead.')
+            otherwise
+                error('quality_setting must be ''precision'', ''fast'', ''draft'', or ''paper''')
+        end
     end
 end
 
