@@ -2,9 +2,9 @@ function opts = detection_opts(varargin)
 %% Parse inputs
 p = inputParser;
 
-%*******************************************
-% Generate TF-Peak detection Structure
-%*******************************************
+%************************************************
+% Generate TF-Peak Detection Option Structure
+%************************************************
 %Verbose option
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 
