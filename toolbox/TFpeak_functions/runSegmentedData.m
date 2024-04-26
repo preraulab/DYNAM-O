@@ -32,7 +32,7 @@ function stats_table = ...
 %   trim_vol     -- fraction maximum trimmed volume (from 0 to 1),
 %                   i.e. 1 means no trim. default 0.8.
 %   trim_shift   -- value to be subtracted from image prior to evaulation of trim volume.
-%                   default min(min(img_data)).
+%                   default min(spect,[],'all').
 %   conn_trim    -- pixel connection to be used by trimRegionsWShed. default 8.
 %   bl_thresh_flag  -- flag indicating use of baseline thresholding to reduce volume of data
 %                   being run through watershed and merging. Default = []
@@ -146,14 +146,14 @@ end
 % Remove baseline *
 %******************
 if ~isempty(baseline)
-    [spect, bl_threshold] = removeBaseline(spect, baseline, bl_thresh_flag, CI_upper_bl, f_verb);
+   [spect, bl_threshold] = removeBaseline(spect, baseline, bl_thresh_flag, CI_upper_bl, f_verb);
 else
     bl_threshold = [];
 end
 
 % Set default trim_shift
 if isempty(trim_shift)
-    trim_shift = min(spect(:));
+    trim_shift = min(spect,[],'all');
 end
 
 %% Segment spectrogram data
