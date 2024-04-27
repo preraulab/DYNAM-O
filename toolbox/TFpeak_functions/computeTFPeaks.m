@@ -94,6 +94,7 @@ end
 
 %% Parse inputs
 p = inputParser;
+p.KeepUnmatched=true;
 
 addRequired(p, 'data', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
@@ -118,11 +119,13 @@ addOptional(p, 'dsfreqs', 0.1, @(x) validateattributes(x,{'scalar','numeric'},{'
 addOptional(p, 'downsample_spect', [2 2], @(x) validateattributes(x,{'vector','numeric'},{}));
 addOptional(p, 'seg_time', 3, @(x) validateattributes(x,{'scalar','numeric'},{}));
 addOptional(p, 'merge_thresh', 11, @(x) validateattributes(x,{'scalar','numeric'},{}));
+addOptional(p, 'max_merges', inf, @(x) validateattributes(x,{'scalar','numeric'},{}));
 addOptional(p, 'quality_setting', '', @(x) validateattributes(x,{'char','numeric'},{}));
 addOptional(p, 'refinement', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
-addOptional(p, 'remove_edge_peaks', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
-addOptional(p, 'refine_method', 'spline_interp', @(x) validatestring(x,{'spline_interp','spline_opt','spect_max'}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
+addOptional(p, 'trim_vol', 0.8, @(x) validateattributes(x,{'scalar','numeric'},{}));
+addOptional(p, 'dur_max', 5, @(x) validateattributes(x,{'scalar','numeric'},{}));
+addOptional(p, 'bw_max', 15, @(x) validateattributes(x,{'scalar','numeric'},{}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -170,6 +173,12 @@ else
         error('Invalid baseline range. Enter a start time or range.')
     end
 end
+
+%% Get presets if needed
+if ~isempty(quality_setting)
+    [seg_time, merge_thresh, downsample_spect] = get_presets(quality_setting);
+end
+
 %% Truncate data to time range
 time_range_inds = t_data >= time_range(1) & t_data <= time_range(2);
 data_trunc = data(time_range_inds);
@@ -179,9 +188,7 @@ t_data_trunc = t_data(time_range_inds);
 % For more information on the multitaper spectrogram parameters and
 % implementation visit: https://github.com/preraulab/multitaper
 
-[spect, stimes, sfreqs,...
-    downsample_spect, seg_time, merge_thresh,...
-    dur_min, bw_min, dur_max, bw_max, ht_db_min] = compute_spectrogram([2,3], [1,0.05], data_trunc, Fs, quality_setting, dsfreqs, verbose);
+[spect, stimes, sfreqs, dur_min, bw_min, ht_db_min] = compute_spectrogram([2,3], [1,0.05], data_trunc, Fs, dsfreqs, verbose);
 stimes = stimes + t_data_trunc(1); % adjust the time axis to t_data
 
 %% Artifact Detection
@@ -223,9 +230,11 @@ if double_watershed
 else
     compute_features = unique([features, {'Duration', 'Bandwidth', 'PeakFrequency', 'Height'}]);
 end
+
 if any(strcmpi(features, 'PeakStage')); compute_features = unique([compute_features, 'PeakTime']); end
 
-stats_table = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, dur_min, bw_min, [], merge_thresh);
+stats_table = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
+    dur_min, bw_min, merge_thresh, max_merges, trim_vol);
 
 if verbose
     disp(['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
@@ -243,9 +252,7 @@ end
 if double_watershed
 
     % Compute multitaper spectrogram using new parameters with smaller spectral resolution
-    [spect, stimes, sfreqs,...
-        downsample_spect, seg_time, merge_thresh,...
-        ~, bw_min, dur_max, bw_max, ht_db_min] = compute_spectrogram([2,3], [2,0.05], data_trunc, Fs, quality_setting, dsfreqs, verbose);
+     [spect, stimes, sfreqs, ~, bw_min, ht_db_min] = compute_spectrogram([2,3], [2,0.05], data_trunc, Fs, dsfreqs, verbose);
     stimes = stimes + t_data_trunc(1); % adjust the time axis to t_data
 
     % Update artifact vector
@@ -272,9 +279,12 @@ if double_watershed
     end
 
     compute_features = unique([features, {'Duration', 'Bandwidth', 'PeakFrequency', 'Height'}]);
-    if any(strcmpi(features, 'PeakStage')); compute_features = unique([compute_features, 'PeakTime']); end
+    if any(strcmpi(features, 'PeakStage'))
+        compute_features = unique([compute_features, 'PeakTime']); 
+    end
 
-    stats_table = runSegmentedData(spect_masked, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, dur_min, bw_min, [], merge_thresh, [], 0.8);
+    stats_table = runSegmentedData(spect_masked, stimes, sfreqs, baseline, seg_time, downsample_spect, features, ...
+                                         dur_min, bw_min, merge_thresh, max_merges, trim_vol);
 
     if verbose
         disp(['[2nd] TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
@@ -303,25 +313,20 @@ stats_table = removevars(stats_table, setdiff(stats_table.Properties.VariableNam
 
 if refinement
     if verbose
-        if remove_edge_peaks
-            disp('Refining peaks and removing edge peaks...')
-        else
             disp('Refining peaks...');
-        end
     end
     rft = tic;
-    stats_table = refine_TFpeaks(data,Fs,stats_table,false,refine_method,remove_edge_peaks);
+    stats_table = refine_TFpeaks(data,Fs,stats_table,false);
     stats_table(isnan(stats_table.PeakFrequency),:) = [];
     if verbose
         disp(['TF-peak refinement took ' datestr(seconds(toc(rft)),'HH:MM:SS'), newline]);
     end
-
 end
 
 end
 
-function [spect, stimes, sfreqs, downsample_spect, seg_time, merge_thresh, dur_min, bw_min, dur_max, bw_max, ht_db_min] = compute_spectrogram(taper_params, time_window_params, data_trunc, Fs, quality_setting, dsfreqs, verbose)
 % Helper function to compute spectrogram and return various parameters
+function [spect, stimes, sfreqs, dur_min, bw_min, ht_db_min] = compute_spectrogram(taper_params, time_window_params, data_trunc, Fs, dsfreqs, verbose)
 
 if isempty(taper_params)
     taper_params = [2,3]; % [time halfbandwidth product, number of tapers]
@@ -330,6 +335,40 @@ if isempty(time_window_params)
     time_window_params = [1,0.05]; % [time window, time step] in seconds
 end
 
+freq_range = [0,30]; % frequency range to compute spectrum over (Hz)
+nfft = 2^(nextpow2(Fs/dsfreqs)); % zero pad data to this minimum value for fft
+detrend = 'constant'; % do not detrend
+weight = 'unity'; % each taper is weighted the same
+ploton = false; % do not plot out
+mts_verbose = false; % suppress verbose messages
+
+%MTS frequency resolution
+df = taper_params(1)/time_window_params(1)*2;
+
+%Set min duration and bandwidth based on spectral parameters
+dur_min = time_window_params(1)/2;
+bw_min = df/2;
+
+%Set minimal peak height based on confidence interval lower bound of MTS
+chi2_df = 2 * taper_params(2);
+alpha = 0.95;
+ht_db_min = -pow2db(chi2_df / chi2inv(alpha/2 + 0.5, chi2_df)) * 2;
+
+if verbose
+    disp('Computing TF-peak spectrogram...');
+end
+
+if exist(['multitaper_spectrogram_coder_mex.' mexext],'file')
+    [spect,stimes,sfreqs] = multitaper_spectrogram_mex(data_trunc, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
+else
+    [spect,stimes,sfreqs] = multitaper_spectrogram(data_trunc, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
+    warning(sprintf('Unable to use mex version of multitaper_spectrogram. Using compiled multitaper spectrogram function will greatly increase the speed of this computaton. \n\nFind mex code at:\n    https://github.com/preraulab/multitaper_toolbox')); %#ok<SPWRN>
+end
+
+end
+
+function [seg_time, merge_thresh, downsample_spect] = get_presets(quality_setting)
+% Check quality settings
 if ~isempty(quality_setting)
     if iscell(quality_setting) % If quality_setting is a cell, define it this way
         downsample_spect = quality_setting{1};
@@ -359,40 +398,4 @@ if ~isempty(quality_setting)
         end
     end
 end
-
-freq_range = [0,30]; % frequency range to compute spectrum over (Hz)
-nfft = 2^(nextpow2(Fs/dsfreqs)); % zero pad data to this minimum value for fft
-detrend = 'constant'; % do not detrend
-weight = 'unity'; % each taper is weighted the same
-ploton = false; % do not plot out
-mts_verbose = false; % suppress verbose messages
-
-%MTS frequency resolution
-df = taper_params(1)/time_window_params(1)*2;
-
-%Set min duration and bandwidth based on spectral parameters
-dur_min = time_window_params(1)/2;
-bw_min = df/2;
-
-%Max duration and bandwidth are set to be large values
-dur_max = 5; % second
-bw_max = 15; % Hz
-
-%Set minimal peak height based on confidence interval lower bound of MTS
-chi2_df = 2 * taper_params(2);
-alpha = 0.95;
-ht_db_min = -pow2db(chi2_df / chi2inv(alpha/2 + 0.5, chi2_df)) * 2;
-
-if verbose
-    disp('Computing TF-peak spectrogram...');
 end
-
-if exist(['multitaper_spectrogram_coder_mex.' mexext],'file')
-    [spect,stimes,sfreqs] = multitaper_spectrogram_mex(data_trunc, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
-else
-    [spect,stimes,sfreqs] = multitaper_spectrogram(data_trunc, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
-    warning(sprintf('Unable to use mex version of multitaper_spectrogram. Using compiled multitaper spectrogram function will greatly increase the speed of this computaton. \n\nFind mex code at:\n    https://github.com/preraulab/multitaper_toolbox')); %#ok<SPWRN>
-end
-
-end
-
