@@ -10,7 +10,7 @@ addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','n
 
 %Double vs single watershed
 addOptional(p, 'double_watershed', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
-%Frequency refinment using 1Hz df hann spectrum
+%Frequency refinment using 1Hz df hann spectrum for final frequency parameter computation
 addOptional(p, 'refinement', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 
 %Frequency bin resolution of the spectrogram
@@ -21,8 +21,6 @@ addOptional(p, 'quality_setting', '', @(x) validateattributes(x,{'char','numeric
 addOptional(p, 'downsample_spect', [2 2], @(x) validateattributes(x,{'vector','numeric'},{}));
 %Segment size for spectrogram paralleization
 addOptional(p, 'seg_time', 30, @(x) validateattributes(x,{'scalar','numeric'},{}));
-%Remove peaks at the edge of the bounds in masking step
-addOptional(p, 'remove_edge_peaks', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 
 %Watershed parameters
 %Threshold weight value for when to stop merge rule
