@@ -1,8 +1,8 @@
-function  [data_segs, x_segs] = segmentData(spect, stimes, sfreqs, seg_time, f_verb, verb_pref)
+function  [data_segs, x_segs, x_inds] = segmentData(spect, stimes, sfreqs, seg_time, f_verb, verb_pref)
 %SEGMENTDATA takes a full spectrogram and chunks it into separate segments
 %
 %   Usage:
-%       [data_segs, x_segs] = segmentData(spect, stimes, sfreqs, seg_time, f_verb, verb_pref)
+%       [data_segs, x_segs, x_inds] = segmentData(spect, stimes, sfreqs, seg_time, f_verb, verb_pref)
 %
 % INPUTS:
 %   spect         -- 2D matrix of image data. defaults to peaks(100).
@@ -17,6 +17,7 @@ function  [data_segs, x_segs] = segmentData(spect, stimes, sfreqs, seg_time, f_v
 % OUTPUTS:
 %   data_segs: segmented spectrogram data
 %   x_segs: x-values for segmented spectrogram data
+%   x_inds: x-value indices for segmented spectrogram data
 %
 %   Copyright 2024 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
@@ -87,6 +88,7 @@ for ii = 1:n_segs
 
     data_segs{ii} = spect(:,idx1:idx2);
     x_segs{ii} = stimes(idx1:idx2);
+    x_inds{ii} = idx1:idx2;
 end
 
 
