@@ -35,6 +35,7 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %                                  W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
 %       double_watershed (opt):    logical - whether to run two rounds of watershed to achieve better
 %                                       frequency resolution in addition to good temporal resolution. Default = true
+%       mask_mode (opt):           string for masking mode: 'polygon','region','region_noborder' (Default 'region_noborder)
 %       verbose (opt):             logical - display extra info. Default = true
 %       quality_setting (opt):     charcater - Quality settings for the algorithm:
 %                                       'precision': high res settings
@@ -115,6 +116,7 @@ addOptional(p, 'baseline_trim',[],@(x) validateattributes(x, {'numeric', 'vector
 
 %TF-peak struct
 addOptional(p, 'double_watershed', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
+addOptional(p, 'mask_mode', 'region_noborder', @(x)(isempty(x)||ismember(x,{'polygon','region','region_noborder'})));
 addOptional(p, 'dsfreqs', 0.1, @(x) validateattributes(x,{'scalar','numeric'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'downsample_spect', [2 2], @(x) validateattributes(x,{'vector','numeric'},{}));
 addOptional(p, 'seg_time', 3, @(x) validateattributes(x,{'scalar','numeric'},{}));
@@ -233,8 +235,13 @@ end
 
 if any(strcmpi(features, 'PeakStage')); compute_features = unique([compute_features, 'PeakTime']); end
 
-stats_table = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
-    dur_min, bw_min, merge_thresh, max_merges, trim_vol);
+if double_watershed
+    [stats_table, regions, borders] = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
+        dur_min, bw_min, merge_thresh, max_merges, trim_vol);
+else
+    stats_table = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
+        dur_min, bw_min, merge_thresh, max_merges, trim_vol);
+end
 
 if verbose
     disp(['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
@@ -252,7 +259,7 @@ end
 if double_watershed
 
     % Compute multitaper spectrogram using new parameters with smaller spectral resolution
-     [spect, stimes, sfreqs, ~, bw_min, ht_db_min] = compute_spectrogram([2,3], [2,0.05], data_trunc, Fs, dsfreqs, verbose);
+    [spect, stimes, sfreqs, ~, bw_min, ht_db_min] = compute_spectrogram([2,3], [2,0.05], data_trunc, Fs, dsfreqs, verbose);
     stimes = stimes + t_data_trunc(1); % adjust the time axis to t_data
 
     % Update artifact vector
@@ -269,8 +276,41 @@ if double_watershed
     % Mask the spectrogram using extracted TFpeaks from the first round of watershed
     if verbose
         disp('Masking the spectrogram using TF-peaks...');
+        tic
     end
-    spect_masked = maskSpectrogram(spect, stimes, sfreqs, stats_table, true);
+
+    %Implement masking modes
+    switch mask_mode
+        case {'polygon','poly','inpolygon'}
+            spect_masked = maskSpectrogram(spect, stimes, sfreqs, stats_table, true);
+        case 'region'
+            %Remove the offset between start times of the spects
+            dt = stimes(2)-stimes(1);
+            indshift = round(size(spect,1)*.5/dt);
+
+            region_inds = cat(1,regions{:}) - indshift;
+            region_inds = region_inds(region_inds>=1 & region_inds<=numel(spect));
+
+            spect_masked = zeros(size(spect));
+            spect_masked(region_inds) = spect(region_inds);
+        case 'region_noborder'
+            dt = stimes(2)-stimes(1);
+            indshift = round(size(spect,1)*.5/dt);
+
+            border_inds = cat(1,borders{:}) - indshift;
+            border_inds = border_inds(border_inds>=1 & border_inds<=numel(spect));
+            region_inds = cat(1,regions{:}) - indshift;
+            region_inds = region_inds(region_inds>=1 & region_inds<=numel(spect));
+
+            spect_masked = zeros(size(spect));
+            spect_masked(region_inds) = spect(region_inds);
+            spect_masked(border_inds) = 0;
+    end
+
+    % Mask the spectrogram using extracted TFpeaks from the first round of watershed
+    if verbose
+        disp(['Masking took ' num2str(toc) ' seconds']);
+    end
 
     % Compute time-frequency peaks
     if verbose
@@ -280,11 +320,11 @@ if double_watershed
 
     compute_features = unique([features, {'Duration', 'Bandwidth', 'PeakFrequency', 'Height'}]);
     if any(strcmpi(features, 'PeakStage'))
-        compute_features = unique([compute_features, 'PeakTime']); 
+        compute_features = unique([compute_features, 'PeakTime']);
     end
 
     stats_table = runSegmentedData(spect_masked, stimes, sfreqs, baseline, seg_time, downsample_spect, features, ...
-                                         dur_min, bw_min, merge_thresh, max_merges, trim_vol);
+        dur_min, bw_min, merge_thresh, max_merges, trim_vol);
 
     if verbose
         disp(['[2nd] TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
@@ -313,7 +353,7 @@ stats_table = removevars(stats_table, setdiff(stats_table.Properties.VariableNam
 
 if refinement
     if verbose
-            disp('Refining peaks...');
+        disp('Refining peaks...');
     end
     rft = tic;
     stats_table = refine_TFpeaks(data,Fs,stats_table,false);

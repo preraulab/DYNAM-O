@@ -1,5 +1,5 @@
-function [stats_table] = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, features, ...
-                                         dur_min, bw_min, merge_thresh, max_merges, trim_vol, f_verb, verb_pref, f_disp)
+function [stats_table, regions, borders] = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, features, ...
+    dur_min, bw_min, merge_thresh, max_merges, trim_vol, f_verb, verb_pref, f_disp)
 %RUNSEGMENTEDDATA wrapper that runs 1) baseline subtraction, 2) spectrogram
 %segmentation, 3) TFpeak extraction (watershed, merging, trimming, stats), 4)TFpeak statistics packaging and saving
 %
@@ -18,7 +18,7 @@ function [stats_table] = runSegmentedData(spect, stimes, sfreqs, baseline, seg_t
 %                       speedup and should not greatly affect results
 %   downsample_spect -- 2x1 double indicating number of rows and columns to downsize spect to.
 %   features         -- cell array of features to include, can be any subset of
-%                       {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData', 
+%                       {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData',
 %                        'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. default 'all'
 %   dur_min          -- minimum duration allowed
 %   bw_min           -- minimum bandwidth allowed
@@ -110,7 +110,7 @@ end
 % Remove baseline *
 %******************
 if ~isempty(baseline)
-   % Remove baseline. Subtraction in dB equivalent to division in non-dB.
+    % Remove baseline. Subtraction in dB equivalent to division in non-dB.
     spect = spect./repmat(baseline,1,size(spect,2));
 end
 
@@ -122,12 +122,16 @@ bl_threshold = '';
 trim_shift = min(spect,[],'all');
 
 %% Segment spectrogram data
-[data_segs, x_segs] = segmentData(spect, stimes, sfreqs, seg_time, f_verb, verb_pref);
+[data_segs, x_segs, x_inds] = segmentData(spect, stimes, sfreqs, seg_time, f_verb, verb_pref);
+%Compute the linear index pixel shift for each segment
+pixel_shift = cellfun(@(x)x(1)-1,x_inds)'*size(spect,1);
 
 %% Extract TFpeaks from spectrogram segments
 % Initialize storage for parallel processing of image segs
 n_segs = length(data_segs);
 stats_tables = cell(n_segs,1);
+regions = cell(n_segs,1);
+borders = cell(n_segs,1);
 
 % In parallel, find TFpeaks for each seg
 computetime = tic;
@@ -148,17 +152,29 @@ if f_verb > 0
     disp([verb_pref 'Processing segments...']);
 end
 
+%Need to save the nargout outside the parfor
+num_out = nargout;
 
 %MAIN LOOP ACROSS SEGMENTS
-parfor ii = 1:n_segs % was parfor
+parfor ii = 1:n_segs
     % Check for valid segments
     if all(data_segs{ii}(:) == 0) || all(isnan(data_segs{ii}(:))) || length(x_segs{ii}) <= 1
         stats_tables{ii} = table;
         continue
     end
-    
-    stats_tables{ii} = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
-    
+
+    %Compute the stats table with optional regions and borders
+    if num_out == 1
+        stats_tables{ii} = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
+    elseif num_out == 2
+        [stats_tables{ii}, regions{ii}] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
+        regions{ii} = cellfun(@(x)x+pixel_shift(ii),regions{ii},'UniformOutput',false);
+    elseif num_out == 3
+        [stats_tables{ii}, regions{ii}, borders{ii}] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
+        regions{ii} = cellfun(@(x)x+pixel_shift(ii),regions{ii},'UniformOutput',false);
+        borders{ii} = cellfun(@(x)x+pixel_shift(ii),borders{ii},'UniformOutput',false);
+    end
+
     % Update loading bar
     if haspar
         send(D, ii);
@@ -182,5 +198,14 @@ end
 stats_table = cat(1,stats_tables{:});
 peaktimes_ind = find(strcmpi(stats_table.Properties.VariableNames, 'PeakTime'));
 stats_table = sortrows(stats_table, peaktimes_ind, 'ascend');
- 
+
+if nargout>1
+    regions = cat(2, regions{:});
+    [~,sort_inds] = sort(stats_table.PeakTime,'ascend');
+    regions = regions(sort_inds);
+end
+if nargout>2
+    borders = cat(2, borders{:});
+    borders = borders(sort_inds);
+end
 end
