@@ -63,7 +63,7 @@ mts_verbose = false; % suppress verbose messages
 % Calculate total recording time
 data_len = length(data)/Fs;
 
-event_times = spindle_table.PeakTime;
+event_times = spindle_table.PeakTime-t(1);
 % Exclude event times that fall within half the window size distance from
 % the start/end of the data collected
 event_times_inc = event_times>=(0.5*window_size) & event_times<=data_len-(0.5*window_size);
