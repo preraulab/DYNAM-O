@@ -33,6 +33,7 @@ p = inputParser;
 addRequired(p, 'data', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addRequired(p,'event_times',@(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
+addOptional(p, 't',[], @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
 addOptional(p, 'frequency_range',[], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonan'}));
 addOptional(p,'data_window_params',[5,1],@(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addOptional(p,'NFFT',0,@(x) validateattributes(x, {'numeric', 'scalar'}, {'real', 'nonempty'}));
@@ -157,6 +158,7 @@ function [data, Fs, frequency_range, winsize_samples, winstep_samples, window_st
 data = p.Results.data;
 Fs = p.Results.Fs;
 event_times = p.Results.event_times;
+t = p.Results.t;
 frequency_range = p.Results.frequency_range;
 data_window_params = p.Results.data_window_params;
 NFFT = p.Results.NFFT;
@@ -165,6 +167,9 @@ plot_on = p.Results.plot_on;
 verbose = p.Results.verbose;
 xyflip = p.Results.xyflip;
 % Set defaults
+if isempty(t)
+    t = (0:length(data)-1)/Fs;
+end
 if isempty(frequency_range)
     frequency_range = [0 Fs/2];
 end
