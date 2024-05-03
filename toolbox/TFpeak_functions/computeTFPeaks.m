@@ -35,7 +35,6 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %                                  W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
 %       double_watershed (opt):    logical - whether to run two rounds of watershed to achieve better
 %                                       frequency resolution in addition to good temporal resolution. Default = true
-%       mask_mode (opt):           string for masking mode: 'polygon','region','region_noborder' (Default 'region_noborder)
 %       verbose (opt):             logical - display extra info. Default = true
 %       quality_setting (opt):     charcater - Quality settings for the algorithm:
 %                                       'precision': high res settings
@@ -117,7 +116,6 @@ addOptional(p, 'baseline_trim',[],@(x) validateattributes(x, {'numeric', 'vector
 
 %TF-peak struct
 addOptional(p, 'double_watershed', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
-addOptional(p, 'mask_mode', 'region_noborder', @(x)(isempty(x)||ismember(x,{'polygon','region','region_noborder'})));
 addOptional(p, 'dsfreqs', 0.1, @(x) validateattributes(x,{'scalar','numeric'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'downsample_spect', [2 2], @(x) validateattributes(x,{'vector','numeric'},{}));
 addOptional(p, 'seg_time', 3, @(x) validateattributes(x,{'scalar','numeric'},{}));
@@ -230,13 +228,8 @@ if verbose
     tfp = tic;
 end
 
-% Handle extracted features
-if double_watershed
-    compute_features = {'BoundingBox', 'Boundaries', 'Duration', 'Bandwidth', 'PeakFrequency', 'Height'};
-else
-    compute_features = unique([features, {'Duration', 'Bandwidth', 'PeakFrequency', 'Height'}]);
-end
-
+% Augment extracted features with necessary computation features that will be removed later
+compute_features = unique([features, {'Duration', 'Bandwidth', 'PeakFrequency', 'Height'}]);
 if any(strcmpi(features, 'PeakStage'))
     compute_features = unique([compute_features, 'PeakTime']);
 end
@@ -283,38 +276,21 @@ if double_watershed
     baseline = prctile(spect_bl, baseline_ptile, 2); % get baseline
 
     % Mask the spectrogram using extracted TFpeaks from the first round of watershed
-    if verbose
-        disp('Masking the spectrogram using TF-peaks...');
-        tic
-    end
-
-    %Implement masking modes
-    switch mask_mode
-        case {'polygon','poly','inpolygon'}
-            spect_masked = maskSpectrogram(spect, stimes, sfreqs, stats_table, true);
-        case {'region', 'region_noborder'}
-            %Remove the offset between start times of the spects
-            dt = stimes(2)-stimes(1);
-            assert(dt == (stimes_first(2)-stimes_first(1)), 'The two rounds of watershed used different stepsizes. Cannot use linear indices.')
-            indshift = round((stimes(1)-stimes_first(1)) / dt) * size(spect, 1); % assuming same sfreqs across spects
-            
-            region_inds = cat(1, regions{:}) - indshift;
-            region_inds = region_inds(region_inds>=1 & region_inds<=numel(spect)); % limit to valid indices
-
-            spect_masked = zeros(size(spect));
-            spect_masked(region_inds) = spect(region_inds);
-            
-            if strcmp(mask_mode, 'region_noborder') % drop the border pixels
-                border_inds = cat(1, borders{:}) - indshift;
-                border_inds = border_inds(border_inds>=1 & border_inds<=numel(spect)); % limit to valid indices
-                spect_masked(border_inds) = 0;
-            end
-    end
-
-    % Mask the spectrogram using extracted TFpeaks from the first round of watershed
-    if verbose
-        disp(['Masking took ' num2str(toc) ' seconds']);
-    end
+    % Remove the offset between start times of spects from the two rounds
+    dt = stimes(2)-stimes(1);
+    assert(dt == (stimes_first(2)-stimes_first(1)), 'The two rounds of watershed used different stepsizes. Cannot use linear indices.')
+    indshift = round((stimes(1)-stimes_first(1)) / dt) * size(spect, 1); % assuming same sfreqs across spects
+    
+    % mask all pixels outside of peak regions as zero
+    region_inds = cat(1, regions{:}) - indshift;
+    region_inds = region_inds(region_inds>=1 & region_inds<=numel(spect)); % limit to valid indices
+    spect_masked = zeros(size(spect));
+    spect_masked(region_inds) = spect(region_inds);
+    
+    % mask all border pixels as zero as well
+    border_inds = cat(1, borders{:}) - indshift;
+    border_inds = border_inds(border_inds>=1 & border_inds<=numel(spect)); % limit to valid indices
+    spect_masked(border_inds) = 0;
 
     % Compute time-frequency peaks
     if verbose
@@ -322,6 +298,7 @@ if double_watershed
         tfp = tic;
     end
 
+    % Augment extracted features with necessary computation features that will be removed later
     compute_features = unique([features, {'Duration', 'Bandwidth', 'PeakFrequency', 'Height'}]);
     if any(strcmpi(features, 'PeakStage'))
         compute_features = unique([compute_features, 'PeakTime']);
@@ -352,7 +329,7 @@ if any(strcmpi(features, 'PeakStage'))
     stats_table.Properties.VariableUnits{'PeakStage'} = 'Stage #';
 end
 
-% Remove all features not requested to be extracted
+% Remove all features not requested to be extracted (added by compute_features)
 stats_table = removevars(stats_table, setdiff(stats_table.Properties.VariableNames, features));
 
 if refinement
