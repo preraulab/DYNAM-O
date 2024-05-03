@@ -40,7 +40,9 @@ function [stats_table, regions, borders] = extractTFPeaks(img,x,y,features,num_s
 %   f_disp       -- flag indicator of whether to plot.
 %                   defaults to 0, unless using default data.
 % OUTPUTS:
-%   stats_table   -- Table of peak statistics. Each row is a peak.
+%   stats_table  -- Table of peak statistics. Each row is a peak.
+%   regions      -- A cell array of linear indices of peak regions in the current image.
+%   borders      -- A cell array of linear indices of peak borders in the current image.
 %
 %   Copyright 2024 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
