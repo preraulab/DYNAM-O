@@ -80,7 +80,7 @@ if any(struct_ind)
     else
         opt_struct = varargin{struct_ind}; % Store the struct
     end
-    varargin = {varargin{~struct_ind}}; % Remove struct from the varargins
+    varargin = varargin(~struct_ind); % Remove struct from the varargins
 
     argcell = namedargs2cell(opt_struct); % Convert the struct to cell array
     varargin = cat(2,varargin,argcell); % Add the new cell array with the params to the end of the varargins
@@ -91,6 +91,7 @@ if any(struct_ind)
     if length(str_cell)~=length(unique(str_cell))
         error('Cannot include struct and duplicate parameters.');
     end
+    
 end
 
 %% Parse inputs
@@ -162,8 +163,8 @@ end
 if isscalar(baseline_trim)
     buffer = baseline_trim;
     nonwake_stage_inds = ismember(stage_vals, [1,2,3,4]);
-    baseline_range(1) = max([ min(stage_times(nonwake_stage_inds))-buffer*60, 0]); % x minutes before first non-wake stage
-    baseline_range(2) = min([ max(stage_times(nonwake_stage_inds))+buffer*60, max(stage_times)]); % x minutes after last non-wake stage
+    baseline_range(1) = max([ min(stage_times(nonwake_stage_inds))-buffer*60, 0 ]); % x minutes before first non-wake stage
+    baseline_range(2) = min([ max(stage_times(nonwake_stage_inds))+buffer*60, max(stage_times) ]); % x minutes after last non-wake stage
 else
     % Empty array
     if isempty(baseline_trim)
@@ -202,6 +203,7 @@ if isempty(artifacts)
 else
     artifacts = artifacts(time_range_inds); % apply time_range selection
 end
+
 % Modify artifacts to include stages not in baseline_stages (useful for
 % excluding stage =0 in baseline computation
 exclude_idx = single(~ismember(stage_vals,baseline_stages));
@@ -214,11 +216,13 @@ artifacts_stimes = logical(interp1(t_data_trunc, double(artifacts), stimes, 'nea
 spect_bl = spect;
 spect_bl(:,artifacts_stimes) = NaN; % turn artifact times into NaNs for percentile computation
 spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
-% Applying triming for baseline computation
 
-baseline_range_inds = stimes>=baseline_range(1) & stimes<baseline_range(2);
+% Applying time period trimming for baseline computation
+baseline_range_inds = stimes >= baseline_range(1) & stimes <= baseline_range(2);
 spect_bl = spect_bl(:,baseline_range_inds);
-baseline = prctile(spect_bl, baseline_ptile, 2); % get baseline
+
+% Get baseline
+baseline = prctile(spect_bl, baseline_ptile, 2);
 
 %% Compute time-frequency peaks
 if verbose
@@ -233,7 +237,9 @@ else
     compute_features = unique([features, {'Duration', 'Bandwidth', 'PeakFrequency', 'Height'}]);
 end
 
-if any(strcmpi(features, 'PeakStage')); compute_features = unique([compute_features, 'PeakTime']); end
+if any(strcmpi(features, 'PeakStage'))
+    compute_features = unique([compute_features, 'PeakTime']);
+end
 
 if double_watershed
     [stats_table, regions, borders] = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
@@ -258,6 +264,9 @@ end
 %% Do a second round of watershed with finer frequency resolution of spectrogram
 if double_watershed
 
+    % Save the stimes from the first round of watershed
+    stimes_first = stimes;
+    
     % Compute multitaper spectrogram using new parameters with smaller spectral resolution
     [spect, stimes, sfreqs, ~, bw_min, ht_db_min] = compute_spectrogram([2,3], [2,0.05], data_trunc, Fs, dsfreqs, verbose);
     stimes = stimes + t_data_trunc(1); % adjust the time axis to t_data
@@ -269,7 +278,7 @@ if double_watershed
     spect_bl = spect;
     spect_bl(:,artifacts_stimes) = NaN; % turn artifact times into NaNs for percentile computation
     spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
-    baseline_range_inds = stimes>=baseline_range(1) & stimes<baseline_range(2);
+    baseline_range_inds = stimes >= baseline_range(1) & stimes <= baseline_range(2);
     spect_bl = spect_bl(:,baseline_range_inds);
     baseline = prctile(spect_bl, baseline_ptile, 2); % get baseline
 
@@ -283,28 +292,23 @@ if double_watershed
     switch mask_mode
         case {'polygon','poly','inpolygon'}
             spect_masked = maskSpectrogram(spect, stimes, sfreqs, stats_table, true);
-        case 'region'
+        case {'region', 'region_noborder'}
             %Remove the offset between start times of the spects
             dt = stimes(2)-stimes(1);
-            indshift = round(size(spect,1)*.5/dt);
-
-            region_inds = cat(1,regions{:}) - indshift;
-            region_inds = region_inds(region_inds>=1 & region_inds<=numel(spect));
-
-            spect_masked = zeros(size(spect));
-            spect_masked(region_inds) = spect(region_inds);
-        case 'region_noborder'
-            dt = stimes(2)-stimes(1);
-            indshift = round(size(spect,1)*.5/dt);
-
-            border_inds = cat(1,borders{:}) - indshift;
-            border_inds = border_inds(border_inds>=1 & border_inds<=numel(spect));
-            region_inds = cat(1,regions{:}) - indshift;
-            region_inds = region_inds(region_inds>=1 & region_inds<=numel(spect));
+            assert(dt == (stimes_first(2)-stimes_first(1)), 'The two rounds of watershed used different stepsizes. Cannot use linear indices.')
+            indshift = round((stimes(1)-stimes_first(1)) / dt) * size(spect, 1); % assuming same sfreqs across spects
+            
+            region_inds = cat(1, regions{:}) - indshift;
+            region_inds = region_inds(region_inds>=1 & region_inds<=numel(spect)); % limit to valid indices
 
             spect_masked = zeros(size(spect));
             spect_masked(region_inds) = spect(region_inds);
-            spect_masked(border_inds) = 0;
+            
+            if strcmp(mask_mode, 'region_noborder') % drop the border pixels
+                border_inds = cat(1, borders{:}) - indshift;
+                border_inds = border_inds(border_inds>=1 & border_inds<=numel(spect)); % limit to valid indices
+                spect_masked(border_inds) = 0;
+            end
     end
 
     % Mask the spectrogram using extracted TFpeaks from the first round of watershed
@@ -323,7 +327,7 @@ if double_watershed
         compute_features = unique([compute_features, 'PeakTime']);
     end
 
-    stats_table = runSegmentedData(spect_masked, stimes, sfreqs, baseline, seg_time, downsample_spect, features, ...
+    stats_table = runSegmentedData(spect_masked, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
         dur_min, bw_min, merge_thresh, max_merges, trim_vol);
 
     if verbose

@@ -40,6 +40,8 @@ function [stats_table, regions, borders] = runSegmentedData(spect, stimes, sfreq
 %
 % OUTPUTS:
 %   stats_table      -- table of peak statistics
+%   regions          -- A cell array of linear indices of peak regions in the entire spect.
+%   borders          -- A cell array of linear indices of peak borders in the entire spect.
 %
 % COPYRIGHT 2024 Prerau Lab - http://www.sleepEEG.org
 % This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
@@ -124,7 +126,7 @@ trim_shift = min(spect,[],'all');
 %% Segment spectrogram data
 [data_segs, x_segs, x_inds] = segmentData(spect, stimes, sfreqs, seg_time, f_verb, verb_pref);
 %Compute the linear index pixel shift for each segment
-pixel_shift = cellfun(@(x)x(1)-1,x_inds)'*size(spect,1);
+pixel_shift = cellfun(@(x)x(1)-1, x_inds) * size(spect,1);
 
 %% Extract TFpeaks from spectrogram segments
 % Initialize storage for parallel processing of image segs
@@ -197,15 +199,16 @@ end
 %% Assembles peaks stats for all segs into single table and sorts by peak time
 stats_table = cat(1,stats_tables{:});
 peaktimes_ind = find(strcmpi(stats_table.Properties.VariableNames, 'PeakTime'));
-stats_table = sortrows(stats_table, peaktimes_ind, 'ascend');
+[stats_table, sort_inds] = sortrows(stats_table, peaktimes_ind, 'ascend');
 
 if nargout>1
-    regions = cat(2, regions{:});
-    [~,sort_inds] = sort(stats_table.PeakTime,'ascend');
+    regions = cat(2, regions{:});  % linear indices here have been shifted to the entire spect
     regions = regions(sort_inds);
 end
+
 if nargout>2
-    borders = cat(2, borders{:});
+    borders = cat(2, borders{:});  % linear indices here have been shifted to the entire spect
     borders = borders(sort_inds);
 end
+
 end
