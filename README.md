@@ -28,7 +28,7 @@ To clone the DYNAM_O_dev.git repository to your own computer or remote work stat
 	mkdir DYNAM_O_dev
 
  ##### clone the repository to the folder you created:
-	git clone --recursive git@github.com:preraulab/DYNAM_O_dev.git DYNAM_O_dev
+	git clone --recursive git@github.com:preraulab/DYNAM-O_dev.git DYNAM_O_dev
 
  ##### set to master branch for all submodules:
 	git submodule foreach --recursive git checkout master
