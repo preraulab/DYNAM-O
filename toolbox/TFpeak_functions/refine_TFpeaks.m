@@ -21,6 +21,7 @@ p = inputParser;
 addRequired(p, 'data', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addRequired(p,'spindle_table',@(x) validateattributes(x, {'table'}, {'real'}));
+addOptional(p, 't',[], @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
 addOptional(p,'baseline_opt',false,@(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'refine_method', 'spline_interp', @(x) ismember(x,{'spline_interp','spline_opt','spect_max'}));
 addOptional(p,'remove_edge_peaks',true,@(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
@@ -30,10 +31,14 @@ parse(p,varargin{:});
 data = p.Results.data;
 Fs = p.Results.Fs;
 spindle_table = p.Results.spindle_table;
+t = p.Results.t;
 baseline_opt = p.Results.baseline_opt;
 refine_method = p.Results.refine_method;
 remove_edge_peaks = p.Results.remove_edge_peaks;
 
+if isempty(t)
+    t = (0:length(data)-1)/Fs;
+end
 
 %Force spline interp if spline fitting is unavailable
 if strcmpi(refine_method,'spline_opt') && ~license('test', 'Curve_Fitting_Toolbox')
@@ -74,7 +79,7 @@ bounding_box_height = spindle_table.BoundingBox(event_times_inc,4); % Element 4 
 % Compute Hann spectrogram at the center of each event time. Rather than
 % computing the entire spectrogram, this approach takes a fixed window
 % around each event center to use for the frequency refinement
-[spect, ~, sfreqs] = hanning_spectrogram_optimized(data, Fs, event_times(event_times_inc), ...
+[spect, ~, sfreqs] = hanning_spectrogram_optimized(data, Fs, event_times(event_times_inc),'t',t, ...
     'frequency_range', freq_range,'data_window_params',[window_size,step_size],'NFFT',nfft,'detrend_opt',detrend, 'plot_on',ploton,'verbose',mts_verbose);
 
 %% RECOMPUTE BASELINE
