@@ -1,4 +1,4 @@
-function [spindle_table] = refine_TFpeaks(data,Fs,spindle_table,baseline_opt, refine_method, remove_edge_peaks)
+function [spindle_table] = refine_TFpeaks(varargin)
 %REFINE_TFPEAKS  Compute a Hann spectrogram with 1Hz spectral resolution to refine the event frequencies
 %
 %   Usage:
@@ -17,13 +17,23 @@ function [spindle_table] = refine_TFpeaks(data,Fs,spindle_table,baseline_opt, re
 %    Copyright 2024 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
 %
 %% ********************************************************************
-%Sets default method to spline interpolation. See notes below
-if nargin<5
-    refine_method = 'spline_interp';
-end
+p = inputParser;
+addRequired(p, 'data', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
+addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
+addRequired(p,'spindle_table',@(x) validateattributes(x, {'table'}, {'real'}));
+addOptional(p,'baseline_opt',false,@(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
+addOptional(p, 'refine_method', 'spline_interp', @(x) ismember(x,{'spline_interp','spline_opt','spect_max'}));
+addOptional(p,'remove_edge_peaks',true,@(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 
-%Validate string
-refine_method = validatestring(refine_method,{'spline_interp','spline_opt','spect_max'});
+parse(p,varargin{:});
+% Manually assign variables because eval doesn't work with parpool
+data = p.Results.data;
+Fs = p.Results.Fs;
+spindle_table = p.Results.spindle_table;
+baseline_opt = p.Results.baseline_opt;
+refine_method = p.Results.refine_method;
+remove_edge_peaks = p.Results.remove_edge_peaks;
+
 
 %Force spline interp if spline fitting is unavailable
 if strcmpi(refine_method,'spline_opt') && ~license('test', 'Curve_Fitting_Toolbox')
@@ -31,9 +41,6 @@ if strcmpi(refine_method,'spline_opt') && ~license('test', 'Curve_Fitting_Toolbo
     refine_method = 'spline_interp';
 end
 
-if nargin<6
-    remove_edge_peaks = true;
-end
 
 %% SPECTROGRAM PARAMS
 dsfreqs = 0.05; % For example, with Fs = 200, this should make the nfft = 2^12
