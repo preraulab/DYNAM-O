@@ -29,8 +29,21 @@ function [hann_spectrogram,stimes,sfreqs] = hanning_spectrogram_optimized(vararg
 % PROCESS DATA AND PARAMETERS
 
 %Process user input
+p = inputParser;
+addRequired(p, 'data', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
+addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
+addRequired(p,'event_times',@(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
+addOptional(p, 'frequency_range',[], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonan'}));
+addOptional(p,'data_window_params',[5,1],@(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
+addOptional(p,'NFFT',0,@(x) validateattributes(x, {'numeric', 'scalar'}, {'real', 'nonempty'}));
+addOptional(p,'detrend_opt','linear',@(x) validateattributes(x,{'logical','char','string'},{'real','nonempty'}));
+addOptional(p,'plot_on',true,@(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
+addOptional(p,'verbose',true,@(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
+addOptional(p,'xyflip',false,@(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
+parse(p,varargin{:});
+
 [data, Fs, frequency_range, winsize_samples, winstep_samples, window_start, num_windows, nfft, detrend_opt, ...
-    plot_on, verbose, xyflip] = process_input(varargin{:});
+    plot_on, verbose, xyflip] = process_input(p);
 
 %Set up and display spectrogram parameters
 [window_idxs, stimes, sfreqs, freq_inds] = get_windows(Fs, nfft, frequency_range, window_start, winsize_samples);
@@ -139,31 +152,25 @@ end
 %% PROCESS THE USER INPUT
 
 function [data, Fs, frequency_range, winsize_samples, winstep_samples, window_start, num_windows, nfft, ...
-          detrend_opt, plot_on, verbose, xyflip,flag] = process_input(varargin)
-if length(varargin)<3
-    error('Too few inputs. Need at least data, sampling rate, and peak time points.');
+          detrend_opt, plot_on, verbose, xyflip,flag] = process_input(p)
+% Manually assign variables because eval doesn't work with parpool
+data = p.Results.data;
+Fs = p.Results.Fs;
+event_times = p.Results.event_times;
+frequency_range = p.Results.frequency_range;
+data_window_params = p.Results.data_window_params;
+NFFT = p.Results.NFFT;
+detrend_opt = p.Results.detrend_opt;
+plot_on = p.Results.plot_on;
+verbose = p.Results.verbose;
+xyflip = p.Results.xyflip;
+% Set defaults
+if isempty(frequency_range)
+    frequency_range = [0 Fs/2];
 end
-
-%Set default values for inputs
-default={[],[],[],[0 varargin{2}/2],[5,1], 0, 'linear', true, true, false};
-
-%Allow the fourth input to be ploton
-if nargin == 4 && islogical(varargin{4})
-    default{6} = varargin{4};
-    varargin = varargin(1:3);
-end
-
-%Handle defaults
-inputs = default;
-inputs(setdiff(1:length(varargin), find(cellfun(@isempty,varargin)))) = varargin(~cellfun(@isempty,(varargin)));
-
-%Transfer input vector to parameters
-[data, Fs, event_times, frequency_range, data_window_params, NFFT, detrend_opt, plot_on, verbose, xyflip] = deal(inputs{:});
-
-if NFFT==0
-    NFFT = 2^(nextpow2(data_window_params(1)*Fs)); 
-end
-
+if NFFT ==0
+   NFFT = 2^(nextpow2(data_window_params(1)*Fs)); 
+end 
 %Set either linear or constant detrending
 if detrend_opt ~= false
     switch lower(detrend_opt)
@@ -175,7 +182,6 @@ if detrend_opt ~= false
             detrend_opt = 'linear';
     end
 end
-
 %Fix error in frequency range
 if length(frequency_range) == 1 %Set max frequency to nyquist if only lower bound specified
     frequency_range(2) = Fs/2;
@@ -200,9 +206,6 @@ if mod(data_window_params(2)*Fs,1)
 else
     winstep_samples=data_window_params(2)*Fs;
 end
-
-%Total data length
-N=length(data);
 
 %Force data to be a column vector 
 if isrow(data)
