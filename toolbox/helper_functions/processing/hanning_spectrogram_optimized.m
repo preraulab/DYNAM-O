@@ -218,8 +218,8 @@ if isrow(data)
 end
 
 % Find index in the full signal where each window starts
-window_start = event_times - data_window_params(1)/2;
-window_start = max(floor(window_start*Fs)',1); % TEMPORARY UNTIL TESTED
+window_start = event_times - data_window_params(1)/2; %seconds
+window_start = max(floor(window_start*Fs)',1); % indices
 
 
 %Number of windows
