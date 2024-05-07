@@ -9,7 +9,11 @@ function [spindle_table] = refine_TFpeaks(varargin)
 %       Fs: double - sampling frequency in Hz  -- required
 %       spindle_table: table - list of events, including the peak times, peak frequencies,
 %                      and the bounding box -- required
+%       t: double - <number of samples> x 1  vector timestamps for data. Default = (0:length(data)-1)/Fs;
 %       baseline_opt: logical - true to include baseline removal, false to exclude (default: false)
+%       refine_method: Method to assign max frequency value using interpolation 'spline_interp', 'spline_opt', or 'spect_max'
+%       remove_edge_peaks: logical - true to remove peaks at edge of event
+%                           bounding box (default: true)
 %
 %   Output:
 %       spindle_table: input spindle table with the Peak Frequency column updated following the 1Hz refinement
@@ -61,15 +65,13 @@ mts_verbose = false; % suppress verbose messages
 %% Extract necessary stats from the spindle table
 
 % Calculate total recording time
-data_len = length(data)/Fs;
-
+data_len = t(end)-t(1);
+% Event times alligned with the start of data
 event_times = spindle_table.PeakTime-t(1);
 % Exclude event times that fall within half the window size distance from
 % the start/end of the data collected
-event_times_inc = event_times>=(0.5*window_size) & event_times<=data_len-(0.5*window_size);
+event_times_inc = event_times >=(0.5*window_size) & event_times<=data_len-(0.5*window_size);
 
-% POTENTIAL FIX:
-%event_times_inc(floor((event_times-(window_size/2))*Fs)==0) = 0;
 
 bounding_box_lower = spindle_table.BoundingBox(event_times_inc,2); % Element 2 of the bounding box corresponds to the lower bound frequency of the detected event
 bounding_box_height = spindle_table.BoundingBox(event_times_inc,4); % Element 4 of the bounding box gives the height of the bounding box
@@ -79,7 +81,7 @@ bounding_box_height = spindle_table.BoundingBox(event_times_inc,4); % Element 4 
 % Compute Hann spectrogram at the center of each event time. Rather than
 % computing the entire spectrogram, this approach takes a fixed window
 % around each event center to use for the frequency refinement
-[spect, ~, sfreqs] = hanning_spectrogram_optimized(data, Fs, event_times(event_times_inc),'t',t, ...
+[spect, ~, sfreqs] = hanning_spectrogram_optimized(data, Fs, event_times(event_times_inc), ...
     'frequency_range', freq_range,'data_window_params',[window_size,step_size],'NFFT',nfft,'detrend_opt',detrend, 'plot_on',ploton,'verbose',mts_verbose);
 
 %% RECOMPUTE BASELINE
@@ -167,7 +169,7 @@ parfor ii = 1:N_events
 end
 
 % Update the spindle table with the refined frequency array
-spindle_table.PeakFrequency(event_times>=(0.5*window_size) & event_times<=data_len-(0.5*window_size)) = peak_freqs;
+spindle_table.PeakFrequency(event_times_inc) = peak_freqs;
 
 end
 
