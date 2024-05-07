@@ -9,12 +9,14 @@ function [hann_spectrogram,stimes,sfreqs] = hanning_spectrogram_optimized(vararg
 %       data: <number of samples> x 1  vector - time series data-- required
 %       Fs: double - sampling frequency in Hz  -- required
 %       event_times - 1xN vector with a time for each peak -- required
+%       t: double - <number of samples> x 1  vector timestamps for data. Default = (0:length(data)-1)/Fs;
 %       frequency_range: 1x2 vector - [<min frequency>, <max frequency>] (default: [0 nyquist])
 %       window_params: 1x2 vector - [window size (seconds), step size (seconds)] (default: [5 1])
 %       nfft: double - NFFT size, adds zero padding for interpolation (closest 2^x) (default: 0)
 %       detrend_opt: string - detrend data window ('linear' (default), 'constant', 'off');
 %       plot_on: boolean to plot results (default: true)
 %       verbose: boolean to display spectrogram properties (default: true)
+%       xyflip: boolean to flip spectrogram (default: false)
 %
 %   Output:
 %       spect: FxT matrix of spectral power
@@ -69,8 +71,6 @@ start_time = datetime('now');
 
 hann_taper = hann(winsize_samples);
 hann_taper = hann_taper / sqrt(sum(hann_taper.^2));
-
-%temp_reg = zeros(1024,3,num_windows);
 
 %Loop in parallel over all of the windows
 parfor n = 1:num_windows % REMOVE PARFOR TO TEST
@@ -218,7 +218,7 @@ if isrow(data)
 end
 
 % Find index in the full signal where each window starts
-window_start = event_times - data_window_params(1)/2; %seconds
+window_start = event_times - t(1)- data_window_params(1)/2; %seconds
 window_start = max(floor(window_start*Fs)',1); % indices
 
 
