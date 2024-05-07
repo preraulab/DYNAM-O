@@ -120,8 +120,8 @@ addOptional(p, 'isexcluded', [], @(x) validateattributes(x, {'logical', 'vector'
 %SOPH settings
 addOptional(p, 'freq_range', [0,40], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'freq_binsizestep', [1, 0.2], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
-addOptional(p, 'SOpower_range', [], @(x) validateattributes(x,{'numeric', 'vector'}, {'real', 'nonempty'}));
-addOptional(p, 'SOpower_binsizestep', [], @(x) validateattributes(x,{'numeric', 'vector'}, {'real', 'nonempty'}));
+addOptional(p, 'SOpower_range', [], @(x) validateattributes(x,{'numeric', 'vector'}, {'real'}));
+addOptional(p, 'SOpower_binsizestep', [], @(x) validateattributes(x,{'numeric', 'vector'}, {'real'}));
 addOptional(p, 'SOphase_range', [-pi,pi], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'SOphase_binsizestep', [(2*pi)/5, (2*pi)/100], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
 addOptional(p, 'SO_freqrange', [0.3, 1.5], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan'}));
@@ -135,8 +135,8 @@ addOptional(p, 'SOpower_retain_Fs', true, @(x) validateattributes(x,{'logical'},
 addOptional(p, 'SOpower_min_time_in_bin', 10, @(x) validateattributes(x,{'numeric'},{'scalar','real','finite','nonnan','nonnegative','integer'}));
 addOptional(p, 'SOphase_filter', []);
 addOptional(p, 'SOphase_norm_dim', 1, @(x) validateattributes(x,{'numeric'},{'scalar','real','finite','nonnan','nonnegative','integer'}));
-addOptional(p, 'SOpower_tapers', [15 29], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
-addOptional(p, 'SOpower_window_params', [30 15], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
+addOptional(p, 'SOpower_tapers', [5 9], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
+addOptional(p, 'SOpower_window_params', [5 .5], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
 
 %Display settings
 addOptional(p, 'plot_on', false, @(x) validateattributes(x,{'logical'},{}));

@@ -14,8 +14,8 @@ addOptional(p, 'SO_freqrange', [0.3, 1.5], @(x) validateattributes(x, {'numeric'
 addOptional(p, 'SOpower_outlier_threshold', 3, @(x) validateattributes(x,{'numeric'}, {'scalar'}));
 addOptional(p, 'norm_method', 'p2shift1234', @(x) validateattributes(x, {'char', 'numeric'},{}));
 addOptional(p, 'retain_Fs', true, @(x) validateattributes(x,{'logical'},{}));
-addOptional(p, 'tapers', [15 29], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
-addOptional(p, 'window_params', [30 15], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
+addOptional(p, 'tapers', [5 9], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
+addOptional(p, 'window_params', [5 .5], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
 
 %EEG time settings
 addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
@@ -105,22 +105,9 @@ elseif isValidShiftstr
 end
 
 
-% Note: right now the stage selection is only applied to the 'shift'
+% To do: right now the stage selection is only applied to the 'shift'
 % method. If we were to use proportion, percentile, ALL stages will be
 % used. Is this what we want?
-
-% Note: two other cases coded in SOpower_histogram_allstageTIB() is now
-% removed:
-%     case {'NREMshift', 'nrem', 'NREM'}
-%         NREM_SOpow = SOpower_goodstages(ismember(stages_SOpower, [1,2]));
-%         NREM_SOpow_mean_first5 = mean(NREM_SOpow(1:round(300/SOpow_times_step)), 'omitnan'); % mean of first 5 min of NREM
-%         SOpower_norm = SOpower_goodstages - NREM_SOpow_mean_first5;
-%         ptile = [];
-% 
-%     case {'N1', 'n1', 'N1shift', 'n1shift'}
-%         N1_SOpow_mean = mean(SOpower_goodstages(stages_SOpower==3), 'omitnan');
-%         SOpower_norm = SOpower_goodstages - N1_SOpow_mean;
-%         ptile = [];
 
 switch norm_method
     case {'proportion', 'normalized'}
@@ -136,11 +123,12 @@ switch norm_method
         SOpower_norm = SOpower_norm/(ptile(2) - ptile(1));  % Normalize between 1 and 0
 
     case {'shift'}
-        if islogical(SOpower_stages) && SOpower_stages
-            SOpower_stages_valid = true(size(SOpower_stages));
-        else
-            SOpower_stages_valid = ismember(SOpower_stages, shift_stages);
-        end
+        %To Do: allow for pXshiftsleep = 1:4, NREM, 1:3, etc.
+
+        %Check for valid shift stages
+        SOpower_stages_valid = ismember(SOpower_stages, shift_stages);
+        assert(any(SOpower_stages_valid),['No valid stages found for shift normalization. {' num2str(shift_stages) '} are not valid members of {' num2str(unique(SOpower_stages)) '}']);
+
         ptile = prctile(SOpower(SOpower_times>=time_range(1) & SOpower_times<=time_range(2) & SOpower_stages_valid), shift_ptile);
         SOpower_norm = SOpower-ptile(1);
 
