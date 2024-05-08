@@ -213,7 +213,8 @@ baseline_exclude_stimes = logical(interp1(t_data_trunc, double(baseline_exclude)
 baseline_range_inds = stimes >= baseline_range(1) & stimes <= baseline_range(2);
 % Exclude segments with artifact/not in baseline include or withing baseline range for baseline computation
 spect_bl = spect;
-spect_bl(:,baseline_exclude_stimes|baseline_range_inds) = NaN; 
+spect_bl(:,baseline_exclude_stimes) = NaN;
+spect_bl(:,baseline_exclude_stimes|~baseline_range_inds) = NaN; 
 spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
 % Get baseline
 baseline = prctile(spect_bl, baseline_ptile, 2);
@@ -267,7 +268,7 @@ if double_watershed
     % Re-compute baseline spectrum
     % Exclude segments with artifact/not in baseline include or withing baseline range for baseline computation
     spect_bl = spect;
-    spect_bl(:,baseline_exclude_stimes|baseline_range_inds) = NaN; 
+    spect_bl(:,baseline_exclude_stimes|~baseline_range_inds) = NaN; 
     spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
     % Get baseline
     baseline = prctile(spect_bl, baseline_ptile, 2);
