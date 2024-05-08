@@ -202,23 +202,19 @@ else
     artifacts = artifacts(time_range_inds); % apply time_range selection
 end
 
-% Modify artifacts to include stages not in baseline_stages (useful for
-% excluding stage =0 in baseline computation
+%% Compute baseline spectrum used to flatten data spectrum
+% Exclude artifacts and anything not in baseline_include in baseline
+% computation
 exclude_idx = single(~ismember(stage_vals,baseline_stages));
 exclude_resamp = logical(interp1(stage_times, exclude_idx, t_data_trunc, 'previous'));
-artifacts = artifacts|exclude_resamp';
-artifacts_stimes = logical(interp1(t_data_trunc, double(artifacts), stimes, 'nearest')); % get artifacts occurring at spectrogram times
-
-%% Compute baseline spectrum used to flatten data spectrum
-% Exclude segments with artifacts during baseline computation
-spect_bl = spect;
-spect_bl(:,artifacts_stimes) = NaN; % turn artifact times into NaNs for percentile computation
-spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
-
+baseline_exclude = artifacts|exclude_resamp';
+baseline_exclude_stimes = logical(interp1(t_data_trunc, double(baseline_exclude), stimes, 'nearest')); % get excluded baseline times occurring at spectrogram times
 % Applying time period trimming for baseline computation
 baseline_range_inds = stimes >= baseline_range(1) & stimes <= baseline_range(2);
-spect_bl = spect_bl(:,baseline_range_inds);
-
+% Exclude segments with artifact/not in baseline include or withing baseline range for baseline computation
+spect_bl = spect;
+spect_bl(:,baseline_exclude_stimes|baseline_range_inds) = NaN; 
+spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
 % Get baseline
 baseline = prctile(spect_bl, baseline_ptile, 2);
 
@@ -264,16 +260,18 @@ if double_watershed
     [spect, stimes, sfreqs, ~, bw_min, ht_db_min] = compute_spectrogram([2,3], [2,0.05], data_trunc, Fs, dsfreqs, verbose);
     stimes = stimes + t_data_trunc(1); % adjust the time axis to t_data
 
-    % Update artifact vector
-    artifacts_stimes = logical(interp1(t_data_trunc, double(artifacts), stimes, 'nearest')); % get artifacts occurring at spectrogram times
-
-    % Re-compute baseline spectrum
-    spect_bl = spect;
-    spect_bl(:,artifacts_stimes) = NaN; % turn artifact times into NaNs for percentile computation
-    spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
+    % Update baseline exclusion
+    baseline_exclude_stimes = logical(interp1(t_data_trunc, double(baseline_exclude), stimes, 'nearest')); % get artifacts occurring at spectrogram times
+    % Applying time period trimming for baseline computation
     baseline_range_inds = stimes >= baseline_range(1) & stimes <= baseline_range(2);
-    spect_bl = spect_bl(:,baseline_range_inds);
-    baseline = prctile(spect_bl, baseline_ptile, 2); % get baseline
+    % Re-compute baseline spectrum
+    % Exclude segments with artifact/not in baseline include or withing baseline range for baseline computation
+    spect_bl = spect;
+    spect_bl(:,baseline_exclude_stimes|baseline_range_inds) = NaN; 
+    spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
+    % Get baseline
+    baseline = prctile(spect_bl, baseline_ptile, 2);
+
 
     % Mask the spectrogram using extracted TFpeaks from the first round of watershed
     % Remove the offset between start times of spects from the two rounds
