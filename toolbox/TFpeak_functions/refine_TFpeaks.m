@@ -11,7 +11,9 @@ function [spindle_table] = refine_TFpeaks(varargin)
 %                      and the bounding box -- required
 %       t: double - <number of samples> x 1  vector timestamps for data. Default = (0:length(data)-1)/Fs;
 %       baseline_opt: logical - true to include baseline removal, false to exclude (default: false)
-%       refine_method: Method to assign max frequency value using interpolation 'spline_interp', 'spline_opt', or 'spect_max'
+%       refine_method: Method to assign max frequency value using
+%       interpolation 'spline_interp', 'spline_opt', or 'spect_max'
+%       (default: spline_interp)
 %       remove_edge_peaks: logical - true to remove peaks at edge of event
 %                           bounding box (default: true)
 %
