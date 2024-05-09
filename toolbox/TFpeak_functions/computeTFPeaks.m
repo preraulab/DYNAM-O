@@ -337,7 +337,7 @@ if refinement
         disp('Refining peaks...');
     end
     rft = tic;
-    stats_table = refine_TFpeaks(data_trunc,Fs,stats_table,'t',t_data_trunc,'baseline_opt',false,'refine_method','spline_interp', ...
+    stats_table = refineTFpeaks(data_trunc,Fs,stats_table,'t',t_data_trunc,'baseline_opt',false,'refine_method','spline_interp', ...
         'remove_edge_peaks',true);
     stats_table(isnan(stats_table.PeakFrequency),:) = [];
     if verbose

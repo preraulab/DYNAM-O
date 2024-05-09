@@ -1,4 +1,4 @@
-function [spindle_table] = refine_TFpeaks(varargin)
+function [spindle_table] = refineTFpeaks(varargin)
 %REFINE_TFPEAKS  Compute a Hann spectrogram with 1Hz spectral resolution to refine the event frequencies
 %
 %   Usage:
@@ -79,7 +79,7 @@ bounding_box_height = spindle_table.BoundingBox(event_times_inc,4); % Element 4 
 % Compute Hann spectrogram at the center of each event time. Rather than
 % computing the entire spectrogram, this approach takes a fixed window
 % around each event center to use for the frequency refinement
-[spect, ~, sfreqs] = hanning_spectrogram_optimized(data, Fs, event_times(event_times_inc),'t',t, ...
+[spect, ~, sfreqs] = hann_event_spectra(data, Fs, event_times(event_times_inc),'t',t, ...
     'frequency_range', freq_range,'data_window_params',[window_size,step_size],'NFFT',nfft,'detrend_opt',detrend, 'plot_on',ploton,'verbose',mts_verbose);
 
 %% RECOMPUTE BASELINE
