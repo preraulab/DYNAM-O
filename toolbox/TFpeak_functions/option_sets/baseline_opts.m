@@ -6,7 +6,7 @@ p = inputParser;
 % Generate Baseline Options Structure
 %*******************************************
 %Sleep stages to include for baseline detection
-addOptional(p, 'baseline_stages',[1,2,3,4,5],@(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
+addOptional(p, 'baseline_include',[1,2,3,4,5],@(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 %Percentile to use for fixed baseline detection
 addOptional(p, 'baseline_ptile',2,@(x) validateattributes(x, {'numeric', 'scalar'}, {'real', 'nonempty'}));
 %Start and stop times for baseline trimming OR integer representing buffer time (min) around the first and last sleep period.
