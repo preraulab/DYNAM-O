@@ -32,11 +32,11 @@ function [hann_spectrogram,stimes,sfreqs] = hanning_spectrogram_optimized(vararg
 
 %Process user input
 p = inputParser;
-addRequired(p, 'data', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
+addRequired(p,'data', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
+addRequired(p,'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addRequired(p,'event_times',@(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-addOptional(p, 't',[], @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
-addOptional(p, 'frequency_range',[], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonan'}));
+addOptional(p,'t',[], @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
+addOptional(p,'frequency_range',[], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonan'}));
 addOptional(p,'data_window_params',[5,1],@(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addOptional(p,'NFFT',0,@(x) validateattributes(x, {'numeric', 'scalar'}, {'real', 'nonempty'}));
 addOptional(p,'detrend_opt','linear',@(x) validateattributes(x,{'logical','char','string'},{'real','nonempty'}));
@@ -219,8 +219,8 @@ end
 
 % Find index in the full signal where each window starts
 window_start = event_times - t(1)- data_window_params(1)/2; %seconds
-window_start = max(floor(window_start*Fs)',1); % indices
-
+window_start = floor(window_start*Fs)'; % indices
+assert(all(window_start>0), 'Negative or 0 window start indices')
 
 %Number of windows
 num_windows = length(window_start);
