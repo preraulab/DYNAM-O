@@ -21,9 +21,8 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %                                  {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData',
 %                                   'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. Default = 'all'
 %       artifacts (opt):           [1xn] logical - boolean indicating artifact time points. Default = [], run detect_artifacts()
-%       baseline_stages (opt):     [1xp] double - stages to include
-%                                  in spectrogram baseline computation. All timepoints outside these
-%                                  stages will be considered artifact
+%       baseline_include (opt):    [1xn] logical - boolean indicating time points to include in baseline computation OR [1xp] array of stages 
+%                                  to include in spectrogram baseline computation. 
 %       baseline_trim (opt):       2D array representing start and stop
 %                                  times for baseline trimming OR integer representing buffer time (min)
 %                                  around the first and last sleep period.
@@ -110,7 +109,7 @@ addOptional(p, 'artifacts', [], @(x) validateattributes(x,{'logical'},{'real','f
 addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'struct'},{}));
 
 %Baseline struct
-addOptional(p, 'baseline_stages',[1,2,3,4,5],@(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
+addOptional(p, 'baseline_include',[1,2,3,4,5],@(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addOptional(p, 'baseline_ptile',2,@(x) validateattributes(x, {'numeric', 'scalar'}, {'real', 'nonempty'}));
 addOptional(p, 'baseline_trim',[],@(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
 
@@ -205,7 +204,12 @@ end
 %% Compute baseline spectrum used to flatten data spectrum
 % Exclude artifacts and anything not in baseline_include in baseline
 % computation
-exclude_idx = single(~ismember(stage_vals,baseline_stages));
+if length(baseline_include)==length(data) %full baseline_include passed in
+    baseline_include = baseline_include(time_range_inds);
+    exclude_idx = ~baseline_include;
+else
+    exclude_idx = single(~ismember(stage_vals,baseline_include)); %stages to use passed in
+end
 exclude_resamp = logical(interp1(stage_times, exclude_idx, t_data_trunc, 'previous'));
 baseline_exclude = artifacts|exclude_resamp';
 baseline_exclude_stimes = logical(interp1(t_data_trunc, double(baseline_exclude), stimes, 'nearest')); % get excluded baseline times occurring at spectrogram times
