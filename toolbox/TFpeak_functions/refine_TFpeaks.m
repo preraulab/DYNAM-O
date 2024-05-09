@@ -24,12 +24,12 @@ function [spindle_table] = refine_TFpeaks(varargin)
 %
 %% ********************************************************************
 p = inputParser;
-addRequired(p, 'data', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
+addRequired(p,'data', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
+addRequired(p,'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addRequired(p,'spindle_table',@(x) validateattributes(x, {'table'}, {'real'}));
-addOptional(p, 't',[], @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
+addOptional(p,'t',[], @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
 addOptional(p,'baseline_opt',false,@(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
-addOptional(p, 'refine_method', 'spline_interp', @(x) ismember(x,{'spline_interp','spline_opt','spect_max'}));
+addOptional(p,'refine_method', 'spline_interp', @(x) ismember(x,{'spline_interp','spline_opt','spect_max'}));
 addOptional(p,'remove_edge_peaks',true,@(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 
 parse(p,varargin{:});
