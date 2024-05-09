@@ -1,4 +1,4 @@
-function [hann_spectrogram,stimes,sfreqs] = hanning_spectrogram_optimized(varargin)
+function [hann_spectrogram,stimes,sfreqs] = hann_event_spectra(varargin)
 %HANNING_SPECTROGRAM  Compute the spectrogram for time series data with Hanning windowing
 %
 %   Usage:
