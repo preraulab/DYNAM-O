@@ -219,8 +219,8 @@ end
 
 % Find index in the full signal where each window starts
 window_start = event_times - t(1)- data_window_params(1)/2; %seconds
-window_start = max(floor(window_start*Fs)',1); % indices
-
+window_start = floor(window_start*Fs)'; % indices
+assert(all(window_start>0), 'Negative or 0 window start indices')
 
 %Number of windows
 num_windows = length(window_start);
