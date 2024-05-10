@@ -5,6 +5,7 @@ p = inputParser;
 %*******************************************
 % Generate Baseline Options Structure
 %*******************************************
+baseline_exclude = logical([]);
 %Sleep stages to include for baseline detection
 addOptional(p, 'baseline_stages',[1,2,3,4,5],@(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 %Percentile to use for fixed baseline detection
