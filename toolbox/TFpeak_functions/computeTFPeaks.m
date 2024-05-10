@@ -366,7 +366,7 @@ nfft = 2^(nextpow2(Fs/dsfreqs)); % zero pad data to this minimum value for fft
 detrend = 'constant'; % do not detrend
 weight = 'unity'; % each taper is weighted the same
 ploton = false; % do not plot out
-mts_verbose = false; % suppress verbose messages
+mts_verbose = true; % suppress verbose messages
 
 %MTS frequency resolution
 df = taper_params(1)/time_window_params(1)*2;
