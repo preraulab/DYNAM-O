@@ -268,7 +268,7 @@ if double_watershed
     stimes = stimes + t_data_trunc(1); % adjust the time axis to t_data
 
     % Update baseline exclusion
-    baseline_exclude_stimes = logical(interp1(t_data_trunc, double(baseline_exclude), stimes, 'nearest')); % get artifacts occurring at spectrogram times
+    baseline_exclude_stimes = logical(interp1(t_data_trunc, double(baseline_exclude), stimes, 'nearest')); 
     % Applying time period trimming for baseline computation
     baseline_range_inds = stimes >= baseline_range(1) & stimes <= baseline_range(2);
     % Re-compute baseline spectrum
