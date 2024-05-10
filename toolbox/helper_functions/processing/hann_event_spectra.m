@@ -36,7 +36,7 @@ addRequired(p,'data', @(x) validateattributes(x, {'numeric', 'vector'}, {'real',
 addRequired(p,'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addRequired(p,'event_times',@(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addOptional(p,'t',[], @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
-addOptional(p,'frequency_range',[], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonan'}));
+addOptional(p,'frequency_range',[], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonnan'}));
 addOptional(p,'data_window_params',[5,1],@(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addOptional(p,'NFFT',0,@(x) validateattributes(x, {'numeric', 'scalar'}, {'real', 'nonempty'}));
 addOptional(p,'detrend_opt','linear',@(x) validateattributes(x,{'logical','char','string'},{'real','nonempty'}));
