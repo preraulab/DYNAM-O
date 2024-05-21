@@ -8,7 +8,7 @@ function [hann_spectrogram,stimes,sfreqs] = hann_event_spectra(varargin)
 %   Input:
 %       data: <number of samples> x 1  vector - time series data-- required
 %       Fs: double - sampling frequency in Hz  -- required
-%       event_times - 1xN vector with a time for each peak -- required
+%       event_times - 1xN vector with a time for each peak. Events must fall within (window size/2) from the data time extents -- required
 %       t: double - <number of samples> x 1  vector timestamps for data. Default = (0:length(data)-1)/Fs;
 %       frequency_range: 1x2 vector - [<min frequency>, <max frequency>] (default: [0 nyquist])
 %       window_params: 1x2 vector - [window size (seconds), step size (seconds)] (default: [5 1])
@@ -33,9 +33,9 @@ function [hann_spectrogram,stimes,sfreqs] = hann_event_spectra(varargin)
 %Process user input
 p = inputParser;
 addRequired(p,'data', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-addRequired(p,'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-addRequired(p,'event_times',@(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-addOptional(p,'t',[], @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
+addRequired(p,'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty','positive'}));
+addRequired(p,'event_times',@(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty','increasing'}));
+addOptional(p,'t',[], @(x) validateattributes(x, {'numeric', 'vector'}, {'real','increasing'}));
 addOptional(p,'frequency_range',[], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonnan'}));
 addOptional(p,'data_window_params',[5,1],@(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addOptional(p,'NFFT',0,@(x) validateattributes(x, {'numeric', 'scalar'}, {'real', 'nonempty'}));
@@ -57,7 +57,7 @@ end
 
 %Preallocate spectrogram and slice data for efficient parallel computing
 data_type = class(data);
-hann_spectrogram = zeros(sum(freq_inds), num_windows, data_type);
+hann_spectrogram = nan(sum(freq_inds), num_windows, data_type);
 data_segments = data(window_idxs)';
 
 %Start timing
@@ -78,12 +78,7 @@ parfor n = 1:num_windows % REMOVE PARFOR TO TEST
     data_segment = data_segments(:,n);
     
     %Skip empty segments
-    if all(data_segment == 0)
-        continue;
-    end
-    
-    if any(isnan(data_segment))
-        hann_spectrogram(:,n) = nan;
+    if all(data_segment == 0) || any(isnan(data_segment))
         continue;
     end
     
@@ -187,8 +182,13 @@ if detrend_opt ~= false
             detrend_opt = 'linear';
     end
 end
+
+%Make sure all events are within the correct range
+win_buffer = data_window_params(1)/2;
+assert(all(event_times>t(1)+win_buffer & event_times<t(end)-win_buffer),'All events must fall within winsize/2 from the time extents of the data');
+
 %Fix error in frequency range
-if length(frequency_range) == 1 %Set max frequency to nyquist if only lower bound specified
+if isscalar(frequency_range) %Set max frequency to nyquist if only lower bound specified
     frequency_range(2) = Fs/2;
 elseif frequency_range(2) > Fs/2 % updated on 05/18/2020 to remove floor on (Fs/2)
     frequency_range(2) = Fs/2;
@@ -218,8 +218,8 @@ if isrow(data)
 end
 
 % Find index in the full signal where each window starts
-window_start = event_times - t(1)- data_window_params(1)/2; %seconds
-window_start = floor(window_start*Fs)'; % indices
+window_start = event_times - t(1)- win_buffer; %seconds
+window_start = floor(window_start*Fs)'+1; % indices
 assert(all(window_start>0), 'Negative or 0 window start indices')
 
 %Number of windows
