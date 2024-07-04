@@ -96,16 +96,16 @@ end
 p = inputParser;
 p.KeepUnmatched=true;
 
-addRequired(p, 'data', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
+addRequired(p, 'data', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'row', 'nonempty'}));
 addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric', 'vector'}, {'real','nonempty'}));
 addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric', 'vector'}, {'real','nonempty'}));
 
-addOptional(p, 't_data', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
+addOptional(p, 't_data', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','row','nonnan'}));
 addOptional(p, 'time_range', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'features', 'all',  @(x) validateattributes(x,{'char', 'cell'},{}));
 
-addOptional(p, 'artifacts', [], @(x) validateattributes(x,{'logical'},{'real','finite','nonnan'}));
+addOptional(p, 'artifacts', [], @(x) validateattributes(x,{'logical'},{'real','finite','row','nonnan'}));
 addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'struct'},{}));
 
 %Baseline struct
@@ -212,9 +212,9 @@ end
 % computation
 
 exclude_stages = single(~ismember(stage_vals,baseline_stages)); %stages to use passed in
-exclude_stages_resamp = logical(interp1(stage_times, exclude_stages, t_data_trunc, 'previous'));
+exclude_stages_resamp = interp1(stage_times, exclude_stages, t_data_trunc, 'previous','extrap')==1; %==1 instead of logical handles NaN
 baseline_exclude = artifacts'|exclude_stages_resamp|baseline_exclude;
-baseline_exclude_stimes = logical(interp1(t_data_trunc, double(baseline_exclude), stimes, 'nearest')); % get excluded baseline times occurring at spectrogram times
+baseline_exclude_stimes = interp1(t_data_trunc, double(baseline_exclude), stimes, 'nearest','extrap')==1; % get excluded baseline times occurring at spectrogram times
 % Applying time period trimming for baseline computation
 baseline_range_inds = stimes >= baseline_range(1) & stimes <= baseline_range(2);
 % Exclude segments with artifact/not in baseline include or withing baseline range for baseline computation
