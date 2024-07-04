@@ -1,4 +1,4 @@
-function [SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, SOpow_TIB, SOphase_TIB, peak_SOpower, peak_SOphase, peak_selection_inds, ...
+function [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, SOpower_TIB, SOphase_TIB, peak_SOpower, peak_SOphase, peak_selection_inds, ...
     SOpower, SOpower_times, SOphase, SOphase_times, SOdata] = SOpowerphaseHistogram(EEG,Fs,varargin)
 % SOPOWERPHASEHISTOGRAM: Computes slow-oscillation power and phase histogram matrices
 %
@@ -113,7 +113,7 @@ addOptional(p, 'stage_vals', [], @(x) validateattributes(x, {'double', 'single'}
 addOptional(p, 'stage_times', [], @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
 
 %EEG time settings
-addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
+addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','row','nonnan'}));
 addOptional(p, 'time_range', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'isexcluded', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
 
@@ -189,7 +189,7 @@ if verbose
     disp('Computing SO-power histogram...');
 end
 
-[SOpow_mat, freq_bins, SOpow_bins, SOpow_TIB, ~, peak_SOpower, hist_peakidx_SOpower, SOpower, SOpower_times] =...
+[SOpower_mat, freq_bins, SOpower_bins, SOpower_TIB, ~, peak_SOpower, hist_peakidx_SOpower, SOpower, SOpower_times] =...
     SOpowerHistogram(SOpower, SOpower_times, TFpeak_freqs, TFpeak_times,...
     'TFpeak_stages', TFpeak_stages, 'stage_vals', single(stage_vals), 'stage_times', stage_times,...
     'freq_range', freq_range, 'freq_binsizestep', freq_binsizestep, 'SO_range', SOpower_range, 'SO_binsizestep', SOpower_binsizestep,...
