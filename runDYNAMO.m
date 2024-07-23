@@ -9,9 +9,9 @@
 %       stage_times: 1 x <number of stages> vector - times of sleep stages in seconds -- required
 %       stage_vals: 1 x <number of stages> vector - values of sleep stages -- required
 %       time_range: 1x2 vector - [<start time>, <end time>] in seconds (default: range of scored data)
-%       detection_options: structure - parameters for detection algorithm (default: detection_opts)
-%       baseline_options: structure - parameters for baseline algorithm (default: baseline_opts)
-%       SOPH_options: structure - parameters for SO-power/phase histograms (default: SOpowerphasehist_opts)
+%       detection_options: structure - parameters for detection algorithm (default: detection_opts())
+%       baseline_options: structure - parameters for baseline algorithm (default: baseline_opts())
+%       SOPH_options: structure - parameters for SO-power/phase histograms (default: SOpowerphasehist_opts())
 %       save_output_image: logical - flag to save the output image (default: false)
 %       output_fname: char or string - filename for saving the output image (default: 'DYNAM-O_output')
 %       verbose: logical - flag for verbose output (default: true)
@@ -64,9 +64,9 @@ addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 
 addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric', 'vector'}, {'real','row','nonempty'}));
 addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric', 'vector'}, {'real','row','nonempty'}));
 addOptional(p, 'time_range', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','nonempty', 'nonnan'}));
-addOptional(p, 'detection_options', detection_opts, @(x) validateattributes(x,{'structure'},{'nonempty'}));
-addOptional(p, 'baseline_options', baseline_opts, @(x) validateattributes(x,{'structure'},{'nonempty'}));
-addOptional(p, 'SOPH_options', SOpowerphasehist_opts, @(x) validateattributes(x,{'structure'},{'nonempty'}));
+addOptional(p, 'detection_options', detection_opts(), @(x) validateattributes(x,{'structure'},{'nonempty'}));
+addOptional(p, 'baseline_options', baseline_opts(), @(x) validateattributes(x,{'structure'},{'nonempty'}));
+addOptional(p, 'SOPH_options', SOpowerphasehist_opts(), @(x) validateattributes(x,{'structure'},{'nonempty'}));
 addOptional(p, 'save_output_image', false, @(x) validateattributes(x,{'logical'},{'nonempty', 'nonnan'}));
 addOptional(p, 'output_fname', 'DYNAM-O_output', @(x) validateattributes(x,{'char','string'},{'nonempty'}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'nonempty', 'nonnan'}));
@@ -161,26 +161,26 @@ if plot_on
     % Create figure
     fh = figure('Color',[1 1 1],'units','inches','position',[0 0 8.5 11]);
     orient portrait;
-
+    
     %Hypnogram/spectrogram/SO-power axes
     hypn_spect_ax(1) = axes('Parent',fh,'Position',[0.06 0.913 0.83 0.056]);
     hypn_spect_ax(2) = axes('Parent',fh,'Position',[0.06 0.756 0.83 0.157]);
     hypn_spect_ax(3) = axes('Parent',fh,'Position',[0.06 0.7   0.83 0.056]);
-
+    
     %Scatter plot axes
     ax(1) = axes('Parent',fh,'Position',[0.06 0.45 0.83 0.2]);
-
+    
     %SO-power/phase axes
     ax(2) = axes('Parent',fh,'Position',[0.06  0.07 0.335 0.3]);
     ax(3) = axes('Parent',fh,'Position',[0.555 0.07 0.335 0.3]);
-
+    
     % Link axes of appropriate plots
     linkaxes([hypn_spect_ax, ax(1)], 'x');
     linkaxes([hypn_spect_ax(2), ax(1)], 'y');
-
+    
     % Set yaxis limits
     ylimits = [2,25];
-
+    
     % Plot hypnogram
     axes(hypn_spect_ax(1));
     %Adds artifacts raster below hypnogram, as computed in the time-domain,
@@ -189,7 +189,7 @@ if plot_on
     xlim(time_range/3600)
     ylim(hypn_spect_ax(1),[.3 5.1])
     th(1) = title('EEG Spectrogram');
-
+    
     % Plot spectrogram
     axes(hypn_spect_ax(2))
     stimes_inds = stimes_disp >= time_range(1) & stimes_disp <= time_range(2);
@@ -197,18 +197,18 @@ if plot_on
     axis xy
     colormap(hypn_spect_ax(2), rainbow4);
     climscale;
-
+    
     c = colorbar_noresize; % set colobar
     c.Label.String = 'Power (dB)'; % colobar label
     c.Label.Rotation = -90; % rotate colorbar label
     c.Label.VerticalAlignment = "bottom";
-
+    
     ylabel('Frequency (Hz)');
     xlabel('')
     ylim(ylimits);
     hypn_spect_ax(1).XTick = [];
     xlim(time_range/3600)
-
+    
     % Plot SO-Power trace
     axes(hypn_spect_ax(3))
     plot(SOpower_times/3600,SOpower_norm,'linewidth',2)
@@ -218,7 +218,7 @@ if plot_on
     ylim([min_SOP-(0.1*abs(min_SOP)), max_SOP+(0.1*abs(max_SOP))])
     hypn_spect_ax(1).YTick = [round(min_SOP, 2, 'significant') round((max_SOP+min_SOP)/2, 2, 'significant') round(max_SOP, 2, 'significant')];
     hypn_spect_ax(1).YTickLabel = num2str(get(hypn_spect_ax(3),'ytick')','%.1f');
-
+    
     switch SOPH_options.SOpower_norm_method
         case 'percent'
             ylab = '%SOP';
@@ -227,54 +227,54 @@ if plot_on
         otherwise
             ylab = 'SOP (dB)';
     end
-
+    
     ylabel(ylab);
-
+    
     % Plot time-frequency peak scatterplot
     axes(ax(1))
     %Compute peak dot size
     pmin = prctile(stats_table_SOPH.Volume, 5); % get 5th ptile of heights
     peak_size = stats_table_SOPH.Volume / pmin * 0.5;  % 5th ptile fixed at size 0.5
-
+    
     %Do not plot larger than 95th ptile or else dots could obscure other things on the plot
     pmax = prctile(stats_table_SOPH.Volume, 95); % get 95th ptile of heights
     pmax_inds = stats_table_SOPH.Volume> pmax;
     peak_size(pmax_inds) = nan;
-
+    
     scatter(stats_table_SOPH.PeakTime/3600, stats_table_SOPH.PeakFrequency, peak_size, stats_table_SOPH.SOphase, 'filled'); % scatter plot all peaks
-
+    
     %Make circular colormap
     colormap(ax(1),circshift(hsv(2^12),-650))
-
+    
     c = colorbar_noresize;
     c.Label.String = 'Phase (radians)';
     c.Label.Rotation = -90;
     c.Label.VerticalAlignment = "bottom";
     c.XTick = [-pi -pi/2 0 pi/2 pi];
     c.XTickLabel = {'-\pi', '-\pi/2', '0', '\pi/2', '\pi'};
-
+    
     ylabel('Frequency (Hz)');
     ylim(ylimits);
-
+    
     xlabel('Time (hrs)')
     th(2) = title('Extracted Time-Frequency Peaks');
     xlim(time_range/3600)
-
+    
     % Plot SO-power histogram
     axes(ax(2))
     imagesc(SOpower_bins, freq_bins, SOpower_mat');
     axis xy;
     colormap(ax(2), gouldian);
-
+    
     %Set colorscale
     c_ptiles = prctile(SOpower_mat(:), [5, 98]);
     caxis(gca,[c_ptiles(1) c_ptiles(2)]);
-
+    
     c = colorbar_noresize;
     c.Label.String = {'Density', '(peaks/min in bin)'};
     c.Label.Rotation = -90;
     c.Label.VerticalAlignment = "bottom";
-
+    
     switch SOPH_options.SOpower_norm_method
         case 'percent'
             xlab = '% SO-Power';
@@ -287,31 +287,31 @@ if plot_on
     ylabel('Frequency (Hz)');
     ylim(ylimits);
     th(3) = title('SO-Power Histogram');
-
+    
     % Plot SO-phase histogram
     axes(ax(3))
     imagesc(SOphase_bins, freq_bins, SOphase_mat');
     axis xy;
     colormap(ax(3), 'magma');
-
+    
     %Scale color limits
     c_ptiles = prctile(SOphase_mat(:), [5, 98]);
     caxis([c_ptiles(1) c_ptiles(2)]);
-
+    
     c = colorbar_noresize;
     c.Label.String = {'Proportion'};
     c.Label.Rotation = -90;
     c.Label.VerticalAlignment = "bottom";
-
+    
     xlabel('SO-Phase (rad)');
     xticks([-pi -pi/2 0 pi/2 pi])
     xticklabels({'-\pi', '-\pi/2', '0', '\pi/2', '\pi'});
     ylim(ylimits);
     th(4) = title('SO-Phase Histogram');
-
+    
     set([ax(1:3) hypn_spect_ax],'fontsize',10)
     set(th,'fontsize',15)
-
+    
     %% PRINT OUTPUT
     if save_output_image
         %Output filename
@@ -324,9 +324,9 @@ function [stats_table, SOPHs] = runExampleData()
 disp('Running Example Data...');
 
 %Load default options
-detection_options = detection_opts;
-baseline_options = baseline_opts;
-SOPH_options = SOpowerphasehist_opts;
+detection_options = detection_opts();
+baseline_options = baseline_opts();
+SOPH_options = SOpowerphasehist_opts();
 
 %% DATA SETTINGS
 %Location of example data
@@ -343,22 +343,22 @@ switch data_range
     case 'segment'
         % Choose an example segment from the data
         time_range = [8420 13446];
-
+        
         %Set the minimum time in SO-power bin to include in the SOPH
         SOPH_options.SOpower_min_time_in_bin = 5;
-
+        
         disp(['Running example segment', newline])
     case 'night'
         % Choose an example segment from the data
         wake_buffer = 5*60; %5 minute buffer before/after first/last wake
         start_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'first')) - wake_buffer;
         end_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'last')) + wake_buffer;
-
+        
         time_range = [start_time end_time];
-
+        
         %Set the minimum time in SO-power bin to include in the SOPH
         SOPH_options.SOpower_min_time_in_bin = 10;
-
+        
         disp(['Running full night', newline])
 end
 
