@@ -37,6 +37,11 @@
 
 function [stats_table, SOPHs] = runDYNAMO(varargin)
 %%%% Example script showing how to compute time-frequency peaks and SO-power/phase histograms
+% Users are encouraged to edit this script and the data loading boilerplate
+% in runExampleData() for their specific analysis. This script is provided
+% only as a template for illustrative purposes on how to use various
+% functions in DYNAM-O in tantem. It is not an official entry point
+% function to use the DYNAM-O toolbox.
 
 %% PATH SETTINGS
 % Add necessary functions to path
@@ -151,7 +156,8 @@ if verbose
 end
 
 % COMPUTE SPECTROGRAM FOR DISPLAY
-[spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(data, Fs, [2,25], [15 29], [30 15], [],'linear',[],false,false);
+freq_limits = [2,25];
+[spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(data, Fs, freq_limits, [15 29], [30 15], [],'linear',[],false,false);
 
 % Plot only TFpeaks that contribute to SO-power/phase histograms
 stats_table_SOPH = stats_table(hist_peakidx, :);
@@ -179,7 +185,7 @@ if plot_on
     linkaxes([hypn_spect_ax(2), ax(1)], 'y');
     
     % Set yaxis limits
-    ylimits = [2,25];
+    ylimits = freq_limits;  % can be modified to change the figure limits
     
     % Plot hypnogram
     axes(hypn_spect_ax(1));
