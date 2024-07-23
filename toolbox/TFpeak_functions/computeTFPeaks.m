@@ -110,7 +110,7 @@ addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'struct'},{}))
 
 %Baseline struct
 addOptional(p, 'baseline_stages',[1,2,3,4,5],@(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-addOptional(p, 'baseline_exclude',[], @(x) validateattributes(x,{'logical'},{'real','finite','nonnan'}));
+addOptional(p, 'baseline_exclude',[],@(x) validateattributes(x,{'logical'},{'real','finite','nonnan'}));
 addOptional(p, 'baseline_ptile',2,@(x) validateattributes(x, {'numeric', 'scalar'}, {'real', 'nonempty'}));
 addOptional(p, 'baseline_trim',[],@(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
 
