@@ -105,7 +105,7 @@ addOptional(p, 't_data', [], @(x) validateattributes(x,{'numeric', 'vector'},{'r
 addOptional(p, 'time_range', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'features', 'all',  @(x) validateattributes(x,{'char', 'cell'},{}));
 
-addOptional(p, 'artifacts', [], @(x) validateattributes(x,{'logical'},{'real','finite','row','nonnan'}));
+addOptional(p, 'artifacts', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','row','nonnan'}));
 addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'struct'},{}));
 
 %Baseline struct
