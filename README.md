@@ -22,13 +22,13 @@ Included in this package are versions of a rainbow and "gouldian" colormap, desi
 --- 
 ## Initial Clone 
 
-To clone the DYNAM_O_dev.git repository to your own computer or remote work station, you need to create an empty folder to contain the repository. You can name it whatever you want and place it wherever you want. For a post on the subtle differences between different git versions on initial clone: https://stackoverflow.com/questions/3796927/how-to-git-clone-including-submodules 
+To clone the DYNAM-O_dev.git repository to your own computer or remote work station, you need to create an empty folder to contain the repository. You can name it whatever you want and place it wherever you want. For a post on the subtle differences between different git versions on initial clone: https://stackoverflow.com/questions/3796927/how-to-git-clone-including-submodules 
  
  ##### create an empty folder:
-	mkdir DYNAM_O_dev
+	mkdir DYNAM-O_dev
 
  ##### clone the repository to the folder you created:
-	git clone --recursive git@github.com:preraulab/DYNAM-O_dev.git DYNAM_O_dev
+	git clone --recursive git@github.com:preraulab/DYNAM-O_dev.git DYNAM-O_dev
 
  ##### set to master branch for all submodules:
 	git submodule foreach --recursive git checkout master
