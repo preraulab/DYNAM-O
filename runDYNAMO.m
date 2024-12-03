@@ -114,12 +114,13 @@ ttotal = datetime('now');
 % See computeTFPeaks() for a full list of optional arguments for finer
 % control of watershed extraction of Time-Frequency Peaks
 
-% If no stats table provided
 if isempty(stats_table)
+    % If no stats table provided
     [stats_table, spect, stimes, sfreqs, data_trunc, t_data, artifacts]= computeTFPeaks(data, Fs, stage_vals, stage_times,...
         'time_range', time_range, baseline_options, detection_options); %#ok<*ASGLU>
-% If stats table provided, check to be sure SOPH has also been provided
+
 else
+    % If stats table provided, check to be sure SOPH is asked for output
     assert(nargout==2,'Nothing to compute. Must provide SOPH output if stats table is used as input.');
 
     if verbose
@@ -137,7 +138,6 @@ end
 % finer control of Histogram generation
 
 if nargout==2
-
     [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins,...
         SOpower_TIB, SOphase_TIB, stats_table.SOpower, stats_table.SOphase, hist_peakidx,...
         SOpower_norm, SOpower_times, SOphase, SOphase_times, SOdata] = SOpowerphaseHistogram(...
@@ -179,7 +179,7 @@ else
         disp('Computing TF-peaks only. No SOPH output requested.');
     end
 
-    % This value generally comes from the SOPH- if not computing the SOPH,
+    % This value generally comes from the SOPH - if not computing the SOPH,
     % set all to true.
     hist_peakidx = true(1,height(stats_table));
 
@@ -248,8 +248,6 @@ if plot_on
         xlim(time_range/3600)
 
         % Plot SO-Power trace
-        % Leave empty if no SOPH outputs requested
-
         axes(hypn_spect_ax(3))
         plot(SOpower_times/3600,SOpower_norm,'linewidth',2)
         xlim(time_range/3600)
@@ -283,7 +281,6 @@ if plot_on
 
         scatter(stats_table_SOPH.PeakTime/3600, stats_table_SOPH.PeakFrequency, peak_size, stats_table_SOPH.SOphase, 'filled'); % scatter plot all peaks
 
-
         %Make circular colormap
         colormap(ax(1),circshift(hsv(2^12),-650))
 
@@ -302,7 +299,6 @@ if plot_on
         xlim(time_range/3600)
 
         % Plot SO-power histogram
-
         axes(ax(2))
         imagesc(SOpower_bins, freq_bins, SOpower_mat');
         axis xy;
@@ -310,7 +306,7 @@ if plot_on
 
         %Set colorscale
         c_ptiles = prctile(SOpower_mat(:), [5, 98]);
-        caxis(gca,[c_ptiles(1) c_ptiles(2)]);
+        clim(gca,[c_ptiles(1) c_ptiles(2)]);
 
         c = colorbar_noresize;
         c.Label.String = {'Density', '(peaks/min in bin)'};
@@ -338,7 +334,7 @@ if plot_on
 
         %Scale color limits
         c_ptiles = prctile(SOphase_mat(:), [5, 98]);
-        caxis([c_ptiles(1) c_ptiles(2)]);
+        clim([c_ptiles(1) c_ptiles(2)]);
 
         c = colorbar_noresize;
         c.Label.String = {'Proportion'};
@@ -355,7 +351,6 @@ if plot_on
         set(th,'fontsize',15)
 
     else
-
         % Create figure
         fh = figure('Color',[1 1 1],'units','inches','position',[0 0 8.5 11]);
         orient portrait;
@@ -402,7 +397,6 @@ if plot_on
         hypn_spect_ax(1).XTick = [];
         xlim(time_range/3600)
 
-
         % Plot time-frequency peak scatterplot
         axes(ax(1))
         %Compute peak dot size
@@ -435,6 +429,7 @@ if plot_on
     end
 end
 end
+
 
 function [stats_table, SOPHs] = runExampleData()
 disp('Running Example Data...');
