@@ -1,6 +1,6 @@
 function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifacts] = computeTFPeaks(varargin)
-% COMPUTETFPKEAKS: Run watershed algorithm to extract time-frequency peaks
-%                  from spectrogram of data
+%COMPUTETFPKEAKS: Run watershed algorithm to extract time-frequency peaks
+%                 from spectrogram of data
 %
 %   Usage:
 %       [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifacts] = ...

@@ -1,4 +1,4 @@
-%RUN DYNAMO  Compute time-frequency peaks and SO-power/phase histograms
+%RUNDYNAMO: Compute time-frequency peaks and SO-power/phase histograms
 %
 %   Usage:
 %       [stats_table, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options, save_output_image, output_fname, verbose, plot_on)
@@ -36,7 +36,6 @@
 %       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
 %
 %**********************************************************************
-
 
 function [stats_table, SOPHs] = runDYNAMO(varargin)
 %%%% Example script showing how to compute time-frequency peaks and SO-power/phase histograms
