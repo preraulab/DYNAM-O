@@ -10,21 +10,21 @@ addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','n
 
 %Double vs single watershed
 addOptional(p, 'double_watershed', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
-%Frequency refinment using 1Hz df hann spectrum for final frequency parameter computation
-addOptional(p, 'refinement', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 
 %Frequency bin resolution of the spectrogram
 addOptional(p, 'dsfreqs', 0.1, @(x) validateattributes(x,{'scalar','numeric'},{'real','nonempty', 'nonnan'}));
-%Fixed quality setting by name 'fast', 'precision', 'paper', 
-addOptional(p, 'quality_setting', '', @(x) validateattributes(x,{'char','numeric'},{}));
+
+%Watershed parameters
 %Decimation steps for the spectrogram prior to watershed
 addOptional(p, 'downsample_spect', [2 2], @(x) validateattributes(x,{'vector','numeric'},{}));
 %Segment size for spectrogram paralleization
 addOptional(p, 'seg_time', 30, @(x) validateattributes(x,{'scalar','numeric'},{}));
-
-%Watershed parameters
 %Threshold weight value for when to stop merge rule
 addOptional(p, 'merge_thresh', 11, @(x) validateattributes(x,{'scalar','numeric'},{}));
+%Fixed quality setting by name 'fast', 'precision', 'paper', 
+addOptional(p, 'quality_setting', '', @(x) validateattributes(x,{'char','numeric'},{}));
+
+%Merging and trimming parameters
 %Maximum number of merges to perform
 addOptional(p, 'max_merges', inf, @(x) validateattributes(x,{'scalar','numeric'},{}));
 %Fraction maximum trimmed volume
@@ -33,6 +33,9 @@ addOptional(p, 'trim_vol', 0.8, @(x) validateattributes(x,{'scalar','numeric'},{
 addOptional(p, 'dur_max', 5, @(x) validateattributes(x,{'scalar','numeric'},{}));
 %Max bandwidth allowed
 addOptional(p, 'bw_max', 15, @(x) validateattributes(x,{'scalar','numeric'},{}));
+
+%Frequency refinement using 1Hz df hann spectrum for final PeakFrequency feature computation
+addOptional(p, 'refinement', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 
 %Features to compute
 all_features = {'all', 'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height',  'HeightData',...

@@ -20,11 +20,11 @@ function [stats_table, regions, borders] = runSegmentedData(spect, stimes, sfreq
 %   features         -- cell array of features to include, can be any subset of
 %                       {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData',
 %                        'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. default 'all'
-%   dur_min          -- minimum duration allowed
-%   bw_min           -- minimum bandwidth allowed
+%   dur_min          -- minimum duration allowed. default 0.
+%   bw_min           -- minimum bandwidth allowed. default 0.
 %   merge_thresh     -- threshold weight value for when to stop merge rule. default 8.
 %   max_merges       -- maximum number of merges to perform. default inf.
-%   trim_vol         -- fraction maximum trimmed volume (from 0 to 1),
+%   trim_vol         -- fraction of maximum in trimmed volume (from 0 to 1),
 %                       i.e. 1 means no trim. default 0.8.
 %   f_verb           -- number indicating depth of output text statements of progress.
 %                       0 - no output.

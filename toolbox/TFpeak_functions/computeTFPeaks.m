@@ -3,7 +3,7 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %                  from spectrogram of data
 %
 %   Usage:
-%       [stats_table, spect, stimes, sfreqs, data, t_data, artifacts] = ...
+%       [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifacts] = ...
 %               computeTFPeaks(data, Fs, stage_times, stage_vals, <options>)
 %
 %   Inputs:
@@ -21,26 +21,41 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %                                  {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData',
 %                                   'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. Default = 'all'
 %       artifacts (opt):           [nx1] logical - boolean indicating artifact time points. Default = [], run detect_artifacts()
-%       baseline_exclude (opt):    [1xn] logical - boolean indicating time points to exclude in baseline computation 
+%       artifact_filters (opt):    struct with 2 digitalFilter fields "hpFilt_high","hpFilt_broad" -
+%                                  filters to be used for artifact detection
+%
+%       BASELINE_OPTS STRUCTURE PARAMETERS - see baseline_opts()
 %       baseline_stages (opt):     [1xp] double - stages to include in spectrogram baseline computation
+%       baseline_exclude (opt):    [1xn] logical - boolean indicating time points to exclude in baseline computation
+%       baseline_ptile (opt):      scalar - percentile of power spectral density at every frequency used for baseline subtraction
+%                                  Default = 2
 %       baseline_trim (opt):       2D array representing start and stop
 %                                  times for baseline trimming OR integer representing buffer time (min)
 %                                  around the first and last sleep period.
 %                                  Default = [-inf,inf]
-%       artifact_filters (opt):    struct with 2 digitalFilter fields "hpFilt_high","hpFilt_broad" -
-%                                  filters to be used for artifact detection
-%       stages_include (not used): [1xp] double - which stages to include in the SO-power and
-%                                  SO-phase histograms. Default = [1,2,3,4]
-%                                  W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
+%
+%       DETECTION_OPTS STRUCTURE PARAMETERS - see detection_opts()
+%       verbose (opt):             logical - whether to print out messages when performing each computation step. Default = true
 %       double_watershed (opt):    logical - whether to run two rounds of watershed to achieve better
-%                                       frequency resolution in addition to good temporal resolution. Default = true
+%                                  frequency resolution in addition to good temporal resolution. Default = true
+%       dsfreqs (opt):             scalar - frequency bin resolution between two consecutive frequency samples,
+%                                  which is used to determine nfft in spectrogram computation. Default = 0.1
 %       verbose (opt):             logical - display extra info. Default = true
-%       quality_setting (opt):     charcater - Quality settings for the algorithm:
+%       downsample_spect (opt):    2D array representing the number of decimation steps during downsampling spectrogram
+%                                  for watershed and merging to extract peaks. Default = [2, 2]
+%       seg_time (opt):            scalar - length in seconds of each segment of spectrogram on which peaks are extracted.
+%                                  Default = 30 (seconds)
+%       merge_thresh (opt):        scalar - threshold weight value for when to stop merge rule. Default = 11
+%       quality_setting (opt):     character - Quality settings for the algorithm:
 %                                       'precision': high res settings
 %                                       'fast' (default): speed-up with minimal impact on results *suggested*
 %                                       'draft': faster speed-up with increased high frequency TF-peaks, *not recommended for analyzing SOphase*
-%       refinement (opt):          logical - perform 1Hz refinement on the spindle table from double watershed. Default = true
-%
+%                                  N.B.: setting quality_setting will overwrite the downsample_spect, seg_time, and merge_thresh inputs
+%       max_merges (opt):          integer - maximum number of merges to perform. Default = inf
+%       trim_vol (opt):            scalar - fraction of maximum in trimmed volume (from 0 to 1), i.e. 1 means no trim. Default = 0.8
+%       dur_max (opt):             scalar - maximum duration allowed for a peak. Default = 5 (seconds)
+%       bw_max (opt):              scalar - maximum bandwidth allowed for a peak. Default = 15 (Hz)
+%       refinement (opt):          logical - perform 1Hz refinement on the PeakFrequency feature in stats_table. Default = true
 %
 %   Outputs:
 %       stats_table:  table - time, frequency, height, SOpower, and SOphase
@@ -66,8 +81,8 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %**********************************************************************
 
 %%
-% If a struct is input with the SOPH settings/params, detect and
-% reformat it to work with the input parser below.
+% If a struct is input with settings/params, detect and reformat it to work
+% with the input parser below.
 struct_ind = cellfun(@isstruct,varargin); % Get index of the struct
 
 if any(struct_ind)
@@ -89,7 +104,7 @@ if any(struct_ind)
     if length(str_cell)~=length(unique(str_cell))
         error('Cannot include struct and duplicate parameters.');
     end
-    
+
 end
 
 %% Parse inputs
@@ -114,19 +129,19 @@ addOptional(p, 'baseline_exclude',[],@(x) validateattributes(x,{'logical'},{'rea
 addOptional(p, 'baseline_ptile',2,@(x) validateattributes(x, {'numeric', 'scalar'}, {'real', 'nonempty'}));
 addOptional(p, 'baseline_trim',[],@(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
 
-%TF-peak struct
+%TF-peak detection struct
+addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'double_watershed', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'dsfreqs', 0.1, @(x) validateattributes(x,{'scalar','numeric'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'downsample_spect', [2 2], @(x) validateattributes(x,{'vector','numeric'},{}));
 addOptional(p, 'seg_time', 30, @(x) validateattributes(x,{'scalar','numeric'},{}));
 addOptional(p, 'merge_thresh', 11, @(x) validateattributes(x,{'scalar','numeric'},{}));
-addOptional(p, 'max_merges', inf, @(x) validateattributes(x,{'scalar','numeric'},{}));
 addOptional(p, 'quality_setting', '', @(x) validateattributes(x,{'char','numeric'},{}));
-addOptional(p, 'refinement', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
-addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
+addOptional(p, 'max_merges', inf, @(x) validateattributes(x,{'scalar','numeric'},{}));
 addOptional(p, 'trim_vol', 0.8, @(x) validateattributes(x,{'scalar','numeric'},{}));
 addOptional(p, 'dur_max', 5, @(x) validateattributes(x,{'scalar','numeric'},{}));
 addOptional(p, 'bw_max', 15, @(x) validateattributes(x,{'scalar','numeric'},{}));
+addOptional(p, 'refinement', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -246,7 +261,7 @@ else
 end
 
 if verbose
-    disp(['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
+    disp(['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]); %#ok<*DATST>
 end
 
 %% Filter stats_table based on {Duration, Bandwidth, PeakFrequency, and Height}
@@ -262,13 +277,13 @@ if double_watershed
 
     % Save the stimes from the first round of watershed
     stimes_first = stimes;
-    
+
     % Compute multitaper spectrogram using new parameters with smaller spectral resolution
     [spect, stimes, sfreqs, ~, bw_min, ht_db_min] = compute_spectrogram([2,3], [2,0.05], data_trunc, Fs, dsfreqs, verbose);
     stimes = stimes + t_data_trunc(1); % adjust the time axis to t_data
 
     % Update baseline exclusion
-    baseline_exclude_stimes = logical(interp1(t_data_trunc, double(baseline_exclude), stimes, 'nearest')); 
+    baseline_exclude_stimes = logical(interp1(t_data_trunc, double(baseline_exclude), stimes, 'nearest'));
     % Applying time period trimming for baseline computation
     baseline_range_inds = stimes >= baseline_range(1) & stimes <= baseline_range(2);
     % Re-compute baseline spectrum
@@ -284,13 +299,13 @@ if double_watershed
     dt = stimes(2)-stimes(1);
     assert(dt == (stimes_first(2)-stimes_first(1)), 'The two rounds of watershed used different stepsizes. Cannot use linear indices.')
     indshift = round((stimes(1)-stimes_first(1)) / dt) * size(spect, 1); % assuming same sfreqs across spects
-    
+
     % mask all pixels outside of peak regions as zero
     region_inds = cat(1, regions{:}) - indshift;
     region_inds = region_inds(region_inds>=1 & region_inds<=numel(spect)); % limit to valid indices
     spect_masked = zeros(size(spect));
     spect_masked(region_inds) = spect(region_inds);
-    
+
     % mask all border pixels as zero as well
     border_inds = cat(1, borders{:}) - indshift;
     border_inds = border_inds(border_inds>=1 & border_inds<=numel(spect)); % limit to valid indices
@@ -351,7 +366,8 @@ end
 
 end
 
-% Helper function to compute spectrogram and return various parameters
+
+%% Helper functions to compute spectrogram and return various parameters
 function [spect, stimes, sfreqs, dur_min, bw_min, ht_db_min] = compute_spectrogram(taper_params, time_window_params, data_trunc, Fs, dsfreqs, verbose)
 
 if isempty(taper_params)
@@ -392,6 +408,7 @@ else
 end
 
 end
+
 
 function [seg_time, merge_thresh, downsample_spect] = get_presets(quality_setting)
 % Check quality settings
