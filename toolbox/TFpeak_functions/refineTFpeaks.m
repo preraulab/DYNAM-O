@@ -1,14 +1,14 @@
-function [spindle_table] = refineTFpeaks(varargin)
+function [stats_table] = refineTFpeaks(varargin)
 %REFINE_TFPEAKS  Compute a Hann spectrogram with 1Hz spectral resolution to refine the event frequencies
 %
 %   Usage:
-%       [spindle_table] = refine_TFpeaks(data, Fs, spindle_table, baseline_opt, method)
+%       [stats_table] = refine_TFpeaks(data, Fs, stats_table, baseline_opt, method)
 %
 %   Input:
 %       data: <number of samples> x 1  vector - time series data -- required
 %       Fs: double - sampling frequency in Hz  -- required
-%       spindle_table: table - list of events, including the peak times, peak frequencies,
-%                      and the bounding box -- required
+%       stats_table: table - list of events, including the peak times, peak frequencies,
+%                    and the bounding box -- required
 %       t: double - <number of samples> x 1  vector timestamps for data. Default = (0:length(data)-1)/Fs;
 %       baseline_opt: logical - true to include baseline removal, false to exclude (default: false)
 %       refine_method: Method to assign max frequency value using
@@ -18,7 +18,7 @@ function [spindle_table] = refineTFpeaks(varargin)
 %                           bounding box (default: true)
 %
 %   Output:
-%       spindle_table: input spindle table with the Peak Frequency column updated following the 1Hz refinement
+%       stats_table: input stats table with the Peak Frequency column updated following the 1Hz refinement
 %
 %    Copyright 2024 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
 %
@@ -26,7 +26,7 @@ function [spindle_table] = refineTFpeaks(varargin)
 p = inputParser;
 addRequired(p,'data', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
 addRequired(p,'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-addRequired(p,'spindle_table',@(x) validateattributes(x, {'table'}, {'real'}));
+addRequired(p,'stats_table',@(x) validateattributes(x, {'table'}, {'real'}));
 addOptional(p,'t',[], @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
 addOptional(p,'baseline_opt',false,@(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 addOptional(p,'refine_method', 'spline_interp', @(x) ismember(x,{'spline_interp','spline_opt','spect_max'}));
@@ -36,7 +36,7 @@ parse(p,varargin{:});
 % Manually assign variables because eval doesn't work with parpool
 data = p.Results.data;
 Fs = p.Results.Fs;
-spindle_table = p.Results.spindle_table;
+stats_table = p.Results.stats_table;
 t = p.Results.t;
 baseline_opt = p.Results.baseline_opt;
 refine_method = p.Results.refine_method;
@@ -64,15 +64,15 @@ detrend = 'constant'; % do not detrend
 ploton = false; % do not plot out
 mts_verbose = false; % suppress verbose messages
 
-%% Extract necessary stats from the spindle table
-event_times = spindle_table.PeakTime;
+%% Extract necessary stats from the stats_table
+event_times = stats_table.PeakTime;
 % Exclude event times that fall within half the window size distance from
 % the start/end of the data collected
 event_times_inc = event_times > t(1)+(0.5*window_size) & event_times < t(end)-(0.5*window_size);
 
 
-bounding_box_lower = spindle_table.BoundingBox(event_times_inc,2); % Element 2 of the bounding box corresponds to the lower bound frequency of the detected event
-bounding_box_height = spindle_table.BoundingBox(event_times_inc,4); % Element 4 of the bounding box gives the height of the bounding box
+bounding_box_lower = stats_table.BoundingBox(event_times_inc,2); % Element 2 of the bounding box corresponds to the lower bound frequency of the detected event
+bounding_box_height = stats_table.BoundingBox(event_times_inc,4); % Element 4 of the bounding box gives the height of the bounding box
 
 %% SPECTROGRAM
 
@@ -97,10 +97,10 @@ if baseline_opt
     [spect, ~] = removeBaseline(spect, baseline); % recompute spect with baseline removed
 end
 
-%% REFINE SPINDLE TABLE
-N_events = height(spindle_table(event_times_inc,:));
+%% REFINE STATS_TABLE
+N_events = height(stats_table(event_times_inc,:));
 % Pre-allocate space to store updated spindle values
-peak_freqs = NaN(height(spindle_table(event_times_inc,:)),1);
+peak_freqs = NaN(height(stats_table(event_times_inc,:)),1);
 
 % Loop through each event
 parfor ii = 1:N_events
@@ -166,8 +166,8 @@ parfor ii = 1:N_events
 
 end
 
-% Update the spindle table with the refined frequency array
-spindle_table.PeakFrequency(event_times_inc) = peak_freqs;
+% Update the stats_table with the refined frequency array
+stats_table.PeakFrequency(event_times_inc) = peak_freqs;
 
 end
 

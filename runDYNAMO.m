@@ -1,16 +1,18 @@
 %RUN DYNAMO  Compute time-frequency peaks and SO-power/phase histograms
 %
 %   Usage:
-%       [stats_table, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, detection_options, baseline_options, SOPH_options, save_output_image, output_fname, verbose, plot_on)
+%       [stats_table, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options, save_output_image, output_fname, verbose, plot_on)
 %
-%   Input:
+%   Inputs:
 %       data: 1 x <number of samples> vector - time series data -- required
 %       Fs: double - sampling frequency in Hz -- required
 %       stage_times: 1 x <number of stages> vector - times of sleep stages in seconds -- required
 %       stage_vals: 1 x <number of stages> vector - values of sleep stages -- required
+%
+%   Optional inputs:
 %       time_range: 1x2 vector - [<start time>, <end time>] in seconds (default: range of scored data)
-%       detection_options: structure - parameters for detection algorithm (default: detection_opts())
 %       baseline_options: structure - parameters for baseline algorithm (default: baseline_opts())
+%       detection_options: structure - parameters for detection algorithm (default: detection_opts())
 %       SOPH_options: structure - parameters for SO-power/phase histograms (default: SOpowerphasehist_opts())
 %       stats_table: table - TF-peak stats_table output from computeTFPeaks for direct computation of SOPH (default: [])
 %       save_output_image: logical - flag to save the output image (default: false)
@@ -18,7 +20,7 @@
 %       verbose: logical - flag for verbose output (default: true)
 %       plot_on: logical - flag to plot the results (default: true)
 %
-%   Output:
+%   Outputs:
 %       stats_table: table - table of computed time-frequency peaks
 %       SOPHs: structure - structure containing SO-power/phase histograms
 %
@@ -70,8 +72,8 @@ addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 
 addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric', 'vector'}, {'real','row','nonempty'}));
 addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric', 'vector'}, {'real','row','nonempty'}));
 addOptional(p, 'time_range', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real', 'nonnan'}));
-addOptional(p, 'detection_options', detection_opts(), @(x) validateattributes(x,{'struct'},{'nonempty'}));
 addOptional(p, 'baseline_options', baseline_opts(), @(x) validateattributes(x,{'struct'},{'nonempty'}));
+addOptional(p, 'detection_options', detection_opts(), @(x) validateattributes(x,{'struct'},{'nonempty'}));
 addOptional(p, 'SOPH_options', SOpowerphasehist_opts(), @(x) validateattributes(x,{'struct'},{'nonempty'}));
 addOptional(p, 'stats_table', [], @(x) validateattributes(x,{'table'},{'nonempty'}));
 addOptional(p, 'save_output_image', false, @(x) validateattributes(x,{'logical'},{'nonempty', 'nonnan'}));
@@ -117,10 +119,10 @@ ttotal = datetime('now');
 if isempty(stats_table)
     % If no stats table provided
     [stats_table, spect, stimes, sfreqs, data_trunc, t_data, artifacts]= computeTFPeaks(data, Fs, stage_vals, stage_times,...
-        'time_range', time_range, baseline_options, detection_options); %#ok<*ASGLU>
+        'time_range', time_range, detection_options, baseline_options); %#ok<*ASGLU>
 
 else
-    % If stats table provided, check to be sure SOPH is asked for output
+    % If stats table provided, check to be sure SOPH is asked by output
     assert(nargout==2,'Nothing to compute. Must provide SOPH output if stats table is used as input.');
 
     if verbose
@@ -435,8 +437,8 @@ function [stats_table, SOPHs] = runExampleData()
 disp('Running Example Data...');
 
 %Load default options
-detection_options = detection_opts();
 baseline_options = baseline_opts();
+detection_options = detection_opts();
 SOPH_options = SOpowerphasehist_opts();
 
 %% DATA SETTINGS
@@ -473,6 +475,6 @@ switch data_range
         disp(['Running full night', newline])
 end
 
-%Call main script
-[stats_table, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, detection_options, baseline_options, SOPH_options);
+%Call main function
+[stats_table, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options);
 end
