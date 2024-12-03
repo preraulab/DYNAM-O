@@ -118,7 +118,7 @@ addOptional(p, 'baseline_trim',[],@(x) validateattributes(x, {'numeric', 'vector
 addOptional(p, 'double_watershed', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'dsfreqs', 0.1, @(x) validateattributes(x,{'scalar','numeric'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'downsample_spect', [2 2], @(x) validateattributes(x,{'vector','numeric'},{}));
-addOptional(p, 'seg_time', 3, @(x) validateattributes(x,{'scalar','numeric'},{}));
+addOptional(p, 'seg_time', 30, @(x) validateattributes(x,{'scalar','numeric'},{}));
 addOptional(p, 'merge_thresh', 11, @(x) validateattributes(x,{'scalar','numeric'},{}));
 addOptional(p, 'max_merges', inf, @(x) validateattributes(x,{'scalar','numeric'},{}));
 addOptional(p, 'quality_setting', '', @(x) validateattributes(x,{'char','numeric'},{}));
