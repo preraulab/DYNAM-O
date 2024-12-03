@@ -217,7 +217,7 @@ baseline_exclude = artifacts'|exclude_stages_resamp|baseline_exclude;
 baseline_exclude_stimes = interp1(t_data_trunc, double(baseline_exclude), stimes, 'nearest','extrap')==1; % get excluded baseline times occurring at spectrogram times
 % Applying time period trimming for baseline computation
 baseline_range_inds = stimes >= baseline_range(1) & stimes <= baseline_range(2);
-% Exclude segments with artifact/not in baseline include or withing baseline range for baseline computation
+% Exclude segments with artifact/not in baseline include or not within baseline_range for baseline computation
 spect_bl = spect;
 spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
 %spect_bl(:,baseline_exclude_stimes|~baseline_range_inds) = NaN;
@@ -272,7 +272,7 @@ if double_watershed
     % Applying time period trimming for baseline computation
     baseline_range_inds = stimes >= baseline_range(1) & stimes <= baseline_range(2);
     % Re-compute baseline spectrum
-    % Exclude segments with artifact/not in baseline include or withing baseline range for baseline computation
+    % Exclude segments with artifact/not in baseline include or not within baseline_range for baseline computation
     spect_bl = spect;
     spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
     % Get baseline
