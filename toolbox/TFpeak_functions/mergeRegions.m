@@ -129,6 +129,3 @@ adj_mat = [adj_mat(~cnx_a,:); sub_adj_mat(u_idx,:)];
 %Identify which edge weights need to be updated
 pick_update = false(size(adj_mat(:,3)));
 pick_update((end-length(u_idx)+1):end) = true;
-
-
-
