@@ -127,7 +127,7 @@ else
     % f_valid_inputs = false;
     disp(['WARNING: adjacency matrix (' num2str(size(adj_list,1)) ' x ' ...
         num2str(size(adj_list,2)) ') has too few or too many columns. Returning original regions.' ]);
-    
+
 end
 
 %****************
@@ -167,23 +167,24 @@ if f_verb > 0
     end
 end
 
-%*************************
-%    MAIN MERGING LOOP   *
-%*************************
+%%
+%********************
+% MAIN MERGING LOOP *
+%********************
 while ~isempty(ematr) && max_wt > merge_thresh && num_merges < max_merges && num_regions > 1
     % Determine regions to merge
     mrg_to = ematr(max_idx(1),1);
     mrg_from = ematr(max_idx(1),2);
-    
+
     % Merge regions
     [regions, borders, ematr, pick_update] = mergeRegions(regions,mrg_to,mrg_from,region_lbls,borders,ematr);
-    
+
     % Update edge weights
     if ~isempty(find(pick_update,1))
         e_wts = computeMergeWeights(regions,data,region_lbls,borders,ematr(pick_update,1:2),merge_rule,f_verb-1,['  ' verb_pref]);
         ematr(pick_update,3) = e_wts;
     end
-    
+
     % Find new maximum weight and its index
     if ~isempty(ematr)
         [max_wt,max_idx] = max(ematr(:,3));
@@ -192,7 +193,7 @@ while ~isempty(ematr) && max_wt > merge_thresh && num_merges < max_merges && num
     end
     num_merges = num_merges + 1;
     num_regions = num_regions - 1;
-    
+
     % Update region plot
     if f_disp && mod(num_merges,100)==1
         % Plot data with boundaries
@@ -219,7 +220,7 @@ while ~isempty(ematr) && max_wt > merge_thresh && num_merges < max_merges && num
         axis(ax(3),'xy');
         title(ax(3),['Current weight merged: ' num2str(max_wt)]);
         drawnow;
-        axes(ax(4));
+        axes(ax(4)); %#ok<LAXES>
         title("Borders");
         temp_B_data = zeros(size(data));
         for ii = 1:length(borders)
@@ -239,16 +240,16 @@ while ~isempty(ematr) && max_wt > merge_thresh && num_merges < max_merges && num
         RGB2 = cat(3,R,G,B);
         imagesc(ax(4),RGB2);
     end
-    
+
     if f_verb > 1
         disp([verb_pref '  Size of edge matrix: ' num2str(size(ematr,1)) '. Maximum weight: ' num2str(max_wt) '.']);
     end
-    
+
 end
 
 % Checks to see if only one region found that fills the entire area,
 % create a 1-pixel border around the entire region
-if num_regions==1 
+if num_regions==1
     [region_size, region_ind] = max(cellfun(@numel,regions));
     if region_size==numel(data)
         temp_border = zeros(size(data));
@@ -259,7 +260,6 @@ if num_regions==1
         borders{region_ind} = find(temp_border==1);
     end
 end
-
 
 if f_verb > 0
     disp([verb_pref '  Full merging took ' num2str(toc(ttic)) ' sec, ' num2str(num_merges) ' merges.']);
@@ -294,6 +294,6 @@ if f_disp
     title(ax(3),['Current weight merged: ' num2str(max_wt)]);
 end
 
-%Remove dead regions
+% Remove dead regions
 regions = regions(cellfun(@(x)~isempty(x),regions));
 borders = borders(cellfun(@(x)~isempty(x),borders));
