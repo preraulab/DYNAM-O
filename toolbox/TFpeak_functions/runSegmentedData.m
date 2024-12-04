@@ -19,7 +19,7 @@ function [stats_table, regions, borders] = runSegmentedData(spect, stimes, sfreq
 %                           at a time (in seconds). Default = 30. Note that a 60s segment time is
 %                           used in the paper accompanying this code, but using 30s offers large
 %                           speedup and should not greatly affect results
-%       downsample_spect -- 2x1 double indicating number of rows and columns to downsize spect to.
+%       downsample_spect -- 2x1 double indicating numbers of columns and rows to downsize spect to.
 %       features         -- cell array of features to include, can be any subset of
 %                           {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData',
 %                            'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. default 'all'

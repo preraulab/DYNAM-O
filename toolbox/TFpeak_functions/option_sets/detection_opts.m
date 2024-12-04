@@ -15,7 +15,7 @@ addOptional(p, 'double_watershed', true, @(x) validateattributes(x,{'logical'},{
 addOptional(p, 'dsfreqs', 0.1, @(x) validateattributes(x,{'scalar','numeric'},{'real','nonempty', 'nonnan'}));
 
 %Watershed parameters
-%Decimation steps for the spectrogram prior to watershed
+%Decimation steps for the spectrogram prior to watershed: first index along the time axis; second index along frequency
 addOptional(p, 'downsample_spect', [2 2], @(x) validateattributes(x,{'vector','numeric'},{}));
 %Segment size for spectrogram paralleization
 addOptional(p, 'seg_time', 30, @(x) validateattributes(x,{'scalar','numeric'},{}));

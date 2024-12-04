@@ -42,7 +42,8 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %                                  which is used to determine nfft in spectrogram computation. Default = 0.1
 %       verbose (opt):             logical - display extra info. Default = true
 %       downsample_spect (opt):    2D array representing the number of decimation steps during downsampling spectrogram
-%                                  for watershed and merging to extract peaks. Default = [2, 2]
+%                                  for watershed and merging to extract peaks. First index decimates time (columns of spect).
+%                                  Second index decimates frequency (rows of spect). Default = [2, 2]
 %       seg_time (opt):            scalar - length in seconds of each segment of spectrogram on which peaks are extracted.
 %                                  Default = 30 (seconds)
 %       merge_thresh (opt):        scalar - threshold weight value for when to stop merge rule. Default = 11
