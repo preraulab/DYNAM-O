@@ -126,7 +126,6 @@ end
 if isempty(img) || ~any(img(:)) || ~any(isfinite(img(:)))
     error('Image must not be empty')
 end
-
 % x-axis
 if isempty(x)
     x = 1:size(img,2);
@@ -309,7 +308,7 @@ if trim_vol < 1
         disp([verb_pref '    trim took: ' num2str(toc(ttic)) ' seconds.']);
     end
 
-    % Remove regions that now fall below the removal criteria after trimming
+    %Remove regions that now fall below the removal criteria after trimming
     if dur_min>0 || bw_min>0
         [f_inds, t_inds] = cellfun(@(x)ind2sub(size(img),x),trim_regions,'UniformOutput',false);
         good_inds = cellfun(@(x)~isempty(max(x))&&((max(x)-min(x))*dt>dur_min),t_inds) & cellfun(@(x)~isempty(max(x))&&((max(x)-min(x))*df>bw_min),f_inds);
