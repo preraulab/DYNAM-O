@@ -19,7 +19,7 @@ function [stats_table, regions, borders] = extractTFPeaks(img,x,y,features,num_s
 %   conn_wshed   -- pixel connection to be used by peaksWShed. default 8.
 %   merge_thresh -- threshold weight value for when to stop merge rule. default 8.
 %   max_merges   -- maximum number of merges to perform. default inf.
-%   downsample_spect   --  2x1 double indicating number of rows and columns to downsize spect to. Default = []
+%   downsample_spect  --  2x1 double indicating numbers of columns and rows to downsize spect to. Default = []
 %   dur_min      -- minimum duration allowed
 %   bw_min       -- minimum bandwidth allowed
 %   trim_vol     -- fraction maximum trimmed volume (from 0 to 1),
