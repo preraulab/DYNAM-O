@@ -22,7 +22,7 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %                                   'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. Default = 'all'
 %       artifacts (opt):           [nx1] logical - boolean indicating artifact time points. Default = [], run detect_artifacts()
 %       artifact_filters (opt):    struct with 2 digitalFilter fields "hpFilt_high","hpFilt_broad" -
-%                                  filters to be used for artifact detection
+%                                  filters to be used for artifact detection. Default = []
 %
 %       BASELINE_OPTS STRUCTURE PARAMETERS - see baseline_opts()
 %       baseline_stages (opt):     [1xp] double - stages to include in spectrogram baseline computation
@@ -208,7 +208,6 @@ baseline_exclude = baseline_exclude(time_range_inds);
 %% Compute spectrogram
 % For more information on the multitaper spectrogram parameters and
 % implementation visit: https://github.com/preraulab/multitaper
-
 [spect, stimes, sfreqs, dur_min, bw_min, ht_db_min] = compute_spectrogram([2,3], [1,0.05], data_trunc, Fs, dsfreqs, verbose);
 stimes = stimes + t_data_trunc(1); % adjust the time axis to t_data
 
@@ -223,22 +222,19 @@ else
 end
 
 %% Compute baseline spectrum used to flatten data spectrum
-% Exclude artifacts, baseline_exclude and times corresponding to stages not in baseline_stages from baseline
-% computation
-
+% Exclude artifacts, baseline_exclude, and times corresponding to stages not in baseline_stages from baseline computation
 exclude_stages = single(~ismember(stage_vals,baseline_stages)); %stages to use passed in
-exclude_stages_resamp = interp1(stage_times, exclude_stages, t_data_trunc, 'previous','extrap')==1; % ==1 instead of logical handles NaN
-baseline_exclude = artifacts'|exclude_stages_resamp|baseline_exclude;
-baseline_exclude_stimes = interp1(t_data_trunc, double(baseline_exclude), stimes, 'nearest','extrap')==1; % get excluded baseline times occurring at spectrogram times
+exclude_stages_resamp = interp1(stage_times, exclude_stages, t_data_trunc, 'previous', 'extrap')==1; % ==1 instead of logical handles NaN
+baseline_exclude = artifacts' | exclude_stages_resamp | baseline_exclude;
+baseline_exclude_stimes = interp1(t_data_trunc, double(baseline_exclude), stimes, 'nearest', 'extrap')==1; % get excluded baseline times occurring at spectrogram times
 % Applying time period trimming for baseline computation
 baseline_range_inds = stimes >= baseline_range(1) & stimes <= baseline_range(2);
 % Exclude segments with artifact/not in baseline include or not within baseline_range for baseline computation
 spect_bl = spect;
 spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
-%spect_bl(:,baseline_exclude_stimes|~baseline_range_inds) = NaN;
 % Get baseline
-valid_baseline_inds = ~baseline_exclude_stimes&baseline_range_inds;
-baseline = prctile(spect_bl(:,valid_baseline_inds), baseline_ptile, 2);
+valid_baseline_inds = ~baseline_exclude_stimes & baseline_range_inds;
+baseline = prctile(spect_bl(:, valid_baseline_inds), baseline_ptile, 2); % 2 here indicates along second dimension
 
 %% Compute time-frequency peaks
 if verbose
@@ -246,7 +242,7 @@ if verbose
     tfp = tic;
 end
 
-% Augment extracted features with necessary computation features that will be removed later
+% Augment extracted features with necessary computation features that will be removed later if extra added
 compute_features = unique([features, {'Duration', 'Bandwidth', 'PeakFrequency', 'Height'}]);
 if any(strcmpi(features, 'PeakStage'))
     compute_features = unique([compute_features, 'PeakTime']);
@@ -282,17 +278,17 @@ if double_watershed
     [spect, stimes, sfreqs, ~, bw_min, ht_db_min] = compute_spectrogram([2,3], [2,0.05], data_trunc, Fs, dsfreqs, verbose);
     stimes = stimes + t_data_trunc(1); % adjust the time axis to t_data
 
-    % Update baseline exclusion
-    baseline_exclude_stimes = logical(interp1(t_data_trunc, double(baseline_exclude), stimes, 'nearest'));
+    % Update baseline exclusion - this block is identical to the first round
+    baseline_exclude_stimes = interp1(t_data_trunc, double(baseline_exclude), stimes, 'nearest', 'extrap')==1;
     % Applying time period trimming for baseline computation
     baseline_range_inds = stimes >= baseline_range(1) & stimes <= baseline_range(2);
     % Re-compute baseline spectrum
-    % Exclude segments with artifact/not in baseline include or not within baseline_range for baseline computation
+    % Exclude artifacts, baseline_exclude, and times corresponding to stages not in baseline_stages from baseline computation
     spect_bl = spect;
     spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
     % Get baseline
-    valid_baseline_inds = ~baseline_exclude_stimes&baseline_range_inds;
-    baseline = prctile(spect_bl(:,valid_baseline_inds), baseline_ptile, 2);
+    valid_baseline_inds = ~baseline_exclude_stimes & baseline_range_inds;
+    baseline = prctile(spect_bl(:, valid_baseline_inds), baseline_ptile, 2); % 2 here indicates along second dimension
 
     % Mask the spectrogram using extracted TFpeaks from the first round of watershed
     % Remove the offset between start times of spects from the two rounds
@@ -317,7 +313,7 @@ if double_watershed
         tfp = tic;
     end
 
-    % Augment extracted features with necessary computation features that will be removed later
+    % Augment extracted features with necessary computation features that will be removed later if extra added
     compute_features = unique([features, {'Duration', 'Bandwidth', 'PeakFrequency', 'Height'}]);
     if any(strcmpi(features, 'PeakStage'))
         compute_features = unique([compute_features, 'PeakTime']);
@@ -384,7 +380,7 @@ weight = 'unity'; % each taper is weighted the same
 ploton = false; % do not plot out
 mts_verbose = verbose; % suppress verbose messages
 
-%MTS frequency resolution
+%MTS spectral resolution
 df = taper_params(1)/time_window_params(1)*2;
 
 %Set min duration and bandwidth based on spectral parameters
