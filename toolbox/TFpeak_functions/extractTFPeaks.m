@@ -189,6 +189,9 @@ assert(trim_vol>0 && trim_vol<=1,'Trim volume must be (0, 1]');
 % Get low-res version of image *
 %*******************************
 if ~isempty(downsample_spect)
+    % Using decimation instead of downsampling with anti-aliasing filter to
+    % preserve the watershed region properties (borders, integer region
+    % labels)
     img_LR = img(1:downsample_spect(2):end, 1:downsample_spect(1):end);
 else
     img_LR = img;
