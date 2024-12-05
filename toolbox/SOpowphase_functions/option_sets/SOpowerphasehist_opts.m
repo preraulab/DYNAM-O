@@ -23,7 +23,6 @@ addOptional(p, 'SOpower_min_time_in_bin', 10, @(x) validateattributes(x,{'numeri
 addOptional(p, 'SOpower_range', [], @(x) validateattributes(x,{'numeric', 'vector'}, {'real', 'nonempty'}));
 addOptional(p, 'SOpower_binsizestep', [], @(x) validateattributes(x,{'numeric', 'vector'}, {'real', 'nonempty'}));
 
-
 %SOphase specific settings
 addOptional(p, 'SOphase_filter', []);
 addOptional(p, 'SOphase_norm_dim', 1, @(x) validateattributes(x,{'numeric'},{'scalar','real','finite','nonnan','nonnegative','integer'}));
@@ -31,4 +30,4 @@ addOptional(p, 'SOphase_range', [-pi,pi], @(x) validateattributes(x,{'numeric', 
 addOptional(p, 'SOphase_binsizestep', [(2*pi)/5, (2*pi)/100], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
 
 parse(p,varargin{:});
-opts = p.Results; 
+opts = p.Results;

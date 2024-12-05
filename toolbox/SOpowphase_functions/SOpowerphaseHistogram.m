@@ -83,12 +83,14 @@ function [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, SOpow
 %       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
 %**********************************************************************
 
-% If a struct is input with the SOPH settings/params, detect and
-% reformat it to work with the input parser below.
+% If a struct is input with the SOPH settings/params, detect and reformat
+% it to work with the input parser below.
 struct_ind = cellfun(@isstruct,varargin); % Get index of the struct
+
 if any(struct_ind)
+
     opt_struct = varargin{struct_ind}; % Store the struct
-    varargin = {varargin{~struct_ind}}; % Remove struct from the varargins
+    varargin = varargin(~struct_ind); % Remove struct from the varargins
 
     argcell = namedargs2cell(opt_struct); % Convert the struct to cell array
     varargin = cat(2,varargin,argcell); % Add the new cell array with the params to the end of the varargins
@@ -99,9 +101,11 @@ if any(struct_ind)
     if length(str_cell)~=length(unique(str_cell))
         error('Cannot include struct and duplicate parameters.');
     end
+
 end
 %% Parse inputs
 p = inputParser;
+p.KeepUnmatched=true;
 
 %TFpeak info
 addRequired(p, 'TFpeak_freqs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
@@ -117,26 +121,30 @@ addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric', 'vector'}
 addOptional(p, 'time_range', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
 addOptional(p, 'isexcluded', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
 
-%SOPH settings
-addOptional(p, 'freq_range', [0,40], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
-addOptional(p, 'freq_binsizestep', [1, 0.2], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
-addOptional(p, 'SOpower_range', [], @(x) validateattributes(x,{'numeric', 'vector'}, {'real'}));
-addOptional(p, 'SOpower_binsizestep', [], @(x) validateattributes(x,{'numeric', 'vector'}, {'real'}));
-addOptional(p, 'SOphase_range', [-pi,pi], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
-addOptional(p, 'SOphase_binsizestep', [(2*pi)/5, (2*pi)/100], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
-addOptional(p, 'SO_freqrange', [0.3, 1.5], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan'}));
-addOptional(p, 'SOPH_stages', 1:3, @(x) validateattributes(x, {'numeric', 'vector'}, {'real'})); % W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
-addOptional(p, 'compute_rate', true, @(x) validateattributes(x,{'logical'},{}));
-
-%SOpower/phase specific settings
-addOptional(p, 'SOpower_outlier_threshold', 3, @(x) validateattributes(x,{'numeric'},{'scalar'}));
-addOptional(p, 'SOpower_norm_method', 'p2shift1234', @(x) validateattributes(x, {'char', 'numeric'},{}));
-addOptional(p, 'SOpower_retain_Fs', true, @(x) validateattributes(x,{'logical'},{}));
-addOptional(p, 'SOpower_min_time_in_bin', 10, @(x) validateattributes(x,{'numeric'},{'scalar','real','finite','nonnan','nonnegative','integer'}));
-addOptional(p, 'SOphase_filter', []);
-addOptional(p, 'SOphase_norm_dim', 1, @(x) validateattributes(x,{'numeric'},{'scalar','real','finite','nonnan','nonnegative','integer'}));
-addOptional(p, 'SOpower_tapers', [5 9], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
-addOptional(p, 'SOpower_window_params', [5 .5], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
+%SOPH struct parameters
+SOPH_options = SOpowerphasehist_opts(); % get the default parameters
+%General settings
+addOptional(p, 'freq_range', SOPH_options.freq_range, @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
+addOptional(p, 'freq_binsizestep', SOPH_options.freq_binsizestep, @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
+addOptional(p, 'compute_rate', SOPH_options.compute_rate, @(x) validateattributes(x,{'logical'},{}));
+addOptional(p, 'SOPH_stages', SOPH_options.SOPH_stages, @(x) validateattributes(x, {'numeric', 'vector'}, {'real'})); % W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
+%SOpower params
+addOptional(p, 'SO_freqrange', SOPH_options.SO_freqrange, @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan'}));
+addOptional(p, 'SOpower_tapers', SOPH_options.SOpower_tapers, @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
+addOptional(p, 'SOpower_window_params', SOPH_options.SOpower_window_params, @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
+addOptional(p, 'SOpower_outlier_threshold', SOPH_options.SOpower_outlier_threshold, @(x) validateattributes(x,{'numeric'},{'scalar'}));
+%SOpower specific settings
+addOptional(p, 'SOpower_norm_method', SOPH_options.SOpower_norm_method, @(x) validateattributes(x, {'char', 'numeric'},{}));
+addOptional(p, 'SOpower_retain_Fs', SOPH_options.SOpower_retain_Fs, @(x) validateattributes(x,{'logical'},{}));
+addOptional(p, 'SOpower_min_time_in_bin', SOPH_options.SOpower_min_time_in_bin, @(x) validateattributes(x,{'numeric'},{'scalar','real','finite','nonnan','nonnegative','integer'}));
+%Ranges and bin step sizes determined dynamically with empty input [], set to fixed values when comparing between subjects
+addOptional(p, 'SOpower_range', SOPH_options.SOpower_range, @(x) validateattributes(x,{'numeric', 'vector'}, {'real'}));
+addOptional(p, 'SOpower_binsizestep', SOPH_options.SOpower_binsizestep, @(x) validateattributes(x,{'numeric', 'vector'}, {'real'}));
+%SOphase specific settings
+addOptional(p, 'SOphase_filter', SOPH_options.SOphase_filter);
+addOptional(p, 'SOphase_norm_dim', SOPH_options.SOphase_norm_dim, @(x) validateattributes(x,{'numeric'},{'scalar','real','finite','nonnan','nonnegative','integer'}));
+addOptional(p, 'SOphase_range', SOPH_options.SOphase_range, @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
+addOptional(p, 'SOphase_binsizestep', SOPH_options.SOphase_binsizestep, @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
 
 %Display settings
 addOptional(p, 'plot_on', false, @(x) validateattributes(x,{'logical'},{}));
