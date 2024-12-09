@@ -179,7 +179,7 @@ if num_rgns>1
     %Create 2xN adjacency matrix
     adj_list = cat(1,nbr_matrs{:});
 
-    %Reduce to a undirected graph - unique pairs of neighbors
+    %Reduce to a undirected graph - only keep unique pairs of neighbors
     adj_list = unique(sort(adj_list,2),'rows');
     %adj_list = unique(adj_list,'rows'); %keep as a directed graph
 end
