@@ -66,19 +66,19 @@ end
 p = inputParser;
 p.KeepUnmatched=true;
 
-addRequired(p, 'data', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'row', 'nonempty'}));
-addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric', 'vector'}, {'real','row','nonempty'}));
-addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric', 'vector'}, {'real','row','nonempty'}));
-addOptional(p, 'time_range', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real', 'nonnan'}));
-addOptional(p, 'baseline_options', baseline_opts(), @(x) validateattributes(x,{'struct'},{'nonempty'}));
-addOptional(p, 'detection_options', detection_opts(), @(x) validateattributes(x,{'struct'},{'nonempty'}));
-addOptional(p, 'SOPH_options', SOpowerphasehist_opts(), @(x) validateattributes(x,{'struct'},{'nonempty'}));
-addOptional(p, 'stats_table', [], @(x) validateattributes(x,{'table'},{'nonempty'}));
-addOptional(p, 'save_output_image', false, @(x) validateattributes(x,{'logical'},{'nonempty', 'nonnan'}));
-addOptional(p, 'output_fname', 'DYNAM-O_output', @(x) validateattributes(x,{'char','string'},{'nonempty'}));
-addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'nonempty', 'nonnan'}));
-addOptional(p, 'plot_on', true, @(x) validateattributes(x,{'logical'},{'nonempty', 'nonnan'}));
+addRequired(p, 'data', @(x) validateattributes(x, {'vector','numeric'}, {'real','row','nonempty'}));
+addRequired(p, 'Fs', @(x) validateattributes(x, {'scalar','numeric'}, {'real','nonempty'}));
+addRequired(p, 'stage_times', @(x) validateattributes(x, {'vector','numeric'}, {'real','row','nonempty'}));
+addRequired(p, 'stage_vals', @(x) validateattributes(x, {'vector','numeric'}, {'real','row','nonempty'}));
+addOptional(p, 'time_range', [], @(x) validateattributes(x, {'vector','numeric'}, {'real','nonnan'}));
+addOptional(p, 'baseline_options', baseline_opts(), @(x) validateattributes(x, {'struct'}, {'nonempty'}));
+addOptional(p, 'detection_options', detection_opts(), @(x) validateattributes(x, {'struct'}, {'nonempty'}));
+addOptional(p, 'SOPH_options', SOpowerphasehist_opts(), @(x) validateattributes(x, {'struct'}, {'nonempty'}));
+addOptional(p, 'stats_table', [], @(x) validateattributes(x, {'table'}, {'nonempty'}));
+addOptional(p, 'save_output_image', false, @(x) validateattributes(x, {'logical'}, {'nonempty','nonnan'}));
+addOptional(p, 'output_fname', 'DYNAM-O_output', @(x) validateattributes(x, {'char','string'}, {'nonempty'}));
+addOptional(p, 'verbose', true, @(x) validateattributes(x, {'logical'}, {'nonempty','nonnan'}));
+addOptional(p, 'plot_on', true, @(x) validateattributes(x, {'logical'}, {'nonempty','nonnan'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>

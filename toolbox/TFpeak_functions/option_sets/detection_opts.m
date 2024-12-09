@@ -15,7 +15,7 @@ addOptional(p, 'double_watershed', true, @(x) validateattributes(x,{'logical'},{
 %Frequency bin resolution of the spectrogram
 addOptional(p, 'dsfreqs', 0.1, @(x) validateattributes(x,{'scalar','numeric'},{'real','nonempty', 'nonnan'}));
 %Taper parameters [time half-bandwidth product, number of tapers]
-addOptional(p, 'mtm_taper_params', [2, 3], @(x) validateattributes(x,{'vector'},{'real','nonempty', 'nonnan'}));
+addOptional(p, 'mtm_taper_params', [2, 3], @(x) validateattributes(x,{'vector','numeric'},{'real','nonempty', 'nonnan'}));
 %Window length in spectrogram computation for the first round of watershed
 addOptional(p, 'mtm_window_length_1', 1, @(x) validateattributes(x,{'scalar','numeric'},{'real','nonempty', 'nonnan'}));
 %Window length in spectrogram computation for the second round of watershed
@@ -43,7 +43,7 @@ addOptional(p, 'merge_thresh', [], @(x) validateattributes(x,{'scalar','numeric'
 %   downsample_spect = [2, 2]; (steps, steps)
 %   seg_time = 30; (seconds)
 %   merge_thresh = 11; (merge weight unit)
-addOptional(p, 'quality_setting', 'default', @(x) validateattributes(x,{'char','numeric'},{}));
+addOptional(p, 'quality_setting', 'default', @(x) validateattributes(x,{'char'},{}));
 
 %Merging and trimming parameters
 %Maximum number of merges to perform
