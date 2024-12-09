@@ -123,43 +123,43 @@ end
 p = inputParser;
 p.KeepUnmatched=true;
 
-addRequired(p, 'data', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'row', 'nonempty'}));
-addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric', 'vector'}, {'real','nonempty'}));
-addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric', 'vector'}, {'real','nonempty'}));
+addRequired(p, 'data', @(x) validateattributes(x, {'vector','numeric'}, {'real','row','nonempty'}));
+addRequired(p, 'Fs', @(x) validateattributes(x, {'vector','numeric'}, {'real','nonempty'}));
+addRequired(p, 'stage_vals', @(x) validateattributes(x, {'vector','numeric'}, {'real','nonempty'}));
+addRequired(p, 'stage_times', @(x) validateattributes(x, {'vector','numeric'}, {'real','nonempty'}));
 
-addOptional(p, 't_data', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','row','nonnan'}));
-addOptional(p, 'time_range', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
-addOptional(p, 'features', 'all',  @(x) validateattributes(x,{'char', 'cell'},{}));
+addOptional(p, 't_data', [], @(x) validateattributes(x,{'vector','numeric'},{'real','finite','row','nonnan'}));
+addOptional(p, 'time_range', [], @(x) validateattributes(x,{'vector','numeric'},{'real','finite','nonnan'}));
+addOptional(p, 'features', 'all',  @(x) validateattributes(x,{'char','cell'},{}));
 
-addOptional(p, 'artifacts', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','row','nonnan'}));
+addOptional(p, 'artifacts', logical([]), @(x) validateattributes(x,{'vector','logical'},{'real','finite','row','nonnan'}));
 addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'struct'},{}));
 
 %Baseline struct parameters
 baseline_options = baseline_opts(); % get the default parameters
-addOptional(p, 'baseline_stages', baseline_options.baseline_stages, @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-addOptional(p, 'baseline_exclude', baseline_options.baseline_exclude, @(x) validateattributes(x,{'logical'},{'real','finite','nonnan'}));
-addOptional(p, 'baseline_ptile', baseline_options.baseline_ptile, @(x) validateattributes(x, {'numeric', 'scalar'}, {'real', 'nonempty'}));
-addOptional(p, 'baseline_trim', baseline_options.baseline_trim, @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
+addOptional(p, 'baseline_stages', baseline_options.baseline_stages, @(x) validateattributes(x, {'vector','numeric'}, {'real','nonempty'}));
+addOptional(p, 'baseline_exclude', baseline_options.baseline_exclude, @(x) validateattributes(x,{'vector','logical'},{'real','finite','nonnan'}));
+addOptional(p, 'baseline_ptile', baseline_options.baseline_ptile, @(x) validateattributes(x, {'scalar','numeric'}, {'real', 'nonempty'}));
+addOptional(p, 'baseline_trim', baseline_options.baseline_trim, @(x) validateattributes(x, {'vector','numeric'}, {'real'}));
 
 %TF-peak detection struct parameters
 detection_options = detection_opts(); % get the default parameters
 addOptional(p, 'verbose', detection_options.verbose, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
-addOptional(p, 'double_watershed', detection_options.double_watershed, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
+addOptional(p, 'double_watershed', detection_options.double_watershed, @(x) validateattributes(x,{'logical'},{'real','nonempty','nonnan'}));
 addOptional(p, 'dsfreqs', detection_options.dsfreqs, @(x) validateattributes(x,{'scalar','numeric'},{'real','nonempty', 'nonnan'}));
-addOptional(p, 'mtm_taper_params', detection_options.mtm_taper_params, @(x) validateattributes(x,{'vector'},{'real','nonempty', 'nonnan'}));
-addOptional(p, 'mtm_window_length_1', detection_options.mtm_window_length_1, @(x) validateattributes(x,{'scalar','numeric'},{'real','nonempty', 'nonnan'}));
-addOptional(p, 'mtm_window_length_2', detection_options.mtm_window_length_2, @(x) validateattributes(x,{'scalar','numeric'},{'real','nonempty', 'nonnan'}));
-addOptional(p, 'mtm_window_stepsize', detection_options.mtm_window_stepsize, @(x) validateattributes(x,{'scalar','numeric'},{'real','nonempty', 'nonnan'}));
+addOptional(p, 'mtm_taper_params', detection_options.mtm_taper_params, @(x) validateattributes(x,{'vector','numeric'},{'real','nonempty','nonnan'}));
+addOptional(p, 'mtm_window_length_1', detection_options.mtm_window_length_1, @(x) validateattributes(x,{'scalar','numeric'},{'real','nonempty','nonnan'}));
+addOptional(p, 'mtm_window_length_2', detection_options.mtm_window_length_2, @(x) validateattributes(x,{'scalar','numeric'},{'real','nonempty','nonnan'}));
+addOptional(p, 'mtm_window_stepsize', detection_options.mtm_window_stepsize, @(x) validateattributes(x,{'scalar','numeric'},{'real','nonempty','nonnan'}));
 addOptional(p, 'downsample_spect', detection_options.downsample_spect, @(x) validateattributes(x,{'vector','numeric'},{}));
 addOptional(p, 'seg_time', detection_options.seg_time, @(x) validateattributes(x,{'scalar','numeric'},{}));
 addOptional(p, 'merge_thresh', detection_options.merge_thresh, @(x) validateattributes(x,{'scalar','numeric'},{}));
-addOptional(p, 'quality_setting', detection_options.quality_setting, @(x) validateattributes(x,{'char','numeric'},{}));
+addOptional(p, 'quality_setting', detection_options.quality_setting, @(x) validateattributes(x,{'char'},{}));
 addOptional(p, 'max_merges', detection_options.max_merges, @(x) validateattributes(x,{'scalar','numeric'},{}));
 addOptional(p, 'trim_vol', detection_options.trim_vol, @(x) validateattributes(x,{'scalar','numeric'},{}));
 addOptional(p, 'dur_max', detection_options.dur_max, @(x) validateattributes(x,{'scalar','numeric'},{}));
 addOptional(p, 'bw_max', detection_options.bw_max, @(x) validateattributes(x,{'scalar','numeric'},{}));
-addOptional(p, 'refinement', detection_options.refinement, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
+addOptional(p, 'refinement', detection_options.refinement, @(x) validateattributes(x,{'logical'},{'real','nonempty','nonnan'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
