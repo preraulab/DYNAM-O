@@ -21,11 +21,11 @@ function [rgn, rgn_lbls, Lborders, adj_list] = Ldata2graph(Ldata, exclusion_val,
 %   Copyright 2024 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
-%      
+%
 %   Please provide the following citation for all use:
-%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach, 
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis 
-%       for Electroencephalographic Phenotyping and Biomarker Identification, 
+%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
+%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification,
 %       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
 %
 %**********************************************************************
@@ -73,7 +73,9 @@ end
 Ldata = double(Ldata);
 
 % Convolution matrix to get border
-H_border = [1 1 1; 1 -8 1; 1 1 1];
+H_border = [1 1 1;
+    1 -8 1;
+    1 1 1];
 
 % Convolution matrix for dilation to get neighbors. Same as strel3.Neighborhood
 H_dilate = [1   1   1   1   1; ...
@@ -177,9 +179,9 @@ if num_rgns>1
     %Create 2xN adjacency matrix
     adj_list = cat(1,nbr_matrs{:});
 
-    %Reduce to non-digraph
+    %Reduce to a undirected graph - unique pairs of neighbors
     adj_list = unique(sort(adj_list,2),'rows');
-    %Amatr = unique(Amatr,'rows'); %keep as digraph
+    %adj_list = unique(adj_list,'rows'); %keep as a directed graph
 end
 
 %****************************************
