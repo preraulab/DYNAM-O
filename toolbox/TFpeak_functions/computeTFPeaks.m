@@ -29,7 +29,7 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %       baseline_exclude (opt):    [1xn] logical - boolean indicating time points to exclude in baseline computation. Default = []
 %       baseline_ptile (opt):      scalar - percentile of power spectral density at every frequency used for baseline subtraction
 %                                  Default = 2
-%       baseline_trim (opt):       2D array representing start and stop times for baseline trimming OR integer representing 
+%       baseline_trim (opt):       2D array representing start and stop times for baseline trimming OR integer representing
 %                                  buffer time (min) around the first and last sleep period. Default = [-inf, inf]
 %
 %       DETECTION_OPTS STRUCTURE PARAMETERS - see detection_opts()

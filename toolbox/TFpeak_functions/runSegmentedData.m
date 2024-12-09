@@ -60,7 +60,7 @@ function [stats_table, regions, borders] = runSegmentedData(spect, stimes, sfreq
 %*************************
 % Handle variable inputs *
 %*************************
-assert(nargin >= 3 || isempty(spect), '3 input required: spect, stimes, sfreqs');
+assert(nargin >= 3 || isempty(spect), 'At least 3 inputs required: spect, stimes, sfreqs');
 
 if nargin < 4 || isempty(baseline)
     baseline = [];
