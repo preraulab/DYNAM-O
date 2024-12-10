@@ -21,8 +21,8 @@ addRequired(p, 'peak_Cmetric', @(x) validateattributes(x, {'numeric'}, {'real','
 SOPH_options = SOpowerphasehist_opts(); % get some default parameters
 addOptional(p, 'circular_Cmetric', false, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
 addOptional(p, 'circular_bounds', SOPH_options.SOphase_range, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','vector','numel',2}));
-addOptional(p, 'Cmetric_label', 'C-metric', @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
-addOptional(p, 'xlabel_text', 'C metric', @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
+addOptional(p, 'Cmetric_label', 'C-metric', @(x) validateattributes(x, {'char','string'}, {'scalartext'}));
+addOptional(p, 'xlabel_text', 'C metric', @(x) validateattributes(x, {'char','string'}, {'scalartext'}));
 
 addOptional(p, 'C_range', [], @(x) assert(isa(x, 'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
 addOptional(p, 'C_binsizestep', [], @(x) assert(isa(x, 'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
@@ -31,7 +31,7 @@ addOptional(p, 'freq_range', SOPH_options.freq_range, @(x) validateattributes(x,
 addOptional(p, 'freq_binsizestep', SOPH_options.freq_binsizestep, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','positive','vector','numel',2}));
 addOptional(p, 'norm_dim', 0, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnan','nonnegative','integer','scalar'}));
 addOptional(p, 'compute_rate', SOPH_options.compute_rate, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
-addOptional(p, 'norm_method', '', @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
+addOptional(p, 'norm_method', '', @(x) validateattributes(x, {'char','string'}, {'scalartext'}));
 addOptional(p, 'min_time_in_bin', 0, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnan','nonnegative','integer','scalar'}));
 
 %Display settings

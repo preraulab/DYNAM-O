@@ -131,8 +131,8 @@ addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','no
 addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
 
 addOptional(p, 't_data', [], @(x) validateattributes(x,{'numeric'},{'real','finite','nonnan','2d'}));
-addOptional(p, 'time_range', [], @(x) assert(isa(x, 'numeric') && (ismpety(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
-addOptional(p, 'features', 'all',  @(x) validateattributes(x,{'char','cell'},{'nonempty','scalartext'}));
+addOptional(p, 'time_range', [], @(x) assert(isa(x, 'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
+addOptional(p, 'features', 'all',  @(x) validateattributes(x,{'char','cell'},{'nonempty'}));
 
 addOptional(p, 'artifacts', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','nonnan','2d'}));
 addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'double','struct'},{'nonnan'}));

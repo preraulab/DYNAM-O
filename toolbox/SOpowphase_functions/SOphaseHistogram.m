@@ -101,7 +101,7 @@ addOptional(p, 'stage_times', [], @(x) validateattributes(x, {'numeric'}, {'real
 
 %EEG time settings
 addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','2d'}));
-addOptional(p, 'time_range', [], @(x) assert(isa(x, 'numeric') && (ismpety(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
+addOptional(p, 'time_range', [], @(x) assert(isa(x, 'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
 addOptional(p, 'isexcluded', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','nonnan','2d'}));
 
 %SOPH settings

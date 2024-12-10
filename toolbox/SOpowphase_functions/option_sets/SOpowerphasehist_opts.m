@@ -16,7 +16,7 @@ addOptional(p, 'SOpower_window_params', [5, .5], @(x) validateattributes(x, {'nu
 addOptional(p, 'SOpower_outlier_threshold', 3, @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan','scalar'}));
 
 %SOpower specific settings
-addOptional(p, 'SOpower_norm_method', 'p2shift1234', @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
+addOptional(p, 'SOpower_norm_method', 'p2shift1234', @(x) validateattributes(x, {'char','string'}, {'scalartext'}));
 addOptional(p, 'SOpower_retain_Fs', true, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
 addOptional(p, 'SOpower_min_time_in_bin', 10, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnan','nonnegative','integer','scalar'}));
 %Ranges and bin step sizes determined dynamically with empty input [], set to fixed values when comparing between subjects

@@ -120,7 +120,7 @@ addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric'}, {'real','n
 
 %EEG time settings
 addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','2d'}));
-addOptional(p, 'time_range', [], @(x) assert(isa(x, 'numeric') && (ismpety(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
+addOptional(p, 'time_range', [], @(x) assert(isa(x, 'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
 addOptional(p, 'isexcluded', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','nonnan','2d'}));
 
 %SOPH struct parameters
@@ -136,7 +136,7 @@ addOptional(p, 'SOpower_tapers', SOPH_options.SOpower_tapers, @(x) validateattri
 addOptional(p, 'SOpower_window_params', SOPH_options.SOpower_window_params, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','positive','vector','numel',2}));
 addOptional(p, 'SOpower_outlier_threshold', SOPH_options.SOpower_outlier_threshold, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnan','scalar'}));
 %SOpower specific settings
-addOptional(p, 'SOpower_norm_method', SOPH_options.SOpower_norm_method, @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
+addOptional(p, 'SOpower_norm_method', SOPH_options.SOpower_norm_method, @(x) validateattributes(x, {'char','string'}, {'scalartext'}));
 addOptional(p, 'SOpower_retain_Fs', SOPH_options.SOpower_retain_Fs, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
 addOptional(p, 'SOpower_min_time_in_bin', SOPH_options.SOpower_min_time_in_bin, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnan','nonnegative','integer','scalar'}));
 %Ranges and bin step sizes determined dynamically with empty input [], set to fixed values when comparing between subjects
