@@ -17,8 +17,8 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOphase, 
 %
 %   OPTIONAL:
 %       TFpeak_stages: Px1 - sleep stage each TF peak occurs 5=W,4=R,3=N1,2=N2,1=N3
-%       stage_vals:  1xS double - numeric stage values 5=W,4=R,3=N1,2=N2,1=N3
 %       stage_times: 1xS double - stage times
+%       stage_vals:  1xS double - numeric stage values 5=W,4=R,3=N1,2=N2,1=N3
 %       freq_range: 1x2 double - min and max frequencies of TF peak to include in the histogram
 %                   (Hz). Default = [0,40]
 %       freq_binsizestep: 1x2 double - [size, step] frequency bin size and bin step for frequency
@@ -96,8 +96,8 @@ addRequired(p, 'TFpeak_times', @(x) validateattributes(x, {'numeric'}, {'real','
 addOptional(p, 'TFpeak_stages', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','2d'}));
 
 %Stage info
-addOptional(p, 'stage_vals', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','2d'}));
 addOptional(p, 'stage_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','2d'}));
+addOptional(p, 'stage_vals', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','2d'}));
 
 %EEG time settings
 addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','2d'}));
@@ -159,7 +159,7 @@ else
     end
 
     % Compute SOphase stage
-    if ~isempty(stage_vals) && ~isempty(stage_times)
+    if  ~isempty(stage_times) && ~isempty(stage_vals)
         SOphase_stages = interp1(stage_times, stage_vals, SOphase_times, 'previous');
     else
         SOphase_stages = true;
@@ -173,7 +173,7 @@ assert(SO_binsizestep(1) < 2*pi, 'SO-phase bin size must be less than 2*pi')
 if ~isempty(SOphase) % SOphase is directly provided
     assert(~isempty(SOphase_times), 'SOphase input only but no SOphase_times received.')
 else % Compute the SOphase
-    [SOphase, SOphase_times, SOphase_stages] = computeSOphase(EEG, Fs, 'stage_vals', stage_vals, 'stage_times', stage_times,...
+    [SOphase, SOphase_times, SOphase_stages] = computeSOphase(EEG, Fs, 'stage_times', stage_times, 'stage_vals', stage_vals,...
         'EEG_times', EEG_times, 'isexcluded', isexcluded, 'SO_freqrange', SO_freqrange, 'SOphase_filter', SOphase_filter);
 end
 
@@ -190,7 +190,7 @@ SOphase = wrapToPi(SOphase);
 
 %% Get valid peak indices
 % Compute TF-peak stages if not included
-if isempty(TFpeak_stages) && ~isempty(stage_vals) && ~isempty(stage_times)
+if isempty(TFpeak_stages) && ~isempty(stage_times) && ~isempty(stage_vals)
     TFpeak_stages = interp1(stage_times, stage_vals, TFpeak_times, 'previous');
 end
 

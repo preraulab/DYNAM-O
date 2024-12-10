@@ -6,8 +6,8 @@ function [SOphase, SOphase_times, SOphase_stages, filtdata] = computeSOphase(EEG
 p = inputParser;
 
 %Stage info
-addOptional(p, 'stage_vals', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','2d'}));
 addOptional(p, 'stage_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','2d'}));
+addOptional(p, 'stage_vals', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','2d'}));
 
 %EEG time settings
 addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','2d'}));
@@ -81,7 +81,7 @@ filtdata(isexcluded) = nan;
 SOphase(isexcluded) = nan;
 
 % Compute SOphase stage
-if ~isempty(stage_vals) && ~isempty(stage_times)
+if ~isempty(stage_times) && ~isempty(stage_vals)
     SOphase_stages = interp1(stage_times, stage_vals, SOphase_times, 'previous');
 else
     SOphase_stages = true;
