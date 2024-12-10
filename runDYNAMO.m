@@ -71,7 +71,7 @@ addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','nonempty',
 addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
 addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
 
-addOptional(p, 'time_range', [], @(x) assert(isa(x, 'numeric') && (ismpety(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
+addOptional(p, 'time_range', [], @(x) assert(isa(x, 'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
 
 addOptional(p, 'baseline_options', baseline_opts(), @(x) validateattributes(x, {'struct'}, {'nonempty'}));
 addOptional(p, 'detection_options', detection_opts(), @(x) validateattributes(x, {'struct'}, {'nonempty'}));
