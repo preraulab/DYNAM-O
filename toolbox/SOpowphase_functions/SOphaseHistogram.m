@@ -106,7 +106,7 @@ addOptional(p, 'isexcluded', logical([]), @(x) validateattributes(x,{'logical'},
 
 %SOPH settings
 SOPH_options = SOpowerphasehist_opts(); % get the default parameters
-addOptional(p, 'freq_range', SOPH_options.freq_range, @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan','vector','numel',2}));
+addOptional(p, 'freq_range', SOPH_options.freq_range, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','nonnan','vector','numel',2}));
 addOptional(p, 'freq_binsizestep', SOPH_options.freq_binsizestep, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','positive','vector','numel',2}));
 addOptional(p, 'SO_range', SOPH_options.SOphase_range, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','vector','numel',2}));
 addOptional(p, 'SO_binsizestep', SOPH_options.SOphase_binsizestep, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','positive','vector','numel',2}));

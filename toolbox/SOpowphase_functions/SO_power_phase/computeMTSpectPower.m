@@ -19,7 +19,7 @@ function [SO_power, stimes, sfreqs] = computeMTSpectPower(varargin)
 p = inputParser;
 
 addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
-addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','scalar'}));
+addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','nonnan','positive','scalar'}));
 
 SOPH_options = SOpowerphasehist_opts(); % get the default parameters
 addOptional(p, 'freq_range', SOPH_options.SO_freqrange, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','nonnegative','vector','numel',2}));

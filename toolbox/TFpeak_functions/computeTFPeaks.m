@@ -126,7 +126,7 @@ p = inputParser;
 p.KeepUnmatched=true;
 
 addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
-addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','scalar'}));
+addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','nonnan','positive','scalar'}));
 addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
 addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
 
@@ -148,19 +148,19 @@ addOptional(p, 'baseline_trim', baseline_options.baseline_trim, @(x) validateatt
 detection_options = detection_opts(); % get the default parameters
 addOptional(p, 'verbose', detection_options.verbose, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
 addOptional(p, 'double_watershed', detection_options.double_watershed, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
-addOptional(p, 'dsfreqs', detection_options.dsfreqs, @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan','scalar'}));
-addOptional(p, 'mtm_taper_params', detection_options.mtm_taper_params, @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan','vector','numel',2}));
-addOptional(p, 'mtm_window_length_1', detection_options.mtm_window_length_1, @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan','scalar'}));
-addOptional(p, 'mtm_window_length_2', detection_options.mtm_window_length_2, @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan','scalar'}));
-addOptional(p, 'mtm_window_stepsize', detection_options.mtm_window_stepsize, @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan','scalar'}));
+addOptional(p, 'dsfreqs', detection_options.dsfreqs, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','nonnan','scalar'}));
+addOptional(p, 'mtm_taper_params', detection_options.mtm_taper_params, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','nonnan','vector','numel',2}));
+addOptional(p, 'mtm_window_length_1', detection_options.mtm_window_length_1, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','nonnan','scalar'}));
+addOptional(p, 'mtm_window_length_2', detection_options.mtm_window_length_2, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','nonnan','scalar'}));
+addOptional(p, 'mtm_window_stepsize', detection_options.mtm_window_stepsize, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','nonnan','scalar'}));
 addOptional(p, 'downsample_spect', detection_options.downsample_spect, @(x) assert(isa(x, 'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
 addOptional(p, 'seg_time', detection_options.seg_time, @(x) assert(isa(x, 'numeric') && (isempty(x) || isscalar(x)), 'Expected input to be a scalar.'));
 addOptional(p, 'merge_thresh', detection_options.merge_thresh, @(x) assert(isa(x, 'numeric') && (isempty(x) || isscalar(x)), 'Expected input to be a scalar.'));
-addOptional(p, 'quality_setting', detection_options.quality_setting, @(x) validateattributes(x,{'char'},{'nonempty'}));
-addOptional(p, 'max_merges', detection_options.max_merges, @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan','scalar'}));
-addOptional(p, 'trim_vol', detection_options.trim_vol, @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan','scalar'}));
-addOptional(p, 'dur_max', detection_options.dur_max, @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan','scalar'}));
-addOptional(p, 'bw_max', detection_options.bw_max, @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan','scalar'}));
+addOptional(p, 'quality_setting', detection_options.quality_setting, @(x) any(validatestring(x, {'stokes_2023', 'precision', 'default'})));
+addOptional(p, 'max_merges', detection_options.max_merges, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','nonnan','scalar'}));
+addOptional(p, 'trim_vol', detection_options.trim_vol, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','nonnan','scalar'}));
+addOptional(p, 'dur_max', detection_options.dur_max, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','nonnan','scalar'}));
+addOptional(p, 'bw_max', detection_options.bw_max, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','nonnan','scalar'}));
 addOptional(p, 'refinement', detection_options.refinement, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
 
 parse(p,varargin{:});
