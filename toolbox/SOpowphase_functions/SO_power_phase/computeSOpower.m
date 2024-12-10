@@ -6,21 +6,22 @@ function [SOpower_norm, SOpower_times, SOpower_stages, norm_method, ptile] = com
 p = inputParser;
 
 %Stage info
-addOptional(p, 'stage_vals', [], @(x) validateattributes(x, {'double', 'single'}, {'real'}));
-addOptional(p, 'stage_times', [], @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
-
-%SOpower settings
-addOptional(p, 'SO_freqrange', [0.3, 1.5], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan'}));
-addOptional(p, 'SOpower_outlier_threshold', 3, @(x) validateattributes(x,{'numeric'}, {'scalar'}));
-addOptional(p, 'norm_method', 'p2shift1234', @(x) validateattributes(x, {'char', 'numeric'},{}));
-addOptional(p, 'retain_Fs', true, @(x) validateattributes(x,{'logical'},{}));
-addOptional(p, 'tapers', [5 9], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
-addOptional(p, 'window_params', [5 .5], @(x) validateattributes(x,{'numeric', 'vector'}, {'numel',2}));
+addOptional(p, 'stage_vals', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','2d'}));
+addOptional(p, 'stage_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','2d'}));
 
 %EEG time settings
-addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
-addOptional(p, 'time_range', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
-addOptional(p, 'isexcluded', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
+addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','2d'}));
+addOptional(p, 'time_range', [], @(x) assert(isa(x, 'numeric') && (ismpety(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
+addOptional(p, 'isexcluded', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','nonnan','2d'}));
+
+%SOpower settings
+SOPH_options = SOpowerphasehist_opts(); % get the default parameters
+addOptional(p, 'SO_freqrange', SOPH_options.SO_freqrange, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','nonnegative','vector','numel',2}));
+addOptional(p, 'tapers', SOPH_options.SOpower_tapers, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','positive','vector','numel',2}));
+addOptional(p, 'window_params', SOPH_options.SOpower_window_params, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','positive','vector','numel',2}));
+addOptional(p, 'SOpower_outlier_threshold', SOPH_options.SOpower_outlier_threshold, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnan','scalar'}));
+addOptional(p, 'norm_method', SOPH_options.SOpower_norm_method, @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
+addOptional(p, 'retain_Fs', SOPH_options.SOpower_retain_Fs, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -68,9 +69,9 @@ SOpower(abs(nanzscore(SOpower)) >= SOpower_outlier_threshold) = nan;
 %Check for all nan SOpower
 if all(isnan(SOpower))
     warning('SOpower is all Nan')
-   norm_method = nan;
-   ptile = nan;
-   return;
+    norm_method = nan;
+    ptile = nan;
+    return;
 end
 
 % % Remove single time points sandwiched between nan values
@@ -87,7 +88,7 @@ pattern = '^p(0*[0-9]|[1-9][0-9]|100)shift[1-5]+$';
 isValidShiftstr = ~isempty(regexp(norm_method, pattern, 'once'));
 
 %Handle shift inputs
-if strcmpi(norm_method,'shift')
+if strcmpi(norm_method, 'shift')
     shift_ptile = 2;
     shift_stages = 1:4;
 elseif isValidShiftstr
@@ -103,7 +104,6 @@ elseif isValidShiftstr
     %Check shift
     assert(shift_ptile >= 0 && shift_ptile <= 100, 'Shift percentile must be between 0 and 100');
 end
-
 
 % To do: right now the stage selection is only applied to the 'shift'
 % method. If we were to use proportion, percentile, ALL stages will be
@@ -140,14 +140,14 @@ switch norm_method
         error(['Normalization method "', norm_method, '" not recognized']);
 end
 
-% Make the output SOpower_norm a row vector 
+% Make the output SOpower_norm a row vector
 SOpower_norm = SOpower_norm';
 
-%% (Optional) Upsample to EEG sampling rate 
+%% (Optional) Upsample to EEG sampling rate
 if retain_Fs
     SOpower_norm_notnan = SOpower_norm(~isnan(SOpower_norm));
     SOpower_norm = interp1([EEG_times(1), SOpower_times(~isnan(SOpower_norm)), EEG_times(end)],...
-       [SOpower_norm_notnan(1), SOpower_norm_notnan, SOpower_norm_notnan(end)], EEG_times);
+        [SOpower_norm_notnan(1), SOpower_norm_notnan, SOpower_norm_notnan(end)], EEG_times);
     SOpower_norm(isexcluded) = nan;
     SOpower_times = EEG_times;
     if ~isempty(stage_vals) && ~isempty(stage_times)

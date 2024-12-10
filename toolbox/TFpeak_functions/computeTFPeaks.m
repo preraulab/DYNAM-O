@@ -4,7 +4,7 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %
 %   Usage:
 %       [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifacts] = ...
-%               computeTFPeaks(data, Fs, stage_times, stage_vals, <options>)
+%               computeTFPeaks(data, Fs, stage_vals, stage_times, <options>)
 %
 %   Inputs:
 %       data (req):                [1xn] double - timeseries data to be analyzed
@@ -13,6 +13,8 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %                                  stage_times. Note the staging convention: 0=unidentified, 1=N3,
 %                                  2=N2, 3=N1, 4=REM, 5=WAKE
 %       stage_times (req):         [1xm] double - timestamps of stage_vals
+%
+%   Optional inputs:
 %       t_data (opt):              [1xn] double - timestamps for data. Default = (0:length(data)-1)/Fs
 %       time_range (opt):          [1x2] double - section of EEG to use in analysis
 %                                  (seconds). Default = [min(t_data), max(t_data)]
@@ -105,10 +107,10 @@ if any(struct_ind)
     else
         opt_struct = varargin{struct_ind}; % Store the struct
     end
-    varargin = varargin(~struct_ind); % Remove struct from the varargins
+    varargin = varargin(~struct_ind); % Remove struct from the varargin
 
     argcell = namedargs2cell(opt_struct); % Convert the struct to cell array
-    varargin = cat(2,varargin,argcell); % Add the new cell array with the params to the end of the varargins
+    varargin = cat(2,varargin,argcell); % Add the new cell array with the params to the end of the varargin
 
     % Test to make sure that none of the additional parameters are already
     % being included in the struct (if input)
@@ -123,43 +125,43 @@ end
 p = inputParser;
 p.KeepUnmatched=true;
 
-addRequired(p, 'data', @(x) validateattributes(x, {'vector','numeric'}, {'real','row','nonempty'}));
-addRequired(p, 'Fs', @(x) validateattributes(x, {'vector','numeric'}, {'real','nonempty'}));
-addRequired(p, 'stage_vals', @(x) validateattributes(x, {'vector','numeric'}, {'real','nonempty'}));
-addRequired(p, 'stage_times', @(x) validateattributes(x, {'vector','numeric'}, {'real','nonempty'}));
+addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
+addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','scalar'}));
+addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
+addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
 
-addOptional(p, 't_data', [], @(x) validateattributes(x,{'vector','numeric'},{'real','finite','row','nonnan'}));
-addOptional(p, 'time_range', [], @(x) validateattributes(x,{'vector','numeric'},{'real','finite','nonnan'}));
-addOptional(p, 'features', 'all',  @(x) validateattributes(x,{'char','cell'},{}));
+addOptional(p, 't_data', [], @(x) validateattributes(x,{'numeric'},{'real','finite','nonnan','2d'}));
+addOptional(p, 'time_range', [], @(x) assert(isa(x, 'numeric') && (ismpety(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
+addOptional(p, 'features', 'all',  @(x) validateattributes(x,{'char','cell'},{'nonempty','scalartext'}));
 
-addOptional(p, 'artifacts', logical([]), @(x) validateattributes(x,{'vector','logical'},{'real','finite','row','nonnan'}));
-addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'struct'},{}));
+addOptional(p, 'artifacts', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','nonnan','2d'}));
+addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'double','struct'},{'nonnan'}));
 
 %Baseline struct parameters
 baseline_options = baseline_opts(); % get the default parameters
-addOptional(p, 'baseline_stages', baseline_options.baseline_stages, @(x) validateattributes(x, {'vector','numeric'}, {'real','nonempty'}));
-addOptional(p, 'baseline_exclude', baseline_options.baseline_exclude, @(x) validateattributes(x,{'vector','logical'},{'real','finite','nonnan'}));
-addOptional(p, 'baseline_ptile', baseline_options.baseline_ptile, @(x) validateattributes(x, {'scalar','numeric'}, {'real', 'nonempty'}));
-addOptional(p, 'baseline_trim', baseline_options.baseline_trim, @(x) validateattributes(x, {'vector','numeric'}, {'real'}));
+addOptional(p, 'baseline_stages', baseline_options.baseline_stages, @(x) validateattributes(x,{'numeric'},{'real','nonempty','vector'}));
+addOptional(p, 'baseline_exclude', baseline_options.baseline_exclude, @(x) validateattributes(x,{'logical'},{'real','finite','nonnan','2d'}));
+addOptional(p, 'baseline_ptile', baseline_options.baseline_ptile, @(x) validateattributes(x,{'numeric'},{'real','nonempty','scalar'}));
+addOptional(p, 'baseline_trim', baseline_options.baseline_trim, @(x) validateattributes(x,{'numeric'},{'real','vector','numel',2}));
 
 %TF-peak detection struct parameters
 detection_options = detection_opts(); % get the default parameters
-addOptional(p, 'verbose', detection_options.verbose, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
-addOptional(p, 'double_watershed', detection_options.double_watershed, @(x) validateattributes(x,{'logical'},{'real','nonempty','nonnan'}));
-addOptional(p, 'dsfreqs', detection_options.dsfreqs, @(x) validateattributes(x,{'scalar','numeric'},{'real','nonempty', 'nonnan'}));
-addOptional(p, 'mtm_taper_params', detection_options.mtm_taper_params, @(x) validateattributes(x,{'vector','numeric'},{'real','nonempty','nonnan'}));
-addOptional(p, 'mtm_window_length_1', detection_options.mtm_window_length_1, @(x) validateattributes(x,{'scalar','numeric'},{'real','nonempty','nonnan'}));
-addOptional(p, 'mtm_window_length_2', detection_options.mtm_window_length_2, @(x) validateattributes(x,{'scalar','numeric'},{'real','nonempty','nonnan'}));
-addOptional(p, 'mtm_window_stepsize', detection_options.mtm_window_stepsize, @(x) validateattributes(x,{'scalar','numeric'},{'real','nonempty','nonnan'}));
-addOptional(p, 'downsample_spect', detection_options.downsample_spect, @(x) validateattributes(x,{'vector','numeric'},{}));
-addOptional(p, 'seg_time', detection_options.seg_time, @(x) validateattributes(x,{'scalar','numeric'},{}));
-addOptional(p, 'merge_thresh', detection_options.merge_thresh, @(x) validateattributes(x,{'scalar','numeric'},{}));
-addOptional(p, 'quality_setting', detection_options.quality_setting, @(x) validateattributes(x,{'char'},{}));
-addOptional(p, 'max_merges', detection_options.max_merges, @(x) validateattributes(x,{'scalar','numeric'},{}));
-addOptional(p, 'trim_vol', detection_options.trim_vol, @(x) validateattributes(x,{'scalar','numeric'},{}));
-addOptional(p, 'dur_max', detection_options.dur_max, @(x) validateattributes(x,{'scalar','numeric'},{}));
-addOptional(p, 'bw_max', detection_options.bw_max, @(x) validateattributes(x,{'scalar','numeric'},{}));
-addOptional(p, 'refinement', detection_options.refinement, @(x) validateattributes(x,{'logical'},{'real','nonempty','nonnan'}));
+addOptional(p, 'verbose', detection_options.verbose, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
+addOptional(p, 'double_watershed', detection_options.double_watershed, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
+addOptional(p, 'dsfreqs', detection_options.dsfreqs, @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan','scalar'}));
+addOptional(p, 'mtm_taper_params', detection_options.mtm_taper_params, @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan','vector','numel',2}));
+addOptional(p, 'mtm_window_length_1', detection_options.mtm_window_length_1, @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan','scalar'}));
+addOptional(p, 'mtm_window_length_2', detection_options.mtm_window_length_2, @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan','scalar'}));
+addOptional(p, 'mtm_window_stepsize', detection_options.mtm_window_stepsize, @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan','scalar'}));
+addOptional(p, 'downsample_spect', detection_options.downsample_spect, @(x) assert(isa(x, 'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
+addOptional(p, 'seg_time', detection_options.seg_time, @(x) assert(isa(x, 'numeric') && (isempty(x) || isscalar(x)), 'Expected input to be a scalar.'));
+addOptional(p, 'merge_thresh', detection_options.merge_thresh, @(x) assert(isa(x, 'numeric') && (isempty(x) || isscalar(x)), 'Expected input to be a scalar.'));
+addOptional(p, 'quality_setting', detection_options.quality_setting, @(x) validateattributes(x,{'char'},{'nonempty'}));
+addOptional(p, 'max_merges', detection_options.max_merges, @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan','scalar'}));
+addOptional(p, 'trim_vol', detection_options.trim_vol, @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan','scalar'}));
+addOptional(p, 'dur_max', detection_options.dur_max, @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan','scalar'}));
+addOptional(p, 'bw_max', detection_options.bw_max, @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan','scalar'}));
+addOptional(p, 'refinement', detection_options.refinement, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -372,8 +374,7 @@ if refinement
         disp('Refining peaks...');
     end
     rft = tic;
-    stats_table = refineTFpeaks(data_trunc,Fs,stats_table,'t',t_data_trunc,'baseline_opt',false,'refine_method','spline_interp', ...
-        'remove_edge_peaks',true);
+    stats_table = refineTFpeaks(data_trunc, Fs, stats_table, 't', t_data_trunc);
     stats_table(isnan(stats_table.PeakFrequency),:) = [];
     if verbose
         disp(['TF-peak refinement took ' datestr(seconds(toc(rft)),'HH:MM:SS'), newline]);
