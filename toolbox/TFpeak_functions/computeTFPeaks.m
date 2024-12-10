@@ -4,15 +4,15 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %
 %   Usage:
 %       [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifacts] = ...
-%               computeTFPeaks(data, Fs, stage_vals, stage_times, <options>)
+%               computeTFPeaks(data, Fs, stage_times, stage_vals, <options>)
 %
 %   Inputs:
 %       data (req):                [1xn] double - timeseries data to be analyzed
 %       Fs (req):                  double - sampling frequency of data (Hz)
+%       stage_times (req):         [1xm] double - timestamps of stage_vals
 %       stage_vals (req):          [1xm] double - sleep stage values at eaach time in
 %                                  stage_times. Note the staging convention: 0=unidentified, 1=N3,
 %                                  2=N2, 3=N1, 4=REM, 5=WAKE
-%       stage_times (req):         [1xm] double - timestamps of stage_vals
 %
 %   Optional inputs:
 %       t_data (opt):              [1xn] double - timestamps for data. Default = (0:length(data)-1)/Fs
@@ -127,8 +127,8 @@ p.KeepUnmatched=true;
 
 addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
 addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','nonnan','positive','scalar'}));
-addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
 addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
+addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
 
 addOptional(p, 't_data', [], @(x) validateattributes(x,{'numeric'},{'real','finite','nonnan','2d'}));
 addOptional(p, 'time_range', [], @(x) assert(isa(x, 'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
@@ -245,7 +245,7 @@ end
 
 %% Compute baseline spectrum used to flatten data spectrum
 % Exclude artifacts, baseline_exclude, and times corresponding to stages not in baseline_stages from baseline computation
-exclude_stages = single(~ismember(stage_vals,baseline_stages)); %stages to use passed in
+exclude_stages = ~ismember(stage_vals, baseline_stages); %stages to use passed in
 exclude_stages_resamp = interp1(stage_times, exclude_stages, t_data_trunc, 'previous', 'extrap')==1; % ==1 instead of logical handles NaN
 baseline_exclude = artifacts' | exclude_stages_resamp | baseline_exclude;
 baseline_exclude_stimes = interp1(t_data_trunc, double(baseline_exclude), stimes, 'nearest', 'extrap')==1; % get excluded baseline times occurring at spectrogram times
@@ -360,7 +360,7 @@ end
 %% Update feature columns of stats_table
 % Get peak stages
 if any(strcmpi(features, 'PeakStage'))
-    stats_table.PeakStage = interp1(stage_times, single(stage_vals), stats_table.PeakTime, 'previous');
+    stats_table.PeakStage = interp1(stage_times, stage_vals, stats_table.PeakTime, 'previous');
     stats_table.PeakStage(logical(interp1(t_data_trunc, double(artifacts), stats_table.PeakTime, 'nearest'))) = 6;
     stats_table.Properties.VariableDescriptions{'PeakStage'} = 'Stage: 6 = Artifact, 5 = W, 4 = R, 3 = N1, 2 = N2, 1 = N3, 0 = Unknown';
     stats_table.Properties.VariableUnits{'PeakStage'} = 'Stage #';

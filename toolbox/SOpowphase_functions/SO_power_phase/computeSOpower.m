@@ -6,8 +6,8 @@ function [SOpower_norm, SOpower_times, SOpower_stages, norm_method, ptile] = com
 p = inputParser;
 
 %Stage info
-addOptional(p, 'stage_vals', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','2d'}));
 addOptional(p, 'stage_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','2d'}));
+addOptional(p, 'stage_vals', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','2d'}));
 
 %EEG time settings
 addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','2d'}));
@@ -57,7 +57,7 @@ nanEEG(isexcluded) = nan;
 SOpower_times = SOpower_times + EEG_times(1); % adjust the time axis to EEG_times
 
 % Compute SOpower stage
-if ~isempty(stage_vals) && ~isempty(stage_times)
+if ~isempty(stage_times) && ~isempty(stage_vals)
     SOpower_stages = interp1(stage_times, stage_vals, SOpower_times, 'previous');
 else
     SOpower_stages = true;
@@ -150,7 +150,7 @@ if retain_Fs
         [SOpower_norm_notnan(1), SOpower_norm_notnan, SOpower_norm_notnan(end)], EEG_times);
     SOpower_norm(isexcluded) = nan;
     SOpower_times = EEG_times;
-    if ~isempty(stage_vals) && ~isempty(stage_times)
+    if ~isempty(stage_times) && ~isempty(stage_vals)
         SOpower_stages = interp1(stage_times, stage_vals, SOpower_times, 'previous');
     else
         SOpower_stages = true;

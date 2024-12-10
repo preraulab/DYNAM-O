@@ -17,8 +17,8 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower, 
 %
 %   OPTIONAL:
 %       TFpeak_stages: Px1 - sleep stage each TF peak occurs 5=W,4=R,3=N1,2=N2,1=N3
-%       stage_vals:  1xS double - numeric stage values 5=W,4=R,3=N1,2=N2,1=N3
 %       stage_times: 1xS double - stage times
+%       stage_vals:  1xS double - numeric stage values 5=W,4=R,3=N1,2=N2,1=N3
 %       freq_range: 1x2 double - min and max frequencies of TF peak to include in the histogram
 %                   (Hz). Default = [0,40]
 %       freq_binsizestep: 1x2 double - [size, step] frequency bin size and bin step for frequency
@@ -104,8 +104,8 @@ addRequired(p, 'TFpeak_times', @(x) validateattributes(x, {'numeric'}, {'real','
 addOptional(p, 'TFpeak_stages', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','2d'}));
 
 %Stage info
-addOptional(p, 'stage_vals', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','2d'}));
 addOptional(p, 'stage_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','2d'}));
+addOptional(p, 'stage_vals', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','2d'}));
 
 %EEG time settings
 addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','2d'}));
@@ -169,7 +169,7 @@ else
     end
 
     % Compute SOpower stage
-    if ~isempty(stage_vals) && ~isempty(stage_times)
+    if  ~isempty(stage_times) && ~isempty(stage_vals)
         SOpower_stages = interp1(stage_times, stage_vals, SOpower_times, 'previous');
     else
         SOpower_stages = true;
@@ -186,7 +186,7 @@ else % Compute the normalized SOpower
     if isempty(norm_method)
         norm_method = SOPH_options.SOpower_norm_method;
     end
-    [SOpower, SOpower_times, SOpower_stages, norm_method] = computeSOpower(EEG, Fs, 'stage_vals', stage_vals, 'stage_times', stage_times,...
+    [SOpower, SOpower_times, SOpower_stages, norm_method] = computeSOpower(EEG, Fs, 'stage_times', stage_times, 'stage_vals', stage_vals,...
         'EEG_times', EEG_times, 'time_range', time_range, 'isexcluded', isexcluded,...
         'SO_freqrange', SO_freqrange,...
         'SOpower_outlier_threshold', SOpower_outlier_threshold, 'norm_method', norm_method, 'retain_Fs', retain_Fs);
@@ -201,7 +201,7 @@ peak_SOpower = interp1([SOpower_times(1)-SOpower_times_step, SOpower_times, SOpo
 
 %% Get valid peak indices
 % Compute TF-peak stages if not included
-if isempty(TFpeak_stages) && ~isempty(stage_vals) && ~isempty(stage_times)
+if isempty(TFpeak_stages) && ~isempty(stage_times) && ~isempty(stage_vals)
     TFpeak_stages = interp1(stage_times, stage_vals, TFpeak_times, 'previous');
 end
 

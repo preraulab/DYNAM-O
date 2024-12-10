@@ -1,13 +1,13 @@
 %RUNDYNAMO: Compute time-frequency peaks and SO-power/phase histograms
 %
 %   Usage:
-%       [stats_table, SOPHs] = runDYNAMO(data, Fs, stage_vals, stage_times, time_range, baseline_options, detection_options, SOPH_options, save_output_image, output_fname, verbose, plot_on)
+%       [stats_table, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options, save_output_image, output_fname, verbose, plot_on)
 %
 %   Inputs:
 %       data: 1 x <number of samples> vector - time series data -- required
 %       Fs: double - sampling frequency in Hz -- required
-%       stage_vals: 1 x <number of stages> vector - values of sleep stages -- required
 %       stage_times: 1 x <number of stages> vector - times of sleep stages in seconds -- required
+%       stage_vals: 1 x <number of stages> vector - values of sleep stages -- required
 %
 %   Optional inputs:
 %       time_range: 1x2 vector - [<start time>, <end time>] in seconds (default: range of scored data)
@@ -68,8 +68,8 @@ p.KeepUnmatched=true;
 
 addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
 addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','nonnan','positive','scalar'}));
-addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
 addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
+addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
 
 addOptional(p, 'time_range', [], @(x) assert(isa(x, 'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
 
@@ -96,13 +96,13 @@ assert(~isempty(valid_stages),'No valid stages found');
 
 %Create unknown stages for missing time
 if min(stage_times)>0
-    stage_vals = [0 stage_vals];
     stage_times = [0 stage_times];
+    stage_vals = [0 stage_vals];
 end
 
 if max(stage_times)>length(data)/Fs
-    stage_vals = [stage_vals 0];
     stage_times = [stage_times stage_times(end)+1e-5];
+    stage_vals = [stage_vals 0];
 end
 
 %Set to range of valid scored data by default
@@ -120,7 +120,7 @@ ttotal = datetime('now');
 
 if isempty(stats_table)
     % If no stats table provided
-    [stats_table, spect, stimes, sfreqs, data_trunc, t_data, artifacts]= computeTFPeaks(data, Fs, stage_vals, stage_times,...
+    [stats_table, spect, stimes, sfreqs, data_trunc, t_data, artifacts]= computeTFPeaks(data, Fs, stage_times, stage_vals,...
         'time_range', time_range, detection_options, baseline_options); %#ok<*ASGLU>
 
 else
@@ -146,7 +146,7 @@ if nargout==2
         SOpower_TIB, SOphase_TIB, stats_table.SOpower, stats_table.SOphase, hist_peakidx,...
         SOpower_norm, SOpower_times, SOphase, SOphase_times, SOdata] = SOpowerphaseHistogram(...
         data_trunc, Fs, stats_table.PeakFrequency, stats_table.PeakTime,...
-        'stage_vals', single(stage_vals), 'stage_times', stage_times,...
+        'stage_times', stage_times, 'stage_vals', stage_vals,...
         'EEG_times', t_data, 'isexcluded', artifacts, 'verbose', verbose, SOPH_options);
 
     %Create SOPHs structure
@@ -452,7 +452,7 @@ data_range = 'night'; %Only works for provided example data
 
 %% LOAD DATA
 %Load example EEG data
-load(data_fname, 'data', 'stage_vals', 'stage_times', 'Fs');
+load(data_fname, 'data', 'stage_times', 'stage_vals', 'Fs');
 
 switch data_range
     case 'segment'
@@ -478,5 +478,5 @@ switch data_range
 end
 
 %Call main function
-[stats_table, SOPHs] = runDYNAMO(data, Fs, stage_vals, stage_times, time_range, baseline_options, detection_options, SOPH_options);
+[stats_table, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options);
 end
