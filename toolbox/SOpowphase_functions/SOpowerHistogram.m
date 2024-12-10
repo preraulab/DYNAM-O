@@ -41,7 +41,7 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower, 
 %                                  be NaN. Default = 10.
 %       SOpower_outlier_threshold: double - cutoff threshold in standard deviation for excluding outlier SOpower values.
 %                                  Default = 3.
-%       norm_method: char - normalization method for SOpower. Options:'pNshiftS', 'percent', 'proportion', 'none'. Default: 'p2shift1234'
+%       norm_method: char - normalization method for SOpower. Options: 'pNshiftS', 'percent', 'proportion', 'none'. Default: 'p2shift1234'
 %                         For shift, it follows the format pNshiftS where N is the percentile and S is the list of stages (5=W,4=R,3=N1,2=N2,1=N3).
 %                         (e.g. p2shift1234 = use the 2nd percentile of stages N3, N2, N1, and REM,
 %                               p5shift123 = use the 5th percentile of stages N3, N2 and N1)
@@ -109,7 +109,7 @@ addOptional(p, 'stage_times', [], @(x) validateattributes(x, {'numeric'}, {'real
 
 %EEG time settings
 addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','2d'}));
-addOptional(p, 'time_range', [], @(x) assert(isa(x, 'numeric') && (ismpety(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
+addOptional(p, 'time_range', [], @(x) assert(isa(x, 'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
 addOptional(p, 'isexcluded', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','nonnan','2d'}));
 
 %SOPH settings
@@ -126,7 +126,7 @@ addOptional(p, 'min_time_in_bin', SOPH_options.SOpower_min_time_in_bin, @(x) val
 
 %SOpower specific settings
 addOptional(p, 'SOpower_outlier_threshold', SOPH_options.SOpower_outlier_threshold, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnan','scalar'}));
-addOptional(p, 'norm_method', '', @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
+addOptional(p, 'norm_method', '', @(x) validateattributes(x, {'char','string'}, {'scalartext'}));
 addOptional(p, 'retain_Fs', SOPH_options.SOpower_retain_Fs, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
 
 %Display settings
