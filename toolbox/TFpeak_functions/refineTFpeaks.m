@@ -25,12 +25,12 @@ function [stats_table] = refineTFpeaks(varargin)
 %% ********************************************************************
 p = inputParser;
 addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
-addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','scalar'}));
+addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','nonnan','positive','scalar'}));
 addRequired(p, 'stats_table', @(x) validateattributes(x, {'table'}, {'nonnan'}));
 
 addOptional(p, 't', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','2d'}));
 addOptional(p, 'baseline_opt', false, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
-addOptional(p, 'refine_method', 'spline_interp', @(x) ismember(x, {'spline_interp', 'spline_opt', 'spect_max'}));
+addOptional(p, 'refine_method', 'spline_interp', @(x) any(validatestring(x, {'spline_interp', 'spline_opt', 'spect_max'})));
 addOptional(p, 'remove_edge_peaks', true, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
 
 parse(p,varargin{:});

@@ -67,7 +67,7 @@ p = inputParser;
 p.KeepUnmatched=true;
 
 addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
-addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','scalar'}));
+addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','nonnan','positive','scalar'}));
 addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
 addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
 
