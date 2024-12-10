@@ -32,13 +32,13 @@ function [hann_spectrogram,stimes,sfreqs] = hann_event_spectra(varargin)
 %Process user input
 p = inputParser;
 addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','vector'}));
-addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','nonnan','positive','scalar'}));
+addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','positive','scalar'}));
 addRequired(p, 'event_times', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','increasing','vector'}));
 
-addOptional(p, 't', [], @(x) validateattributes(x,{'numeric'},{'real','finite','nonnan','increasing','2d'}));
+addOptional(p, 't', [], @(x) validateattributes(x,{'numeric'},{'real','finite','increasing','2d'}));
 addOptional(p, 'frequency_range', [], @(x) isempty(x) || (isnumeric(x) && isvector(x) && numel(x) == 2));
-addOptional(p, 'data_window_params', [5, 1], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','positive','vector','numel',2}));
-addOptional(p, 'NFFT', 0, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnan','nonnegative','integer','scalar'}));
+addOptional(p, 'data_window_params', [5, 1], @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
+addOptional(p, 'NFFT', 0, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
 addOptional(p, 'detrend_opt', 'linear', @(x) any(validatestring(x, {'linear', 'constant', 'off'})));
 addOptional(p, 'plot_on', true, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));

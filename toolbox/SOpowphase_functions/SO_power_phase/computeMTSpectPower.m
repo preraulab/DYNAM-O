@@ -19,15 +19,15 @@ function [SO_power, stimes, sfreqs] = computeMTSpectPower(varargin)
 p = inputParser;
 
 addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
-addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','nonnan','positive','scalar'}));
+addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','positive','scalar'}));
 
 SOPH_options = SOpowerphasehist_opts(); % get the default parameters
-addOptional(p, 'freq_range', SOPH_options.SO_freqrange, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','nonnegative','vector','numel',2}));
-addOptional(p, 'tapers', SOPH_options.SOpower_tapers, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','positive','vector','numel',2}));
-addOptional(p, 'window_params', SOPH_options.SOpower_window_params, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','positive','vector','numel',2}));
+addOptional(p, 'freq_range', SOPH_options.SO_freqrange, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','vector','numel',2}));
+addOptional(p, 'tapers', SOPH_options.SOpower_tapers, @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
+addOptional(p, 'window_params', SOPH_options.SOpower_window_params, @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
 addOptional(p, 'smoothing_method', 'none', @(x) any(validatestring(x, {'none', 'movmean', 'movmedian', 'gaussian', 'lowess', 'loess', 'rlowess', 'rloess', 'sgolay'})));
-addOptional(p, 'smoothing_param', 60*5, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnan','nonnegative','integer','scalar'}));
-addOptional(p, 'interp_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','2d'}));
+addOptional(p, 'smoothing_param', 60*5, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
+addOptional(p, 'interp_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
 addOptional(p, 'verbose', false, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
 
 parse(p,varargin{:});
