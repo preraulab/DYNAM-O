@@ -48,6 +48,7 @@ function sh = hypnoplot(stage_times,stage_vals,varargin)
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %% ********************************************************************
 
+%%
 %Check for old input
 if isstruct(stage_times)
     hypnoplot(stage_times.time, stage_times.stage, varargin{2:end});
@@ -66,9 +67,10 @@ default_colors = [    0.9000    0.9000    0.9000; ...
 
 p = inputParser;
 
-addRequired(p,'stage_times',@(x)validateattributes(x,{'numeric'},{'nonempty'}));
-addRequired(p,'stage_vals',@(x)validateattributes(x,{'numeric'},{'nonempty'}));
-addOptional(p,'Artifacts',[],@(x)validateattributes(x,{'logical','numeric'},{'nonempty'}));
+addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','nondecreasing','row'}));
+addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','nonnegative','row'}));
+addOptional(p, 'Artifacts', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
+
 addOptional(p,'Fs',[],@(x)validateattributes(x,{'numeric'},{'nonempty','positive'}));
 addOptional(p,'ArtifactTimes',[],@(x)validateattributes(x,{'numeric'},{'nonempty'}));
 addOptional(p,'HypnogramLabels',{'Undef','N3','N2','N1','REM','Wake','Art'},@iscell);
