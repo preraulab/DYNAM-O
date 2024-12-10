@@ -24,13 +24,14 @@ function [stats_table] = refineTFpeaks(varargin)
 %
 %% ********************************************************************
 p = inputParser;
-addRequired(p,'data', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-addRequired(p,'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-addRequired(p,'stats_table',@(x) validateattributes(x, {'table'}, {'real'}));
-addOptional(p,'t',[], @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
-addOptional(p,'baseline_opt',false,@(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
-addOptional(p,'refine_method', 'spline_interp', @(x) ismember(x,{'spline_interp','spline_opt','spect_max'}));
-addOptional(p,'remove_edge_peaks',true,@(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
+addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
+addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','scalar'}));
+addRequired(p, 'stats_table', @(x) validateattributes(x, {'table'}, {'nonnan'}));
+
+addOptional(p, 't', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','2d'}));
+addOptional(p, 'baseline_opt', false, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
+addOptional(p, 'refine_method', 'spline_interp', @(x) ismember(x, {'spline_interp', 'spline_opt', 'spect_max'}));
+addOptional(p, 'remove_edge_peaks', true, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
 
 parse(p,varargin{:});
 % Manually assign variables because eval doesn't work with parpool
@@ -52,7 +53,6 @@ if strcmpi(refine_method,'spline_opt') && ~license('test', 'Curve_Fitting_Toolbo
     refine_method = 'spline_interp';
 end
 
-
 %% SPECTROGRAM PARAMS
 dsfreqs = 0.05; % For example, with Fs = 200, this should make the nfft = 2^12
 
@@ -69,7 +69,6 @@ event_times = stats_table.PeakTime;
 % Exclude event times that fall within half the window size distance from
 % the start/end of the data collected
 event_times_inc = event_times > t(1)+(0.5*window_size) & event_times < t(end)-(0.5*window_size);
-
 
 bounding_box_lower = stats_table.BoundingBox(event_times_inc,2); % Element 2 of the bounding box corresponds to the lower bound frequency of the detected event
 bounding_box_height = stats_table.BoundingBox(event_times_inc,4); % Element 4 of the bounding box gives the height of the bounding box
@@ -171,7 +170,8 @@ stats_table.PeakFrequency(event_times_inc) = peak_freqs;
 
 end
 
-% Define a function to enforce constraints
+
+%% Define a helper function to enforce constraints
 function constrainedValue = constrainedObjective(x, objective_fcn, LB, UB)
 % Penalize values outside the bounds
 penalty = 1e6;
@@ -182,6 +182,3 @@ else
     constrainedValue = objective_fcn(x);
 end
 end
-
-
-

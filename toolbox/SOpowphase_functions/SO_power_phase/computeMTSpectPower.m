@@ -1,7 +1,7 @@
 function [SO_power, stimes, sfreqs] = computeMTSpectPower(varargin)
 % COMPUTEMTSPECTPOWER computes the slow oscillation power of timeseries data
 % Usage:
-%   [SO_power, stimes] = computeMTSpectPower(data, Fs, freq_range, tapers, window_params, smoothing_method, smoothing_param, interp_times, verbose)
+%   [SO_power, stimes, sfreqs] = computeMTSpectPower(data, Fs, freq_range, tapers, window_params, smoothing_method, smoothing_param, interp_times, verbose)
 %
 %%   Copyright 2024 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
@@ -18,15 +18,18 @@ function [SO_power, stimes, sfreqs] = computeMTSpectPower(varargin)
 %Input Error handling
 p = inputParser;
 
-addRequired(p,'data',@(x) validateattributes(x,{'numeric', 'vector'},{'nonempty'}));
-addRequired(p,'Fs',@(x) validateattributes(x,{'numeric'},{'nonempty','numel',1}));
-addOptional(p,'freq_range',[.3 1.5], @(x) validateattributes(x,{'numeric', 'vector'},{'numel',2}));
-addOptional(p,'tapers',[15 29],@(x) validateattributes(x,{'numeric', 'vector'},{'numel',2}));
-addOptional(p,'window_params',[30 15], @(x) validateattributes(x,{'numeric', 'vector'},{'numel',2}));
-addOptional(p,'smoothing_method','none', @(x) validateattributes(x,{'char'},{}));
-addOptional(p,'smoothing_param', 60*5, @(x) validateattributes(x,{'numeric'},{'numel',1}));
-addOptional(p,'interp_times',[], @(x) validateattributes(x,{'numeric', 'vector'},{'real'}));
-addOptional(p,'verbose',false, @(x) validateattributes(x,{'logical'},{}));
+addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
+addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','scalar'}));
+
+SOPH_options = SOpowerphasehist_opts(); % get the default parameters
+addOptional(p, 'freq_range', SOPH_options.SO_freqrange, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','nonnegative','vector','numel',2}));
+addOptional(p, 'tapers', SOPH_options.SOpower_tapers, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','positive','vector','numel',2}));
+addOptional(p, 'window_params', SOPH_options.SOpower_window_params, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','positive','vector','numel',2}));
+addOptional(p, 'smoothing_method', 'none', @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
+addOptional(p, 'smoothing_param', 60*5, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnan','nonnegative','integer','scalar'}));
+addOptional(p, 'interp_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','2d'}));
+addOptional(p, 'verbose', false, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
+
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
 field_names = fieldnames(p.Results);

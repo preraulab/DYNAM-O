@@ -1,13 +1,13 @@
 %RUNDYNAMO: Compute time-frequency peaks and SO-power/phase histograms
 %
 %   Usage:
-%       [stats_table, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options, save_output_image, output_fname, verbose, plot_on)
+%       [stats_table, SOPHs] = runDYNAMO(data, Fs, stage_vals, stage_times, time_range, baseline_options, detection_options, SOPH_options, save_output_image, output_fname, verbose, plot_on)
 %
 %   Inputs:
 %       data: 1 x <number of samples> vector - time series data -- required
 %       Fs: double - sampling frequency in Hz -- required
-%       stage_times: 1 x <number of stages> vector - times of sleep stages in seconds -- required
 %       stage_vals: 1 x <number of stages> vector - values of sleep stages -- required
+%       stage_times: 1 x <number of stages> vector - times of sleep stages in seconds -- required
 %
 %   Optional inputs:
 %       time_range: 1x2 vector - [<start time>, <end time>] in seconds (default: range of scored data)
@@ -66,19 +66,22 @@ end
 p = inputParser;
 p.KeepUnmatched=true;
 
-addRequired(p, 'data', @(x) validateattributes(x, {'vector','numeric'}, {'real','row','nonempty'}));
-addRequired(p, 'Fs', @(x) validateattributes(x, {'scalar','numeric'}, {'real','nonempty'}));
-addRequired(p, 'stage_times', @(x) validateattributes(x, {'vector','numeric'}, {'real','row','nonempty'}));
-addRequired(p, 'stage_vals', @(x) validateattributes(x, {'vector','numeric'}, {'real','row','nonempty'}));
-addOptional(p, 'time_range', [], @(x) validateattributes(x, {'vector','numeric'}, {'real','nonnan'}));
+addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
+addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','scalar'}));
+addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
+addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
+
+addOptional(p, 'time_range', [], @(x) assert(isa(x, 'numeric') && (ismpety(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
+
 addOptional(p, 'baseline_options', baseline_opts(), @(x) validateattributes(x, {'struct'}, {'nonempty'}));
 addOptional(p, 'detection_options', detection_opts(), @(x) validateattributes(x, {'struct'}, {'nonempty'}));
 addOptional(p, 'SOPH_options', SOpowerphasehist_opts(), @(x) validateattributes(x, {'struct'}, {'nonempty'}));
-addOptional(p, 'stats_table', [], @(x) validateattributes(x, {'table'}, {'nonempty'}));
-addOptional(p, 'save_output_image', false, @(x) validateattributes(x, {'logical'}, {'nonempty','nonnan'}));
-addOptional(p, 'output_fname', 'DYNAM-O_output', @(x) validateattributes(x, {'char','string'}, {'nonempty'}));
-addOptional(p, 'verbose', true, @(x) validateattributes(x, {'logical'}, {'nonempty','nonnan'}));
-addOptional(p, 'plot_on', true, @(x) validateattributes(x, {'logical'}, {'nonempty','nonnan'}));
+
+addOptional(p, 'stats_table', [], @(x) validateattributes(x, {'double','table'}, {'nonnan'}));
+addOptional(p, 'save_output_image', false, @(x) validateattributes(x, {'logical'}, {'nonempty','nonnan','scalar'}));
+addOptional(p, 'output_fname', 'DYNAM-O_output', @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
+addOptional(p, 'verbose', true, @(x) validateattributes(x, {'logical'}, {'nonempty','nonnan','scalar'}));
+addOptional(p, 'plot_on', true, @(x) validateattributes(x, {'logical'}, {'nonempty','nonnan','scalar'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -93,13 +96,13 @@ assert(~isempty(valid_stages),'No valid stages found');
 
 %Create unknown stages for missing time
 if min(stage_times)>0
-    stage_times = [0 stage_times];
     stage_vals = [0 stage_vals];
+    stage_times = [0 stage_times];
 end
 
 if max(stage_times)>length(data)/Fs
-    stage_times = [stage_times stage_times(end)+1e-5];
     stage_vals = [stage_vals 0];
+    stage_times = [stage_times stage_times(end)+1e-5];
 end
 
 %Set to range of valid scored data by default
@@ -475,5 +478,5 @@ switch data_range
 end
 
 %Call main function
-[stats_table, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options);
+[stats_table, SOPHs] = runDYNAMO(data, Fs, stage_vals, stage_times, time_range, baseline_options, detection_options, SOPH_options);
 end

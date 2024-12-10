@@ -34,13 +34,13 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower, 
 %       SOPH_stages: stages in which to restrict the SOPH. Default: 1:3 (NREM only)
 %                    W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
 %       norm_dim: double - histogram dimension to normalize, not related to norm_method (default: 0 = no normalization)
-%       compute_rate: logical - histogram output in terms of TFpeaks/min instead of count. 
+%       compute_rate: logical - histogram output in terms of TFpeaks/min instead of count.
 %                               Default = true.
 %       min_time_in_bin: numerical - time (minutes) required in each SO power bin to include
 %                                  in SOpower analysis. Otherwise all values in that SO power bin will
 %                                  be NaN. Default = 10.
-%       SOpower_outlier_threshold: double - cutoff threshold in standard deviation for excluding outlier SOpower values. 
-%                                  Default = 3. 
+%       SOpower_outlier_threshold: double - cutoff threshold in standard deviation for excluding outlier SOpower values.
+%                                  Default = 3.
 %       norm_method: char - normalization method for SOpower. Options:'pNshiftS', 'percent', 'proportion', 'none'. Default: 'p2shift1234'
 %                         For shift, it follows the format pNshiftS where N is the percentile and S is the list of stages (5=W,4=R,3=N1,2=N2,1=N3).
 %                         (e.g. p2shift1234 = use the 2nd percentile of stages N3, N2, N1, and REM,
@@ -99,38 +99,39 @@ end
 p = inputParser;
 
 %TFpeak info
-addRequired(p, 'TFpeak_freqs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-addRequired(p, 'TFpeak_times', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-addOptional(p, 'TFpeak_stages', [], @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
+addRequired(p, 'TFpeak_freqs', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','positive','vector'}));
+addRequired(p, 'TFpeak_times', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','nonnan','vector'}));
+addOptional(p, 'TFpeak_stages', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','2d'}));
 
 %Stage info
-addOptional(p, 'stage_vals', [], @(x) validateattributes(x, {'double', 'single'}, {'real'}));
-addOptional(p, 'stage_times', [], @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
-
-%SOPH settings
-addOptional(p, 'freq_range', [0,40], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
-addOptional(p, 'freq_binsizestep', [1, 0.2], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
-addOptional(p, 'SO_range', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
-addOptional(p, 'SO_binsizestep', [], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
-addOptional(p, 'SO_freqrange', [0.3, 1.5], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan'}));
-addOptional(p, 'SOPH_stages', 1:3, @(x) validateattributes(x, {'numeric', 'vector'}, {'real'})); % W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
-addOptional(p, 'norm_dim', 0, @(x) validateattributes(x,{'numeric'},{'scalar'}));
-addOptional(p, 'compute_rate', true, @(x) validateattributes(x,{'logical'},{}));
-addOptional(p, 'min_time_in_bin', 10, @(x) validateattributes(x,{'numeric'},{'scalar','real','finite','nonnan','nonnegative','integer'}));
-
-%SOpower specific settings
-addOptional(p, 'SOpower_outlier_threshold', 3, @(x) validateattributes(x,{'numeric'},{'scalar'}));
-addOptional(p, 'norm_method', 'p2shift1234', @(x) validateattributes(x, {'char', 'numeric'},{}));
-addOptional(p, 'retain_Fs', true, @(x) validateattributes(x,{'logical'},{}));
+addOptional(p, 'stage_vals', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','2d'}));
+addOptional(p, 'stage_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','2d'}));
 
 %EEG time settings
-addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
-addOptional(p, 'time_range', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
-addOptional(p, 'isexcluded', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
+addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','2d'}));
+addOptional(p, 'time_range', [], @(x) assert(isa(x, 'numeric') && (ismpety(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
+addOptional(p, 'isexcluded', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','nonnan','2d'}));
+
+%SOPH settings
+SOPH_options = SOpowerphasehist_opts(); % get the default parameters
+addOptional(p, 'freq_range', SOPH_options.freq_range, @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnan','vector','numel',2}));
+addOptional(p, 'freq_binsizestep', SOPH_options.freq_binsizestep, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','positive','vector','numel',2}));
+addOptional(p, 'SO_range', SOPH_options.SOpower_range, @(x) assert(isa(x, 'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
+addOptional(p, 'SO_binsizestep', SOPH_options.SOpower_binsizestep, @(x) assert(isa(x, 'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
+addOptional(p, 'SO_freqrange', SOPH_options.SO_freqrange, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnan','nonnegative','vector','numel',2}));
+addOptional(p, 'SOPH_stages', SOPH_options.SOPH_stages, @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnegative','vector'})); % W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
+addOptional(p, 'norm_dim', 0, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnan','nonnegative','integer','scalar'}));
+addOptional(p, 'compute_rate', SOPH_options.compute_rate, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
+addOptional(p, 'min_time_in_bin', SOPH_options.SOpower_min_time_in_bin, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnan','nonnegative','integer','scalar'}));
+
+%SOpower specific settings
+addOptional(p, 'SOpower_outlier_threshold', SOPH_options.SOpower_outlier_threshold, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnan','scalar'}));
+addOptional(p, 'norm_method', '', @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
+addOptional(p, 'retain_Fs', SOPH_options.SOpower_retain_Fs, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
 
 %Display settings
-addOptional(p, 'plot_on', false, @(x) validateattributes(x,{'logical'},{}));
-addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{}));
+addOptional(p, 'plot_on', false, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
+addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -151,22 +152,22 @@ if ~isempty(EEG)
     else
         assert( (time_range(1) >= min(EEG_times)) & (time_range(2) <= max(EEG_times)), 'time_range cannot be outside of the time range described by "EEG_times"');
     end
-    
+
     if isempty(isexcluded)
         isexcluded = false(size(EEG,2),1);
     else
         assert(length(isexcluded) == size(EEG,2),'isexcluded must be the same length as EEG');
     end
-    
-%Handle SOpower/SOpower_times input
+
+    %Handle SOpower/SOpower_times input
 else
     SOpower_times_step = SOpower_times(2) - SOpower_times(1);
     if isempty(time_range)
         time_range = [min(SOpower_times)-SOpower_times_step, max(SOpower_times)+SOpower_times_step];
     else
-        assert( (time_range(1) >= min(SOpower_times)-SOpower_times_step) & (time_range(2) <= max(SOpower_times)+SOpower_times_step), 'time_range cannot be outside of the time range described by "SOpower_times"');
+        assert((time_range(1) >= min(SOpower_times)-SOpower_times_step) & (time_range(2) <= max(SOpower_times)+SOpower_times_step), 'time_range cannot be outside of the time range described by "SOpower_times"');
     end
-    
+
     % Compute SOpower stage
     if ~isempty(stage_vals) && ~isempty(stage_times)
         SOpower_stages = interp1(stage_times, stage_vals, SOpower_times, 'previous');
@@ -178,11 +179,17 @@ end
 %% Compute SO power
 if ~isempty(SOpower) % SOpower is directly provided
     assert(~isempty(SOpower_times), 'SOpower input only but no SOpower_times received.')
-    norm_method = 'direct SOpower input';
+    if isempty(norm_method)
+        norm_method = 'direct SOpower input';
+    end
 else % Compute the normalized SOpower
+    if isempty(norm_method)
+        norm_method = SOPH_options.SOpower_norm_method;
+    end
     [SOpower, SOpower_times, SOpower_stages, norm_method] = computeSOpower(EEG, Fs, 'stage_vals', stage_vals, 'stage_times', stage_times,...
-        'SO_freqrange', SO_freqrange, 'SOpower_outlier_threshold', SOpower_outlier_threshold, 'norm_method', norm_method,...
-        'retain_Fs', retain_Fs, 'EEG_times', EEG_times, 'time_range', time_range, 'isexcluded', isexcluded);
+        'EEG_times', EEG_times, 'time_range', time_range, 'isexcluded', isexcluded,...
+        'SO_freqrange', SO_freqrange,...
+        'SOpower_outlier_threshold', SOpower_outlier_threshold, 'norm_method', norm_method, 'retain_Fs', retain_Fs);
 end
 
 % Get SOpower_times step size
@@ -217,6 +224,7 @@ if islogical(SOpower_stages) && SOpower_stages
 else
     SOpower_stages_valid = ismember(SOpower_stages, SOPH_stages);
 end
+
 SOpower_excluded_valid = ~isnan(SOpower);
 SOpower_times_valid = SOpower_times>=time_range(1) & SOpower_times<=time_range(2);
 
@@ -236,10 +244,14 @@ if isempty(SO_binsizestep)
     SO_binsizestep(2) = (SO_range(2) - SO_range(1)) / 100;
 end
 
-[SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin] = TFPeakHistogram(SOpower, SOpower_stages, SOpower_times_step, SOpower_valid,...
-    SOpower_valid_allstages, TFpeak_freqs(peak_selection_inds), peak_SOpower(peak_selection_inds),...
+[SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin] = TFPeakHistogram(SOpower,...
+    SOpower_stages, SOpower_times_step, SOpower_valid, SOpower_valid_allstages,...
+    TFpeak_freqs(peak_selection_inds), peak_SOpower(peak_selection_inds),...
     'norm_method', norm_method,... # specific to SOpower histogram
-    'Cmetric_label', 'SO-Power', 'C_range', SO_range, 'C_binsizestep', SO_binsizestep, 'freq_range', freq_range, 'freq_binsizestep', freq_binsizestep,...
-    'norm_dim', norm_dim, 'compute_rate', compute_rate, 'min_time_in_bin', min_time_in_bin, 'plot_on', plot_on, 'xlabel_text', 'SO Power (normalized)', 'verbose', verbose);
+    'Cmetric_label', 'SO-Power', 'xlabel_text', 'SO Power (normalized)',...
+    'C_range', SO_range, 'C_binsizestep', SO_binsizestep,...
+    'freq_range', freq_range, 'freq_binsizestep', freq_binsizestep,...
+    'norm_dim', norm_dim, 'compute_rate', compute_rate, 'min_time_in_bin', min_time_in_bin,...
+    'plot_on', plot_on, 'verbose', verbose);
 
 end
