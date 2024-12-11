@@ -47,7 +47,7 @@ addOptional(p, 'quality_setting', 'default', @(x) any(validatestring(x, {'stokes
 
 %Merging and trimming parameters
 %Maximum number of merges to perform
-addOptional(p, 'max_merges', inf, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
+addOptional(p, 'max_merges', inf, @(x) validateattributes(x,{'numeric'},{'real','positive','scalar'}));
 %Fraction maximum trimmed volume
 addOptional(p, 'trim_vol', 0.8, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 %Max duration allowed

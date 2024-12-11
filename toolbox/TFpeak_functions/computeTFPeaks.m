@@ -157,7 +157,7 @@ addOptional(p, 'downsample_spect', detection_options.downsample_spect, @(x) asse
 addOptional(p, 'seg_time', detection_options.seg_time, @(x) assert(isa(x, 'numeric') && (isempty(x) || isscalar(x)), 'Expected input to be a scalar.'));
 addOptional(p, 'merge_thresh', detection_options.merge_thresh, @(x) assert(isa(x, 'numeric') && (isempty(x) || isscalar(x)), 'Expected input to be a scalar.'));
 addOptional(p, 'quality_setting', detection_options.quality_setting, @(x) any(validatestring(x, {'stokes_2023', 'precision', 'default'})));
-addOptional(p, 'max_merges', detection_options.max_merges, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
+addOptional(p, 'max_merges', detection_options.max_merges, @(x) validateattributes(x,{'numeric'},{'real','positive','scalar'}));
 addOptional(p, 'trim_vol', detection_options.trim_vol, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 addOptional(p, 'dur_max', detection_options.dur_max, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 addOptional(p, 'bw_max', detection_options.bw_max, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
@@ -246,9 +246,9 @@ end
 %% Compute baseline spectrum used to flatten data spectrum
 % Exclude artifacts, baseline_exclude, and times corresponding to stages not in baseline_stages from baseline computation
 exclude_stages = ~ismember(stage_vals, baseline_stages); %stages to use passed in
-exclude_stages_resamp = interp1(stage_times, exclude_stages, t_data_trunc, 'previous', 'extrap')==1; % ==1 instead of logical handles NaN
+exclude_stages_resamp = interp1(stage_times, single(exclude_stages), t_data_trunc, 'previous', 'extrap')==1; % ==1 instead of logical handles NaN
 baseline_exclude = artifacts' | exclude_stages_resamp | baseline_exclude;
-baseline_exclude_stimes = interp1(t_data_trunc, double(baseline_exclude), stimes, 'nearest', 'extrap')==1; % get excluded baseline times occurring at spectrogram times
+baseline_exclude_stimes = interp1(t_data_trunc, single(baseline_exclude), stimes, 'nearest', 'extrap')==1; % get excluded baseline times occurring at spectrogram times
 % Applying time period trimming for baseline computation
 baseline_range_inds = stimes >= baseline_range(1) & stimes <= baseline_range(2);
 % Exclude segments with artifact/not in baseline include or not within baseline_range for baseline computation
@@ -301,7 +301,7 @@ if double_watershed
     stimes = stimes + t_data_trunc(1); % adjust the time axis to t_data
 
     % Update baseline exclusion - this block is identical to the first round
-    baseline_exclude_stimes = interp1(t_data_trunc, double(baseline_exclude), stimes, 'nearest', 'extrap')==1;
+    baseline_exclude_stimes = interp1(t_data_trunc, single(baseline_exclude), stimes, 'nearest', 'extrap')==1;
     % Applying time period trimming for baseline computation
     baseline_range_inds = stimes >= baseline_range(1) & stimes <= baseline_range(2);
     % Re-compute baseline spectrum
@@ -361,7 +361,7 @@ end
 % Get peak stages
 if any(strcmpi(features, 'PeakStage'))
     stats_table.PeakStage = interp1(stage_times, stage_vals, stats_table.PeakTime, 'previous');
-    stats_table.PeakStage(logical(interp1(t_data_trunc, double(artifacts), stats_table.PeakTime, 'nearest'))) = 6;
+    stats_table.PeakStage(logical(interp1(t_data_trunc, single(artifacts), stats_table.PeakTime, 'nearest'))) = 6;
     stats_table.Properties.VariableDescriptions{'PeakStage'} = 'Stage: 6 = Artifact, 5 = W, 4 = R, 3 = N1, 2 = N2, 1 = N3, 0 = Unknown';
     stats_table.Properties.VariableUnits{'PeakStage'} = 'Stage #';
 end
