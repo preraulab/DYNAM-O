@@ -6,8 +6,8 @@ function [SOpower_norm, SOpower_times, SOpower_stages, norm_method, ptile] = com
 p = inputParser;
 
 %Stage info
-addOptional(p, 'stage_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nondecreasing','2d'}));
-addOptional(p, 'stage_vals', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','2d'}));
+addOptional(p, 'stage_times', [], @(x) validateattributes(x, {'double','single'}, {'real','finite','nondecreasing','2d'}));
+addOptional(p, 'stage_vals', [], @(x) validateattributes(x, {'double','single'}, {'real','finite','nonnegative','2d'}));
 
 %EEG time settings
 addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));

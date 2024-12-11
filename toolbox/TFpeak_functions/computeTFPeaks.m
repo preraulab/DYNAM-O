@@ -9,8 +9,8 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %   Inputs:
 %       data (req):                [1xn] double - timeseries data to be analyzed
 %       Fs (req):                  double - sampling frequency of data (Hz)
-%       stage_times (req):         [1xm] double - timestamps of stage_vals
-%       stage_vals (req):          [1xm] double - sleep stage values at eaach time in
+%       stage_times (req):         [1xm] double or single - timestamps of stage_vals
+%       stage_vals (req):          [1xm] double or single - sleep stage values at eaach time in
 %                                  stage_times. Note the staging convention: 0=unidentified, 1=N3,
 %                                  2=N2, 3=N1, 4=REM, 5=WAKE
 %
@@ -127,8 +127,8 @@ p.KeepUnmatched=true;
 
 addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','row'}));
 addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','scalar'}));
-addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric'}, {'real','finite','nondecreasing','row'}));
-addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','row'}));
+addRequired(p, 'stage_times', @(x) validateattributes(x, {'double','single'}, {'real','finite','nondecreasing','row'}));
+addRequired(p, 'stage_vals', @(x) validateattributes(x, {'double','single'}, {'real','finite','nonnegative','row'}));
 
 addOptional(p, 't_data', [], @(x) validateattributes(x,{'numeric'},{'real','finite','2d'}));
 addOptional(p, 'time_range', [], @(x) assert(isa(x, 'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
