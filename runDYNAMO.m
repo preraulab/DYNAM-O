@@ -66,10 +66,10 @@ end
 p = inputParser;
 p.KeepUnmatched=true;
 
-addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
-addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','positive','scalar'}));
-addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','nondecreasing','row'}));
-addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','nonnegative','row'}));
+addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','row'}));
+addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','scalar'}));
+addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric'}, {'real','finite','nondecreasing','row'}));
+addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','row'}));
 
 addOptional(p, 'time_range', [], @(x) assert(isa(x, 'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
 

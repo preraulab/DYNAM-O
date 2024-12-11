@@ -24,8 +24,8 @@ function [stats_table] = refineTFpeaks(varargin)
 %
 %% ********************************************************************
 p = inputParser;
-addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','nonempty','row'}));
-addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','positive','scalar'}));
+addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','row'}));
+addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','scalar'}));
 addRequired(p, 'stats_table', @(x) validateattributes(x, {'table'}, {'nonnan'}));
 
 addOptional(p, 't', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));

@@ -13,15 +13,15 @@ addOptional(p, 'double_watershed', true, @(x) validateattributes(x,{'logical'},{
 
 %Multitaper method parameters
 %Frequency bin resolution of the spectrogram
-addOptional(p, 'dsfreqs', 0.1, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','scalar'}));
+addOptional(p, 'dsfreqs', 0.1, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 %Taper parameters [time half-bandwidth product, number of tapers]
-addOptional(p, 'mtm_taper_params', [2, 3], @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','vector','numel',2}));
+addOptional(p, 'mtm_taper_params', [2, 3], @(x) validateattributes(x,{'numeric'},{'real','finite','vector','numel',2}));
 %Window length in spectrogram computation for the first round of watershed
-addOptional(p, 'mtm_window_length_1', 1, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','scalar'}));
+addOptional(p, 'mtm_window_length_1', 1, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 %Window length in spectrogram computation for the second round of watershed
-addOptional(p, 'mtm_window_length_2', 2, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','scalar'}));
+addOptional(p, 'mtm_window_length_2', 2, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 %Window step size in spectrogram computations
-addOptional(p, 'mtm_window_stepsize', 0.05, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','scalar'}));
+addOptional(p, 'mtm_window_stepsize', 0.05, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 
 %Watershed parameters
 %Decimation steps for the spectrogram prior to watershed: first index along the time axis; second index along frequency
@@ -47,13 +47,13 @@ addOptional(p, 'quality_setting', 'default', @(x) any(validatestring(x, {'stokes
 
 %Merging and trimming parameters
 %Maximum number of merges to perform
-addOptional(p, 'max_merges', inf, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','scalar'}));
+addOptional(p, 'max_merges', inf, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 %Fraction maximum trimmed volume
-addOptional(p, 'trim_vol', 0.8, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','scalar'}));
+addOptional(p, 'trim_vol', 0.8, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 %Max duration allowed
-addOptional(p, 'dur_max', 5, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','scalar'}));
+addOptional(p, 'dur_max', 5, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 %Max bandwidth allowed
-addOptional(p, 'bw_max', 15, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','scalar'}));
+addOptional(p, 'bw_max', 15, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 
 %Frequency refinement using 1Hz df hann spectrum for final PeakFrequency feature computation
 addOptional(p, 'refinement', true, @(x) validateattributes(x,{'logical'},{'scalar'}));

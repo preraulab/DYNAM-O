@@ -100,7 +100,7 @@ p = inputParser;
 
 %TFpeak info
 addRequired(p, 'TFpeak_freqs', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','positive','vector'}));
-addRequired(p, 'TFpeak_times', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','vector'}));
+addRequired(p, 'TFpeak_times', @(x) validateattributes(x, {'numeric'}, {'real','finite','vector'}));
 addOptional(p, 'TFpeak_stages', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','2d'}));
 
 %Stage info
@@ -114,7 +114,7 @@ addOptional(p, 'isexcluded', logical([]), @(x) validateattributes(x,{'logical'},
 
 %SOPH settings
 SOPH_options = SOpowerphasehist_opts(); % get the default parameters
-addOptional(p, 'freq_range', SOPH_options.freq_range, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','vector','numel',2}));
+addOptional(p, 'freq_range', SOPH_options.freq_range, @(x) validateattributes(x,{'numeric'},{'real','finite','vector','numel',2}));
 addOptional(p, 'freq_binsizestep', SOPH_options.freq_binsizestep, @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
 addOptional(p, 'SO_range', SOPH_options.SOpower_range, @(x) assert(isa(x, 'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
 addOptional(p, 'SO_binsizestep', SOPH_options.SOpower_binsizestep, @(x) assert(isa(x, 'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));

@@ -67,14 +67,14 @@ default_colors = [    0.9000    0.9000    0.9000; ...
 
 p = inputParser;
 
-addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','nondecreasing','row'}));
-addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','nonnegative','row'}));
+addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric'}, {'real','finite','nondecreasing','row'}));
+addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','row'}));
 addOptional(p, 'Artifacts', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
 addOptional(p, 'Fs', [], @(x) isempty(x) || (isnumeric(x) && isscalar(x)));
 addOptional(p, 'ArtifactTimes', [], @(x) validateattributes(x,{'numeric'},{'real','finite','2d'}));
-addOptional(p, 'HypnogramLabels', {'Undef','N3','N2','N1','REM','Wake','Art'}, @(x) validateattributes(x,{'cell'},{'nonempty','numel',7}));
-addOptional(p, 'StageColors', default_colors, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','nonnegative','ndims',2,'ncols',3}));
-addOptional(p, 'PlotBuffer', .3, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','positive','scalar'}));
+addOptional(p, 'HypnogramLabels', {'Undef','N3','N2','N1','REM','Wake','Art'}, @(x) validateattributes(x,{'cell'},{'numel',7}));
+addOptional(p, 'StageColors', default_colors, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','ndims',2,'ncols',3}));
+addOptional(p, 'PlotBuffer', .3, @(x) validateattributes(x,{'numeric'},{'real','finite','positive','scalar'}));
 addOptional(p, 'LabelPos', 'left', @(x) any(validatestring(x, {'top', 'left'})));
 addOptional(p, 'GroupNREMColors', true, @(x) validateattributes(x,{'logical'},{'scalar'}));
 
