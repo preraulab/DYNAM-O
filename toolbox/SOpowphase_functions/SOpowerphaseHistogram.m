@@ -111,12 +111,12 @@ p.KeepUnmatched=true;
 
 %TFpeak info
 addRequired(p, 'TFpeak_freqs', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','positive','vector'}));
-addRequired(p, 'TFpeak_times', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','vector'}));
+addRequired(p, 'TFpeak_times', @(x) validateattributes(x, {'numeric'}, {'real','finite','vector'}));
 addOptional(p, 'TFpeak_stages', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','2d'}));
 
 %Stage info
-addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','nondecreasing','row'}));
-addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','nonnegative','row'}));
+addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric'}, {'real','finite','nondecreasing','row'}));
+addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','row'}));
 
 %EEG time settings
 addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
@@ -126,7 +126,7 @@ addOptional(p, 'isexcluded', logical([]), @(x) validateattributes(x,{'logical'},
 %SOPH struct parameters
 SOPH_options = SOpowerphasehist_opts(); % get the default parameters
 %General settings
-addOptional(p, 'freq_range', SOPH_options.freq_range, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','vector','numel',2}));
+addOptional(p, 'freq_range', SOPH_options.freq_range, @(x) validateattributes(x,{'numeric'},{'real','finite','vector','numel',2}));
 addOptional(p, 'freq_binsizestep', SOPH_options.freq_binsizestep, @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
 addOptional(p, 'compute_rate', SOPH_options.compute_rate, @(x) validateattributes(x,{'logical'},{'scalar'}));
 addOptional(p, 'SOPH_stages', SOPH_options.SOPH_stages, @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnegative','vector'})); % W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0

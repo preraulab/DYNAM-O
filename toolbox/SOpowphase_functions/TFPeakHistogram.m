@@ -7,15 +7,15 @@ function [C_mat, freq_cbins, C_cbins, time_in_bin, prop_in_bin] = TFPeakHistogra
 p = inputParser;
 
 %Cmetric info
-addRequired(p, 'Cmetric', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','vector'}));
-addRequired(p, 'Cmetric_stages', @(x) validateattributes(x, {'numeric','logical'}, {'real','finite','nonempty','nonnegative','2d'}));
+addRequired(p, 'Cmetric', @(x) validateattributes(x, {'numeric'}, {'real','finite','vector'}));
+addRequired(p, 'Cmetric_stages', @(x) validateattributes(x, {'numeric','logical'}, {'real','finite','nonnegative','vector'}));
 addRequired(p, 'Cmetric_times_step', @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
-addRequired(p, 'Cmetric_valid', @(x) validateattributes(x,{'logical'},{'finite','nonempty','vector'}));
-addRequired(p, 'Cmetric_valid_allstages', @(x) validateattributes(x,{'logical'},{'finite','nonempty','vector'}));
+addRequired(p, 'Cmetric_valid', @(x) validateattributes(x,{'logical'},{'finite','vector'}));
+addRequired(p, 'Cmetric_valid_allstages', @(x) validateattributes(x,{'logical'},{'finite','vector'}));
 
 %TF-peak info
-addRequired(p, 'TFpeak_freqs', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','positive','vector'}));
-addRequired(p, 'peak_Cmetric', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','vector'}));
+addRequired(p, 'TFpeak_freqs', @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector'}));
+addRequired(p, 'peak_Cmetric', @(x) validateattributes(x, {'numeric'}, {'real','finite','vector'}));
 
 %CPH settings
 SOPH_options = SOpowerphasehist_opts(); % get some default parameters
@@ -27,7 +27,7 @@ addOptional(p, 'xlabel_text', 'C metric', @(x) validateattributes(x, {'char','st
 addOptional(p, 'C_range', [], @(x) assert(isa(x, 'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
 addOptional(p, 'C_binsizestep', [], @(x) assert(isa(x, 'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
 
-addOptional(p, 'freq_range', SOPH_options.freq_range, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','vector','numel',2}));
+addOptional(p, 'freq_range', SOPH_options.freq_range, @(x) validateattributes(x,{'numeric'},{'real','finite','vector','numel',2}));
 addOptional(p, 'freq_binsizestep', SOPH_options.freq_binsizestep, @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
 addOptional(p, 'norm_dim', 0, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
 addOptional(p, 'compute_rate', SOPH_options.compute_rate, @(x) validateattributes(x,{'logical'},{'scalar'}));
