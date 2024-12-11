@@ -16,8 +16,8 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %
 %   Optional inputs:
 %       t_data (opt):              [1xn] double - timestamps for data. Default = (0:length(data)-1)/Fs
-%       time_range (opt):          [1x2] double - section of EEG to use in analysis
-%                                  (seconds). Default = [min(t_data), max(t_data)]
+%       time_range (opt):          [1x2] double - section of EEG to use in analysis (seconds).
+%                                  Default = [min(t_data), max(t_data)]
 %       features (opt):            [1xf] char or cell array of char -
 %                                  features to be extracted from each peak region. Can be any subset of
 %                                  {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData',

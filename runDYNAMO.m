@@ -70,13 +70,13 @@ addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','row'}));
 addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','scalar'}));
 addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric'}, {'real','finite','nondecreasing','row'}));
 addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','row'}));
-
+% section of EEG to use in analysis (seconds)
 addOptional(p, 'time_range', [], @(x) assert(isa(x, 'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
-
+% parameters managed using struct outputs from opts functions
 addOptional(p, 'baseline_options', baseline_opts(), @(x) validateattributes(x, {'struct'}, {'nonempty'}));
 addOptional(p, 'detection_options', detection_opts(), @(x) validateattributes(x, {'struct'}, {'nonempty'}));
 addOptional(p, 'SOPH_options', SOpowerphasehist_opts(), @(x) validateattributes(x, {'struct'}, {'nonempty'}));
-
+% additional inputs to control the outputs from runDYNAMO()
 addOptional(p, 'stats_table', [], @(x) validateattributes(x, {'double','table'}, {'nonnan'}));
 addOptional(p, 'save_output_image', false, @(x) validateattributes(x, {'logical'}, {'scalar'}));
 addOptional(p, 'output_fname', 'DYNAM-O_output', @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
@@ -124,7 +124,7 @@ if isempty(stats_table)
         'time_range', time_range, detection_options, baseline_options); %#ok<*ASGLU>
 
 else
-    % If stats table provided, check to be sure SOPH is asked by output
+    % If stats table provided, check to be sure SOPH is requested by output
     assert(nargout==2,'Nothing to compute. Must provide SOPH output if stats table is used as input.');
 
     if verbose
