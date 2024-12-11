@@ -73,7 +73,7 @@ addOptional(p, 'Artifacts', logical([]), @(x) validateattributes(x,{'logical'},{
 addOptional(p, 'Fs', [], @(x) isempty(x) || (isnumeric(x) && isscalar(x)));
 addOptional(p, 'ArtifactTimes', [], @(x) validateattributes(x,{'numeric'},{'real','finite','2d'}));
 addOptional(p, 'HypnogramLabels', {'Undef','N3','N2','N1','REM','Wake','Art'}, @(x) validateattributes(x,{'cell'},{'numel',7}));
-addOptional(p, 'StageColors', default_colors, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','ndims',2,'ncols',3}));
+addOptional(p, 'StageColors', default_colors, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','ncols',3}));
 addOptional(p, 'PlotBuffer', .3, @(x) validateattributes(x,{'numeric'},{'real','finite','positive','scalar'}));
 addOptional(p, 'LabelPos', 'left', @(x) any(validatestring(x, {'top', 'left'})));
 addOptional(p, 'GroupNREMColors', true, @(x) validateattributes(x,{'logical'},{'scalar'}));
