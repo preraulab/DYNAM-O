@@ -67,8 +67,8 @@ default_colors = [    0.9000    0.9000    0.9000; ...
 
 p = inputParser;
 
-addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric'}, {'real','finite','nondecreasing','row'}));
-addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','row'}));
+addRequired(p, 'stage_times', @(x) validateattributes(x, {'double','single'}, {'real','finite','nondecreasing','row'}));
+addRequired(p, 'stage_vals', @(x) validateattributes(x, {'double','single'}, {'real','finite','nonnegative','row'}));
 addOptional(p, 'Artifacts', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
 addOptional(p, 'Fs', [], @(x) isempty(x) || (isnumeric(x) && isscalar(x)));
 addOptional(p, 'ArtifactTimes', [], @(x) validateattributes(x,{'numeric'},{'real','finite','2d'}));
@@ -195,7 +195,7 @@ if ~isempty(artifacts)
     art_stage_inds = stage_vals == 6;
     if any(art_stage_inds)
         stage_vals(stage_vals ~= 6) = 0;
-        art_stage = interp1(stage_times, stage_vals, artifact_times,'previous','extrap');
+        art_stage = interp1(stage_times, stage_vals, artifact_times, 'previous', 'extrap');
         art_stage(isnan(art_stage)) = 0;
         artifacts = artifacts | art_stage;
     end

@@ -15,8 +15,8 @@ function [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, SOpow
 %
 %    OPTIONAL:
 %       TFpeak_stages: Px1 - sleep stage each TF peak occurs 5=W,4=R,3=N1,2=N2,1=N3
-%       stage_times: 1xS double - stage times
-%       stage_vals:  1xS double - numeric stage values 5=W,4=R,3=N1,2=N2,1=N3
+%       stage_times: 1xS double or single - stage times
+%       stage_vals:  1xS double or single - numeric stage values 5=W,4=R,3=N1,2=N2,1=N3
 %       freq_range: 1x2 double - min and max frequencies of TF peak to include in the histograms
 %                   (Hz). Default = [0,40]
 %       freq_binsizestep: 1x2 double - [size, step] frequency bin size and bin step for frequency
@@ -115,8 +115,8 @@ addRequired(p, 'TFpeak_times', @(x) validateattributes(x, {'numeric'}, {'real','
 addOptional(p, 'TFpeak_stages', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','2d'}));
 
 %Stage info
-addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric'}, {'real','finite','nondecreasing','row'}));
-addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','row'}));
+addRequired(p, 'stage_times', @(x) validateattributes(x, {'double','single'}, {'real','finite','nondecreasing','row'}));
+addRequired(p, 'stage_vals', @(x) validateattributes(x, {'double','single'}, {'real','finite','nonnegative','row'}));
 
 %EEG time settings
 addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
