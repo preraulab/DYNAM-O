@@ -146,8 +146,8 @@ addOptional(p, 'baseline_trim', baseline_options.baseline_trim, @(x) validateatt
 
 %TF-peak detection struct parameters
 detection_options = detection_opts(); % get the default parameters
-addOptional(p, 'verbose', detection_options.verbose, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
-addOptional(p, 'double_watershed', detection_options.double_watershed, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
+addOptional(p, 'verbose', detection_options.verbose, @(x) validateattributes(x,{'logical'},{'scalar'}));
+addOptional(p, 'double_watershed', detection_options.double_watershed, @(x) validateattributes(x,{'logical'},{'scalar'}));
 addOptional(p, 'dsfreqs', detection_options.dsfreqs, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','scalar'}));
 addOptional(p, 'mtm_taper_params', detection_options.mtm_taper_params, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','vector','numel',2}));
 addOptional(p, 'mtm_window_length_1', detection_options.mtm_window_length_1, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','scalar'}));
@@ -161,7 +161,7 @@ addOptional(p, 'max_merges', detection_options.max_merges, @(x) validateattribut
 addOptional(p, 'trim_vol', detection_options.trim_vol, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','scalar'}));
 addOptional(p, 'dur_max', detection_options.dur_max, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','scalar'}));
 addOptional(p, 'bw_max', detection_options.bw_max, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','scalar'}));
-addOptional(p, 'refinement', detection_options.refinement, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
+addOptional(p, 'refinement', detection_options.refinement, @(x) validateattributes(x,{'logical'},{'scalar'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>

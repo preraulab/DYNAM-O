@@ -21,7 +21,7 @@ addOptional(p, 'tapers', SOPH_options.SOpower_tapers, @(x) validateattributes(x,
 addOptional(p, 'window_params', SOPH_options.SOpower_window_params, @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
 addOptional(p, 'SOpower_outlier_threshold', SOPH_options.SOpower_outlier_threshold, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 addOptional(p, 'norm_method', SOPH_options.SOpower_norm_method, @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
-addOptional(p, 'retain_Fs', SOPH_options.SOpower_retain_Fs, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
+addOptional(p, 'retain_Fs', SOPH_options.SOpower_retain_Fs, @(x) validateattributes(x,{'logical'},{'scalar'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>

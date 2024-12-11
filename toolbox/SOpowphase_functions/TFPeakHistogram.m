@@ -19,7 +19,7 @@ addRequired(p, 'peak_Cmetric', @(x) validateattributes(x, {'numeric'}, {'real','
 
 %CPH settings
 SOPH_options = SOpowerphasehist_opts(); % get some default parameters
-addOptional(p, 'circular_Cmetric', false, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
+addOptional(p, 'circular_Cmetric', false, @(x) validateattributes(x,{'logical'},{'scalar'}));
 addOptional(p, 'circular_bounds', SOPH_options.SOphase_range, @(x) validateattributes(x, {'numeric'}, {'real','finite','vector','numel',2}));
 addOptional(p, 'Cmetric_label', 'C-metric', @(x) validateattributes(x, {'char','string'}, {'scalartext'}));
 addOptional(p, 'xlabel_text', 'C metric', @(x) validateattributes(x, {'char','string'}, {'scalartext'}));
@@ -30,13 +30,13 @@ addOptional(p, 'C_binsizestep', [], @(x) assert(isa(x, 'numeric') && (isempty(x)
 addOptional(p, 'freq_range', SOPH_options.freq_range, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','vector','numel',2}));
 addOptional(p, 'freq_binsizestep', SOPH_options.freq_binsizestep, @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
 addOptional(p, 'norm_dim', 0, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
-addOptional(p, 'compute_rate', SOPH_options.compute_rate, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
+addOptional(p, 'compute_rate', SOPH_options.compute_rate, @(x) validateattributes(x,{'logical'},{'scalar'}));
 addOptional(p, 'norm_method', '', @(x) validateattributes(x, {'char','string'}, {'scalartext'}));
 addOptional(p, 'min_time_in_bin', 0, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
 
 %Display settings
-addOptional(p, 'plot_on', false, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
-addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
+addOptional(p, 'plot_on', false, @(x) validateattributes(x,{'logical'},{'scalar'}));
+addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'scalar'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
