@@ -70,17 +70,17 @@ p = inputParser;
 addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','nondecreasing','row'}));
 addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','nonnegative','row'}));
 addOptional(p, 'Artifacts', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
-
-addOptional(p,'Fs',[],@(x)validateattributes(x,{'numeric'},{'nonempty','positive'}));
-addOptional(p,'ArtifactTimes',[],@(x)validateattributes(x,{'numeric'},{'nonempty'}));
-addOptional(p,'HypnogramLabels',{'Undef','N3','N2','N1','REM','Wake','Art'},@iscell);
-addOptional(p,'StageColors',default_colors,@(x)validateattributes(x,{'numeric'},{'nonempty'}));
-addOptional(p,'PlotBuffer', .3, @(x)validateattributes(x,{'numeric'},{'nonempty','positive'}));
-addOptional(p,'LabelPos', 'left', @ischar);
-addOptional(p,'GroupNREMColors',true, @islogical);
+addOptional(p, 'Fs', [], @(x) isempty(x) || (isnumeric(x) && isscalar(x)));
+addOptional(p, 'ArtifactTimes', [], @(x) validateattributes(x,{'numeric'},{'real','finite','2d'}));
+addOptional(p, 'HypnogramLabels', {'Undef','N3','N2','N1','REM','Wake','Art'}, @(x) validateattributes(x,{'cell'},{'nonempty','numel',7}));
+addOptional(p, 'StageColors', default_colors, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','nonnegative','ndims',2,'ncols',3}));
+addOptional(p, 'PlotBuffer', .3, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','positive','scalar'}));
+addOptional(p, 'LabelPos', 'left', @(x) any(validatestring(x, {'top', 'left'})));
+addOptional(p, 'GroupNREMColors', true, @(x) validateattributes(x,{'logical'},{'scalar'}));
 
 parse(p,stage_times,stage_vals,varargin{:});
 
+% Manually assign variables
 HypnogramLabels = p.Results.HypnogramLabels;
 StageColors = p.Results.StageColors;
 PlotBuffer = p.Results.PlotBuffer;
@@ -89,7 +89,6 @@ LabelPos = p.Results.LabelPos;
 artifacts = p.Results.Artifacts;
 Fs = p.Results.Fs;
 artifact_times = p.Results.ArtifactTimes;
-
 
 %Do additional input checks
 if iscolumn(stage_vals)
@@ -106,9 +105,6 @@ if ~isa(stage_vals,'double')
 end
 
 assert(isequal(size(stage_times),size(stage_vals)),'time and stage must be the same dimensions')
-assert(size(StageColors,2)==3,'Colors must be an N x 3 matrix')
-assert(length(HypnogramLabels)==7,'Hypnogram labels must be a 1 x 7 cell of strings - Undefined, N3, N2, N1, R, W, Artifiact')
-assert(ismember(lower(LabelPos),{'left','top'}),'LabelPos must be "left" or "top"')
 
 if ~isempty(artifacts)
     assert(xor(~isempty(Fs), ~isempty(artifact_times)), 'Must provide either sampling frequency or time vector for artifacts')
@@ -223,4 +219,3 @@ end
 
 %Set limits
 axis tight
-

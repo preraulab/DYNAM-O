@@ -6,10 +6,10 @@ p = inputParser;
 % Generate TF-Peak Detection Option Structure
 %************************************************
 %Verbose option
-addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
+addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'scalar'}));
 
 %Double vs single watershed
-addOptional(p, 'double_watershed', true, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
+addOptional(p, 'double_watershed', true, @(x) validateattributes(x,{'logical'},{'scalar'}));
 
 %Multitaper method parameters
 %Frequency bin resolution of the spectrogram
@@ -56,7 +56,7 @@ addOptional(p, 'dur_max', 5, @(x) validateattributes(x,{'numeric'},{'real','fini
 addOptional(p, 'bw_max', 15, @(x) validateattributes(x,{'numeric'},{'real','finite','nonempty','scalar'}));
 
 %Frequency refinement using 1Hz df hann spectrum for final PeakFrequency feature computation
-addOptional(p, 'refinement', true, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
+addOptional(p, 'refinement', true, @(x) validateattributes(x,{'logical'},{'scalar'}));
 
 %Features to compute
 all_features = {'all', 'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height',  'HeightData',...

@@ -40,9 +40,9 @@ addOptional(p, 'frequency_range', [], @(x) isempty(x) || (isnumeric(x) && isvect
 addOptional(p, 'data_window_params', [5, 1], @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
 addOptional(p, 'NFFT', 0, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
 addOptional(p, 'detrend_opt', 'linear', @(x) any(validatestring(x, {'linear', 'constant', 'off'})));
-addOptional(p, 'plot_on', true, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
-addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
-addOptional(p, 'xyflip', false, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
+addOptional(p, 'plot_on', true, @(x) validateattributes(x,{'logical'},{'scalar'}));
+addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'scalar'}));
+addOptional(p, 'xyflip', false, @(x) validateattributes(x,{'logical'},{'scalar'}));
 
 parse(p,varargin{:});
 

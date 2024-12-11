@@ -78,10 +78,10 @@ addOptional(p, 'detection_options', detection_opts(), @(x) validateattributes(x,
 addOptional(p, 'SOPH_options', SOpowerphasehist_opts(), @(x) validateattributes(x, {'struct'}, {'nonempty'}));
 
 addOptional(p, 'stats_table', [], @(x) validateattributes(x, {'double','table'}, {'nonnan'}));
-addOptional(p, 'save_output_image', false, @(x) validateattributes(x, {'logical'}, {'nonempty','nonnan','scalar'}));
+addOptional(p, 'save_output_image', false, @(x) validateattributes(x, {'logical'}, {'scalar'}));
 addOptional(p, 'output_fname', 'DYNAM-O_output', @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
-addOptional(p, 'verbose', true, @(x) validateattributes(x, {'logical'}, {'nonempty','nonnan','scalar'}));
-addOptional(p, 'plot_on', true, @(x) validateattributes(x, {'logical'}, {'nonempty','nonnan','scalar'}));
+addOptional(p, 'verbose', true, @(x) validateattributes(x, {'logical'}, {'scalar'}));
+addOptional(p, 'plot_on', true, @(x) validateattributes(x, {'logical'}, {'scalar'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>

@@ -29,9 +29,9 @@ addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','n
 addRequired(p, 'stats_table', @(x) validateattributes(x, {'table'}, {'nonnan'}));
 
 addOptional(p, 't', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
-addOptional(p, 'baseline_opt', false, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
+addOptional(p, 'baseline_opt', false, @(x) validateattributes(x,{'logical'},{'scalar'}));
 addOptional(p, 'refine_method', 'spline_interp', @(x) any(validatestring(x, {'spline_interp', 'spline_opt', 'spect_max'})));
-addOptional(p, 'remove_edge_peaks', true, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
+addOptional(p, 'remove_edge_peaks', true, @(x) validateattributes(x,{'logical'},{'scalar'}));
 
 parse(p,varargin{:});
 % Manually assign variables because eval doesn't work with parpool

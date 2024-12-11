@@ -28,7 +28,7 @@ addOptional(p, 'window_params', SOPH_options.SOpower_window_params, @(x) validat
 addOptional(p, 'smoothing_method', 'none', @(x) any(validatestring(x, {'none', 'movmean', 'movmedian', 'gaussian', 'lowess', 'loess', 'rlowess', 'rloess', 'sgolay'})));
 addOptional(p, 'smoothing_param', 60*5, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
 addOptional(p, 'interp_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
-addOptional(p, 'verbose', false, @(x) validateattributes(x,{'logical'},{'nonempty','nonnan','scalar'}));
+addOptional(p, 'verbose', false, @(x) validateattributes(x,{'logical'},{'scalar'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
