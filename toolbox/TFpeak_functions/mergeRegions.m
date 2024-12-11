@@ -121,11 +121,12 @@ cnx_a = adj_mat(:,1)==a | adj_mat(:,2)==a;
 sub_adj_mat = adj_mat(cnx_a,:);
 sub_adj_mat(:,3) = NaN;
 sub_adj_mat = sub_adj_mat(sub_adj_mat(:,1)~=sub_adj_mat(:,2),:);
-[~,u_idx] = unique(sub_adj_mat(:,1:2),'rows');
+[~,u_idx] = unique(sort(sub_adj_mat(:,1:2), 2),'rows');
+%[~,u_idx] = unique(sub_adj_mat(:,1:2),'rows');
 
 %Update the adjacency matrix with unique pairs
 adj_mat = [adj_mat(~cnx_a,:); sub_adj_mat(u_idx,:)];
 
 %Identify which edge weights need to be updated
-pick_update = false(size(adj_mat(:,3)));
+pick_update = false(size(adj_mat, 1), 1);
 pick_update((end-length(u_idx)+1):end) = true;
