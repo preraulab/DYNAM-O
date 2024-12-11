@@ -7,7 +7,7 @@ function [C_mat, freq_cbins, C_cbins, time_in_bin, prop_in_bin] = TFPeakHistogra
 p = inputParser;
 
 %Cmetric info
-addRequired(p, 'Cmetric', @(x) validateattributes(x, {'numeric'}, {'real','finite','vector'}));
+addRequired(p, 'Cmetric', @(x) validateattributes(x, {'numeric'}, {'real','vector'}));
 addRequired(p, 'Cmetric_stages', @(x) validateattributes(x, {'numeric','logical'}, {'real','finite','nonnegative','vector'}));
 addRequired(p, 'Cmetric_times_step', @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 addRequired(p, 'Cmetric_valid', @(x) validateattributes(x,{'logical'},{'finite','vector'}));
