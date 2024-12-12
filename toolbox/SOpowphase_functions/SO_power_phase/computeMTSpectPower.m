@@ -18,7 +18,7 @@ function [SO_power, stimes, sfreqs] = computeMTSpectPower(varargin)
 %Input Error handling
 p = inputParser;
 
-addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','row'}));
+addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','vector'}));
 addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','scalar'}));
 
 SOPH_options = SOpowerphasehist_opts(); % get the default parameters

@@ -4,7 +4,7 @@
 %       [stats_table, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options, save_output_image, output_fname, verbose, plot_on)
 %
 %   Inputs:
-%       data: 1 x <number of samples> vector - time series data -- required
+%       data: <number of samples> x 1 vector - time series data -- required
 %       Fs: double - sampling frequency in Hz -- required
 %       stage_times: 1 x <number of stages> vector - times of sleep stages in seconds -- required
 %       stage_vals: 1 x <number of stages> vector - values of sleep stages -- required
@@ -66,12 +66,12 @@ end
 p = inputParser;
 p.KeepUnmatched=true;
 
-addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','row'}));
+addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','vector'}));
 addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','scalar'}));
-addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric'}, {'real','finite','nondecreasing','row'}));
-addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','row'}));
+addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric'}, {'real','finite','nondecreasing','vector'}));
+addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','vector'}));
 % section of EEG to use in analysis (seconds)
-addOptional(p, 'time_range', [], @(x) assert(isa(x, 'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
+addOptional(p, 'time_range', [], @(x) isa(x, 'numeric') && (isempty(x) || length(x) == 2));
 % parameters managed using struct outputs from opts functions
 addOptional(p, 'baseline_options', baseline_opts(), @(x) validateattributes(x, {'struct'}, {'nonempty'}));
 addOptional(p, 'detection_options', detection_opts(), @(x) validateattributes(x, {'struct'}, {'nonempty'}));
@@ -90,25 +90,32 @@ field_names = fieldnames(p.Results);
 %Automatically add parser results to the workspace
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 
+%Force data to be a column vector
+if isrow(data)
+    data = data(:);
+end
+
 %Check sleep stages
-valid_stages = (stage_vals>0 & stage_vals<6);
+valid_stages = stage_vals>0 & stage_vals<6;
 assert(~isempty(valid_stages),'No valid stages found');
 
 %Create unknown stages for missing time
 if min(stage_times)>0
-    stage_times = [0 stage_times];
-    stage_vals = [0 stage_vals];
+    stage_times(2:end+1) = stage_times;
+    stage_times(1) = 0;
+    stage_vals(2:end+1) = stage_vals;
+    stage_vals(1) = 0;
 end
 
 if max(stage_times)>length(data)/Fs
-    stage_times = [stage_times stage_times(end)+1e-5];
-    stage_vals = [stage_vals 0];
+    stage_times(end+1) = stage_times(end)+1e-5;
+    stage_vals(end+1) = 0;
 end
 
 %Set to range of valid scored data by default
 if isempty(time_range) %#ok<*NODEF>
     valid_stage_inds = find(valid_stages);
-    time_range = stage_times(valid_stage_inds([1 end]));
+    time_range = stage_times(valid_stage_inds([1, end]));
 end
 
 %Start a timer
@@ -125,7 +132,7 @@ if isempty(stats_table)
 
 else
     % If stats table provided, check to be sure SOPH is requested by output
-    assert(nargout==2,'Nothing to compute. Must provide SOPH output if stats table is used as input.');
+    assert(nargout==2, 'Nothing to compute. Must provide SOPH output if stats table is used as input.');
 
     if verbose
         disp('TF-peaks stats table provided. Computing SOPH only.');
@@ -185,7 +192,7 @@ else
 
     % This value generally comes from the SOPH - if not computing the SOPH,
     % set all to true.
-    hist_peakidx = true(1,height(stats_table));
+    hist_peakidx = true(1, height(stats_table));
 
 end
 
