@@ -25,11 +25,11 @@ addOptional(p, 'mtm_window_stepsize', 0.05, @(x) validateattributes(x,{'numeric'
 
 %Watershed parameters
 %Decimation steps for the spectrogram prior to watershed: first index along the time axis; second index along frequency
-addOptional(p, 'downsample_spect', [], @(x) assert(isa(x, 'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.')); % set by quality_setting
+addOptional(p, 'downsample_spect', [], @(x) assert(isa(x,'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.')); % set by quality_setting
 %Segment size for spectrogram parallelization
-addOptional(p, 'seg_time', [], @(x) assert(isa(x, 'numeric') && (isempty(x) || isscalar(x)), 'Expected input to be a scalar.')); % set by quality_setting
+addOptional(p, 'seg_time', [], @(x) assert(isa(x,'numeric') && (isempty(x) || isscalar(x)), 'Expected input to be a scalar.')); % set by quality_setting
 %Threshold weight value for when to stop merge rule
-addOptional(p, 'merge_thresh', [], @(x) assert(isa(x, 'numeric') && (isempty(x) || isscalar(x)), 'Expected input to be a scalar.')); % set by quality_setting
+addOptional(p, 'merge_thresh', [], @(x) assert(isa(x,'numeric') && (isempty(x) || isscalar(x)), 'Expected input to be a scalar.')); % set by quality_setting
 %Fixed quality setting by string options: 'stokes_2023', 'precision', or 'default'
 % 'stokes_2023':
 %   downsample_spect = [];

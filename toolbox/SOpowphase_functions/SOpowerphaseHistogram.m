@@ -120,7 +120,7 @@ addOptional(p, 'stage_vals', [], @(x) validateattributes(x, {'double','single'},
 
 %EEG time settings
 addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
-addOptional(p, 'time_range', [], @(x) assert(isa(x, 'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
+addOptional(p, 'time_range', [], @(x) assert(isa(x,'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
 addOptional(p, 'isexcluded', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
 
 %SOPH struct parameters
@@ -140,8 +140,8 @@ addOptional(p, 'SOpower_norm_method', SOPH_options.SOpower_norm_method, @(x) val
 addOptional(p, 'SOpower_retain_Fs', SOPH_options.SOpower_retain_Fs, @(x) validateattributes(x,{'logical'},{'scalar'}));
 addOptional(p, 'SOpower_min_time_in_bin', SOPH_options.SOpower_min_time_in_bin, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
 %Ranges and bin step sizes determined dynamically with empty input [], set to fixed values when comparing between subjects
-addOptional(p, 'SOpower_range', SOPH_options.SOpower_range, @(x) assert(isa(x, 'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
-addOptional(p, 'SOpower_binsizestep', SOPH_options.SOpower_binsizestep, @(x) assert(isa(x, 'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
+addOptional(p, 'SOpower_range', SOPH_options.SOpower_range, @(x) assert(isa(x,'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
+addOptional(p, 'SOpower_binsizestep', SOPH_options.SOpower_binsizestep, @(x) assert(isa(x,'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
 %SOphase specific settings
 addOptional(p, 'SOphase_filter', SOPH_options.SOphase_filter);
 addOptional(p, 'SOphase_norm_dim', SOPH_options.SOphase_norm_dim, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
