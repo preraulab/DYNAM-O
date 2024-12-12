@@ -28,7 +28,7 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %
 %       BASELINE_OPTS STRUCTURE PARAMETERS - see baseline_opts()
 %       baseline_stages (opt):     [1xp] double - stages to include in spectrogram baseline computation. Default = [1,2,3,4,5]
-%       baseline_exclude (opt):    [1xn] logical - boolean indicating time points to exclude in baseline computation. Default = []
+%       baseline_exclude (opt):    [1xn] logical - boolean indicating time points to exclude in baseline computation. Default = logical([])
 %       baseline_ptile (opt):      scalar - percentile of power spectral density at every frequency used for baseline subtraction
 %                                  Default = 2
 %       baseline_trim (opt):       2D array representing start and stop times for baseline trimming OR integer representing
@@ -125,7 +125,7 @@ end
 p = inputParser;
 p.KeepUnmatched=true;
 
-addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','row'}));
+addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','vector'}));
 addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','scalar'}));
 addRequired(p, 'stage_times', @(x) validateattributes(x, {'double','single'}, {'real','finite','nondecreasing','row'}));
 addRequired(p, 'stage_vals', @(x) validateattributes(x, {'double','single'}, {'real','finite','nonnegative','row'}));
@@ -170,6 +170,11 @@ field_names = fieldnames(p.Results);
 %Automatically add parser results to the workspace
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 
+%Force data to be a column vector
+if isrow(data)
+    data = data(:);
+end
+
 if isempty(t_data) %#ok<*NODEF>
     t_data = (0:length(data)-1)/Fs;
 end
@@ -192,7 +197,6 @@ if isempty(artifact_filters)
 end
 
 % Set baseline_range based on baseline_trim input
-% int
 if isscalar(baseline_trim)
     buffer = baseline_trim;
     nonwake_stage_inds = ismember(stage_vals, [1,2,3,4]);
@@ -207,9 +211,10 @@ else
         error('Invalid baseline range. Enter a start time or range.')
     end
 end
+
 % Set default baseline_exclude
 if isempty(baseline_exclude)
-    baseline_exclude = zeros(1, length(data));
+    baseline_exclude = false(1, length(data));
 end
 
 %% Get presets if needed
