@@ -131,7 +131,7 @@ addRequired(p, 'stage_times', @(x) validateattributes(x, {'double','single'}, {'
 addRequired(p, 'stage_vals', @(x) validateattributes(x, {'double','single'}, {'real','finite','nonnegative','row'}));
 
 addOptional(p, 't_data', [], @(x) validateattributes(x,{'numeric'},{'real','finite','2d'}));
-addOptional(p, 'time_range', [], @(x) assert(isa(x,'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
+addOptional(p, 'time_range', [], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
 addOptional(p, 'features', 'all',  @(x) validateattributes(x,{'char','cell'},{'nonempty'}));
 
 addOptional(p, 'artifacts', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
@@ -153,9 +153,9 @@ addOptional(p, 'mtm_taper_params', detection_options.mtm_taper_params, @(x) vali
 addOptional(p, 'mtm_window_length_1', detection_options.mtm_window_length_1, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 addOptional(p, 'mtm_window_length_2', detection_options.mtm_window_length_2, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 addOptional(p, 'mtm_window_stepsize', detection_options.mtm_window_stepsize, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
-addOptional(p, 'downsample_spect', detection_options.downsample_spect, @(x) assert(isa(x,'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
-addOptional(p, 'seg_time', detection_options.seg_time, @(x) assert(isa(x,'numeric') && (isempty(x) || isscalar(x)), 'Expected input to be a scalar.'));
-addOptional(p, 'merge_thresh', detection_options.merge_thresh, @(x) assert(isa(x,'numeric') && (isempty(x) || isscalar(x)), 'Expected input to be a scalar.'));
+addOptional(p, 'downsample_spect', detection_options.downsample_spect, @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
+addOptional(p, 'seg_time', detection_options.seg_time, @(x) isa(x,'numeric') && (isempty(x) || isscalar(x)));
+addOptional(p, 'merge_thresh', detection_options.merge_thresh, @(x) isa(x,'numeric') && (isempty(x) || isscalar(x)));
 addOptional(p, 'quality_setting', detection_options.quality_setting, @(x) any(validatestring(x, {'stokes_2023', 'precision', 'default'})));
 addOptional(p, 'max_merges', detection_options.max_merges, @(x) validateattributes(x,{'numeric'},{'real','positive','scalar'}));
 addOptional(p, 'trim_vol', detection_options.trim_vol, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));

@@ -24,8 +24,8 @@ addOptional(p, 'circular_bounds', SOPH_options.SOphase_range, @(x) validateattri
 addOptional(p, 'Cmetric_label', 'C-metric', @(x) validateattributes(x, {'char','string'}, {'scalartext'}));
 addOptional(p, 'xlabel_text', 'C metric', @(x) validateattributes(x, {'char','string'}, {'scalartext'}));
 
-addOptional(p, 'C_range', [], @(x) assert(isa(x,'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
-addOptional(p, 'C_binsizestep', [], @(x) assert(isa(x,'numeric') && (isempty(x) || length(x) == 2), 'Expected input to be an array with number of elements equal to 2.'));
+addOptional(p, 'C_range', [], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
+addOptional(p, 'C_binsizestep', [], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
 
 addOptional(p, 'freq_range', SOPH_options.freq_range, @(x) validateattributes(x,{'numeric'},{'real','finite','vector','numel',2}));
 addOptional(p, 'freq_binsizestep', SOPH_options.freq_binsizestep, @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
