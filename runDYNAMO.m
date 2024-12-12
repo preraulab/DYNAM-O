@@ -71,7 +71,7 @@ addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','p
 addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric'}, {'real','finite','nondecreasing','vector'}));
 addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','vector'}));
 % section of EEG to use in analysis (seconds)
-addOptional(p, 'time_range', [], @(x) isa(x, 'numeric') && (isempty(x) || length(x) == 2));
+addOptional(p, 'time_range', [], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
 % parameters managed using struct outputs from opts functions
 addOptional(p, 'baseline_options', baseline_opts(), @(x) validateattributes(x, {'struct'}, {'nonempty'}));
 addOptional(p, 'detection_options', detection_opts(), @(x) validateattributes(x, {'struct'}, {'nonempty'}));
