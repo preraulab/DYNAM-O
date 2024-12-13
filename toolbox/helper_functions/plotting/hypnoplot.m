@@ -95,6 +95,11 @@ if iscolumn(stage_vals) %Force stage_vals to be a row vector for the horizontal 
     stage_vals = transpose(stage_vals);
 end
 
+%Make stage_vals as double class
+if ~isa(stage_vals,'double')
+    stage_vals = double(stage_vals);
+end
+
 assert(isequal(size(stage_times), size(stage_vals)), 'time and stage must be the same dimensions')
 
 if ~isempty(artifacts)
