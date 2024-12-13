@@ -1,15 +1,15 @@
 function [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, SOpower_TIB, SOphase_TIB, peak_SOpower, peak_SOphase, peak_selection_inds, ...
-    SOpower, SOpower_times, SOphase, SOphase_times, SOdata] = SOpowerphaseHistogram(EEG,Fs,varargin)
+    SOpower, SOpower_times, SOphase, SOphase_times, SOdata] = SOpowerphaseHistogram(varargin)
 % SOPOWERPHASEHISTOGRAM: Computes slow-oscillation power and phase histogram matrices
 %
 %   Usage:
 %       [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds] = ...
-%                                 SOpowerphaseHistogram(EEG, Fs, TFpeak_freqs, TFpeak_times, <options>)
+%                                 SOpowerphaseHistogram(data, Fs, TFpeak_freqs, TFpeak_times, <options>)
 %
 %   Inputs:
 %    REQUIRED:
-%       EEG: 1xN double - timeseries EEG data --required
-%       Fs: numerical - sampling frequency of EEG (Hz) --required
+%       data: Nx1 double - timeseries EEG data --required
+%       Fs: numerical - sampling frequency of data (Hz) --required
 %       TFpeak_freqs: Px1 - frequency each TF peak occurs (Hz) --required
 %       TFpeak_times: Px1 - times each TF peak occurs (s) --required
 %
@@ -17,42 +17,49 @@ function [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, SOpow
 %       TFpeak_stages: Px1 - sleep stage each TF peak occurs 5=W,4=R,3=N1,2=N2,1=N3
 %       stage_times: 1xS double or single - stage times
 %       stage_vals:  1xS double or single - numeric stage values 5=W,4=R,3=N1,2=N2,1=N3
-%       freq_range: 1x2 double - min and max frequencies of TF peak to include in the histograms
-%                   (Hz). Default = [0,40]
+%       EEG_times: 1xN double - times for each EEG data sample. Default = (0:length(data)-1)/Fs
+%       time_range: 1x2 double - min and max times for which to include TFpeaks. Also used to normalize
+%                   SOpower. Default = [EEG_times(1), EEG_times(end)]
+%       isexcluded: 1xN logical - marks each timestep of data as artifact or non-artifact. Default = all false.
+%
+%       SOPOWERPHASEHIST_OPTS STRUCTURE PARAMETERS - see SOpowerphasehist_opts()
+%       freq_range: 1x2 double - min and max frequencies of TF peak to include in the histograms (Hz).
+%                   Default = [0, 40]
 %       freq_binsizestep: 1x2 double - [size, step] frequency bin size and bin step for frequency
 %                         axis of SO power/phase histograms (Hz). Default = [1, 0.2]
+%       compute_rate: logical - histogram output in terms of TFpeaks/min instead of count.
+%                     Default = true.
+%       SOPH_stages: stages in which to restrict the SOPHs. Default: 1:3 (NREM only)
+%                    W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
+%
+%       SO_freqrange: 1x2 double - min and max frequencies (Hz) considered to be "slow oscillation".
+%                     Default = [0.3, 1.5]
+%       SOpower_tapers: 1x2 double - multitaper method parameters. [time half-bandwidth product, number of tapers].
+%                       Default = [5, 9]
+%       SOpower_window_params: 1x2 double - multitaper method window parameters. [window size, window step size].
+%                              Default = [5, .5]
+%       SOpower_outlier_threshold: double - cutoff threshold in standard deviation for excluding outlier SOpower values.
+%                                  Default = 3.
+%
+%       SOpower_norm_method: char - normalization method for SOpower. Options:'pNshiftS', 'percent', 'proportion', 'none'. Default = 'p2shift1234'
+%                            For shift, it follows the format pNshiftS where N is the percentile and S is the list of stages (5=W,4=R,3=N1,2=N2,1=N3).
+%                            (e.g. p2shift1234 = use the 2nd percentile of stages N3, N2, N1, and REM, p5shift123 = use the 5th percentile of stages
+%                            N3, N2 and N1)
+%       SOpower_retain_Fs: logical - whether to upsample calculated SOpower to the sampling rate of data. Default = true
+%       SOpower_min_time_in_bin: numerical - time (minutes) required in each SO power bin to include in SOpower analysis. Otherwise all values 
+%                                in that SO power bin will be NaN. Default = 10.
 %       SOpower_range: 1x2 double - min and max SO power values to consider in SO power analysis.
 %                      Default calculated using min and max of SO power
 %       SOpower_binsizestep: 1x2 double - [size, step] SO power bin size and step for SO power axis
-%                            of histogram. Units are radians. Default
-%                            size is (SOpower_range(2)-SOpower_range(1))/10, default step is
-%                            (SOpower_range(2)-SOpower_range(1))/100
-%       SOphase_range: 1x2 double - min and max SO phase values (radians) to consider in SO phase analysis.
-%                                   Default is [-pi, pi]
-%       SOphase_binsizestep: 1x2 double - [size, step] SO phase bin size and step for SO phase axis
-%                            of histogram. Units are radians. Default size is 2*pi/5, default step is 2*pi/100
-%       SO_freqrange: 1x2 double - min and max frequencies (Hz) considered to be "slow oscillation".
-%                     Default = [0.3, 1.5]
-%       SOPH_stages: stages in which to restrict the SOPHs. Default: 1:3 (NREM only)
-%                    W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
-%       compute_rate: logical - histogram output in terms of TFpeaks/min instead of count.
-%                               Default = true.
-%       SOpower_outlier_threshold: double - cutoff threshold in standard deviation for excluding outlier SOpower values.
-%                                  Default = 3.
-%       SOpower_norm_method: char - normalization method for SOpower. Options:'pNshiftS', 'percent', 'proportion', 'none'. Default: 'p2shift1234'
-%                         For shift, it follows the format pNshiftS where N is the percentile and S is the list of stages (5=W,4=R,3=N1,2=N2,1=N3).
-%                         (e.g. p2shift1234 = use the 2nd percentile of stages N3, N2, N1, and REM,
-%                               p5shift123 = use the 5th percentile of stages N3, N2 and N1)
-%       SOpower_retain_Fs: logical - whether to upsample calculated SOpower to the sampling rate of EEG. Default = true
-%       SOpower_min_time_in_bin: numerical - time (minutes) required in each SO power bin to include
-%                                          in SOpower analysis. Otherwise all values in that SO power bin will
-%                                          be NaN. Default = 10.
+%                            of histogram. Units are radians. Default size is (SOpower_range(2)-SOpower_range(1))/10; 
+%                            default step size is (SOpower_range(2)-SOpower_range(1))/100
+%
 %       SOphase_filter: 1xF double - custom filter that will be used to estimate SOphase
 %       SOphase_norm_dim: integer - which dimension of the SOphase histogram to normalize to add to 1. Default = 1
-%       EEG_times: 1xN double - times for each EEG sample. Default = (0:length(EEG)-1)/Fs
-%       time_range: 1x2 double - min and max times for which to include TFpeaks. Also used to normalize
-%                   SOpower. Default = [EEG_times(1), EEG_times(end)]
-%       isexcluded: 1xN logical - marks each timestep of EEG as artifact or non-artifact. Default = all false.
+%       SOphase_range: 1x2 double - min and max SO phase values (radians) to consider in SO phase analysis.
+%                      Default is [-pi, pi]
+%       SOphase_binsizestep: 1x2 double - [size, step] SO phase bin size and step for SO phase axis
+%                            of histogram. Units are radians. Default size is 2*pi/5; default step suze is 2*pi/100
 %
 %       plot_on: logical - SO power histogram plots. Default = false
 %       verbose: logical - Verbose output. Default = true
@@ -109,6 +116,9 @@ end
 p = inputParser;
 p.KeepUnmatched=true;
 
+addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','vector'}));
+addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','scalar'}));
+
 %TFpeak info
 addRequired(p, 'TFpeak_freqs', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonempty','positive','vector'}));
 addRequired(p, 'TFpeak_times', @(x) validateattributes(x, {'numeric'}, {'real','finite','vector'}));
@@ -136,7 +146,7 @@ addOptional(p, 'SOpower_tapers', SOPH_options.SOpower_tapers, @(x) validateattri
 addOptional(p, 'SOpower_window_params', SOPH_options.SOpower_window_params, @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
 addOptional(p, 'SOpower_outlier_threshold', SOPH_options.SOpower_outlier_threshold, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 %SOpower specific settings
-addOptional(p, 'SOpower_norm_method', SOPH_options.SOpower_norm_method, @(x) validateattributes(x, {'char','string'}, {'scalartext'}));
+addOptional(p, 'SOpower_norm_method', SOPH_options.SOpower_norm_method, @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
 addOptional(p, 'SOpower_retain_Fs', SOPH_options.SOpower_retain_Fs, @(x) validateattributes(x,{'logical'},{'scalar'}));
 addOptional(p, 'SOpower_min_time_in_bin', SOPH_options.SOpower_min_time_in_bin, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
 %Ranges and bin step sizes determined dynamically with empty input [], set to fixed values when comparing between subjects
@@ -156,35 +166,43 @@ parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
 field_names = fieldnames(p.Results);
 
+%Automatically add parser results to the workspace
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 
-if ~isempty(EEG)
-    if isempty(EEG_times) %#ok<*NODEF>
-        EEG_times = (0:length(EEG)-1)/Fs;
-    else
-        assert(length(EEG_times) == size(EEG,2), 'EEG_times must be the same length as EEG');
-    end
+%Force data to be a column vector
+if isrow(data)
+    data = data(:);
+end
 
-    if isempty(time_range)
-        time_range = [min(EEG_times), max(EEG_times)];
-    else
-        assert((time_range(1) >= min(EEG_times)) & (time_range(2) <= max(EEG_times)), 'time_range cannot be outside of the time range described by "EEG_times"');
+if isempty(EEG_times) %#ok<*NODEF>
+    EEG_times = (0:length(data)-1)/Fs;
+else
+    %Force EEG_times to be a row vector
+    if iscolumn(EEG_times)
+        EEG_times = transpose(EEG_times);
     end
+    assert(length(EEG_times) == length(data), 'EEG_times must be the same length as data');
+end
 
-    if isempty(isexcluded)
-        isexcluded = false(size(EEG,2),1);
-    else
-        assert(length(isexcluded) == size(EEG,2),'isexcluded must be the same length as EEG');
-    end
+if isempty(time_range)
+    time_range = [min(EEG_times), max(EEG_times)];
+else
+    assert((time_range(1) >= min(EEG_times)) & (time_range(2) <= max(EEG_times)), 'time_range cannot be outside of the time range described by "EEG_times"');
+end
+
+if isempty(isexcluded)
+    isexcluded = false(length(data), 1);
+else
+    assert(length(isexcluded) == length(data),'isexcluded must be the same length as data');
 end
 
 %% Compute SO-power and SO-phase
-[SOpower, SOpower_times, ~, norm_method] = computeSOpower(EEG, Fs, 'stage_times', stage_times, 'stage_vals', stage_vals,...
+[SOpower, SOpower_times, ~, norm_method] = computeSOpower(data, Fs, 'stage_times', stage_times, 'stage_vals', stage_vals,...
     'EEG_times', EEG_times, 'time_range', time_range, 'isexcluded', isexcluded,...
     'SO_freqrange', SO_freqrange, 'tapers', SOpower_tapers, 'window_params', SOpower_window_params,...
     'SOpower_outlier_threshold', SOpower_outlier_threshold, 'norm_method', SOpower_norm_method, 'retain_Fs', SOpower_retain_Fs);
 
-[SOphase, SOphase_times, ~, SOdata] = computeSOphase(EEG, Fs, 'stage_times', stage_times, 'stage_vals', stage_vals,...
+[SOphase, SOphase_times, ~, SOdata] = computeSOphase(data, Fs, 'stage_times', stage_times, 'stage_vals', stage_vals,...
     'EEG_times', EEG_times, 'isexcluded', isexcluded, 'SO_freqrange', SO_freqrange, 'SOphase_filter', SOphase_filter);
 
 % mask SOphase with SOpower nan values to use the same periods in the histograms

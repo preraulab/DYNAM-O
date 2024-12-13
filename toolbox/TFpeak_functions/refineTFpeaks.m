@@ -9,13 +9,12 @@ function [stats_table] = refineTFpeaks(varargin)
 %       Fs: double - sampling frequency in Hz  -- required
 %       stats_table: table - list of events, including the peak times, peak frequencies,
 %                    and the bounding box -- required
-%       t: double - <number of samples> x 1  vector timestamps for data. Default = (0:length(data)-1)/Fs;
-%       baseline_opt: logical - true to include baseline removal, false to exclude (default: false)
-%       refine_method: Method to assign max frequency value using
-%       interpolation 'spline_interp', 'spline_opt', or 'spect_max'
-%       (default: spline_interp)
-%       remove_edge_peaks: logical - true to remove peaks at edge of event
-%                           bounding box (default: true)
+%       freq_range: 1x2 vector - frequency range to compute spectrogram over (Hz). Default = [0, 30]
+%       t: double - <number of samples> x 1  vector - timestamps for data. Default = (0:length(data)-1)/Fs;
+%       baseline_opt: logical - true to include baseline removal, false to exclude. Default = false
+%       refine_method: Method to assign max frequency value using interpolation
+%                      {'spline_interp', 'spline_opt', or 'spect_max'}. Default = 'spline_interp'
+%       remove_edge_peaks: logical - true to remove peaks at edge of event bounding box. Default = true
 %
 %   Output:
 %       stats_table: input stats table with the Peak Frequency column updated following the 1Hz refinement
@@ -28,6 +27,8 @@ addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','vector'}
 addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','scalar'}));
 addRequired(p, 'stats_table', @(x) validateattributes(x, {'table'}, {'real','nonempty','2d'}));
 
+detection_options = detection_opts(); % get the default parameters
+addOptional(p, 'freq_range', detection_options.mtm_freq_range, @(x) validateattributes(x,{'numeric'},{'real','finite','vector','numel',2}));
 addOptional(p, 't', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
 addOptional(p, 'baseline_opt', false, @(x) validateattributes(x,{'logical'},{'scalar'}));
 addOptional(p, 'refine_method', 'spline_interp', @(x) any(validatestring(x, {'spline_interp', 'spline_opt', 'spect_max'})));
@@ -58,7 +59,6 @@ dsfreqs = 0.05; % For example, with Fs = 200, this should make the nfft = 2^12
 
 window_size = 4;
 step_size = 0.05;
-freq_range = [0,30]; % frequency range to compute spectrum over (Hz)
 nfft = 2^(nextpow2(Fs/dsfreqs)); % zero pad data to this minimum value for fft
 detrend = 'constant'; % do not detrend
 ploton = false; % do not plot out
@@ -79,7 +79,7 @@ bounding_box_height = stats_table.BoundingBox(event_times_inc,4); % Element 4 of
 % computing the entire spectrogram, this approach takes a fixed window
 % around each event center to use for the frequency refinement
 [spect, ~, sfreqs] = hann_event_spectra(data, Fs, event_times(event_times_inc),'t',t, ...
-    'frequency_range', freq_range,'data_window_params',[window_size,step_size],'NFFT',nfft,'detrend_opt',detrend, 'plot_on',ploton,'verbose',mts_verbose);
+    'frequency_range',freq_range,'data_window_params',[window_size,step_size],'NFFT',nfft,'detrend_opt',detrend, 'plot_on',ploton,'verbose',mts_verbose);
 
 %% RECOMPUTE BASELINE
 
@@ -128,7 +128,7 @@ parfor ii = 1:N_events
             %efficient than the spline optimization.
 
             freq_interp = linspace(start_freq, end_freq, 1000);
-            spline_interp = interp1(sfreqs, curr,freq_interp,'spline');
+            spline_interp = interp1(sfreqs, curr, freq_interp, 'spline');
             [~, max_interp_ind] = max(spline_interp);
             peak_freqs(ii) = freq_interp(max_interp_ind);
 

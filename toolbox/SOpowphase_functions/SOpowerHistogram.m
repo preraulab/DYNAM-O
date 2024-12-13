@@ -85,8 +85,8 @@ if isscalar(v2)
     Fs = v2;
     SOpower = [];
     SOpower_times = [];
-    assert(isvector(EEG) & length(EEG)>1,'EEG must be a vector')
-    assert(Fs>0,'Must have positive Fs');
+    assert(isvector(EEG) & length(EEG)>1, 'EEG must be a vector')
+    assert(Fs>0, 'Must have positive Fs');
 else
     EEG = [];
     Fs = [];
@@ -95,7 +95,6 @@ else
 end
 
 %% Parse input
-
 p = inputParser;
 
 %TFpeak info
@@ -137,14 +136,23 @@ parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
 field_names = fieldnames(p.Results);
 
+%Automatically add parser results to the workspace
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 
-%Handle EEG/Fs input
-if ~isempty(EEG)
+if ~isempty(EEG) %Handle EEG/Fs input
+    %Force EEG to be a column vector
+    if isrow(EEG)
+        EEG = EEG(:);
+    end
+
     if isempty(EEG_times) %#ok<*NODEF>
         EEG_times = (0:length(EEG)-1)/Fs;
     else
-        assert(length(EEG_times) == size(EEG,2), 'EEG_times must be the same length as EEG');
+        %Force EEG_times to be a row vector
+        if iscolumn(EEG_times)
+            EEG_times = transpose(EEG_times);
+        end
+        assert(length(EEG_times) == length(EEG), 'EEG_times must be the same length as EEG');
     end
 
     if isempty(time_range)
@@ -154,13 +162,12 @@ if ~isempty(EEG)
     end
 
     if isempty(isexcluded)
-        isexcluded = false(size(EEG,2),1);
+        isexcluded = false(length(EEG), 1);
     else
-        assert(length(isexcluded) == size(EEG,2),'isexcluded must be the same length as EEG');
+        assert(length(isexcluded) == length(EEG),'isexcluded must be the same length as EEG');
     end
 
-    %Handle SOpower/SOpower_times input
-else
+else %Handle SOpower/SOpower_times input
     SOpower_times_step = SOpower_times(2) - SOpower_times(1);
     if isempty(time_range)
         time_range = [min(SOpower_times)-SOpower_times_step, max(SOpower_times)+SOpower_times_step];
@@ -169,7 +176,7 @@ else
     end
 
     % Compute SOpower stage
-    if  ~isempty(stage_times) && ~isempty(stage_vals)
+    if ~isempty(stage_times) && ~isempty(stage_vals)
         SOpower_stages = interp1(stage_times, stage_vals, SOpower_times, 'previous');
     else
         SOpower_stages = true;
@@ -182,6 +189,15 @@ if ~isempty(SOpower) % SOpower is directly provided
     if isempty(norm_method)
         norm_method = 'direct SOpower input';
     end
+    %Force SOpower to be a row vector for the interp1
+    if iscolumn(SOpower)
+        SOpower = transpose(SOpower);
+    end
+    %Force SOpower_times to be a row vector for the interp1
+    if iscolumn(SOpower_times)
+        SOpower_times = transpose(SOpower_times);
+    end
+
 else % Compute the normalized SOpower
     if isempty(norm_method)
         norm_method = SOPH_options.SOpower_norm_method;

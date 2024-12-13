@@ -48,7 +48,7 @@ function sh = hypnoplot(stage_times,stage_vals,varargin)
 %   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %% ********************************************************************
 
-%%
+%% Parse input
 %Check for old input
 if isstruct(stage_times)
     hypnoplot(stage_times.time, stage_times.stage, varargin{2:end});
@@ -91,29 +91,26 @@ Fs = p.Results.Fs;
 artifact_times = p.Results.ArtifactTimes;
 
 %Do additional input checks
-if iscolumn(stage_vals)
-    stage_vals = stage_vals';
+if iscolumn(stage_vals) %Force stage_vals to be a row vector for the horizontal concatenation
+    stage_vals = transpose(stage_vals);
 end
 
-if iscolumn(stage_times)
-    stage_times = stage_times';
-end
-
-%Make stage vals double
-if ~isa(stage_vals,'double')
-    stage_vals = double(stage_vals);
-end
-
-assert(isequal(size(stage_times),size(stage_vals)),'time and stage must be the same dimensions')
+assert(isequal(size(stage_times), size(stage_vals)), 'time and stage must be the same dimensions')
 
 if ~isempty(artifacts)
     assert(xor(~isempty(Fs), ~isempty(artifact_times)), 'Must provide either sampling frequency or time vector for artifacts')
-
+    if iscolumn(artifacts) %Force artifacts to be a row vector for the horizontal concatenation
+        artifacts = transpose(artifacts);
+    end
     if ~isempty(artifact_times)
+        if iscolumn(artifact_times) %Force artifact_times to be a row vector for the interp1
+            artifact_times = transpose(artifact_times);
+        end
         assert(length(artifact_times) == length(artifacts), 'Artifact vector and times must be the same dimension');
     end
 end
 
+%% Make the hypnoplot
 %Adds a 30s epoch at the end for plotting
 stage_times(end+1) = stage_times(end)+30;
 stage_vals(end+1) = stage_vals(end);
@@ -189,7 +186,7 @@ uistack(sh,'top');
 %Plot the artifacts on the bottom
 if ~isempty(artifacts)
     if ~isempty(Fs) && isempty(artifact_times)
-        artifact_times = (0:length(artifacts)-1)/Fs;
+        artifact_times = (0:length(artifacts)-1)/Fs; % this is a row vector
     end
 
     art_stage_inds = stage_vals == 6;

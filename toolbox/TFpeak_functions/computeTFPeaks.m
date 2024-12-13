@@ -7,7 +7,7 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %               computeTFPeaks(data, Fs, stage_times, stage_vals, <options>)
 %
 %   Inputs:
-%       data (req):                [1xn] double - timeseries data to be analyzed
+%       data (req):                [nx1] double - timeseries data to be analyzed
 %       Fs (req):                  double - sampling frequency of data (Hz)
 %       stage_times (req):         [1xm] double or single - timestamps of stage_vals
 %       stage_vals (req):          [1xm] double or single - sleep stage values at eaach time in
@@ -38,8 +38,10 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %       verbose (opt):             logical - whether to print out messages when performing each computation step. Default = true
 %       double_watershed (opt):    logical - whether to run two rounds of watershed to achieve better
 %                                  frequency resolution in addition to good temporal resolution. Default = true
-%       dsfreqs (opt):             scalar - frequency bin resolution between two consecutive frequency samples,
+%       mtm_dsfreqs (opt):         scalar - frequency bin resolution between two consecutive frequency samples,
 %                                  which is used to determine nfft in spectrogram computation. Default = 0.1
+%       mtm_freq_range (opt):      [1x2] double - multitaper method frequency range to compute spectrogram over (Hz). [lower, higher].
+%                                  Default = [0, 30]
 %       mtm_taper_params (opt):    [1x2] double - multitaper method parameter. [time half-bandwidth product, number of tapers].
 %                                  Default = [2, 3]
 %       mtm_window_length_1 (opt): scalar - window length for multitaper spectrogram computation used for the first round of watershed
@@ -127,8 +129,8 @@ p.KeepUnmatched=true;
 
 addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','vector'}));
 addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','scalar'}));
-addRequired(p, 'stage_times', @(x) validateattributes(x, {'double','single'}, {'real','finite','nondecreasing','row'}));
-addRequired(p, 'stage_vals', @(x) validateattributes(x, {'double','single'}, {'real','finite','nonnegative','row'}));
+addRequired(p, 'stage_times', @(x) validateattributes(x, {'double','single'}, {'real','finite','nondecreasing','vector'}));
+addRequired(p, 'stage_vals', @(x) validateattributes(x, {'double','single'}, {'real','finite','nonnegative','vector'}));
 
 addOptional(p, 't_data', [], @(x) validateattributes(x,{'numeric'},{'real','finite','2d'}));
 addOptional(p, 'time_range', [], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
@@ -148,7 +150,8 @@ addOptional(p, 'baseline_trim', baseline_options.baseline_trim, @(x) isa(x,'nume
 detection_options = detection_opts(); % get the default parameters
 addOptional(p, 'verbose', detection_options.verbose, @(x) validateattributes(x,{'logical'},{'scalar'}));
 addOptional(p, 'double_watershed', detection_options.double_watershed, @(x) validateattributes(x,{'logical'},{'scalar'}));
-addOptional(p, 'dsfreqs', detection_options.dsfreqs, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
+addOptional(p, 'mtm_dsfreqs', detection_options.mtm_dsfreqs, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
+addOptional(p, 'mtm_freq_range', detection_options.mtm_freq_range, @(x) validateattributes(x,{'numeric'},{'real','finite','vector','numel',2}));
 addOptional(p, 'mtm_taper_params', detection_options.mtm_taper_params, @(x) validateattributes(x,{'numeric'},{'real','finite','vector','numel',2}));
 addOptional(p, 'mtm_window_length_1', detection_options.mtm_window_length_1, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 addOptional(p, 'mtm_window_length_2', detection_options.mtm_window_length_2, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
@@ -204,11 +207,11 @@ if isscalar(baseline_trim)
     baseline_range(2) = min([ max(stage_times(nonwake_stage_inds))+buffer*60, max(stage_times) ]); % x minutes after last non-wake stage
 else
     if isempty(baseline_trim) % Empty array
-        baseline_range = [-inf,inf];
+        baseline_range = baseline_options.baseline_trim;
     elseif numel(baseline_trim) == 2 % Nonempty 2D array of start, stop
         baseline_range = baseline_trim;
     else
-        error('Invalid baseline_trim. Enter a range or a buffer time.')
+        error('Invalid baseline_trim. Enter a start and stop time range or a buffer time.')
     end
 end
 
@@ -235,7 +238,7 @@ baseline_exclude = baseline_exclude(time_range_inds);
 %% Compute spectrogram
 % For more information on the multitaper spectrogram parameters and
 % implementation visit: https://github.com/preraulab/multitaper
-[spect, stimes, sfreqs, dur_min, bw_min, ht_db_min] = compute_spectrogram(mtm_taper_params, [mtm_window_length_1, mtm_window_stepsize], data_trunc, Fs, dsfreqs, verbose);
+[spect, stimes, sfreqs, dur_min, bw_min, ht_db_min] = compute_spectrogram(mtm_taper_params, [mtm_window_length_1, mtm_window_stepsize], data_trunc, Fs, mtm_dsfreqs, mtm_freq_range, verbose);
 stimes = stimes + t_data_trunc(1); % adjust the time axis to t_data
 
 %% Artifact Detection
@@ -302,7 +305,7 @@ if double_watershed
     stimes_first = stimes;
 
     % Compute multitaper spectrogram using new parameters with smaller spectral resolution
-    [spect, stimes, sfreqs, ~, bw_min, ht_db_min] = compute_spectrogram(mtm_taper_params, [mtm_window_length_2, mtm_window_stepsize], data_trunc, Fs, dsfreqs, verbose);
+    [spect, stimes, sfreqs, ~, bw_min, ht_db_min] = compute_spectrogram(mtm_taper_params, [mtm_window_length_2, mtm_window_stepsize], data_trunc, Fs, mtm_dsfreqs, mtm_freq_range, verbose);
     stimes = stimes + t_data_trunc(1); % adjust the time axis to t_data
 
     % Update baseline exclusion - this block is identical to the first round
@@ -320,7 +323,6 @@ if double_watershed
     % Mask the spectrogram using extracted TFpeaks from the first round of watershed
     % Remove the offset between start times of spects from the two rounds
     dt = stimes(2)-stimes(1);
-    assert(dt == (stimes_first(2)-stimes_first(1)), 'The two rounds of watershed used different stepsizes. Cannot use linear indices.')
     indshift = round((stimes(1)-stimes_first(1)) / dt) * size(spect, 1); % assuming same sfreqs across spects
 
     % mask all pixels outside of peak regions as zero
@@ -371,16 +373,18 @@ if any(strcmpi(features, 'PeakStage'))
     stats_table.Properties.VariableUnits{'PeakStage'} = 'Stage #';
 end
 
-% Remove all features not requested to be extracted (added by compute_features)
+% Remove all features not requested to be extracted (added through compute_features)
 stats_table = removevars(stats_table, setdiff(stats_table.Properties.VariableNames, features));
 
 if refinement
     if verbose
         disp('Refining peaks...');
+        rft = tic;
     end
-    rft = tic;
-    stats_table = refineTFpeaks(data_trunc, Fs, stats_table, 't', t_data_trunc);
+
+    stats_table = refineTFpeaks(data_trunc, Fs, stats_table, 'freq_range', mtm_freq_range, 't', t_data_trunc);
     stats_table(isnan(stats_table.PeakFrequency),:) = [];
+
     if verbose
         disp(['TF-peak refinement took ' datestr(seconds(toc(rft)),'HH:MM:SS'), newline]);
     end
@@ -390,9 +394,8 @@ end
 
 
 %% Helper functions to compute spectrogram and return various parameters
-function [spect, stimes, sfreqs, dur_min, bw_min, ht_db_min] = compute_spectrogram(taper_params, time_window_params, data_trunc, Fs, dsfreqs, verbose)
+function [spect, stimes, sfreqs, dur_min, bw_min, ht_db_min] = compute_spectrogram(taper_params, time_window_params, data_trunc, Fs, dsfreqs, freq_range, verbose)
 % Fixed multitaper computation parameters
-freq_range = [0,30]; % frequency range to compute spectrum over (Hz)
 nfft = 2^(nextpow2(Fs/dsfreqs)); % zero pad data to this minimum value for fft
 detrend = 'constant'; % do not detrend
 weight = 'unity'; % each taper is weighted the same

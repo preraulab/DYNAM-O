@@ -1,9 +1,12 @@
-function [SOpower_norm, SOpower_times, SOpower_stages, norm_method, ptile] = computeSOpower(EEG, Fs, varargin)
+function [SOpower_norm, SOpower_times, SOpower_stages, norm_method, ptile] = computeSOpower(varargin)
 % COMPUTESOPOWER computes slow-oscillation power
 
 %% Parse input
 %Input Error handling
 p = inputParser;
+
+addRequired(p, 'EEG', @(x) validateattributes(x, {'numeric'}, {'real','vector'}));
+addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','scalar'}));
 
 %Stage info
 addOptional(p, 'stage_times', [], @(x) validateattributes(x, {'double','single'}, {'real','finite','nondecreasing','2d'}));
@@ -27,12 +30,22 @@ parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
 field_names = fieldnames(p.Results);
 
+%Automatically add parser results to the workspace
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
+
+%Force EEG to be a column vector
+if isrow(EEG)
+    EEG = EEG(:);
+end
 
 if isempty(EEG_times) %#ok<*NODEF>
     EEG_times = (0:length(EEG)-1)/Fs;
 else
-    assert(length(EEG_times) == size(EEG,2), 'EEG_times must be the same length as EEG');
+    %Force EEG_times to be a row vector
+    if iscolumn(EEG_times)
+        EEG_times = transpose(EEG_times);
+    end
+    assert(length(EEG_times) == length(EEG), 'EEG_times must be the same length as EEG');
 end
 
 if isempty(time_range)
@@ -42,9 +55,9 @@ else
 end
 
 if isempty(isexcluded)
-    isexcluded = false(size(EEG,2),1);
+    isexcluded = false(length(EEG), 1);
 else
-    assert(length(isexcluded) == size(EEG,2),'isexcluded must be the same length as EEG');
+    assert(length(isexcluded) == length(EEG),'isexcluded must be the same length as EEG');
 end
 
 %% Compute SO power
@@ -80,7 +93,6 @@ end
 % SOpower(last_isnan & next_isnan) = nan;
 
 %% Normalize SO power
-
 % Define the regular expression pattern for a valid shift string
 pattern = '^p(0*[0-9]|[1-9][0-9]|100)shift[1-5]+$';
 
@@ -105,11 +117,10 @@ elseif isValidShiftstr
     assert(shift_ptile >= 0 && shift_ptile <= 100, 'Shift percentile must be between 0 and 100');
 end
 
-% To do: right now the stage selection is only applied to the 'shift'
-% method. If we were to use proportion, percentile, ALL stages will be
-% used. Is this what we want?
-
 switch norm_method
+    % To do: right now the stage selection is only applied to the 'shift'
+    % method. If we were to use proportion, percentile, ALL stages will be
+    % used. Is this what we want?
     case {'proportion', 'normalized'}
         [proppower, ~] = computeMTSpectPower(nanEEG, Fs, 'freq_range', [0.3, 40], 'tapers', tapers, 'window_params', window_params);
         SOpower_norm = db2pow(SOpower)./db2pow(proppower);
@@ -119,15 +130,13 @@ switch norm_method
         low_val =  1;
         high_val =  99;
         ptile = prctile(SOpower(SOpower_times>=time_range(1) & SOpower_times<=time_range(2)), [low_val, high_val]);
-        SOpower_norm = SOpower-ptile(1);
+        SOpower_norm = SOpower - ptile(1);
         SOpower_norm = SOpower_norm/(ptile(2) - ptile(1));  % Normalize between 1 and 0
 
     case {'shift'}
-        %To Do: allow for pXshiftsleep = 1:4, NREM, 1:3, etc.
-
         %Check for valid shift stages
         SOpower_stages_valid = ismember(SOpower_stages, shift_stages);
-        assert(any(SOpower_stages_valid),['No valid stages found for shift normalization. {' num2str(shift_stages) '} are not valid members of {' num2str(unique(SOpower_stages)) '}']);
+        assert(any(SOpower_stages_valid), ['No valid stages found for shift normalization. {' num2str(shift_stages) '} are not valid members of {' num2str(unique(SOpower_stages)) '}']);
 
         ptile = prctile(SOpower(SOpower_times>=time_range(1) & SOpower_times<=time_range(2) & SOpower_stages_valid), shift_ptile);
         SOpower_norm = SOpower-ptile(1);
@@ -139,9 +148,6 @@ switch norm_method
     otherwise
         error(['Normalization method "', norm_method, '" not recognized']);
 end
-
-% Make the output SOpower_norm a row vector
-SOpower_norm = SOpower_norm';
 
 %% (Optional) Upsample to EEG sampling rate
 if retain_Fs
@@ -157,4 +163,92 @@ if retain_Fs
     end
 end
 
+end
+
+
+function [SO_power, stimes, sfreqs] = computeMTSpectPower(varargin)
+% COMPUTEMTSPECTPOWER computes the slow oscillation power of timeseries data
+% Usage:
+%   [SO_power, stimes, sfreqs] = computeMTSpectPower(data, Fs, freq_range, tapers, window_params, smoothing_method, smoothing_param, interp_times, verbose)
+%
+%%   Copyright 2024 Prerau Lab - http://www.sleepEEG.org
+%   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
+%   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
+%
+%   Please provide the following citation for all use:
+%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
+%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification,
+%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%**********************************************************************
+
+%% Parse input
+%Input Error handling
+p = inputParser;
+
+addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','vector'}));
+addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','scalar'}));
+
+SOPH_options = SOpowerphasehist_opts(); % get the default parameters
+addOptional(p, 'freq_range', SOPH_options.SO_freqrange, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','vector','numel',2}));
+addOptional(p, 'tapers', SOPH_options.SOpower_tapers, @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
+addOptional(p, 'window_params', SOPH_options.SOpower_window_params, @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
+addOptional(p, 'smoothing_method', 'none', @(x) any(validatestring(x, {'none', 'movmean', 'movmedian', 'gaussian', 'lowess', 'loess', 'rlowess', 'rloess', 'sgolay'})));
+addOptional(p, 'smoothing_param', 60*5, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
+addOptional(p, 'interp_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
+addOptional(p, 'verbose', false, @(x) validateattributes(x,{'logical'},{'scalar'}));
+
+parse(p,varargin{:});
+parser_results = struct2cell(p.Results); %#ok<NASGU>
+field_names = fieldnames(p.Results);
+
+%Automatically add parser results to the workspace
+eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
+
+%Force data to be a column vector
+if isrow(data)
+    data = data(:);
+end
+
+%% Compute SO-power
+%Compute power using the MTS (data, Fs, frequency_range, taper_params, window_params, min_NFFT, detrend_opt, weighting, plot_on, verbose)
+
+[SO_spect, stimes, sfreqs] = multitaper_spectrogram_mex(data, Fs, freq_range, tapers, window_params, [], 'linear', [], false, verbose);
+
+%Compute dt
+dt = stimes(2) - stimes(1);
+df = sfreqs(2) - sfreqs(1);
+
+%Takes the total power and converts to dB
+SO_power = nanpow2db(sum(SO_spect,1)*df); % this is now a row vector for the interp1
+
+%% Smooth data
+if ~strcmpi(smoothing_method, 'none') && ~isempty(smoothing_param) && smoothing_param>0
+
+    if verbose
+        disp(['Smoothing using ' smoothing_method ' with parameter ' num2str(smoothing_param)]);
+    end
+
+    %Get bad indices
+    bad_inds = ~isfinite(SO_power);
+
+    %Interpolate big gaps in data
+    t = 1:length(SO_power); % this is a row vector
+    data_fixed = interp1([0, t(~bad_inds), length(SO_power)+1], [0, SO_power(~bad_inds), 0], t); % this is also a row vector
+
+    smooth_samples = smoothing_param/dt; %Time in samples
+
+    SO_power = smoothdata(data_fixed, smoothing_method, smooth_samples, 'omitnan');
+
+    %Return the bad values
+    SO_power(bad_inds) = nan; % SO_power is a row vector in output
+end
+
+%% Interpolate data
+if ~isempty(interp_times)
+    SO_power = interp1(stimes, SO_power, interp_times);
+    if iscolumn(SO_power)
+        SO_power = transpose(SO_power); % ensure SO_power is still a row vector in output
+    end
+end
 end

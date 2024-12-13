@@ -13,7 +13,9 @@ addOptional(p, 'double_watershed', true, @(x) validateattributes(x,{'logical'},{
 
 %Multitaper method parameters
 %Frequency bin resolution of the spectrogram
-addOptional(p, 'dsfreqs', 0.1, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
+addOptional(p, 'mtm_dsfreqs', 0.1, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
+%Frequency range to compute spectrogram over (Hz)
+addOptional(p, 'mtm_freq_range', [0, 30], @(x) validateattributes(x,{'numeric'},{'real','finite','vector','numel',2}));
 %Taper parameters [time half-bandwidth product, number of tapers]
 addOptional(p, 'mtm_taper_params', [2, 3], @(x) validateattributes(x,{'numeric'},{'real','finite','vector','numel',2}));
 %Window length in spectrogram computation for the first round of watershed
