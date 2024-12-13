@@ -255,7 +255,7 @@ end
 % Exclude artifacts, baseline_exclude, and times corresponding to stages not in baseline_stages from baseline computation
 exclude_stages = ~ismember(stage_vals, baseline_stages); %stages to use passed in
 exclude_stages_resamp = interp1(stage_times, single(exclude_stages), t_data_trunc, 'previous', 'extrap')==1; % ==1 instead of logical handles NaN
-baseline_exclude = artifacts' | exclude_stages_resamp | baseline_exclude;
+baseline_exclude = artifacts | exclude_stages_resamp | baseline_exclude;
 baseline_exclude_stimes = interp1(t_data_trunc, single(baseline_exclude), stimes, 'nearest', 'extrap')==1; % get excluded baseline times occurring at spectrogram times
 % Applying time period trimming for baseline computation
 baseline_range_inds = stimes >= baseline_range(1) & stimes <= baseline_range(2);
