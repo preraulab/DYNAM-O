@@ -87,7 +87,6 @@ else
 end
 
 %% Parse input
-
 p = inputParser;
 
 %TFpeak info
@@ -127,14 +126,23 @@ parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
 field_names = fieldnames(p.Results);
 
+%Automatically add parser results to the workspace
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 
-%Handle EEG/Fs input
-if ~isempty(EEG)
+if ~isempty(EEG) %Handle EEG/Fs input
+    %Force EEG to be a column vector
+    if isrow(EEG)
+        EEG = EEG(:);
+    end
+
     if isempty(EEG_times) %#ok<*NODEF>
         EEG_times = (0:length(EEG)-1)/Fs;
     else
-        assert(length(EEG_times) == size(EEG,2), 'EEG_times must be the same length as EEG');
+        %Force EEG_times to be a row vector
+        if iscolumn(EEG_times)
+            EEG_times = transpose(EEG_times);
+        end
+        assert(length(EEG_times) == length(EEG), 'EEG_times must be the same length as EEG');
     end
 
     if isempty(time_range)
@@ -144,13 +152,12 @@ if ~isempty(EEG)
     end
 
     if isempty(isexcluded)
-        isexcluded = false(size(EEG,2),1);
+        isexcluded = false(length(EEG), 1);
     else
-        assert(length(isexcluded) == size(EEG,2),'isexcluded must be the same length as EEG');
+        assert(length(isexcluded) == length(EEG),'isexcluded must be the same length as EEG');
     end
 
-    %Handle SOphase/SOphase_times input
-else
+else %Handle SOphase/SOphase_times input
     SOphase_times_step = SOphase_times(2) - SOphase_times(1);
     if isempty(time_range)
         time_range = [min(SOphase_times)-SOphase_times_step, max(SOphase_times)+SOphase_times_step];
@@ -159,7 +166,7 @@ else
     end
 
     % Compute SOphase stage
-    if  ~isempty(stage_times) && ~isempty(stage_vals)
+    if ~isempty(stage_times) && ~isempty(stage_vals)
         SOphase_stages = interp1(stage_times, stage_vals, SOphase_times, 'previous');
     else
         SOphase_stages = true;
@@ -172,6 +179,15 @@ assert(SO_binsizestep(1) < 2*pi, 'SO-phase bin size must be less than 2*pi')
 %% Compute SO phase
 if ~isempty(SOphase) % SOphase is directly provided
     assert(~isempty(SOphase_times), 'SOphase input only but no SOphase_times received.')
+    %Force SOphase to be a row vector for the interp1
+    if iscolumn(SOphase)
+        SOphase = transpose(SOphase);
+    end
+    %Force SOphase_times to be a row vector for the interp1
+    if iscolumn(SOphase_times)
+        SOphase_times = transpose(SOphase_times);
+    end
+
 else % Compute the SOphase
     [SOphase, SOphase_times, SOphase_stages] = computeSOphase(EEG, Fs, 'stage_times', stage_times, 'stage_vals', stage_vals,...
         'EEG_times', EEG_times, 'isexcluded', isexcluded, 'SO_freqrange', SO_freqrange, 'SOphase_filter', SOphase_filter);

@@ -3,7 +3,6 @@ function [C_mat, freq_cbins, C_cbins, time_in_bin, prop_in_bin] = TFPeakHistogra
 % (y-axis) against an arbitrary C metric (x-axis)
 
 %% Parse input
-
 p = inputParser;
 
 %Cmetric info
@@ -180,8 +179,8 @@ end
 end
 
 
+%% % Display CPH settings
 function display_soph_setting(verbose, Cmetric_label, C_range, C_binsizestep, freq_range, freq_binsizestep, norm_method, min_time_in_bin, norm_dim, compute_rate)
-% Display CPH settings
 if ischar(verbose)
     disp(verbose)
 
