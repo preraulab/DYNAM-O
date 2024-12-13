@@ -39,6 +39,7 @@ parse(p,varargin{:});
 data = p.Results.data;
 Fs = p.Results.Fs;
 stats_table = p.Results.stats_table;
+freq_range = p.Results.freq_range;
 t = p.Results.t;
 baseline_opt = p.Results.baseline_opt;
 refine_method = p.Results.refine_method;
