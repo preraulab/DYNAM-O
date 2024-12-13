@@ -46,12 +46,12 @@ function [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, SOpow
 %                            (e.g. p2shift1234 = use the 2nd percentile of stages N3, N2, N1, and REM, p5shift123 = use the 5th percentile of stages
 %                            N3, N2 and N1)
 %       SOpower_retain_Fs: logical - whether to upsample calculated SOpower to the sampling rate of data. Default = true
-%       SOpower_min_time_in_bin: numerical - time (minutes) required in each SO power bin to include in SOpower analysis. Otherwise all values 
+%       SOpower_min_time_in_bin: numerical - time (minutes) required in each SO power bin to include in SOpower analysis. Otherwise all values
 %                                in that SO power bin will be NaN. Default = 10.
 %       SOpower_range: 1x2 double - min and max SO power values to consider in SO power analysis.
 %                      Default calculated using min and max of SO power
 %       SOpower_binsizestep: 1x2 double - [size, step] SO power bin size and step for SO power axis
-%                            of histogram. Units are radians. Default size is (SOpower_range(2)-SOpower_range(1))/10; 
+%                            of histogram. Units are radians. Default size is (SOpower_range(2)-SOpower_range(1))/10;
 %                            default step size is (SOpower_range(2)-SOpower_range(1))/100
 %
 %       SOphase_filter: 1xF double - custom filter that will be used to estimate SOphase
@@ -205,14 +205,12 @@ end
 [SOphase, SOphase_times, ~, SOdata] = computeSOphase(data, Fs, 'stage_times', stage_times, 'stage_vals', stage_vals,...
     'EEG_times', EEG_times, 'isexcluded', isexcluded, 'SO_freqrange', SO_freqrange, 'SOphase_filter', SOphase_filter);
 
-% mask SOphase with SOpower nan values to use the same periods in the histograms
+% SOpower and SOphase interpolate the isexcluded vector to different
+% resolutions, resulting in different numbers of TFpeak events with NaN
+% properties. To ensure the same periods and the same TFpeak events are
+% included in the histograms, mask SOphase with NaN values from SOpower.
 SOpower_times_step = SOpower_times(2) - SOpower_times(1);
-SOphase(isnan(interp1([SOpower_times(1)-SOpower_times_step, SOpower_times, SOpower_times(end)+SOpower_times_step], [SOpower(1), SOpower, SOpower(end)], SOphase_times))) = nan;
-
-% To use a custom precomputed SO phase filter, use the SOphase_filter argument
-% custom_SOphase_filter = designfilt('bandpassfir', 'StopbandFrequency1', 0.1, 'PassbandFrequency1', 0.4, ...
-%                        'PassbandFrequency2', 1.75, 'StopbandFrequency2', 2.05, 'StopbandAttenuation1', 60, ...
-%                        'PassbandRipple', 1, 'StopbandAttenuation2', 60, 'SampleRate', 256);
+SOphase(isnan(interp1([SOpower_times(1)-SOpower_times_step, SOpower_times, SOpower_times(end)+SOpower_times_step],[SOpower(1), SOpower, SOpower(end)], SOphase_times))) = nan;
 
 %% Compute SO-power histogram
 if verbose

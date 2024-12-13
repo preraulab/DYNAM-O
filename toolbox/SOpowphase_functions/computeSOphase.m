@@ -1,6 +1,11 @@
 function [SOphase, SOphase_times, SOphase_stages, filtdata] = computeSOphase(varargin)
 % COMPUTESOPHASE computes slow-oscillation phase
 
+% To use a custom precomputed SO phase filter, use the 'SOphase_filter' argument
+% custom_SOphase_filter = designfilt('bandpassfir', 'StopbandFrequency1', 0.1, 'PassbandFrequency1', 0.4, ...
+%                        'PassbandFrequency2', 1.75, 'StopbandFrequency2', 2.05, 'StopbandAttenuation1', 60, ...
+%                        'PassbandRipple', 1, 'StopbandAttenuation2', 60, 'SampleRate', 256);
+
 %% Parse input
 %Input Error handling
 p = inputParser;
