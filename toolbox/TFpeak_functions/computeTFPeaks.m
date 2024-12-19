@@ -22,7 +22,7 @@ function [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifact
 %                                  features to be extracted from each peak region. Can be any subset of
 %                                  {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData',
 %                                   'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. Default = 'all'
-%       artifacts (opt):           [nx1] logical - boolean indicating artifact time points. Default = [], run detect_artifacts()
+%       artifacts (opt):           [nx1] logical - boolean indicating artifact time points. Default = logical([]), run detect_artifacts()
 %       artifact_filters (opt):    struct with 2 digitalFilter fields "hpFilt_high","hpFilt_broad" -
 %                                  filters to be used for artifact detection. Default = []
 %
