@@ -254,9 +254,9 @@ end
 %% Compute baseline spectrum used to flatten data spectrum
 % Exclude artifacts, baseline_exclude, and times corresponding to stages not in baseline_stages from baseline computation
 exclude_stages = ~ismember(stage_vals, baseline_stages); %stages to use passed in
-exclude_stages_resamp = interp1(stage_times, single(exclude_stages), t_data_trunc, 'previous', 'extrap')==1; % ==1 instead of logical handles NaN
+exclude_stages_resamp = interp1(stage_times, single(exclude_stages), t_data_trunc, 'previous')~=0; % ~=0 instead of logical() handles NaN
 baseline_exclude = univariate_or({artifacts, exclude_stages_resamp, baseline_exclude});
-baseline_exclude_stimes = interp1(t_data_trunc, single(baseline_exclude), stimes, 'nearest', 'extrap')==1; % get excluded baseline times occurring at spectrogram times
+baseline_exclude_stimes = interp1(t_data_trunc, single(baseline_exclude), stimes, 'nearest')~=0; % get excluded baseline times occurring at spectrogram times
 % Applying time period trimming for baseline computation
 baseline_range_inds = stimes >= baseline_range(1) & stimes <= baseline_range(2);
 % Exclude segments with artifact/not in baseline include or not within baseline_range for baseline computation
@@ -368,6 +368,7 @@ end
 % Get peak stages
 if any(strcmpi(features, 'PeakStage'))
     stats_table.PeakStage = interp1(stage_times, stage_vals, stats_table.PeakTime, 'previous');
+    stats_table.PeakStage(isnan(stats_table.PeakStage)) = 0; % a conservative choice to mark peaks outside scored stages as unknown
     stats_table.PeakStage(logical(interp1(t_data_trunc, single(artifacts), stats_table.PeakTime, 'nearest'))) = 6;
     stats_table.Properties.VariableDescriptions{'PeakStage'} = 'Stage: 6 = Artifact, 5 = W, 4 = R, 3 = N1, 2 = N2, 1 = N3, 0 = Unknown';
     stats_table.Properties.VariableUnits{'PeakStage'} = 'Stage #';
