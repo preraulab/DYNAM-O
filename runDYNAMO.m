@@ -99,19 +99,6 @@ end
 valid_stages = stage_vals>0 & stage_vals<6;
 assert(~isempty(valid_stages),'No valid stages found');
 
-%Create unknown stages for missing time
-if min(stage_times)>0
-    stage_times(2:end+1) = stage_times;
-    stage_times(1) = 0;
-    stage_vals(2:end+1) = stage_vals;
-    stage_vals(1) = 0;
-end
-
-if max(stage_times)>length(data)/Fs
-    stage_times(end+1) = stage_times(end)+1e-5;
-    stage_vals(end+1) = 0;
-end
-
 %Set to range of valid scored data by default
 if isempty(time_range) %#ok<*NODEF>
     valid_stage_inds = find(valid_stages);
