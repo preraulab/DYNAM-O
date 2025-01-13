@@ -254,9 +254,10 @@ end
 %% Compute baseline spectrum used to flatten data spectrum
 % Exclude artifacts, baseline_exclude, and times corresponding to stages not in baseline_stages from baseline computation
 exclude_stages = ~ismember(stage_vals, baseline_stages); %stages to use passed in
-exclude_stages_resamp = interp1(stage_times, single(exclude_stages), t_data_trunc, 'previous')~=0; % ~=0 instead of logical() handles NaN
-baseline_exclude = univariate_or({artifacts, exclude_stages_resamp, baseline_exclude});
-baseline_exclude_stimes = interp1(t_data_trunc, single(baseline_exclude), stimes, 'nearest')~=0; % get excluded baseline times occurring at spectrogram times
+exclude_stages_resamp = interp1(stage_times, single(exclude_stages), t_data_trunc, 'previous')~=0; % ~=0 excludes both 1 and NaN (when t_data_trunc exceeds the interp1 range)
+baseline_exclude = artifacts(:) | exclude_stages_resamp(:) | baseline_exclude(:);
+% get excluded baseline times occurring at spectrogram times
+baseline_exclude_stimes = logical(interp1(t_data_trunc, single(baseline_exclude), stimes, 'nearest')); % no need to use ~=0 since t_data_trunc matches stimes
 % Applying time period trimming for baseline computation
 baseline_range_inds = stimes >= baseline_range(1) & stimes <= baseline_range(2);
 % Exclude segments with artifact/not in baseline include or not within baseline_range for baseline computation
@@ -309,7 +310,7 @@ if double_watershed
     stimes = stimes + t_data_trunc(1); % adjust the time axis to t_data
 
     % Update baseline exclusion - this block is identical to the first round
-    baseline_exclude_stimes = interp1(t_data_trunc, single(baseline_exclude), stimes, 'nearest', 'extrap')==1;
+    baseline_exclude_stimes = logical(interp1(t_data_trunc, single(baseline_exclude), stimes, 'nearest')); % no need to use ~=0 since t_data_trunc matches stimes
     % Applying time period trimming for baseline computation
     baseline_range_inds = stimes >= baseline_range(1) & stimes <= baseline_range(2);
     % Re-compute baseline spectrum
