@@ -57,17 +57,13 @@ for ii = 1:length(b)
     %Find the label index
     b_lbl_idx = lbls==b(ii);
 
-    %Get the pixels in region b
-    region_b_lidx = regions{b_lbl_idx};
-
     %Update a to include all the b pixels
-    regions{a_lbl_idx} = unique([regions{a_lbl_idx}; region_b_lidx]);
+    regions{a_lbl_idx} = unique([regions{a_lbl_idx}; regions{b_lbl_idx}]);
     regions{b_lbl_idx} = [];
 
     %Update the borders
     if ~isempty(borders)
-        border_b = borders{b_lbl_idx};
-        border_a = setxor(border_a,border_b);
+        border_a = setxor(border_a, borders{b_lbl_idx});
         borders{a_lbl_idx} = border_a;
         borders{b_lbl_idx} = [];
     end
@@ -80,26 +76,22 @@ for ii = 1:length(b)
         adj_mat(cnx_b1,1) = a;
         adj_mat(cnx_b2,2) = a;
 
-        % Look for regions encircled by the merge
+        %Look for regions encircled by the merge
         nbrs = [adj_mat(cnx_b1,2); adj_mat(cnx_b2,1)];
-        %Get all the neighbors of a
-        nbrs = setdiff(unique(nbrs),a);
+        nbrs = setdiff(unique(nbrs),a); % neighbors of b that are not a
         for jj = 1:length(nbrs)
             cnx1 = adj_mat(:,1)==nbrs(jj);
             cnx2 = adj_mat(:,2)==nbrs(jj);
-
-            %Merge the encircled region with a
-            if ~any(a~=adj_mat(cnx1,2)) && ~any(a~=adj_mat(cnx2,1))
-
-                ii_lbl_idx = lbls==nbrs(jj);
-                region_ii_lidx = regions{ii_lbl_idx};
-                regions{a_lbl_idx} = unique([regions{a_lbl_idx}; region_ii_lidx]);
-                regions{ii_lbl_idx} = [];
-                border_ii = borders{ii_lbl_idx};
-                border_a = setxor(border_a,border_ii);
-                borders{a_lbl_idx} = border_a;
-                borders{ii_lbl_idx} = [];
-
+            %merge any encircled region with a
+            if all(a==adj_mat(cnx1,2)) && all(a==adj_mat(cnx2,1)) % the only neighbor is a = encircled by a
+                jj_lbl_idx = lbls==nbrs(jj);
+                regions{a_lbl_idx} = unique([regions{a_lbl_idx}; regions{jj_lbl_idx}]);
+                regions{jj_lbl_idx} = [];
+                if ~isempty(borders)
+                    border_a = setxor(border_a, borders{jj_lbl_idx});
+                    borders{a_lbl_idx} = border_a;
+                    borders{jj_lbl_idx} = [];
+                end
                 adj_mat(cnx1,1) = a;
                 adj_mat(cnx2,2) = a;
             end
@@ -107,15 +99,15 @@ for ii = 1:length(b)
     end
 end
 
-% Update adjacency matrix to remove duplicate entries
-cnx_a = adj_mat(:,1)==a | adj_mat(:,2)==a;
+%Update adjacency matrix to remove duplicate entries
+cnx_a = adj_mat(:,1)==a | adj_mat(:,2)==a; % a is involved in the pair
 sub_adj_mat = adj_mat(cnx_a,:);
 sub_adj_mat(:,3) = NaN;
-sub_adj_mat = sub_adj_mat(sub_adj_mat(:,1)~=sub_adj_mat(:,2),:);
-[~,u_idx] = unique(sort(sub_adj_mat(:,1:2), 2),'rows');
+sub_adj_mat = sub_adj_mat(sub_adj_mat(:,1)~=sub_adj_mat(:,2), :); % remove the a-a pairs
+[~,u_idx] = unique(sort(sub_adj_mat(:,1:2), 2),'rows'); % remove duplicated pairs e.g., a-b, b-a
 %[~,u_idx] = unique(sub_adj_mat(:,1:2),'rows');
 
-%Update the adjacency matrix with unique pairs
+%Update the adjacency matrix with unique pairs involving a
 adj_mat = [adj_mat(~cnx_a,:); sub_adj_mat(u_idx,:)];
 
 %Identify which edge weights need to be updated
