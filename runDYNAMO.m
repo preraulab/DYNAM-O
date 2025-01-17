@@ -1,16 +1,18 @@
-%RUN DYNAMO  Compute time-frequency peaks and SO-power/phase histograms
+%RUNDYNAMO: Compute time-frequency peaks and SO-power/phase histograms
 %
 %   Usage:
-%       [stats_table, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, detection_options, baseline_options, SOPH_options, save_output_image, output_fname, verbose, plot_on)
+%       [stats_table, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options, save_output_image, output_fname, verbose, plot_on)
 %
-%   Input:
-%       data: 1 x <number of samples> vector - time series data -- required
+%   Inputs:
+%       data: <number of samples> x 1 vector - time series data -- required
 %       Fs: double - sampling frequency in Hz -- required
 %       stage_times: 1 x <number of stages> vector - times of sleep stages in seconds -- required
 %       stage_vals: 1 x <number of stages> vector - values of sleep stages -- required
+%
+%   Optional inputs:
 %       time_range: 1x2 vector - [<start time>, <end time>] in seconds (default: range of scored data)
-%       detection_options: structure - parameters for detection algorithm (default: detection_opts())
 %       baseline_options: structure - parameters for baseline algorithm (default: baseline_opts())
+%       detection_options: structure - parameters for detection algorithm (default: detection_opts())
 %       SOPH_options: structure - parameters for SO-power/phase histograms (default: SOpowerphasehist_opts())
 %       stats_table: table - TF-peak stats_table output from computeTFPeaks for direct computation of SOPH (default: [])
 %       save_output_image: logical - flag to save the output image (default: false)
@@ -18,7 +20,7 @@
 %       verbose: logical - flag for verbose output (default: true)
 %       plot_on: logical - flag to plot the results (default: true)
 %
-%   Output:
+%   Outputs:
 %       stats_table: table - table of computed time-frequency peaks
 %       SOPHs: structure - structure containing SO-power/phase histograms
 %
@@ -34,7 +36,6 @@
 %       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
 %
 %**********************************************************************
-
 
 function [stats_table, SOPHs] = runDYNAMO(varargin)
 %%%% Example script showing how to compute time-frequency peaks and SO-power/phase histograms
@@ -65,19 +66,22 @@ end
 p = inputParser;
 p.KeepUnmatched=true;
 
-addRequired(p, 'data', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'row', 'nonempty'}));
-addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric', 'vector'}, {'real','row','nonempty'}));
-addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric', 'vector'}, {'real','row','nonempty'}));
-addOptional(p, 'time_range', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real', 'nonnan'}));
-addOptional(p, 'detection_options', detection_opts(), @(x) validateattributes(x,{'struct'},{'nonempty'}));
-addOptional(p, 'baseline_options', baseline_opts(), @(x) validateattributes(x,{'struct'},{'nonempty'}));
-addOptional(p, 'SOPH_options', SOpowerphasehist_opts(), @(x) validateattributes(x,{'struct'},{'nonempty'}));
-addOptional(p, 'stats_table', [], @(x) validateattributes(x,{'table'},{'nonempty'}));
-addOptional(p, 'save_output_image', false, @(x) validateattributes(x,{'logical'},{'nonempty', 'nonnan'}));
-addOptional(p, 'output_fname', 'DYNAM-O_output', @(x) validateattributes(x,{'char','string'},{'nonempty'}));
-addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'nonempty', 'nonnan'}));
-addOptional(p, 'plot_on', true, @(x) validateattributes(x,{'logical'},{'nonempty', 'nonnan'}));
+addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','vector'}));
+addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','scalar'}));
+addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric'}, {'real','finite','nondecreasing','vector'}));
+addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','vector'}));
+% section of EEG to use in analysis (seconds)
+addOptional(p, 'time_range', [], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
+% parameters managed using struct outputs from opts functions
+addOptional(p, 'baseline_options', baseline_opts(), @(x) validateattributes(x, {'struct'}, {'nonempty'}));
+addOptional(p, 'detection_options', detection_opts(), @(x) validateattributes(x, {'struct'}, {'nonempty'}));
+addOptional(p, 'SOPH_options', SOpowerphasehist_opts(), @(x) validateattributes(x, {'struct'}, {'nonempty'}));
+% additional inputs to control the outputs from runDYNAMO()
+addOptional(p, 'stats_table', [], @(x) validateattributes(x, {'double','table'}, {'real','2d'}));
+addOptional(p, 'save_output_image', false, @(x) validateattributes(x, {'logical'}, {'scalar'}));
+addOptional(p, 'output_fname', 'DYNAM-O_output', @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
+addOptional(p, 'verbose', true, @(x) validateattributes(x, {'logical'}, {'scalar'}));
+addOptional(p, 'plot_on', true, @(x) validateattributes(x, {'logical'}, {'scalar'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -86,25 +90,19 @@ field_names = fieldnames(p.Results);
 %Automatically add parser results to the workspace
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 
+%Force data to be a column vector
+if isrow(data)
+    data = data(:);
+end
+
 %Check sleep stages
-valid_stages = (stage_vals>0 & stage_vals<6);
+valid_stages = stage_vals>0 & stage_vals<6;
 assert(~isempty(valid_stages),'No valid stages found');
-
-%Create unknown stages for missing time
-if min(stage_times)>0
-    stage_times = [0 stage_times];
-    stage_vals = [0 stage_vals];
-end
-
-if max(stage_times)>length(data)/Fs
-    stage_times = [stage_times stage_times(end)+1e-5];
-    stage_vals = [stage_vals 0];
-end
 
 %Set to range of valid scored data by default
 if isempty(time_range) %#ok<*NODEF>
     valid_stage_inds = find(valid_stages);
-    time_range = stage_times(valid_stage_inds([1 end]));
+    time_range = stage_times(valid_stage_inds([1, end]));
 end
 
 %Start a timer
@@ -114,13 +112,14 @@ ttotal = datetime('now');
 % See computeTFPeaks() for a full list of optional arguments for finer
 % control of watershed extraction of Time-Frequency Peaks
 
-% If no stats table provided
 if isempty(stats_table)
-    [stats_table, spect, stimes, sfreqs, data_trunc, t_data, artifacts]= computeTFPeaks(data, Fs, stage_vals, stage_times,...
-        'time_range', time_range, baseline_options, detection_options); %#ok<*ASGLU>
-% If stats table provided, check to be sure SOPH has also been provided
+    % If no stats table provided
+    [stats_table, spect, stimes, sfreqs, data_trunc, t_data, artifacts]= computeTFPeaks(data, Fs, stage_times, single(stage_vals),...
+        'time_range', time_range, detection_options, baseline_options); %#ok<*ASGLU>
+
 else
-    assert(nargout==2,'Nothing to compute. Must provide SOPH output if stats table is used as input.');
+    % If stats table provided, check to be sure SOPH is requested by output
+    assert(nargout==2, 'Nothing to compute. Must provide SOPH output if stats table is used as input.');
 
     if verbose
         disp('TF-peaks stats table provided. Computing SOPH only.');
@@ -137,12 +136,11 @@ end
 % finer control of Histogram generation
 
 if nargout==2
-
     [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins,...
         SOpower_TIB, SOphase_TIB, stats_table.SOpower, stats_table.SOphase, hist_peakidx,...
         SOpower_norm, SOpower_times, SOphase, SOphase_times, SOdata] = SOpowerphaseHistogram(...
         data_trunc, Fs, stats_table.PeakFrequency, stats_table.PeakTime,...
-        'stage_vals', single(stage_vals), 'stage_times', stage_times,...
+        'stage_times', stage_times, 'stage_vals', single(stage_vals),...
         'EEG_times', t_data, 'isexcluded', artifacts, 'verbose', verbose, SOPH_options);
 
     %Create SOPHs structure
@@ -179,9 +177,9 @@ else
         disp('Computing TF-peaks only. No SOPH output requested.');
     end
 
-    % This value generally comes from the SOPH- if not computing the SOPH,
+    % This value generally comes from the SOPH - if not computing the SOPH,
     % set all to true.
-    hist_peakidx = true(1,height(stats_table));
+    hist_peakidx = true(1, height(stats_table));
 
 end
 
@@ -248,8 +246,6 @@ if plot_on
         xlim(time_range/3600)
 
         % Plot SO-Power trace
-        % Leave empty if no SOPH outputs requested
-
         axes(hypn_spect_ax(3))
         plot(SOpower_times/3600,SOpower_norm,'linewidth',2)
         xlim(time_range/3600)
@@ -283,7 +279,6 @@ if plot_on
 
         scatter(stats_table_SOPH.PeakTime/3600, stats_table_SOPH.PeakFrequency, peak_size, stats_table_SOPH.SOphase, 'filled'); % scatter plot all peaks
 
-
         %Make circular colormap
         colormap(ax(1),circshift(hsv(2^12),-650))
 
@@ -302,7 +297,6 @@ if plot_on
         xlim(time_range/3600)
 
         % Plot SO-power histogram
-
         axes(ax(2))
         imagesc(SOpower_bins, freq_bins, SOpower_mat');
         axis xy;
@@ -310,7 +304,7 @@ if plot_on
 
         %Set colorscale
         c_ptiles = prctile(SOpower_mat(:), [5, 98]);
-        caxis(gca,[c_ptiles(1) c_ptiles(2)]);
+        clim(gca,[c_ptiles(1) c_ptiles(2)]);
 
         c = colorbar_noresize;
         c.Label.String = {'Density', '(peaks/min in bin)'};
@@ -338,7 +332,7 @@ if plot_on
 
         %Scale color limits
         c_ptiles = prctile(SOphase_mat(:), [5, 98]);
-        caxis([c_ptiles(1) c_ptiles(2)]);
+        clim([c_ptiles(1) c_ptiles(2)]);
 
         c = colorbar_noresize;
         c.Label.String = {'Proportion'};
@@ -355,7 +349,6 @@ if plot_on
         set(th,'fontsize',15)
 
     else
-
         % Create figure
         fh = figure('Color',[1 1 1],'units','inches','position',[0 0 8.5 11]);
         orient portrait;
@@ -402,7 +395,6 @@ if plot_on
         hypn_spect_ax(1).XTick = [];
         xlim(time_range/3600)
 
-
         % Plot time-frequency peak scatterplot
         axes(ax(1))
         %Compute peak dot size
@@ -436,12 +428,13 @@ if plot_on
 end
 end
 
+
 function [stats_table, SOPHs] = runExampleData()
 disp('Running Example Data...');
 
 %Load default options
-detection_options = detection_opts();
 baseline_options = baseline_opts();
+detection_options = detection_opts();
 SOPH_options = SOpowerphasehist_opts();
 
 %% DATA SETTINGS
@@ -453,7 +446,7 @@ data_range = 'night'; %Only works for provided example data
 
 %% LOAD DATA
 %Load example EEG data
-load(data_fname, 'data', 'stage_vals', 'stage_times', 'Fs');
+load(data_fname, 'data', 'stage_times', 'stage_vals', 'Fs');
 
 switch data_range
     case 'segment'
@@ -478,6 +471,6 @@ switch data_range
         disp(['Running full night', newline])
 end
 
-%Call main script
-[stats_table, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, detection_options, baseline_options, SOPH_options);
+%Call main function
+[stats_table, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options);
 end

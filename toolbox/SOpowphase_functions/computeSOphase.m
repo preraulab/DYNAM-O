@@ -1,38 +1,57 @@
-function [SOphase, SOphase_times, SOphase_stages, filtdata] = computeSOphase(EEG, Fs, varargin)
+function [SOphase, SOphase_times, SOphase_stages, filtdata] = computeSOphase(varargin)
 % COMPUTESOPHASE computes slow-oscillation phase
+
+% To use a custom precomputed SO phase filter, use the 'SOphase_filter' argument
+% custom_SOphase_filter = designfilt('bandpassfir', 'StopbandFrequency1', 0.1, 'PassbandFrequency1', 0.4, ...
+%                        'PassbandFrequency2', 1.75, 'StopbandFrequency2', 2.05, 'StopbandAttenuation1', 60, ...
+%                        'PassbandRipple', 1, 'StopbandAttenuation2', 60, 'SampleRate', 256);
 
 %% Parse input
 %Input Error handling
 p = inputParser;
 
-%Stage info
-addOptional(p, 'stage_vals', [], @(x) validateattributes(x, {'double', 'single'}, {'real'}));
-addOptional(p, 'stage_times', [], @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
+addRequired(p, 'EEG', @(x) validateattributes(x, {'numeric'}, {'real','vector'}));
+addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','scalar'}));
 
-%SOphase settings
-addOptional(p, 'SO_freqrange', [0.3, 1.5], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan'}));
-addOptional(p, 'SOphase_filter', []);
+%Stage info
+addOptional(p, 'stage_times', [], @(x) validateattributes(x, {'double','single'}, {'real','finite','nondecreasing','2d'}));
+addOptional(p, 'stage_vals', [], @(x) validateattributes(x, {'double','single'}, {'real','finite','nonnegative','2d'}));
 
 %EEG time settings
-addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric', 'vector'},{'real','finite','nonnan'}));
-addOptional(p, 'isexcluded', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
+addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
+addOptional(p, 'isexcluded', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
+
+%SOphase settings
+SOPH_options = SOpowerphasehist_opts(); % get the default parameters
+addOptional(p, 'SO_freqrange', SOPH_options.SO_freqrange, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','vector','numel',2}));
+addOptional(p, 'SOphase_filter', SOPH_options.SOphase_filter);
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
 field_names = fieldnames(p.Results);
 
+%Automatically add parser results to the workspace
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
+
+%Force EEG to be a column vector
+if isrow(EEG)
+    EEG = EEG(:);
+end
 
 if isempty(EEG_times) %#ok<*NODEF>
     EEG_times = (0:length(EEG)-1)/Fs;
 else
-    assert(length(EEG_times) == size(EEG,2), 'EEG_times must be the same length as EEG');
+    %Force EEG_times to be a row vector
+    if iscolumn(EEG_times)
+        EEG_times = transpose(EEG_times);
+    end
+    assert(length(EEG_times) == length(EEG), 'EEG_times must be the same length as EEG');
 end
 
 if isempty(isexcluded)
-    isexcluded = false(size(EEG,2),1);
+    isexcluded = false(length(EEG), 1);
 else
-    assert(length(isexcluded) == size(EEG,2),'isexcluded must be the same length as EEG');
+    assert(length(isexcluded) == length(EEG),'isexcluded must be the same length as EEG');
 end
 
 %% Compute SO phase
@@ -69,7 +88,7 @@ else
     d = SOphase_filter;
 end
 
-filtdata = filtfilt(d,double(EEG));
+filtdata = filtfilt(d, EEG);
 
 data_analytic = hilbert(filtdata);
 SOphase = unwrap(angle(data_analytic));  % phase of the real projection (cosine wave)
@@ -79,8 +98,13 @@ SOphase_times = EEG_times;
 filtdata(isexcluded) = nan;
 SOphase(isexcluded) = nan;
 
+% Force the returned SOphase to be a row vector
+if iscolumn(SOphase)
+    SOphase = transpose(SOphase);
+end
+
 % Compute SOphase stage
-if ~isempty(stage_vals) && ~isempty(stage_times)
+if ~isempty(stage_times) && ~isempty(stage_vals)
     SOphase_stages = interp1(stage_times, stage_vals, SOphase_times, 'previous');
 else
     SOphase_stages = true;

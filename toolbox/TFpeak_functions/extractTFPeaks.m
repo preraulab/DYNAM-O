@@ -19,7 +19,7 @@ function [stats_table, regions, borders] = extractTFPeaks(img,x,y,features,num_s
 %   conn_wshed   -- pixel connection to be used by peaksWShed. default 8.
 %   merge_thresh -- threshold weight value for when to stop merge rule. default 8.
 %   max_merges   -- maximum number of merges to perform. default inf.
-%   downsample_spect   --  2x1 double indicating number of rows and columns to downsize spect to. Default = []
+%   downsample_spect  --  2x1 double indicating numbers of columns and rows to downsize spect to. Default = []
 %   dur_min      -- minimum duration allowed
 %   bw_min       -- minimum bandwidth allowed
 %   trim_vol     -- fraction maximum trimmed volume (from 0 to 1),
@@ -86,17 +86,14 @@ end
 if nargin < 9
     downsample_spect = [];
 end
-
 if nargin < 10 || isempty(dur_min)
     %Min TF-peak duration
     dur_min = 0;
 end
-
 if nargin < 11 || isempty(bw_min)
     %Min TF-peak bandwidth
     bw_min = 0;
 end
-
 if nargin < 12
     trim_vol = [];
 end
@@ -129,7 +126,6 @@ end
 if isempty(img) || ~any(img(:)) || ~any(isfinite(img(:)))
     error('Image must not be empty')
 end
-
 % x-axis
 if isempty(x)
     x = 1:size(img,2);
@@ -193,14 +189,16 @@ assert(trim_vol>0 && trim_vol<=1,'Trim volume must be (0, 1]');
 % Get low-res version of image *
 %*******************************
 if ~isempty(downsample_spect)
+    % Using decimation instead of downsampling with anti-aliasing filter to
+    % preserve the watershed region properties (borders, integer region labels)
     img_LR = img(1:downsample_spect(2):end, 1:downsample_spect(1):end);
 else
     img_LR = img;
 end
 
-%************************************
-%   Run watershed and create graph  *
-%************************************
+%**********************************
+% Run watershed and create graph  *
+%**********************************
 t_start = tic;
 if f_verb > 0
     disp([verb_pref 'Computing watershed and building graph...']);
@@ -220,7 +218,7 @@ end
 % Merge watershed regions according to merge rule *
 %**************************************************
 if ~isempty(adj_list)
-    
+
     if f_verb > 0
         disp([verb_pref '  Starting merge...']);
         ttic = tic;
@@ -231,13 +229,13 @@ if ~isempty(adj_list)
     if f_verb > 0
         disp([verb_pref '    merge took: ' num2str(toc(ttic)) ' seconds.']);
     end
-    
+
 else
-   
+
     if f_verb > 0
         disp('Nothing found to merge.');
     end
-    
+
 end
 
 %Return if empty stats table
@@ -252,7 +250,7 @@ end
 if ~isempty(downsample_spect)
     %UPSCALE THE LABELED IMAGE
     Ldata = zeros(size(img_LR));
-    
+
     %Create the labeled image and skip empty regions
     num_regions = length(regions);
     for ii = 1:num_regions
@@ -261,16 +259,16 @@ if ~isempty(downsample_spect)
             Ldata(ii_pixels)=ii;
         end
     end
-    
+
     %Resize image
     LdataHR = imresize(Ldata,size(img),'nearest');
-    
+
     %COMPUTE NEW REGIONS
     regions_HR = cell(1,num_regions);
     for ii = 1:num_regions
         regions_HR{ii} = find(LdataHR == ii);
     end
-    
+
     regions = regions_HR;
 end
 
@@ -281,7 +279,7 @@ end
 if dur_min>0 || bw_min>0
     df = y(2)-y(1);
     dt = x(2)-x(1);
-    
+
     [f_inds,t_inds] = cellfun(@(x)ind2sub(size(img),x),regions,'UniformOutput',false);
     good_inds = cellfun(@(x)(max(x)-min(x))*dt>dur_min,t_inds) & cellfun(@(x)(max(x)-min(x))*df>bw_min,f_inds);
     regions = regions(good_inds);
@@ -311,33 +309,33 @@ if trim_vol < 1
     if f_verb > 0
         disp([verb_pref '    trim took: ' num2str(toc(ttic)) ' seconds.']);
     end
-    
-    % Remove regions that now fall below the removal criteria after trimming
+
+    %Remove regions that now fall below the removal criteria after trimming
     if dur_min>0 || bw_min>0
-        [f_inds,t_inds] = cellfun(@(x)ind2sub(size(img),x),trim_regions,'UniformOutput',false);
+        [f_inds, t_inds] = cellfun(@(x)ind2sub(size(img),x),trim_regions,'UniformOutput',false);
         good_inds = cellfun(@(x)~isempty(max(x))&&((max(x)-min(x))*dt>dur_min),t_inds) & cellfun(@(x)~isempty(max(x))&&((max(x)-min(x))*df>bw_min),f_inds);
         trim_regions = trim_regions(good_inds);
         trim_borders = trim_borders(good_inds);
     end
-    
+
     %Return if empty stats table
     if isempty(trim_regions)
         stats_table = table;
         return;
     end
-    
+
     regions = trim_regions;
     borders = trim_borders;
-    
+
     if dur_min>0 || bw_min>0
         df = y(2)-y(1);
         dt = x(2)-x(1);
-        
-        [f_inds,t_inds]=cellfun(@(x)ind2sub(size(img),x),regions,'UniformOutput',false);
+
+        [f_inds, t_inds] = cellfun(@(x)ind2sub(size(img),x),regions,'UniformOutput',false);
         good_inds = cellfun(@(x)(max(x)-min(x))*dt>dur_min,t_inds) & cellfun(@(x)(max(x)-min(x))*df>bw_min,f_inds);
         regions = regions(good_inds);
     end
-    
+
 end
 
 %***********************************
