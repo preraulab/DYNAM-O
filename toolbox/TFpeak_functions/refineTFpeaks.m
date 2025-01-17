@@ -1,42 +1,45 @@
-function [spindle_table] = refineTFpeaks(varargin)
+function [stats_table] = refineTFpeaks(varargin)
 %REFINE_TFPEAKS  Compute a Hann spectrogram with 1Hz spectral resolution to refine the event frequencies
 %
 %   Usage:
-%       [spindle_table] = refine_TFpeaks(data, Fs, spindle_table, baseline_opt, method)
+%       [stats_table] = refine_TFpeaks(data, Fs, stats_table, baseline_opt, method)
 %
 %   Input:
 %       data: <number of samples> x 1  vector - time series data -- required
 %       Fs: double - sampling frequency in Hz  -- required
-%       spindle_table: table - list of events, including the peak times, peak frequencies,
-%                      and the bounding box -- required
-%       t: double - <number of samples> x 1  vector timestamps for data. Default = (0:length(data)-1)/Fs;
-%       baseline_opt: logical - true to include baseline removal, false to exclude (default: false)
-%       refine_method: Method to assign max frequency value using
-%       interpolation 'spline_interp', 'spline_opt', or 'spect_max'
-%       (default: spline_interp)
-%       remove_edge_peaks: logical - true to remove peaks at edge of event
-%                           bounding box (default: true)
+%       stats_table: table - list of events, including the peak times, peak frequencies,
+%                    and the bounding box -- required
+%       freq_range: 1x2 vector - frequency range to compute spectrogram over (Hz). Default = [0, 30]
+%       t: double - <number of samples> x 1  vector - timestamps for data. Default = (0:length(data)-1)/Fs;
+%       baseline_opt: logical - true to include baseline removal, false to exclude. Default = false
+%       refine_method: Method to assign max frequency value using interpolation
+%                      {'spline_interp', 'spline_opt', or 'spect_max'}. Default = 'spline_interp'
+%       remove_edge_peaks: logical - true to remove peaks at edge of event bounding box. Default = true
 %
 %   Output:
-%       spindle_table: input spindle table with the Peak Frequency column updated following the 1Hz refinement
+%       stats_table: input stats table with the Peak Frequency column updated following the 1Hz refinement
 %
 %    Copyright 2024 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
 %
 %% ********************************************************************
 p = inputParser;
-addRequired(p,'data', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-addRequired(p,'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-addRequired(p,'spindle_table',@(x) validateattributes(x, {'table'}, {'real'}));
-addOptional(p,'t',[], @(x) validateattributes(x, {'numeric', 'vector'}, {'real'}));
-addOptional(p,'baseline_opt',false,@(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
-addOptional(p,'refine_method', 'spline_interp', @(x) ismember(x,{'spline_interp','spline_opt','spect_max'}));
-addOptional(p,'remove_edge_peaks',true,@(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
+addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','vector'}));
+addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','scalar'}));
+addRequired(p, 'stats_table', @(x) validateattributes(x, {'table'}, {'real','nonempty','2d'}));
+
+detection_options = detection_opts(); % get the default parameters
+addOptional(p, 'freq_range', detection_options.mtm_freq_range, @(x) validateattributes(x,{'numeric'},{'real','finite','vector','numel',2}));
+addOptional(p, 't', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
+addOptional(p, 'baseline_opt', false, @(x) validateattributes(x,{'logical'},{'scalar'}));
+addOptional(p, 'refine_method', 'spline_interp', @(x) any(validatestring(x, {'spline_interp', 'spline_opt', 'spect_max'})));
+addOptional(p, 'remove_edge_peaks', true, @(x) validateattributes(x,{'logical'},{'scalar'}));
 
 parse(p,varargin{:});
 % Manually assign variables because eval doesn't work with parpool
 data = p.Results.data;
 Fs = p.Results.Fs;
-spindle_table = p.Results.spindle_table;
+stats_table = p.Results.stats_table;
+freq_range = p.Results.freq_range;
 t = p.Results.t;
 baseline_opt = p.Results.baseline_opt;
 refine_method = p.Results.refine_method;
@@ -52,27 +55,24 @@ if strcmpi(refine_method,'spline_opt') && ~license('test', 'Curve_Fitting_Toolbo
     refine_method = 'spline_interp';
 end
 
-
 %% SPECTROGRAM PARAMS
 dsfreqs = 0.05; % For example, with Fs = 200, this should make the nfft = 2^12
 
 window_size = 4;
 step_size = 0.05;
-freq_range = [0,30]; % frequency range to compute spectrum over (Hz)
 nfft = 2^(nextpow2(Fs/dsfreqs)); % zero pad data to this minimum value for fft
 detrend = 'constant'; % do not detrend
 ploton = false; % do not plot out
 mts_verbose = false; % suppress verbose messages
 
-%% Extract necessary stats from the spindle table
-event_times = spindle_table.PeakTime;
+%% Extract necessary stats from the stats_table
+event_times = stats_table.PeakTime;
 % Exclude event times that fall within half the window size distance from
 % the start/end of the data collected
 event_times_inc = event_times > t(1)+(0.5*window_size) & event_times < t(end)-(0.5*window_size);
 
-
-bounding_box_lower = spindle_table.BoundingBox(event_times_inc,2); % Element 2 of the bounding box corresponds to the lower bound frequency of the detected event
-bounding_box_height = spindle_table.BoundingBox(event_times_inc,4); % Element 4 of the bounding box gives the height of the bounding box
+bounding_box_lower = stats_table.BoundingBox(event_times_inc,2); % Element 2 of the bounding box corresponds to the lower bound frequency of the detected event
+bounding_box_height = stats_table.BoundingBox(event_times_inc,4); % Element 4 of the bounding box gives the height of the bounding box
 
 %% SPECTROGRAM
 
@@ -80,7 +80,7 @@ bounding_box_height = spindle_table.BoundingBox(event_times_inc,4); % Element 4 
 % computing the entire spectrogram, this approach takes a fixed window
 % around each event center to use for the frequency refinement
 [spect, ~, sfreqs] = hann_event_spectra(data, Fs, event_times(event_times_inc),'t',t, ...
-    'frequency_range', freq_range,'data_window_params',[window_size,step_size],'NFFT',nfft,'detrend_opt',detrend, 'plot_on',ploton,'verbose',mts_verbose);
+    'frequency_range',freq_range,'data_window_params',[window_size,step_size],'NFFT',nfft,'detrend_opt',detrend, 'plot_on',ploton,'verbose',mts_verbose);
 
 %% RECOMPUTE BASELINE
 
@@ -97,10 +97,10 @@ if baseline_opt
     [spect, ~] = removeBaseline(spect, baseline); % recompute spect with baseline removed
 end
 
-%% REFINE SPINDLE TABLE
-N_events = height(spindle_table(event_times_inc,:));
+%% REFINE STATS_TABLE
+N_events = height(stats_table(event_times_inc,:));
 % Pre-allocate space to store updated spindle values
-peak_freqs = NaN(height(spindle_table(event_times_inc,:)),1);
+peak_freqs = NaN(height(stats_table(event_times_inc,:)),1);
 
 % Loop through each event
 parfor ii = 1:N_events
@@ -129,7 +129,7 @@ parfor ii = 1:N_events
             %efficient than the spline optimization.
 
             freq_interp = linspace(start_freq, end_freq, 1000);
-            spline_interp = interp1(sfreqs, curr,freq_interp,'spline');
+            spline_interp = interp1(sfreqs, curr, freq_interp, 'spline');
             [~, max_interp_ind] = max(spline_interp);
             peak_freqs(ii) = freq_interp(max_interp_ind);
 
@@ -166,12 +166,13 @@ parfor ii = 1:N_events
 
 end
 
-% Update the spindle table with the refined frequency array
-spindle_table.PeakFrequency(event_times_inc) = peak_freqs;
+% Update the stats_table with the refined frequency array
+stats_table.PeakFrequency(event_times_inc) = peak_freqs;
 
 end
 
-% Define a function to enforce constraints
+
+%% Define a helper function to enforce constraints
 function constrainedValue = constrainedObjective(x, objective_fcn, LB, UB)
 % Penalize values outside the bounds
 penalty = 1e6;
@@ -182,6 +183,3 @@ else
     constrainedValue = objective_fcn(x);
 end
 end
-
-
-

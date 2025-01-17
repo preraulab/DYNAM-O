@@ -1,47 +1,50 @@
 function [stats_table, regions, borders] = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, features, ...
     dur_min, bw_min, merge_thresh, max_merges, trim_vol, f_verb, verb_pref, f_disp)
-%RUNSEGMENTEDDATA wrapper that runs 1) baseline subtraction, 2) spectrogram
-%segmentation, 3) TFpeak extraction (watershed, merging, trimming, stats), 4)TFpeak statistics packaging and saving
+%RUNSEGMENTEDDATA: wrapper that runs:
+%                      1) Baseline subtraction,
+%                      2) Spectrogram segmentation,
+%                      3) TFpeak extraction (watershed, merging, trimming, stats),
+%                      4) TFpeak statistics packaging and saving
 %
 %   Usage:
 %       [stats_table] = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, features, ...
 %       dur_min, bw_min, merge_thresh, max_merges, trim_vol, f_verb, verb_pref, f_disp)
 %
-% INPUTS:
-%   spect            -- 2D image data used to extract TFpeaks [freq, time] -- required
-%   stimes           -- 1D timestamps corresponding to the 2nd dim of spect (seconds) -- required
-%   sfreqs           -- 1D frequencies corresponding to the 1st dim of spect (Hertz) -- required
-%   baseline         -- 1D baseline spectrum used to normalize the spectrogram. default []
-%   seg_time         -- length of each segment of spectrogram to process
-%                       at a time (in seconds). Default = 30. Note that a 60s segment time is
-%                       used in the paper accompanying this code, but using 30s offers large
-%                       speedup and should not greatly affect results
-%   downsample_spect -- 2x1 double indicating number of rows and columns to downsize spect to.
-%   features         -- cell array of features to include, can be any subset of
-%                       {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData',
-%                        'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. default 'all'
-%   dur_min          -- minimum duration allowed
-%   bw_min           -- minimum bandwidth allowed
-%   merge_thresh     -- threshold weight value for when to stop merge rule. default 8.
-%   max_merges       -- maximum number of merges to perform. default inf.
-%   trim_vol         -- fraction maximum trimmed volume (from 0 to 1),
-%                       i.e. 1 means no trim. default 0.8.
-%   f_verb           -- number indicating depth of output text statements of progress.
-%                       0 - no output.
-%                       1 - output current function level.
-%                       2 - output at wrapper level. indicates chunk progress.
-%                       3 - output at sequence level within each chunk.
-%                       4 - output within sequence functions.
-%                       5 - output internal progress of merge and trim functions.
-%                       defaults to 0. >2 is not recommended unless data is single chunk.
-%   verb_pref        -- prefix string for verbose output. defaults to ''.
-%   f_disp           -- flag indicator of whether to plot.
-%                       defaults to false, unless using default data.
+%   Inputs:
+%       spect            -- 2D image data used to extract TFpeaks [freq, time] -- required
+%       stimes           -- 1D timestamps corresponding to the 2nd dim of spect (seconds) -- required
+%       sfreqs           -- 1D frequencies corresponding to the 1st dim of spect (Hertz) -- required
+%       baseline         -- 1D baseline spectrum used to normalize the spectrogram. default []
+%       seg_time         -- length of each segment of spectrogram to process
+%                           at a time (in seconds). Default = 30. Note that a 60s segment time is
+%                           used in the paper accompanying this code, but using 30s offers large
+%                           speedup and should not greatly affect results
+%       downsample_spect -- 2x1 double indicating numbers of columns and rows to downsize spect to.
+%       features         -- cell array of features to include, can be any subset of
+%                           {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData',
+%                            'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. default 'all'
+%       dur_min          -- minimum duration allowed. default 0.
+%       bw_min           -- minimum bandwidth allowed. default 0.
+%       merge_thresh     -- threshold weight value for when to stop merge rule. default 8.
+%       max_merges       -- maximum number of merges to perform. default inf.
+%       trim_vol         -- fraction of maximum in trimmed volume (from 0 to 1),
+%                           i.e. 1 means no trim. default 0.8.
+%       f_verb           -- number indicating depth of output text statements of progress.
+%                           0 - no output.
+%                           1 - output current function level.
+%                           2 - output at wrapper level. indicates chunk progress.
+%                           3 - output at sequence level within each chunk.
+%                           4 - output within sequence functions.
+%                           5 - output internal progress of merge and trim functions.
+%                           defaults to 0. >2 is not recommended unless data is single chunk.
+%       verb_pref        -- prefix string for verbose output. defaults to ''.
+%       f_disp           -- flag indicator of whether to plot.
+%                           defaults to false, unless using default data.
 %
-% OUTPUTS:
-%   stats_table      -- table of peak statistics
-%   regions          -- A cell array of linear indices of peak regions in the entire spect.
-%   borders          -- A cell array of linear indices of peak borders in the entire spect.
+%   Outputs:
+%       stats_table      -- table of peak statistics
+%       regions          -- A cell array of linear indices of peak regions in the entire spect.
+%       borders          -- A cell array of linear indices of peak borders in the entire spect.
 %
 % COPYRIGHT 2024 Prerau Lab - http://www.sleepEEG.org
 % This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
@@ -54,11 +57,10 @@ function [stats_table, regions, borders] = runSegmentedData(spect, stimes, sfreq
 %   Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
 %**********************************************************************
 
-
 %*************************
 % Handle variable inputs *
 %*************************
-assert(nargin >= 3 || isempty(spect), '3 input required: spect, stimes, sfreqs');
+assert(nargin >= 3 || isempty(spect), 'At least 3 inputs required: spect, stimes, sfreqs');
 
 if nargin < 4 || isempty(baseline)
     baseline = [];
@@ -196,7 +198,7 @@ if f_verb > 1
     disp([verb_pref '  Computing took ' num2str(toc(computetime)/60) ' minutes.']);
 end
 
-%% Assembles peaks stats for all segs into single table and sorts by peak time
+%% Assemble peaks stats for all segs into a single table and sort by peak time
 stats_table = cat(1,stats_tables{:});
 peaktimes_ind = find(strcmpi(stats_table.Properties.VariableNames, 'PeakTime'));
 [stats_table, sort_inds] = sortrows(stats_table, peaktimes_ind, 'ascend');

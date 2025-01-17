@@ -28,21 +28,22 @@ function [hann_spectrogram,stimes,sfreqs] = hann_event_spectra(varargin)
 %
 %% ********************************************************************
 
-% PROCESS DATA AND PARAMETERS
-
+%% PROCESS DATA AND PARAMETERS
 %Process user input
 p = inputParser;
-addRequired(p,'data', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-addRequired(p,'Fs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty','positive'}));
-addRequired(p,'event_times',@(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty','increasing'}));
-addOptional(p,'t',[], @(x) validateattributes(x, {'numeric', 'vector'}, {'real','increasing'}));
-addOptional(p,'frequency_range',[], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonnan'}));
-addOptional(p,'data_window_params',[5,1],@(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-addOptional(p,'NFFT',0,@(x) validateattributes(x, {'numeric', 'scalar'}, {'real', 'nonempty'}));
-addOptional(p,'detrend_opt','linear',@(x) validateattributes(x,{'logical','char','string'},{'real','nonempty'}));
-addOptional(p,'plot_on',true,@(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
-addOptional(p,'verbose',true,@(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
-addOptional(p,'xyflip',false,@(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
+addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','vector'}));
+addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','scalar'}));
+addRequired(p, 'event_times', @(x) validateattributes(x, {'numeric'}, {'real','increasing','vector'}));
+
+addOptional(p, 't', [], @(x) validateattributes(x,{'numeric'},{'real','finite','increasing','2d'}));
+addOptional(p, 'frequency_range', [], @(x) isempty(x) || (isnumeric(x) && isvector(x) && numel(x) == 2));
+addOptional(p, 'data_window_params', [5, 1], @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
+addOptional(p, 'NFFT', 0, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
+addOptional(p, 'detrend_opt', 'linear', @(x) any(validatestring(x, {'linear', 'constant', 'off'})));
+addOptional(p, 'plot_on', true, @(x) validateattributes(x,{'logical'},{'scalar'}));
+addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'scalar'}));
+addOptional(p, 'xyflip', false, @(x) validateattributes(x,{'logical'},{'scalar'}));
+
 parse(p,varargin{:});
 
 [data, Fs, frequency_range, winsize_samples, winstep_samples, window_start, num_windows, nfft, detrend_opt, ...
@@ -76,32 +77,32 @@ hann_taper = hann_taper / sqrt(sum(hann_taper.^2));
 parfor n = 1:num_windows % REMOVE PARFOR TO TEST
     %Grab the data for the given window
     data_segment = data_segments(:,n);
-    
+
     %Skip empty segments
     if all(data_segment == 0) || any(isnan(data_segment))
         continue;
     end
-    
+
     %Option to detrend_opt data to remove low frequency DC component
     if detrend_opt
         data_segment = detrend(data_segment, detrend_opt);
     end
-    
+
     %Multiply the data by the hann taper
     tapered_data = data_segment.* hann_taper;
-    
+
     %Compute the FFT
     fft_data = fft(tapered_data, nfft);
-    
+
     %Compute spectral power
     h_spectrum = imag(fft_data).^2 + real(fft_data).^2;
-        
+
     %Add the spectrum to the spectrogram
     hann_spectrogram(:,n) = h_spectrum(freq_inds);
 end
 
 
-%Compute one-sided PSD spectrum 
+%Compute one-sided PSD spectrum
 DC_select = find(sfreqs==0);
 Nyquist_select = find(sfreqs==Fs/2);
 select = setdiff(1:length(sfreqs), [DC_select, Nyquist_select]);
@@ -127,19 +128,18 @@ if plot_on
         imagesc(stimes, sfreqs, nanpow2db(hann_spectrogram));
     end
     axis xy
-    
+
     xlabel('Time (s)');
     ylabel('Frequency (Hz)');
-    
-    climscale; 
+
+    climscale;
     c = colorbar_noresize;
     ylabel(c,'Power (dB)');
-    
+
     axis tight
 end
 
 end
-
 
 
 % ********************************************
@@ -148,7 +148,8 @@ end
 %% PROCESS THE USER INPUT
 
 function [data, Fs, frequency_range, winsize_samples, winstep_samples, window_start, num_windows, nfft, ...
-          detrend_opt, plot_on, verbose, xyflip,flag] = process_input(p)
+    detrend_opt, plot_on, verbose, xyflip,flag] = process_input(p)
+
 % Manually assign variables because eval doesn't work with parpool
 data = p.Results.data;
 Fs = p.Results.Fs;
@@ -161,6 +162,7 @@ detrend_opt = p.Results.detrend_opt;
 plot_on = p.Results.plot_on;
 verbose = p.Results.verbose;
 xyflip = p.Results.xyflip;
+
 % Set defaults
 if isempty(t)
     t = (0:length(data)-1)/Fs;
@@ -169,8 +171,9 @@ if isempty(frequency_range)
     frequency_range = [0 Fs/2];
 end
 if NFFT ==0
-   NFFT = 2^(nextpow2(data_window_params(1)*Fs)); 
-end 
+    NFFT = 2^(nextpow2(data_window_params(1)*Fs));
+end
+
 %Set either linear or constant detrending
 if detrend_opt ~= false
     switch lower(detrend_opt)
@@ -212,7 +215,7 @@ else
     winstep_samples=data_window_params(2)*Fs;
 end
 
-%Force data to be a column vector 
+%Force data to be a column vector
 if isrow(data)
     data = data(:);
 end
@@ -273,6 +276,8 @@ disp(['    Detrending: ' det_string]);
 disp(' ');
 %disp(['Estimating hanning spectrogram on ' num2str(my_pool.NumWorkers) ' workers...']);
 end
+
+%% POW2DB FOR NAN ENTRIES
 
 function ydB = nanpow2db(y)
 %POW2DB   Power to dB conversion, setting all bad values to nan

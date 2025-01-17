@@ -51,7 +51,3 @@ switch lower(bin_method)
         bin_edges = bin_centers + [-bin_width/2; bin_width/2];
         
 end
-
-
-end
-

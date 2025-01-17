@@ -3,39 +3,39 @@ function [C_mat, freq_cbins, C_cbins, time_in_bin, prop_in_bin] = TFPeakHistogra
 % (y-axis) against an arbitrary C metric (x-axis)
 
 %% Parse input
-
 p = inputParser;
 
 %Cmetric info
-addRequired(p, 'Cmetric', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-addRequired(p, 'Cmetric_stages', @(x) validateattributes(x, {'numeric', 'vector', 'logical'}, {'real', 'nonempty'}));
-addRequired(p, 'Cmetric_times_step', @(x) validateattributes(x,{'numeric'},{'real','finite','nonnan'}));
-addRequired(p, 'Cmetric_valid', @(x) validateattributes(x, {'logical'}, {}));
-addRequired(p, 'Cmetric_valid_allstages', @(x) validateattributes(x, {'logical'}, {}));
+addRequired(p, 'Cmetric', @(x) validateattributes(x, {'numeric'}, {'real','vector'}));
+addRequired(p, 'Cmetric_stages', @(x) validateattributes(x, {'numeric','logical'}, {'real','finite','nonnegative','vector'}));
+addRequired(p, 'Cmetric_times_step', @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
+addRequired(p, 'Cmetric_valid', @(x) validateattributes(x,{'logical'},{'finite','vector'}));
+addRequired(p, 'Cmetric_valid_allstages', @(x) validateattributes(x,{'logical'},{'finite','vector'}));
 
 %TF-peak info
-addRequired(p, 'TFpeak_freqs', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
-addRequired(p, 'peak_Cmetric', @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'nonempty'}));
+addRequired(p, 'TFpeak_freqs', @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector'}));
+addRequired(p, 'peak_Cmetric', @(x) validateattributes(x, {'numeric'}, {'real','finite','vector'}));
 
 %CPH settings
-addOptional(p, 'circular_Cmetric', false, @(x) validateattributes(x,{'logical'},{}));
-addOptional(p, 'circular_bounds', [-pi, pi], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan'}));
-addOptional(p, 'Cmetric_label', 'C-metric', @(x) validateattributes(x, {'char', 'numeric'},{}));
+SOPH_options = SOpowerphasehist_opts(); % get some default parameters
+addOptional(p, 'circular_Cmetric', false, @(x) validateattributes(x,{'logical'},{'scalar'}));
+addOptional(p, 'circular_bounds', SOPH_options.SOphase_range, @(x) validateattributes(x, {'numeric'}, {'real','finite','vector','numel',2}));
+addOptional(p, 'Cmetric_label', 'C-metric', @(x) validateattributes(x, {'char','string'}, {'scalartext'}));
+addOptional(p, 'xlabel_text', 'C metric', @(x) validateattributes(x, {'char','string'}, {'scalartext'}));
 
-addOptional(p, 'C_range', [], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
-addOptional(p, 'C_binsizestep', [], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
-addOptional(p, 'freq_range', [0,40], @(x) validateattributes(x,{'numeric', 'vector'},{'real','finite','nonnan'}));
-addOptional(p, 'freq_binsizestep', [1, 0.2], @(x) validateattributes(x, {'numeric', 'vector'}, {'real', 'finite', 'nonnan', 'positive'}));
-addOptional(p, 'norm_dim', 0, @(x) validateattributes(x,{'numeric'},{'scalar'}));
-addOptional(p, 'compute_rate', false, @(x) validateattributes(x,{'logical'},{}));
+addOptional(p, 'C_range', [], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
+addOptional(p, 'C_binsizestep', [], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
 
-addOptional(p, 'norm_method', [], @(x) validateattributes(x, {'char', 'numeric'},{}));
-addOptional(p, 'min_time_in_bin', 0, @(x) validateattributes(x,{'numeric'},{'scalar','real','finite','nonnan','nonnegative','integer'}));
+addOptional(p, 'freq_range', SOPH_options.freq_range, @(x) validateattributes(x,{'numeric'},{'real','finite','vector','numel',2}));
+addOptional(p, 'freq_binsizestep', SOPH_options.freq_binsizestep, @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
+addOptional(p, 'norm_dim', 0, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
+addOptional(p, 'compute_rate', SOPH_options.compute_rate, @(x) validateattributes(x,{'logical'},{'scalar'}));
+addOptional(p, 'norm_method', '', @(x) validateattributes(x, {'char','string'}, {'scalartext'}));
+addOptional(p, 'min_time_in_bin', 0, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
 
 %Display settings
-addOptional(p, 'plot_on', false, @(x) validateattributes(x,{'logical'},{}));
-addOptional(p, 'xlabel_text', 'C metric', @(x) validateattributes(x,{'char'},{}));
-addOptional(p, 'verbose', true, @(x) validateattributes(x,{'char', 'logical'},{}));
+addOptional(p, 'plot_on', false, @(x) validateattributes(x,{'logical'},{'scalar'}));
+addOptional(p, 'verbose', true, @(x) validateattributes(x,{'logical'},{'scalar'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -43,7 +43,7 @@ field_names = fieldnames(p.Results);
 
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 
-if islogical(Cmetric_stages) && Cmetric_stages
+if islogical(Cmetric_stages) && Cmetric_stages %#ok<NODEF>
     Cmetric_stages = true(size(Cmetric_valid));
 end
 
@@ -176,8 +176,11 @@ if plot_on
     ylabel('Frequency (Hz)');
 end
 
+end
+
+
+%% % Display CPH settings
 function display_soph_setting(verbose, Cmetric_label, C_range, C_binsizestep, freq_range, freq_binsizestep, norm_method, min_time_in_bin, norm_dim, compute_rate)
-% Display CPH settings
 if ischar(verbose)
     disp(verbose)
 
@@ -192,9 +195,10 @@ elseif verbose
         '    Minimum time required in each ', Cmetric_label, ' bin: ', num2str(min_time_in_bin), ' min', newline];
 
     if ~isempty(norm_method)
-        display_message = [display_message, '    Normalization Method: ', num2str(norm_method), newline];
+        display_message = [display_message, '    Normalization Method: ', norm_method, newline];
     end
 
     disp(display_message)
 
+end
 end
