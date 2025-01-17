@@ -105,7 +105,7 @@ sub_adj_mat = adj_mat(cnx_a,:);
 sub_adj_mat(:,3) = NaN;
 sub_adj_mat = sub_adj_mat(sub_adj_mat(:,1)~=sub_adj_mat(:,2), :); % remove the a-a pairs
 [~,u_idx] = unique(sort(sub_adj_mat(:,1:2), 2),'rows'); % remove duplicated pairs e.g., a-b, b-a
-%[~,u_idx] = unique(sub_adj_mat(:,1:2),'rows');
+%[~,u_idx] = unique(sub_adj_mat(:,1:2),'rows'); % this old line keeps duplicated pairs and is undesirable
 
 %Update the adjacency matrix with unique pairs involving a
 adj_mat = [adj_mat(~cnx_a,:); sub_adj_mat(u_idx,:)];
