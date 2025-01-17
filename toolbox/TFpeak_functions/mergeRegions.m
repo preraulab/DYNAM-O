@@ -46,15 +46,6 @@ if nargin < 5
     borders = [];
 end
 
-if nargin < 4
-    lbls = [];
-end
-
-%Creates labels if not present
-if isempty(lbls)
-   lbls = unique(regions(:,2)); 
-end
-
 %Find the corresponding label for region a
 a_lbl_idx = find(lbls==a);        
 if ~isempty(borders)
