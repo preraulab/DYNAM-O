@@ -49,7 +49,7 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower, 
 %       EEG_times: 1xN double - times for each EEG sample. Default = (0:length(EEG)-1)/Fs
 %       time_range: 1x2 double - min and max times for which to include TFpeaks. Also used to normalize
 %                   SOpower. Default = [EEG_times(1), EEG_times(end)]
-%       isexcluded: 1xN logical - marks each timestep of EEG as artifact or non-artifact. Default = all false.
+%       isexcluded: 1xN logical - marks each time point of data to be excluded or not, e.g., due to artifacts. Default = all false.
 %
 %       plot_on: logical - SO power histogram plots. Default = false
 %       verbose: logical - Verbose output. Default = true
