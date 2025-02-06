@@ -208,6 +208,7 @@ SOphase = wrapToPi(SOphase);
 % Compute TF-peak stages if not included
 if isempty(TFpeak_stages) && ~isempty(stage_times) && ~isempty(stage_vals)
     TFpeak_stages = interp1(stage_times, stage_vals, TFpeak_times, 'previous');
+    TFpeak_stages(isnan(TFpeak_stages)) = 0; % a conservative choice to mark peaks outside scored stages as unknown
 end
 
 % Remove TF-peaks outside of stage to reduce computational load during loop
