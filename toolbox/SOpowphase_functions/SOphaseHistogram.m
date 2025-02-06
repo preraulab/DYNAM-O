@@ -198,7 +198,7 @@ SOphase_times_step = SOphase_times(2) - SOphase_times(1);
 
 % Interpolate SOphase to peak time points
 peak_SOphase = interp1([SOphase_times(1)-SOphase_times_step, SOphase_times, SOphase_times(end)+SOphase_times_step],...
-    [SOphase(1), SOphase, SOphase(end)], TFpeak_times);
+    [SOphase(1), SOphase, SOphase(end)], TFpeak_times); % peaks at isexcluded time points have NaN values here
 
 % Re-wrap phases to be between -pi and pi
 peak_SOphase = wrapToPi(peak_SOphase);
@@ -218,7 +218,7 @@ else
     stage_inds_peaks = true(size(TFpeak_times));
 end
 
-nanSOphase_inds_peaks = ~isnan(peak_SOphase);
+nanSOphase_inds_peaks = ~isnan(peak_SOphase); % isexcluded time points have NaN values here
 timerange_inds_peaks = TFpeak_times>=time_range(1) & TFpeak_times<=time_range(2);
 peak_selection_inds = stage_inds_peaks & nanSOphase_inds_peaks & timerange_inds_peaks;
 
@@ -231,7 +231,8 @@ if islogical(SOphase_stages) && SOphase_stages
 else
     SOphase_stages_valid = ismember(SOphase_stages, SOPH_stages);
 end
-SOphase_excluded_valid = ~isnan(SOphase);
+
+SOphase_excluded_valid = ~isnan(SOphase); % isexcluded time points have NaN values here
 SOphase_times_valid = SOphase_times>=time_range(1) & SOphase_times<=time_range(2);
 
 SOphase_valid = SOphase_stages_valid & SOphase_excluded_valid & SOphase_times_valid;
