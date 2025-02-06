@@ -169,7 +169,7 @@ field_names = fieldnames(p.Results);
 %Automatically add parser results to the workspace
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 
-%% Compute SO-power and SO-phase
+%% Pre-compute SO-power and SO-phase to synchronize which TFpeaks are included in the two histograms
 [SOpower, SOpower_times, ~, norm_method] = computeSOpower(data, Fs, 'stage_times', stage_times, 'stage_vals', stage_vals,...
     'EEG_times', EEG_times, 'time_range', time_range, 'isexcluded', isexcluded,...
     'SO_freqrange', SO_freqrange, 'tapers', SOpower_tapers, 'window_params', SOpower_window_params,...
@@ -187,7 +187,7 @@ SOphase(isnan(interp1([SOpower_times(1)-SOpower_times_step, SOpower_times, SOpow
 
 % Note: once SOpower and SOphase have been computed, the isexcluded vector
 % is no longer needed inside SOpowerHistogram/SOphasehistogram, since peaks
-% that need to be excluded have NaN values in respective properties.
+% that need to be excluded have NaN values in their respective properties.
 
 %% Compute SO-power histogram
 if verbose
