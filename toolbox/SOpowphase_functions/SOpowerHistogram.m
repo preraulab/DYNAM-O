@@ -213,7 +213,7 @@ SOpower_times_step = SOpower_times(2) - SOpower_times(1);
 
 % Interpolate SOpower to peak time points
 peak_SOpower = interp1([SOpower_times(1)-SOpower_times_step, SOpower_times, SOpower_times(end)+SOpower_times_step],...
-    [SOpower(1), SOpower, SOpower(end)], TFpeak_times);
+    [SOpower(1), SOpower, SOpower(end)], TFpeak_times); % peaks at isexcluded time points have NaN values here
 
 %% Get valid peak indices
 % Compute TF-peak stages if not included
@@ -228,7 +228,7 @@ if ~isempty(TFpeak_stages)
 else
     stage_inds_peaks = true(size(TFpeak_times));
 end
-nanSOpower_inds_peaks = ~isnan(peak_SOpower);
+nanSOpower_inds_peaks = ~isnan(peak_SOpower); % isexcluded time points have NaN values here
 timerange_inds_peaks = TFpeak_times>=time_range(1) & TFpeak_times<=time_range(2);
 peak_selection_inds = stage_inds_peaks & nanSOpower_inds_peaks & timerange_inds_peaks;
 
@@ -242,7 +242,7 @@ else
     SOpower_stages_valid = ismember(SOpower_stages, SOPH_stages);
 end
 
-SOpower_excluded_valid = ~isnan(SOpower);
+SOpower_excluded_valid = ~isnan(SOpower); % isexcluded time points have NaN values here
 SOpower_times_valid = SOpower_times>=time_range(1) & SOpower_times<=time_range(2);
 
 SOpower_valid = SOpower_stages_valid & SOpower_excluded_valid & SOpower_times_valid;
