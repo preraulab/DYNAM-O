@@ -20,7 +20,7 @@ function [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, SOpow
 %       EEG_times: 1xN double - times for each EEG data sample. Default = (0:length(data)-1)/Fs
 %       time_range: 1x2 double - min and max times for which to include TFpeaks. Also used to normalize
 %                   SOpower. Default = [EEG_times(1), EEG_times(end)]
-%       isexcluded: 1xN logical - marks each timestep of data as artifact or non-artifact. Default = all false.
+%       isexcluded: 1xN logical - marks each time point of data to be excluded or not, e.g., due to artifacts. Default = all false.
 %
 %       SOPOWERPHASEHIST_OPTS STRUCTURE PARAMETERS - see SOpowerphasehist_opts()
 %       freq_range: 1x2 double - min and max frequencies of TF peak to include in the histograms (Hz).
