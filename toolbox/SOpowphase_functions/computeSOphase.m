@@ -106,6 +106,7 @@ end
 % Compute SOphase stage
 if ~isempty(stage_times) && ~isempty(stage_vals)
     SOphase_stages = interp1(stage_times, stage_vals, SOphase_times, 'previous');
+    SOphase_stages(isnan(SOphase_stages)) = 0; % a conservative choice to mark peaks outside scored stages as unknown
 else
     SOphase_stages = true;
 end

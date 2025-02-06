@@ -72,6 +72,7 @@ SOpower_times = SOpower_times + EEG_times(1); % adjust the time axis to EEG_time
 % Compute SOpower stage
 if ~isempty(stage_times) && ~isempty(stage_vals)
     SOpower_stages = interp1(stage_times, stage_vals, SOpower_times, 'previous');
+    SOpower_stages(isnan(SOpower_stages)) = 0; % a conservative choice to mark peaks outside scored stages as unknown
 else
     SOpower_stages = true;
 end
