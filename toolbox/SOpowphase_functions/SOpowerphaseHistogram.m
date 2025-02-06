@@ -169,33 +169,6 @@ field_names = fieldnames(p.Results);
 %Automatically add parser results to the workspace
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 
-%Force data to be a column vector
-if isrow(data)
-    data = data(:);
-end
-
-if isempty(EEG_times) %#ok<*NODEF>
-    EEG_times = (0:length(data)-1)/Fs;
-else
-    %Force EEG_times to be a row vector
-    if iscolumn(EEG_times)
-        EEG_times = transpose(EEG_times);
-    end
-    assert(length(EEG_times) == length(data), 'EEG_times must be the same length as data');
-end
-
-if isempty(time_range)
-    time_range = [min(EEG_times), max(EEG_times)];
-else
-    assert((time_range(1) >= min(EEG_times)) & (time_range(2) <= max(EEG_times)), 'time_range cannot be outside of the time range described by "EEG_times"');
-end
-
-if isempty(isexcluded)
-    isexcluded = false(length(data), 1);
-else
-    assert(length(isexcluded) == length(data),'isexcluded must be the same length as data');
-end
-
 %% Compute SO-power and SO-phase
 [SOpower, SOpower_times, ~, norm_method] = computeSOpower(data, Fs, 'stage_times', stage_times, 'stage_vals', stage_vals,...
     'EEG_times', EEG_times, 'time_range', time_range, 'isexcluded', isexcluded,...
