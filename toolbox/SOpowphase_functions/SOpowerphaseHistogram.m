@@ -185,6 +185,10 @@ eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 SOpower_times_step = SOpower_times(2) - SOpower_times(1);
 SOphase(isnan(interp1([SOpower_times(1)-SOpower_times_step, SOpower_times, SOpower_times(end)+SOpower_times_step],[SOpower(1), SOpower, SOpower(end)], SOphase_times))) = nan;
 
+% Note: once SOpower and SOphase have been computed, the isexcluded vector
+% is no longer needed inside SOpowerHistogram/SOphasehistogram, since peaks
+% that need to be excluded have NaN values in respective properties.
+
 %% Compute SO-power histogram
 if verbose
     disp('Computing SO-power histogram...');
