@@ -114,7 +114,7 @@ ttotal = datetime('now');
 
 if isempty(stats_table)
     % If no stats table provided
-    [stats_table, spect, stimes, sfreqs, data_trunc, t_data, artifacts]= computeTFPeaks(data, Fs, stage_times, single(stage_vals),...
+    [stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifacts]= computeTFPeaks(data, Fs, stage_times, single(stage_vals),...
         'time_range', time_range, detection_options, baseline_options); %#ok<*ASGLU>
 
 else
@@ -126,7 +126,7 @@ else
     end
 
     data_trunc = data;
-    t_data = (0:length(data)-1)/Fs;
+    t_data_trunc = (0:length(data)-1)/Fs;
     artifacts = detect_artifacts(data, Fs);
 
 end
@@ -141,7 +141,7 @@ if nargout==2
         SOpower_norm, SOpower_times, SOphase, SOphase_times, SOdata] = SOpowerphaseHistogram(...
         data_trunc, Fs, stats_table.PeakFrequency, stats_table.PeakTime,...
         'stage_times', stage_times, 'stage_vals', single(stage_vals),...
-        'EEG_times', t_data, 'isexcluded', artifacts, 'verbose', verbose, SOPH_options);
+        'EEG_times', t_data_trunc, 'isexcluded', artifacts, 'verbose', verbose, SOPH_options);
 
     %Create SOPHs structure
     SOPHs.SOpower_mat = SOpower_mat;
@@ -221,7 +221,7 @@ if plot_on
         axes(hypn_spect_ax(1));
         %Adds artifacts raster below hypnogram, as computed in the time-domain,
         %will not match up to the spectrogram due to windowing
-        hypnoplot(stage_times/3600,stage_vals,'Artifacts',artifacts','ArtifactTimes',t_data/3600);
+        hypnoplot(stage_times/3600,stage_vals,'Artifacts',artifacts','ArtifactTimes',t_data_trunc/3600);
         xlim(time_range/3600)
         ylim(hypn_spect_ax(1),[.3 5.1])
         th(1) = title('EEG Spectrogram');
@@ -371,7 +371,7 @@ if plot_on
         axes(hypn_spect_ax(1));
         %Adds artifacts raster below hypnogram, as computed in the time-domain,
         %will not match up to the spectrogram due to windowing
-        hypnoplot(stage_times/3600,stage_vals,'Artifacts',artifacts','ArtifactTimes',t_data/3600);
+        hypnoplot(stage_times/3600,stage_vals,'Artifacts',artifacts','ArtifactTimes',t_data_trunc/3600);
         xlim(time_range/3600)
         ylim(hypn_spect_ax(1),[.3 5.1])
         th(1) = title('EEG Spectrogram');
