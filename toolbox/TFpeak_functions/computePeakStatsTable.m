@@ -190,4 +190,7 @@ if any(cellfun(@(prop) strcmp(prop, 'WeightedCentroid'), r_props))
     stats_table.WeightedCentroid = [];
 end
 
+%% Additional features can be added here
+% stats_table.MyFeature = MyValue;
+
 end

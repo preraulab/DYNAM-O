@@ -1,5 +1,5 @@
-function [stats_table] = refineTFpeaks(varargin)
-%REFINE_TFPEAKS  Compute a Hann spectrogram with 1Hz spectral resolution to refine the event frequencies
+function [stats_table] = refinePeakFrequency(varargin)
+%REFINEPEAKFREQUENCY  Compute a Hann spectrogram with 1Hz spectral resolution to refine the event frequencies
 %
 %   Usage:
 %       [stats_table] = refine_TFpeaks(data, Fs, stats_table, baseline_opt, method)
