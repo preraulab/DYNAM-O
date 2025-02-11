@@ -190,7 +190,7 @@ end
 %Set default features
 if any(strcmpi(features, 'all'))
     features = {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height',...
-        'HeightData', 'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume', 'PeakStage'};
+        'HeightData', 'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'};
 end
 
 %Check if filters are passed in
@@ -274,10 +274,7 @@ if verbose
 end
 
 % Augment extracted features with necessary computation features that will be removed later if extra added
-compute_features = unique([features, {'Duration', 'Bandwidth', 'PeakFrequency', 'Height'}]);
-if any(strcmpi(features, 'PeakStage'))
-    compute_features = unique([compute_features, 'PeakTime']);
-end
+compute_features = unique([features, {'PeakFrequency', 'PeakTime', 'Duration', 'Bandwidth', 'Height'}]);
 
 if double_watershed
     [stats_table, regions, borders] = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
@@ -343,12 +340,6 @@ if double_watershed
         tfp = tic;
     end
 
-    % Augment extracted features with necessary computation features that will be removed later if extra added
-    compute_features = unique([features, {'Duration', 'Bandwidth', 'PeakFrequency', 'Height'}]);
-    if any(strcmpi(features, 'PeakStage'))
-        compute_features = unique([compute_features, 'PeakTime']);
-    end
-
     stats_table = runSegmentedData(spect_masked, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
         dur_min, bw_min, merge_thresh, max_merges, trim_vol);
 
@@ -365,32 +356,33 @@ if double_watershed
     end
 end
 
-%% Update feature columns of stats_table
-% Get peak stages
-if any(strcmpi(features, 'PeakStage'))
-    stats_table.PeakStage = interp1(stage_times, stage_vals, stats_table.PeakTime, 'previous');
-    stats_table.PeakStage(isnan(stats_table.PeakStage)) = 0; % a conservative choice to mark peaks outside scored stages as unknown
-    stats_table.PeakStage(logical(interp1(t_time_range, single(artifacts), stats_table.PeakTime, 'nearest'))) = 6;
-    stats_table.Properties.VariableDescriptions{'PeakStage'} = 'Stage: 6 = Artifact, 5 = W, 4 = R, 3 = N1, 2 = N2, 1 = N3, 0 = Unknown';
-    stats_table.Properties.VariableUnits{'PeakStage'} = 'Stage #';
-end
-
-% Remove all features not requested to be extracted (added through compute_features)
-stats_table = removevars(stats_table, setdiff(stats_table.Properties.VariableNames, features));
-
+%% Refine TFpeak frequency estimation using Hann windows
 if refinement
     if verbose
         disp('Refining peaks...');
         rft = tic;
     end
 
-    stats_table = refineTFpeaks(data_time_range, Fs, stats_table, 'freq_range', mtm_freq_range, 't', t_time_range);
+    stats_table = refinePeakFrequency(data_time_range, Fs, stats_table, 'freq_range', mtm_freq_range, 't', t_time_range);
     stats_table(isnan(stats_table.PeakFrequency),:) = [];
 
     if verbose
         disp(['TF-peak refinement took ' datestr(seconds(toc(rft)),'HH:MM:SS'), newline]);
     end
 end
+
+%% Update feature columns of stats_table
+% % Get peak stages
+% if any(strcmpi(features, 'PeakStage'))
+%     stats_table.PeakStage = interp1(stage_times, stage_vals, stats_table.PeakTime, 'previous');
+%     stats_table.PeakStage(isnan(stats_table.PeakStage)) = 0; % a conservative choice to mark peaks outside scored stages as unknown
+%     stats_table.PeakStage(logical(interp1(t_time_range, single(artifacts), stats_table.PeakTime, 'nearest'))) = 6;
+%     stats_table.Properties.VariableDescriptions{'PeakStage'} = 'Stage: 6 = Artifact, 5 = W, 4 = R, 3 = N1, 2 = N2, 1 = N3, 0 = Unknown';
+%     stats_table.Properties.VariableUnits{'PeakStage'} = 'Stage #';
+% end
+
+%% Remove all features not requested to be extracted (added through compute_features)
+stats_table = removevars(stats_table, setdiff(stats_table.Properties.VariableNames, features));
 
 end
 

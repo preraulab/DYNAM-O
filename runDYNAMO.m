@@ -1,4 +1,7 @@
 %RUNDYNAMO: Compute time-frequency peaks and SO-power/phase histograms
+% This is an example pipeline of using the computTFpeaks() and
+% SOpowerphaseHistogram() functions together for studying sleep EEG. One
+% can adapt this function for customized applications.
 %
 %   Usage:
 %       [stats_table, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options, save_output_image, output_fname, verbose, plot_on)
@@ -130,6 +133,13 @@ else
     artifacts = detect_artifacts(data, Fs);
 
 end
+
+% Compute peak stages - note: requires the PeakTime feature in stats_table
+stats_table.PeakStage = interp1(stage_times, stage_vals, stats_table.PeakTime, 'previous');
+stats_table.PeakStage(isnan(stats_table.PeakStage)) = 0; % a conservative choice to mark peaks outside scored stages as unknown
+stats_table.PeakStage(logical(interp1(t_time_range, single(artifacts), stats_table.PeakTime, 'nearest'))) = 6;
+stats_table.Properties.VariableDescriptions{'PeakStage'} = 'Stage: 6 = Artifact, 5 = W, 4 = R, 3 = N1, 2 = N2, 1 = N3, 0 = Unknown';
+stats_table.Properties.VariableUnits{'PeakStage'} = 'Stage #';
 
 %% COMPUTE SO-POWER/PHASE HISTOGRAMS
 % See SOpowerphaseHistogram() for a full list of optional arguments for
