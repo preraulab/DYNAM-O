@@ -1,5 +1,5 @@
 %RUNDYNAMO: Compute time-frequency peaks and SO-power/phase histograms
-% This is an example pipeline of using the computTFpeaks() and
+% This is an example pipeline of using the computeTFPeaks() and
 % SOpowerphaseHistogram() functions together for studying sleep EEG. One
 % can adapt this function for customized applications.
 %
@@ -17,7 +17,7 @@
 %       baseline_options: structure - parameters for baseline algorithm (default: baseline_opts())
 %       detection_options: structure - parameters for detection algorithm (default: detection_opts())
 %       SOPH_options: structure - parameters for SO-power/phase histograms (default: SOpowerphasehist_opts())
-%       stats_table: table - TF-peak stats_table output from computeTFPeaks for direct computation of SOPH (default: [])
+%       stats_table: table - TF peak stats_table output from computeTFPeaks for direct computation of SOPH (default: [])
 %       save_output_image: logical - flag to save the output image (default: false)
 %       output_fname: char or string - filename for saving the output image (default: 'DYNAM-O_output')
 %       verbose: logical - flag for verbose output (default: true)
@@ -111,7 +111,7 @@ end
 %Start a timer
 ttotal = datetime('now');
 
-%% COMPUTE TIME-FREQUENCY PEAKS
+%% PART 1: COMPUTE TIME-FREQUENCY PEAKS
 % See computeTFPeaks() for a full list of optional arguments for finer
 % control of watershed extraction of Time-Frequency Peaks
 
@@ -125,7 +125,7 @@ else
     assert(nargout==2, 'Nothing to compute. Must provide SOPH output if stats table is used as input.');
 
     if verbose
-        disp('TF-peaks stats table provided. Computing SOPH only.');
+        disp('TF peaks stats table provided. Computing SOPH only.');
     end
 
     data_time_range = data;
@@ -134,26 +134,34 @@ else
 
 end
 
-% Compute peak stages - note: requires the PeakTime feature in stats_table
-stats_table.PeakStage = interp1(stage_times, stage_vals, stats_table.PeakTime, 'previous');
-stats_table.PeakStage(isnan(stats_table.PeakStage)) = 0; % a conservative choice to mark peaks outside scored stages as unknown
-stats_table.PeakStage(logical(interp1(t_time_range, single(artifacts), stats_table.PeakTime, 'nearest'))) = 6;
-stats_table.Properties.VariableDescriptions{'PeakStage'} = 'Stage: 6 = Artifact, 5 = W, 4 = R, 3 = N1, 2 = N2, 1 = N3, 0 = Unknown';
-stats_table.Properties.VariableUnits{'PeakStage'} = 'Stage #';
+%% PART 2: COMPUTE ADDITIONAL PEAK FEATURES
+% Additional useful features that describe each detected TF peak in the
+% stats_table are computed here. Customized functions can be added in this
+% section to populate the table with other feature columns.
 
-%% COMPUTE SO-POWER/PHASE HISTOGRAMS
+% Compute sleep stage at each TF peak
+stats_table = computePeakStage(stats_table, stage_times, stage_vals, t_time_range, artifacts);
+% Compute slow oscillation power at each TF peak
+[stats_table, SOpower_norm, SOpower_times] = computePeakSOpower(stats_table, data_time_range, Fs,...
+    'EEG_times', t_time_range, 'isexcluded', artifacts, SOPH_options);
+% Compute slow oscillation phase at each TF peak
+[stats_table, SOphase, SOphase_times] = computePeakSOphase(stats_table, data_time_range, Fs,...
+    'EEG_times', t_time_range, 'isexcluded', artifacts, SOPH_options);
+
+%% PART 3: COMPUTE SO-POWER/PHASE HISTOGRAMS
 % See SOpowerphaseHistogram() for a full list of optional arguments for
 % finer control of Histogram generation
 
 if nargout==2
     [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins,...
-        SOpower_TIB, SOphase_TIB, stats_table.SOpower, stats_table.SOphase, hist_peakidx,...
-        SOpower_norm, SOpower_times, SOphase, SOphase_times, SOdata] = SOpowerphaseHistogram(...
+        SOpower_TIB, SOphase_TIB, ~, ~, hist_peakidx] = SOpowerphaseHistogram(...
         data_time_range, Fs, stats_table.PeakFrequency, stats_table.PeakTime,...
         'stage_times', stage_times, 'stage_vals', single(stage_vals),...
-        'EEG_times', t_time_range, 'isexcluded', artifacts, 'verbose', verbose, SOPH_options);
+        'SOpower', SOpower_norm, 'SOpower_times', SOpower_times,...
+        'SOphase', SOphase, 'SOphase_times', SOphase_times,...
+        'verbose', verbose, SOPH_options);
 
-    %Create SOPHs structure
+    %Create SOPHs structure for output
     SOPHs.SOpower_mat = SOpower_mat;
     SOPHs.SOphase_mat = SOphase_mat;
     SOPHs.SOpower_bins = SOpower_bins;
@@ -162,46 +170,29 @@ if nargout==2
     SOPHs.SOpower_TIB = SOpower_TIB;
     SOPHs.SOphase_TIB = SOphase_TIB;
 
-    % Update table column headers
-    stats_table.Properties.VariableDescriptions{'SOpower'} = 'Slow-oscillation power at peak time';
-
-    switch SOPH_options.SOpower_norm_method
-        case 'percent'
-            pow_units = '%';
-        case 'proportion'
-            pow_units = 'proportion';
-        otherwise
-            pow_units = 'dB';
-    end
-
-    stats_table.Properties.VariableUnits{'SOpower'} = pow_units;
-    stats_table.Properties.VariableDescriptions{'SOphase'} = 'Slow-oscillation phase at peak time';
-    stats_table.Properties.VariableUnits{'SOphase'} = 'rad';
-
     if verbose
         disp([newline, 'Total time: ' char(datetime('now')-ttotal)]);
     end
 
 else
     if verbose
-        disp('Computing TF-peaks only. No SOPH output requested.');
+        disp('Computing TF peaks only. No SOPH output requested.');
     end
 
-    % This value generally comes from the SOPH - if not computing the SOPH,
-    % set all to true.
+    % This index generally comes from the SOPH, otherwise set as all true
     hist_peakidx = true(1, height(stats_table));
 
 end
 
-% COMPUTE SPECTROGRAM FOR DISPLAY
-freq_limits = [2,25];
-[spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(data, Fs, freq_limits, [15 29], [30 15], [],'linear',[],false,false);
-
-% Plot only TFpeaks that contribute to SO-power/phase histograms
-stats_table_SOPH = stats_table(hist_peakidx, :);
-
 %% PLOT RESULTS FIGURE
 if plot_on
+
+    % COMPUTE SPECTROGRAM FOR DISPLAY
+    freq_limits = [2,25];
+    [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(data, Fs, freq_limits, [15 29], [30 15], [],'linear',[],false,false);
+
+    % Plot only TF peaks that contribute to SO-power/phase histograms
+    stats_table_SOPH = stats_table(hist_peakidx, :);
 
     if nargout==2
         % Create figure
@@ -435,6 +426,7 @@ if plot_on
         %Output filename
         print(fh,'-dpng','-r200',output_fname);
     end
+
 end
 end
 

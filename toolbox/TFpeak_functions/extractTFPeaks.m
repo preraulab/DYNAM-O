@@ -87,11 +87,11 @@ if nargin < 9
     downsample_spect = [];
 end
 if nargin < 10 || isempty(dur_min)
-    %Min TF-peak duration
+    %Min TF peak duration
     dur_min = 0;
 end
 if nargin < 11 || isempty(bw_min)
-    %Min TF-peak bandwidth
+    %Min TF peak bandwidth
     bw_min = 0;
 end
 if nargin < 12
