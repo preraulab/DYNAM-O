@@ -150,9 +150,9 @@ addOptional(p, 'time_range', [], @(x) isa(x,'numeric') && (isempty(x) || length(
 addOptional(p, 'isexcluded', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
 
 %Precomputed SOpower and SOphase vectors
-addOptional(p, 'SOpower', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
+addOptional(p, 'SOpower', [], @(x) validateattributes(x, {'numeric'}, {'real','2d'}));
 addOptional(p, 'SOpower_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
-addOptional(p, 'SOphase', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
+addOptional(p, 'SOphase', [], @(x) validateattributes(x, {'numeric'}, {'real','2d'}));
 addOptional(p, 'SOphase_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
 
 %SOPH struct parameters
