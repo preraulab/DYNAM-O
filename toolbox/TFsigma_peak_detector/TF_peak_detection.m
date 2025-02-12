@@ -452,7 +452,7 @@ end
 set(fh,'KeyPressFcn',@(src,event)handle_keys(event, r));
 update_time_range(ax(2), h_timetextstart);
 scrollzoompan;
-msgbox('Press ''v'' to toggle visibility of TF-Peak bounding boxes');
+msgbox('Press ''v'' to toggle visibility of TF peak bounding boxes');
 end
 
 function update_time_range(ax, h_timetext)

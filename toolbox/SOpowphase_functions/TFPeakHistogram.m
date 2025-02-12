@@ -12,7 +12,7 @@ addRequired(p, 'Cmetric_times_step', @(x) validateattributes(x,{'numeric'},{'rea
 addRequired(p, 'Cmetric_valid', @(x) validateattributes(x,{'logical'},{'finite','vector'}));
 addRequired(p, 'Cmetric_valid_allstages', @(x) validateattributes(x,{'logical'},{'finite','vector'}));
 
-%TF-peak info
+%TF peak info
 addRequired(p, 'TFpeak_freqs', @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector'}));
 addRequired(p, 'peak_Cmetric', @(x) validateattributes(x, {'numeric'}, {'real','finite','vector'}));
 

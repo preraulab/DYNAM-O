@@ -74,8 +74,7 @@ function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, art
 %       refinement (opt):          logical - perform 1Hz refinement on the PeakFrequency feature in stats_table. Default = true
 %
 %   Outputs:
-%       stats_table:        table - time, frequency, height, SOpower, and SOphase
-%                           for each TFpeak
+%       stats_table:        table - features of each TFpeak
 %       spect:              2D double - spectrogram of data
 %       stimes:             1D double - timestamp bin center values for dimension 2 of
 %                           spect
@@ -146,7 +145,7 @@ addOptional(p, 'baseline_exclude', baseline_options.baseline_exclude, @(x) valid
 addOptional(p, 'baseline_ptile', baseline_options.baseline_ptile, @(x) validateattributes(x,{'numeric'},{'real','scalar'}));
 addOptional(p, 'baseline_trim', baseline_options.baseline_trim, @(x) isa(x,'numeric') && length(x) <= 2);
 
-%TF-peak detection struct parameters
+%TF peak detection struct parameters
 detection_options = detection_opts(); % get the default parameters
 addOptional(p, 'verbose', detection_options.verbose, @(x) validateattributes(x,{'logical'},{'scalar'}));
 addOptional(p, 'double_watershed', detection_options.double_watershed, @(x) validateattributes(x,{'logical'},{'scalar'}));
@@ -269,7 +268,7 @@ baseline = prctile(spect_bl(:, valid_baseline_inds), baseline_ptile, 2); % 2 her
 
 %% Compute time-frequency peaks
 if verbose
-    disp('Extracting TF-peaks from the spectrogram...');
+    disp('Extracting TF peaks from the spectrogram...');
     tfp = tic;
 end
 
@@ -285,7 +284,7 @@ else
 end
 
 if verbose
-    disp(['TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]); %#ok<*DATST>
+    disp(['TF peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]); %#ok<*DATST>
 end
 
 %% Filter stats_table based on {Duration, Bandwidth, PeakFrequency, and Height}
@@ -336,7 +335,7 @@ if double_watershed
 
     % Compute time-frequency peaks
     if verbose
-        disp('[2nd] Extracting TF-peaks from the spectrogram...');
+        disp('[2nd] Extracting TF peaks from the spectrogram...');
         tfp = tic;
     end
 
@@ -344,7 +343,7 @@ if double_watershed
         dur_min, bw_min, merge_thresh, max_merges, trim_vol);
 
     if verbose
-        disp(['[2nd] TF-peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
+        disp(['[2nd] TF peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
     end
 
     % Filter stats_table based on {Duration, Bandwidth, PeakFrequency, and Height}
@@ -367,7 +366,7 @@ if refinement
     stats_table(isnan(stats_table.PeakFrequency),:) = [];
 
     if verbose
-        disp(['TF-peak refinement took ' datestr(seconds(toc(rft)),'HH:MM:SS'), newline]);
+        disp(['TF peak refinement took ' datestr(seconds(toc(rft)),'HH:MM:SS'), newline]);
     end
 end
 
@@ -409,7 +408,7 @@ alpha = 0.95;
 ht_db_min = -pow2db(chi2_df / chi2inv(alpha/2 + 0.5, chi2_df)) * 2;
 
 if verbose
-    disp('Computing TF-peak spectrogram...');
+    disp('Computing TF peak spectrogram...');
 end
 
 if exist(['multitaper_spectrogram_coder_mex.' mexext],'file')

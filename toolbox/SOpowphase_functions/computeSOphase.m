@@ -21,10 +21,10 @@ addOptional(p, 'stage_vals', [], @(x) validateattributes(x, {'double','single'},
 addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
 addOptional(p, 'isexcluded', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
 
-%SOphase settings
-SOPH_options = SOpowerphasehist_opts(); % get the default parameters
-addOptional(p, 'SO_freqrange', SOPH_options.SO_freqrange, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','vector','numel',2}));
-addOptional(p, 'SOphase_filter', SOPH_options.SOphase_filter);
+%SOphase computation params
+SOphase_options = SOphase_opts(); % get the default parameters
+addOptional(p, 'SO_freqrange', SOphase_options.SO_freqrange, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','vector','numel',2}));
+addOptional(p, 'SOphase_filter', SOphase_options.SOphase_filter);
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -91,7 +91,7 @@ end
 filtdata = filtfilt(d, EEG);
 
 data_analytic = hilbert(filtdata);
-SOphase = unwrap(angle(data_analytic));  % phase of the real projection (cosine wave)
+SOphase = unwrap(angle(data_analytic)); % phase of the real projection (cosine wave)
 SOphase_times = EEG_times;
 
 % Replace excluded times with nans

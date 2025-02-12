@@ -1,5 +1,5 @@
 function [SOpower_norm, SOpower_times, SOpower_stages, norm_method, ptile] = computeSOpower(varargin)
-% COMPUTESOPOWER computes slow-oscillation power
+% COMPUTESOPOWER: Computes slow oscillation power
 
 %% Parse input
 %Input Error handling
@@ -17,14 +17,14 @@ addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric'}, {'real',
 addOptional(p, 'time_range', [], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
 addOptional(p, 'isexcluded', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
 
-%SOpower settings
-SOPH_options = SOpowerphasehist_opts(); % get the default parameters
-addOptional(p, 'SO_freqrange', SOPH_options.SO_freqrange, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','vector','numel',2}));
-addOptional(p, 'tapers', SOPH_options.SOpower_tapers, @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
-addOptional(p, 'window_params', SOPH_options.SOpower_window_params, @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
-addOptional(p, 'SOpower_outlier_threshold', SOPH_options.SOpower_outlier_threshold, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
-addOptional(p, 'norm_method', SOPH_options.SOpower_norm_method, @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
-addOptional(p, 'retain_Fs', SOPH_options.SOpower_retain_Fs, @(x) validateattributes(x,{'logical'},{'scalar'}));
+%SOpower computation params
+SOpower_options = SOpower_opts(); % get the default parameters
+addOptional(p, 'SO_freqrange', SOpower_options.SO_freqrange, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','vector','numel',2}));
+addOptional(p, 'tapers', SOpower_options.SOpower_tapers, @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
+addOptional(p, 'window_params', SOpower_options.SOpower_window_params, @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
+addOptional(p, 'SOpower_outlier_threshold', SOpower_options.SOpower_outlier_threshold, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
+addOptional(p, 'norm_method', SOpower_options.SOpower_norm_method, @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
+addOptional(p, 'retain_Fs', SOpower_options.SOpower_retain_Fs, @(x) validateattributes(x,{'logical'},{'scalar'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -87,11 +87,6 @@ if all(isnan(SOpower))
     ptile = nan;
     return;
 end
-
-% % Remove single time points sandwiched between nan values
-% last_isnan = [0; isnan(SOpower(1:end-1))];
-% next_isnan = [isnan(SOpower(2:end)); 0];
-% SOpower(last_isnan & next_isnan) = nan;
 
 %% Normalize SO power
 % Define the regular expression pattern for a valid shift string
@@ -252,4 +247,5 @@ if ~isempty(interp_times)
         SO_power = transpose(SO_power); % ensure SO_power is still a row vector in output
     end
 end
+
 end

@@ -9,8 +9,8 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower, 
 %       EEG: 1xN double - timeseries EEG data --required
 %       Fs: numerical - sampling frequency of EEG (Hz) --required
 %                   OR
-%       SOpower: 1xM double - timeseries SO power data --required
-%       SOpower_times: 1xM double - timeseries SO power times --required
+%       SOpower: 1xM double - SO power timeseries data --required
+%       SOpower_times: 1xM double - SO power timeseries times --required
 %
 %       TFpeak_freqs: Px1 - frequency each TF peak occurs (Hz) --required
 %       TFpeak_times: Px1 - times each TF peak occurs (s) --required
@@ -18,7 +18,7 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower, 
 %   OPTIONAL:
 %       TFpeak_stages: Px1 - sleep stage each TF peak occurs 5=W,4=R,3=N1,2=N2,1=N3
 %       stage_times: 1xS double - stage times
-%       stage_vals:  1xS double - numeric stage values 5=W,4=R,3=N1,2=N2,1=N3
+%       stage_vals: 1xS double - numeric stage values 5=W,4=R,3=N1,2=N2,1=N3
 %       freq_range: 1x2 double - min and max frequencies of TF peak to include in the histogram
 %                   (Hz). Default = [0,40]
 %       freq_binsizestep: 1x2 double - [size, step] frequency bin size and bin step for frequency
@@ -63,8 +63,8 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower, 
 %                          the selected stages
 %       peak_SOpower: 1xP double - normalized slow oscillation power at each TFpeak
 %       peak_selection_inds: 1xP logical - which TFpeaks are counted in the histogram
-%       SOpower: 1xM double - timeseries SO power data
-%       SOpower_times: 1xM double - timeseries SO power times
+%       SOpower: 1xM double - SO power timeseries data
+%       SOpower_times: 1xM double - SO power timeseries times
 %
 %   Copyright 2024 Prerau Lab - http://www.sleepEEG.org
 %   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
@@ -216,13 +216,13 @@ peak_SOpower = interp1([SOpower_times(1)-SOpower_times_step, SOpower_times, SOpo
     [SOpower(1), SOpower, SOpower(end)], TFpeak_times); % peaks at isexcluded time points have NaN values here
 
 %% Get valid peak indices
-% Compute TF-peak stages if not included
+% Compute TF peak stages if not included
 if isempty(TFpeak_stages) && ~isempty(stage_times) && ~isempty(stage_vals)
     TFpeak_stages = interp1(stage_times, stage_vals, TFpeak_times, 'previous');
     TFpeak_stages(isnan(TFpeak_stages)) = 0; % a conservative choice to mark peaks outside scored stages as unknown
 end
 
-% Remove TF-peaks outside of stage to reduce computational load during loop
+% Remove TF peaks outside of stage to reduce computational load during loop
 if ~isempty(TFpeak_stages)
     stage_inds_peaks = ismember(TFpeak_stages, SOPH_stages);
 else

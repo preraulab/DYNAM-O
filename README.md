@@ -49,7 +49,7 @@ A full description of the toolbox and tutorial [can be found on the Prerau Lab s
 
 ## Overview 
 
-This repository contains code to detect time-frequency peaks (TF-peaks) in a spectrogram of EEG data using the approach based on the one described in ([Stokes et. al, 2022](https://doi.org/10.1093/sleep/zsac223)). TF-peaks represent transient oscillatory neural activity with in the EEG, which by definition will appear as a peak in the time-frequency topography of the spectrogram. Within sleep, perhaps the most important transient EEG oscillation is the sleep spindle, which has been linked to memory consolidation, and changes spindle activity have been linked with natural aging as well as numerous psychiatric and neurodegenerative disorders. This approach extracts TF-peaks by identifies salient peaks in the time-frequency topography of the spectrogram, using a method based on the watershed algorithm, which was original developed for computer vision applications. The dynamics of the TF-peaks can then be described in terms of continuous correlates of sleep depth and cortical up/down states using representations called slow-oscillation (SO) power and phase histograms. This package provides the tools for TF-peak extraction as well as the creation of the SO-power/phase histograms.
+This repository contains code to detect time-frequency peaks (TF peaks) in a spectrogram of EEG data using the approach based on the one described in ([Stokes et. al, 2022](https://doi.org/10.1093/sleep/zsac223)). TF peaks represent transient oscillatory neural activity with in the EEG, which by definition will appear as a peak in the time-frequency topography of the spectrogram. Within sleep, perhaps the most important transient EEG oscillation is the sleep spindle, which has been linked to memory consolidation, and changes spindle activity have been linked with natural aging as well as numerous psychiatric and neurodegenerative disorders. This approach extracts TF peaks by identifies salient peaks in the time-frequency topography of the spectrogram, using a method based on the watershed algorithm, which was original developed for computer vision applications. The dynamics of the TF peaks can then be described in terms of continuous correlates of sleep depth and cortical up/down states using representations called slow-oscillation (SO) power and phase histograms. This package provides the tools for TF peak extraction as well as the creation of the SO-power/phase histograms.
 
 ## Background and Motivation
 
@@ -59,23 +59,23 @@ Scientists typically study brain activity during sleep using the electroencephal
 <figcaption align = "center"><b>An original paper tape trace of EEG from the 1930s, showing sleep spindles. (Loomis et. al 1935)</b></figcaption></figure>
 <br/><br/>
 
-One particularly important set of sleep brainwave events are called sleep spindles. These spindles are short oscillation waveforms, usually lasting less than 1-2 seconds, that are linked to our ability to convert short-term memories to long-term memories. Changes in spindle activity have been linked with numerous disorders such as schizophrenia, autism, and Alzheimer’s disease, as well as with natural aging. Rather than looking for spindle activity according to the historical definition, we develop a new approach to automatically extract tens of thousands of short spindle-like transient oscillation waveform events from the EEG data throughout the entire night. This approach takes advantage of the fact that transient oscillations will looks like high-power regions in the spectrogram, which represent salient time-frequency peaks (TF-peaks) in the spectrogram.
+One particularly important set of sleep brainwave events are called sleep spindles. These spindles are short oscillation waveforms, usually lasting less than 1-2 seconds, that are linked to our ability to convert short-term memories to long-term memories. Changes in spindle activity have been linked with numerous disorders such as schizophrenia, autism, and Alzheimer’s disease, as well as with natural aging. Rather than looking for spindle activity according to the historical definition, we develop a new approach to automatically extract tens of thousands of short spindle-like transient oscillation waveform events from the EEG data throughout the entire night. This approach takes advantage of the fact that transient oscillations will looks like high-power regions in the spectrogram, which represent salient time-frequency peaks (TF peaks) in the spectrogram.
 <br/><br/>
 
-<figure><img src="https://prerau.bwh.harvard.edu/images/TF-peak%20detection_small.png" alt="tf-peaks" style="width:100%"> <figcaption align = "center"><b>Transient oscillation activity in the time domain will appear as contiguous high-power regions in the spectrogram, which represent salient peaks (TF-peaks) in the time-frequency topography.</b></figcaption></figure>
+<figure><img src="https://prerau.bwh.harvard.edu/images/TF peak%20detection_small.png" alt="TF peaks" style="width:100%"> <figcaption align = "center"><b>Transient oscillation activity in the time domain will appear as contiguous high-power regions in the spectrogram, which represent salient peaks (TF peaks) in the time-frequency topography.</b></figcaption></figure>
 <br/><br/>
 
-The TF-peak detection method is based on the watershed algorithm, which is commonly used in computer vision applications to segment an image into distinct objects. The watershed method treats an image as a topography and identifies the catchment basins, that is, the troughs, into which water falling on the terrain would collect.
+The TF peak detection method is based on the watershed algorithm, which is commonly used in computer vision applications to segment an image into distinct objects. The watershed method treats an image as a topography and identifies the catchment basins, that is, the troughs, into which water falling on the terrain would collect.
 <br/><br/>
 
-<figure><img src="https://prerau.bwh.harvard.edu/images/SOpowphase_small.png" alt="SO-power/phase histograms" style="width:100%"> <figcaption align = "center"><b>Slow-oscillation power and phase histograms create representations of TF-peak activity as function of continuous depth-of-sleep and as a function of timing with respect to cortical up/down states.</b></figcaption></figure>
+<figure><img src="https://prerau.bwh.harvard.edu/images/SOpowphase_small.png" alt="SO-power/phase histograms" style="width:100%"> <figcaption align = "center"><b>Slow-oscillation power and phase histograms create representations of TF peak activity as function of continuous depth-of-sleep and as a function of timing with respect to cortical up/down states.</b></figcaption></figure>
 <br/><br/>
 
-Next, instead of looking at the waveforms in terms of fixed sleep stages (i.e., Wake, REM, and non-REM stages 1-3) as di standard sleep studies, we can characterize the full continuum of gradual changes that occur in the brain during sleep. We use the slow oscillation power (SO-phase) as a metric of continuous depth of sleep, and slow-oscillation phase (SO-phase) to represent timing with respect to cortical up/down states. By characterizing TF-peak activity in terms of these two metrics, we can create graphical representations, called SO-power and SO-phase histograms. This creates a comprehensive representation of transient oscillation dynamics at different time scales, providing a highly informative new visualization technique and powerful basis for EEG phenotyping and biomarker identification in pathological states. To form the SO-power histogram, the central frequency of the TF-peak and SO-power at which the peak occured are computed. Each TF-peak is then sorted into its corresponding 2D frequency x SO-power bin and the count in each bin is normalized by the total sleep time in that SO-power bin to obtain TF-peak density in each grid bin. The same process is used to form the SO-phase histograms except the SO-phase at the time of the TF-peak is used in place of SO-power, and each row is normalized by the total peak count in the row to create probability densities.
+Next, instead of looking at the waveforms in terms of fixed sleep stages (i.e., Wake, REM, and non-REM stages 1-3) as di standard sleep studies, we can characterize the full continuum of gradual changes that occur in the brain during sleep. We use the slow oscillation power (SO-phase) as a metric of continuous depth of sleep, and slow-oscillation phase (SO-phase) to represent timing with respect to cortical up/down states. By characterizing TF peak activity in terms of these two metrics, we can create graphical representations, called SO-power and SO-phase histograms. This creates a comprehensive representation of transient oscillation dynamics at different time scales, providing a highly informative new visualization technique and powerful basis for EEG phenotyping and biomarker identification in pathological states. To form the SO-power histogram, the central frequency of the TF peak and SO-power at which the peak occured are computed. Each TF peak is then sorted into its corresponding 2D frequency x SO-power bin and the count in each bin is normalized by the total sleep time in that SO-power bin to obtain TF peak density in each grid bin. The same process is used to form the SO-phase histograms except the SO-phase at the time of the TF peak is used in place of SO-power, and each row is normalized by the total peak count in the row to create probability densities.
 
 ## Quick Start: Using the Toolbox
 
-An [example script](https://github.com/preraulab/DYNAM-O/blob/main_public/example_script.m) is provided in the repository that takes an excerpt of a single channel of [example sleep EEG data](https://github.com/preraulab/DYNAM-O/blob/main_public/example_data/example_data.mat) and runs the TF-peak detection watershed algorithm and the SO-power and SO-phase analyses, plotting the resulting hypnogram, spectrogram, TF-peak scatterplot, SO-power histogram, and SO-phase histogram (shown below). 
+An [example script](https://github.com/preraulab/DYNAM-O/blob/main_public/example_script.m) is provided in the repository that takes an excerpt of a single channel of [example sleep EEG data](https://github.com/preraulab/DYNAM-O/blob/main_public/example_data/example_data.mat) and runs the TF peak detection watershed algorithm and the SO-power and SO-phase analyses, plotting the resulting hypnogram, spectrogram, TF peak scatterplot, SO-power histogram, and SO-phase histogram (shown below). 
 
 After installing the package, execute the example script on the command line:
 
@@ -89,7 +89,7 @@ Once a parallel pool has started (if applicable), the following result should be
 <figcaption><b>Output from the example segment of data provided with the toolbox.</b></figcaption></figure>
 <br/><br/>
 
-This is the general output for the algorithm. On top is the hypnogram, EEG spectrogram, and the SO-power trace. In the middle is a scatterplot of the TF-peaks with x = time, y = frequency, size = peak prominence, and color = SO-phase. On the bottom are the SO-power and SO-phase histograms.
+This is the general output for the algorithm. On top is the hypnogram, EEG spectrogram, and the SO-power trace. In the middle is a scatterplot of the TF peaks with x = time, y = frequency, size = peak prominence, and color = SO-phase. On the bottom are the SO-power and SO-phase histograms.
 
 Additionally, you should get a peak statistics table `stats_table` that has all of the detected peaks. The example script also creates `stats_table_SOPH`, which has the features for just the peaks used in the SO-power/phase histograms and is used for plotting. 
 
@@ -144,7 +144,7 @@ Adjust these by selecting the appropriate and changing `quality_setting` from 'f
 %Quality settings for the algorithm:
 %   'precision': high res settings
 %   'fast': speed-up with minimal impact on results *suggested*
-%   'draft': faster speed-up with increased high frequency TF-peaks, *not recommended for analyzing SOphase*
+%   'draft': faster speed-up with increased high frequency TF peaks, *not recommended for analyzing SOphase*
 quality_setting = 'draft';
 ```
 
@@ -234,7 +234,7 @@ It uses the following inputs:
 %       quality_setting (opt):     charcater - Quality settings for the algorithm:
 %                                       'precision': high res settings
 %                                       'fast' (default): speed-up with minimal impact on results *suggested*
-%                                       'draft': faster speed-up with increased high frequency TF-peaks, *not recommended for analyzing SOphase*
+%                                       'draft': faster speed-up with increased high frequency TF peaks, *not recommended for analyzing SOphase*
 ```
 The outputs are:
 ``` matlab
@@ -319,10 +319,10 @@ The outputs are:
 %       peak_SOpower: 1xP double - normalized slow oscillation power at each TFpeak
 %       peak_SOphase: 1xP double - slow oscillation phase at each TFpeak
 %       peak_selection_inds: 1xP logical - which TFpeaks are counted in the histogram
-%       SOpower: 1xM double - timeseries SO power data
-%       SOpower_times: 1xM double - timeseries SO power times
-%       SOphase: 1xN double - timeseries SO phase data
-%       SOphase_times: 1xN double - timeseries SO phase times
+%       SOpower: 1xM double - SO power timeseries data
+%       SOpower_times: 1xM double - SO power timeseries times
+%       SOphase: 1xN double - SO phase timeseries data
+%       SOphase_times: 1xN double - SO phase timeseries times
 ```
 
 # Documentation and Tutorials
@@ -330,7 +330,7 @@ The outputs are:
 For more comprehensive documentation see [this tutorial on the Prerau Lab site](https://prerau.bwh.harvard.edu/DYNAM-O/)
 
 ## Algorithm Summary
-Here we provide a brief summary of the steps for the TF-peak detection as well as for the SO-power histogram. 
+Here we provide a brief summary of the steps for the TF peak detection as well as for the SO-power histogram. 
 
 ### Transient Oscillation Detection 
 Inputs: Raw EEG timeseries and Spectrogram of EEG timeseries 
@@ -339,23 +339,23 @@ Inputs: Raw EEG timeseries and Spectrogram of EEG timeseries
     * Find 2nd percentile of non-artifact data and subtract from spectrogram 
 3. Spectrogram Segmentation
     * Breaks spectrogram into 30 second segments enabling parallel processing on each segment concurrently
-4. Extract TF-peaks for each segment (in parallel):
+4. Extract TF peaks for each segment (in parallel):
     * Downsample high resolution segment via decimation depending on downsampling settings. Using a lower resolution version of the segment for watershed and merging allows a large runtime decrease.
     * Run Matlab watershed image segmentation on lower resolution segment
     * Create adjacency list for each region found from watershed
       * Loop over each region and dialate slightly to find all neighboring regions
-    * Merge over-segmented regions to form large, distinct TF-peaks 
+    * Merge over-segmented regions to form large, distinct TF peaks 
       * Calculate a merge weight for each set of neighbors
       * Regions are merged iteratively starting with the largest merge weight, and affected merge weights are recalculated after each merge until all merge weights are below a set threshold.
-    * Interpolate TF-peak boundaries back onto high-resolution version of spectrogram segment
-    * Reject TF-peaks below bandwidth and duration cutoff criteria (done here to reduce number of peaks going forward to save on computation time)
-    * Trim all TF-peaks to 80% of their total volume
+    * Interpolate TF peak boundaries back onto high-resolution version of spectrogram segment
+    * Reject TF peaks below bandwidth and duration cutoff criteria (done here to reduce number of peaks going forward to save on computation time)
+    * Trim all TF peaks to 80% of their total volume
     * Compute and store statistics for each peak (pixel indices, boundary indices, centroid frequency and time, amplitude, bandwidth, duration, etc.)
-5. Package TF-peak statistics from all segments into a single feature matrix
-6. Reject TF-peaks above or below bandwidth and duration cutoff criteria
+5. Package TF peak statistics from all segments into a single feature matrix
+6. Reject TF peaks above or below bandwidth and duration cutoff criteria
 
 ### SO-power Histogram Calculation
-Inputs: Raw EEG timeseries and TF-peak frequencies and times
+Inputs: Raw EEG timeseries and TF peak frequencies and times
 1. Compute SO-Power on artifact rejected EEG timeseries
     * Compute multitaper spectrogram of EEG timeseries (30s windows, 15s stepsize, 29 tapers, 1Hz resolution)
     * Integrate spectrogram between 0.3 and 1.5 Hz 
@@ -365,26 +365,26 @@ Inputs: Raw EEG timeseries and TF-peak frequencies and times
     * proportion normalization: Ratio of SO-power to total power
     * No normalization
 3. Create SO-Power and frequency bins based on desired SO-Power and frequency window and step sizes
-4. Compute TF-peak rate in each pixel of SO-Power-Frequency histogram
-    * Count how many TF-peaks fall into each pixel's given frequency and SO-Power bin
+4. Compute TF peak rate in each pixel of SO-Power-Frequency histogram
+    * Count how many TF peaks fall into each pixel's given frequency and SO-Power bin
     * Divide by total sleep time spent in the given SO-Power bin
  
 ### SO-phase Histogram Calculation
-Inputs: Raw EEG timeseries and TF-peak frequencies and times
+Inputs: Raw EEG timeseries and TF peak frequencies and times
 1. Compute SO-Phase on 0.3-1.5Hz bandpassed EEG timeseries
     * Compute Herbert transform of bandpassed signal
     * Unwrap Herbert phase (so that it is in terms of cumulative radians)
-    * Interpolate phase at each TF-peak time 
-    * Rewrap phase of each TF-peak so that 0 radians corresponds to SO peak and -pi or pi corresponds to SO trough
+    * Interpolate phase at each TF peak time 
+    * Rewrap phase of each TF peak so that 0 radians corresponds to SO peak and -pi or pi corresponds to SO trough
 2. Create SO-Phase and frequency bins based on desired SO-Phase and frequency window and step sizes
-3. Compute TF-peak rate in each pixel of SO-Phase-Frequency histogram
-    * Count how many TF-peaks fall into each pixel's given frequency and SO-Phase bin
+3. Compute TF peak rate in each pixel of SO-Phase-Frequency histogram
+    * Count how many TF peaks fall into each pixel's given frequency and SO-Phase bin
     * Divide by total sleep time spent in the given SO-Phase bin
 4. Normalize each frequency row of histogram so that row integration adds to 1
  
 ## Optimizations 
 This code is an optimized version of what was used in Stokes et. al., 2022. The following is a list of the changes made during optimization. The original unoptimized paper code can be found [here](https://github.com/preraulab/DYNAM-O/tree/transient_oscillation_paper).
-* Candidate TF-Peak regions that are below the duration and bandwidth cutoffs are now removed prior to trimming and peak property calculations
+* Candidate TF peak regions that are below the duration and bandwidth cutoffs are now removed prior to trimming and peak property calculations
 * Empty regions that come out of the merge procedure are now removed prior to trimming and peak property calculations
 * Watershed and the merging procedure now run on a lower resolution spectrogram (downsampled from the input spectrogram using decimation) to get the rough watershed regions, which are then mapped back onto the high-resolution spectrogram, from which trimming and peak property calculations are done.
 * Spectrogram segment size reduced from 60s to 30s
