@@ -97,7 +97,6 @@ function [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, SOpow
 %       SOdata: 1xN double - SO filtered timeseries data
 %
 %
-%   Copyright 2024 Prerau Lab - http://www.sleepEEG.org
 %
 %   Please provide the following citation for all use:
 %       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,

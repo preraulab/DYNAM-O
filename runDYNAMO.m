@@ -30,7 +30,6 @@
 %   Running with no arguments calls the example data.
 %       runDYNAMO();
 %
-%   Copyright 2024 Prerau Lab - http://www.sleepEEG.org
 %
 %   Please provide the following citation for all use:
 %       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
