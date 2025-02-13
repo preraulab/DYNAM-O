@@ -37,7 +37,6 @@ function [stats_table, SOpower, SOpower_times, norm_method] = computePeakSOpower
 %       SOpower_times: 1xM double - SO power timeseries times
 %       norm_method: char - normalization method for SOpower
 %
-%   Copyright 2024 Prerau Lab - http://www.sleepEEG.org
 %
 %   Please provide the following citation for all use:
 %       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,

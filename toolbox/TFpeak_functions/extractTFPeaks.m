@@ -44,9 +44,6 @@ function [stats_table, regions, borders] = extractTFPeaks(img,x,y,features,num_s
 %   regions      -- A cell array of linear indices of peak regions in the current image.
 %   borders      -- A cell array of linear indices of peak borders in the current image.
 %
-%   Copyright 2024 Prerau Lab - http://www.sleepEEG.org
-%   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
-%   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %
 %   Please provide the following citation for all use:
 %       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,

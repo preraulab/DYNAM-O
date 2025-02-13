@@ -25,9 +25,6 @@ function e_wts = computeMergeWeights(rgn,data,rgn_lbls,rgn_bnds,amatr,merge_rule
 %   e_wts -- a vector storing the edge weights, one for each row of directed
 %            adjacency in amatr.
 %
-%   Copyright 2024 Prerau Lab - http://www.sleepEEG.org
-%   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
-%   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %
 %   Authors: Patrick Stokes, Thomas Possidente, Michael Prerau
 %
