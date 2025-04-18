@@ -272,11 +272,11 @@ if plot_on
         % Plot time-frequency peak scatterplot
         axes(ax(1))
         %Compute peak dot size
-        pmin = prctile(stats_table_SOPH.Volume, 5); % get 5th ptile of heights
+        pmin = prctile(stats_table_SOPH.Volume, 5); % get 5th ptile of volumes
         peak_size = stats_table_SOPH.Volume / pmin * 0.5;  % 5th ptile fixed at size 0.5
 
         %Do not plot larger than 95th ptile or else dots could obscure other things on the plot
-        pmax = prctile(stats_table_SOPH.Volume, 95); % get 95th ptile of heights
+        pmax = prctile(stats_table_SOPH.Volume, 95); % get 95th ptile of volumes
         pmax_inds = stats_table_SOPH.Volume> pmax;
         peak_size(pmax_inds) = nan;
 
@@ -401,11 +401,11 @@ if plot_on
         % Plot time-frequency peak scatterplot
         axes(ax(1))
         %Compute peak dot size
-        pmin = prctile(stats_table_SOPH.Volume, 5); % get 5th ptile of heights
+        pmin = prctile(stats_table_SOPH.Volume, 5); % get 5th ptile of volumes
         peak_size = stats_table_SOPH.Volume / pmin * 0.5;  % 5th ptile fixed at size 0.5
 
         %Do not plot larger than 95th ptile or else dots could obscure other things on the plot
-        pmax = prctile(stats_table_SOPH.Volume, 95); % get 95th ptile of heights
+        pmax = prctile(stats_table_SOPH.Volume, 95); % get 95th ptile of volumes
         pmax_inds = stats_table_SOPH.Volume> pmax;
         peak_size(pmax_inds) = nan;
 
