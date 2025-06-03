@@ -255,8 +255,8 @@ if plot_on
         min_SOP = min(SOpower_norm);
         max_SOP = max(SOpower_norm);
         ylim([min_SOP-(0.1*abs(min_SOP)), max_SOP+(0.1*abs(max_SOP))])
-        hypn_spect_ax(1).YTick = [round(min_SOP, 2, 'significant') round((max_SOP+min_SOP)/2, 2, 'significant') round(max_SOP, 2, 'significant')];
-        hypn_spect_ax(1).YTickLabel = num2str(get(hypn_spect_ax(3),'ytick')','%.1f');
+        hypn_spect_ax(3).YTick = [round(min_SOP, 2, 'significant') round((max_SOP+min_SOP)/2, 2, 'significant') round(max_SOP, 2, 'significant')];
+        hypn_spect_ax(3).YTickLabel = num2str(get(hypn_spect_ax(3),'ytick')','%.1f');
 
         switch SOPH_options.SOpower_norm_method
             case 'percent'
