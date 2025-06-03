@@ -367,16 +367,6 @@ if refinement
     end
 end
 
-%% Update feature columns of stats_table
-% % Get peak stages
-% if any(strcmpi(features, 'PeakStage'))
-%     stats_table.PeakStage = interp1(stage_times, stage_vals, stats_table.PeakTime, 'previous');
-%     stats_table.PeakStage(isnan(stats_table.PeakStage)) = 0; % a conservative choice to mark peaks outside scored stages as unknown
-%     stats_table.PeakStage(logical(interp1(t_time_range, single(artifacts), stats_table.PeakTime, 'nearest'))) = 6;
-%     stats_table.Properties.VariableDescriptions{'PeakStage'} = 'Stage: 6 = Artifact, 5 = W, 4 = R, 3 = N1, 2 = N2, 1 = N3, 0 = Unknown';
-%     stats_table.Properties.VariableUnits{'PeakStage'} = 'Stage #';
-% end
-
 %% Remove all features not requested to be extracted (added through compute_features)
 stats_table = removevars(stats_table, setdiff(stats_table.Properties.VariableNames, features));
 
