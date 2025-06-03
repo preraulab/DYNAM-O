@@ -35,6 +35,7 @@ addOptional(p, 'refine_method', 'spline_interp', @(x) any(validatestring(x, {'sp
 addOptional(p, 'remove_edge_peaks', true, @(x) validateattributes(x,{'logical'},{'scalar'}));
 
 parse(p,varargin{:});
+
 % Manually assign variables because eval doesn't work with parpool
 data = p.Results.data;
 Fs = p.Results.Fs;

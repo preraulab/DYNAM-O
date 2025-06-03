@@ -1,5 +1,5 @@
 function [stats_table, regions, borders] = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, features, ...
-    dur_min, bw_min, merge_thresh, max_merges, trim_vol, f_verb, verb_pref, f_disp)
+    dur_min, bw_min, merge_thresh, max_merges, trim_vol, f_verb, verb_pref)
 %RUNSEGMENTEDDATA: wrapper that runs:
 %                      1) Baseline subtraction,
 %                      2) Spectrogram segmentation,
@@ -37,9 +37,7 @@ function [stats_table, regions, borders] = runSegmentedData(spect, stimes, sfreq
 %                           4 - output within sequence functions.
 %                           5 - output internal progress of merge and trim functions.
 %                           defaults to 0. >2 is not recommended unless data is single chunk.
-%       verb_pref        -- prefix string for verbose output. defaults to ''.
-%       f_disp           -- flag indicator of whether to plot.
-%                           defaults to false, unless using default data.
+%       verb_pref        -- prefix string for verbose output. defaults to ''
 %
 %   Outputs:
 %       stats_table      -- table of peak statistics
@@ -106,10 +104,6 @@ if nargin < 14 || isempty(verb_pref)
     verb_pref = '';
 end
 
-if nargin < 15 || isempty(f_disp)
-    f_disp = 0;
-end
-
 %******************
 % Remove baseline *
 %******************
@@ -169,12 +163,12 @@ parfor ii = 1:n_segs
 
     %Compute the stats table with optional regions and borders
     if num_out == 1
-        stats_tables{ii} = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
+        stats_tables{ii} = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref]);
     elseif num_out == 2
-        [stats_tables{ii}, regions{ii}] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
+        [stats_tables{ii}, regions{ii}] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref]);
         regions{ii} = cellfun(@(x)x+pixel_shift(ii),regions{ii},'UniformOutput',false);
     elseif num_out == 3
-        [stats_tables{ii}, regions{ii}, borders{ii}] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],f_disp);
+        [stats_tables{ii}, regions{ii}, borders{ii}] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref]);
         regions{ii} = cellfun(@(x)x+pixel_shift(ii),regions{ii},'UniformOutput',false);
         borders{ii} = cellfun(@(x)x+pixel_shift(ii),borders{ii},'UniformOutput',false);
     end

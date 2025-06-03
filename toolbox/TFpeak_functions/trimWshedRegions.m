@@ -32,30 +32,24 @@ function [trimmed_regions, trimmed_borders] = trimWshedRegions(data,regions,vol_
 %
 %**********************************************************************
 
-
 %*******************************
 % Set variable inputs to empty *
 %*******************************
 if nargin < 1
     data = [];
 end
-
 if nargin < 2 
     regions = [];
 end
-
 if nargin < 3
     vol_thresh = [];
 end
-
 if nargin < 4
     shift_val = [];
 end
-
 if nargin < 5
     conn = [];
 end
-
 if nargin < 6
     f_verb = [];
 end
@@ -276,10 +270,10 @@ if f_valid_inputs
         title(ax,['Regions Trimmed to ' num2str(vol_thresh*100) ' Percent Volume']);
     end
 
-else
-    % Image data not provided for regions
-    disp('         Returning original regions and empty boundaries.');
-    trimmed_regions = regions;
-    trimmed_borders = cell(1, length(regions));
+% else
+%     % Image data not provided for regions
+%     disp('         Returning original regions and empty boundaries.');
+%     trimmed_regions = regions;
+%     trimmed_borders = cell(1, length(regions));
 end
 
