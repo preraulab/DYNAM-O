@@ -39,38 +39,38 @@ function [regions, borders] = mergeWshedSegment(data,regions,region_lbls,borders
 %*************************
 % Handle variable inputs *
 %*************************
-if nargin < 11
-    f_disp = [];
-end
-if nargin < 10
-    verb_pref = [];
-end
-if nargin < 9
-    f_verb = [];
-end
-if nargin < 8
-    merge_rule = [];
-end
-if nargin < 7
-    max_merges = [];
-end
-if nargin < 6
-    merge_thresh = [];
-end
-if nargin < 5
-    adj_list = [];
-end
-if nargin < 4
-    borders = [];
-end
-if nargin < 3
-    region_lbls = [];
+if nargin < 1 || isempty(data)
+    error('Data must be specified')
 end
 if nargin < 2
     regions = [];
 end
-if nargin < 1 || isempty(data)
-    error('Data must be specified')
+if nargin < 3
+    region_lbls = [];
+end
+if nargin < 4
+    borders = [];
+end
+if nargin < 5
+    adj_list = [];
+end
+if nargin < 6
+    merge_thresh = [];
+end
+if nargin < 7
+    max_merges = [];
+end
+if nargin < 8
+    merge_rule = [];
+end
+if nargin < 9
+    f_verb = [];
+end
+if nargin < 10
+    verb_pref = [];
+end
+if nargin < 11
+    f_disp = [];
 end
 
 %************************
@@ -132,7 +132,7 @@ end
 %****************
 % Plot original image data
 if f_disp
-    figure('units','normalized','position',[0.2299   -0.1778    0.9896    0.4789]);
+    figure('units','normalized','position',[1.1020 0.1819 0.6867 0.6333]);
     ax(1) = subplot(2,2,1);
     ax(2) = subplot(2,2,2);
     ax(3) = subplot(2,2,3);
@@ -192,7 +192,7 @@ while ~isempty(ematr) && max_wt > merge_thresh && num_merges < max_merges && num
     num_regions = num_regions - 1;
 
     % Update region plot
-    if f_disp && mod(num_merges,100)==1
+    if f_disp && mod(num_merges,100)==1 % only plot every 100 merges
         % Plot data with boundaries
         tmp_Ldata = cell2Ldata(regions,size(data),borders);
         tmp_data = data;
@@ -203,7 +203,7 @@ while ~isempty(ematr) && max_wt > merge_thresh && num_merges < max_merges && num
         cm = jet(1024);
         cm(1,:)=[1 0 1];
         colormap(ax(2),cm);
-        title(ax(2),['Current weight merged: ' num2str(max_wt)]);
+        title(ax(2),['Current weight merged: ' num2str(max_wt), ' (threhold: ' num2str(merge_thresh), ')']);
         % Plot regions
         RGB2 = label2rgb(tmp_Ldata, 'jet', 'c', 'shuffle');
         R = squeeze(RGB2(:,:,1));
@@ -215,10 +215,8 @@ while ~isempty(ematr) && max_wt > merge_thresh && num_merges < max_merges && num
         RGB2 = cat(3,R,G,B);
         imagesc(ax(3),RGB2);
         axis(ax(3),'xy');
-        title(ax(3),['Current weight merged: ' num2str(max_wt)]);
-        drawnow;
-        axes(ax(4)); %#ok<LAXES>
-        title("Borders");
+        title(ax(3),['Current weight merged: ' num2str(max_wt), ' (threhold: ' num2str(merge_thresh), ')']);
+        % Plot borders
         temp_B_data = zeros(size(data));
         for ii = 1:length(borders)
             ii_pixels = borders{ii};
@@ -236,6 +234,10 @@ while ~isempty(ematr) && max_wt > merge_thresh && num_merges < max_merges && num
         B(~tmp_Ldata) = 100;
         RGB2 = cat(3,R,G,B);
         imagesc(ax(4),RGB2);
+        axis(ax(4),'xy');
+        title(ax(4), 'Borders of merged regions');
+        drawnow;
+        pause(1)
     end
 
     if f_verb > 1
@@ -276,7 +278,7 @@ if f_disp
     cm = jet(1024);
     cm(1,:)=[1 0 1];
     colormap(ax(2),cm);
-    title(ax(2),['Current weight merged: ' num2str(max_wt)]);
+    title(ax(2),['Current weight merged: ' num2str(max_wt), ' (threhold: ' num2str(merge_thresh), ')']);
     % Plot regions
     RGB2 = label2rgb(tmp_Ldata, 'jet', 'c', 'shuffle');
     R = squeeze(RGB2(:,:,1));
@@ -288,7 +290,27 @@ if f_disp
     RGB2 = cat(3,R,G,B);
     imagesc(ax(3),RGB2);
     axis(ax(3),'xy');
-    title(ax(3),['Current weight merged: ' num2str(max_wt)]);
+    title(ax(3),['Current weight merged: ' num2str(max_wt), ' (threhold: ' num2str(merge_thresh), ')']);
+    % Plot borders
+    temp_B_data = zeros(size(data));
+    for ii = 1:length(borders)
+        ii_pixels = borders{ii};
+        temp_B_data(ii_pixels)=ii;
+        if ~isempty(borders{ii})
+            temp_B_data(borders{ii}) = 0;
+        end
+    end
+    RGB2 = label2rgb(temp_B_data, 'jet', 'c', 'shuffle');
+    R = squeeze(RGB2(:,:,1));
+    G = squeeze(RGB2(:,:,2));
+    B = squeeze(RGB2(:,:,3));
+    R(~tmp_Ldata) = 100;
+    G(~tmp_Ldata) = 100;
+    B(~tmp_Ldata) = 100;
+    RGB2 = cat(3,R,G,B);
+    imagesc(ax(4),RGB2);
+    axis(ax(4),'xy');
+    title(ax(4), 'Borders of merged regions');
 end
 
 % Remove dead regions
