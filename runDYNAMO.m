@@ -36,7 +36,6 @@
 %       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
 %       for Electroencephalographic Phenotyping and Biomarker Identification,
 %       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
-%
 %**********************************************************************
 
 function [stats_table, SOPHs] = runDYNAMO(varargin)
