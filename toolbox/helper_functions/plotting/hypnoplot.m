@@ -165,6 +165,8 @@ else
         set(gca,'YTick',val_min-1,'YTickLabel','Art')
     end
 end
+ax = gca;
+ax.YAxis.TickLength = [0 0];
 
 if GroupNREMColors %Merge all NREM
     stage_vals(stage_vals==1 | stage_vals == 3) = 2;
@@ -209,7 +211,7 @@ if ~isempty(artifacts)
     %Get epoch times
     a = artifact_times(inds);
     b = artifact_times(inds+1);
-    c = ones(1,length(a))*(val_min-1);
+    c = ones(1,length(a))*(val_min-2);
     d = ones(1,length(a))*min_y;
 
     %Plot shaded rectangle
