@@ -96,7 +96,7 @@ end
 %% Plot EEG trace
 if isgraphics(hypn_spect_ax(3))
     axes(hypn_spect_ax(3))
-    plot(t_time_range/3600, data_time_range,'linewidth',1)
+    plot(t_time_range/3600, data_time_range, 'linewidth', 1)
     min_trace = prctile(data_time_range, 1);
     max_trace = prctile(data_time_range, 99);
     ylim([min_trace-(0.1*abs(min_trace)), max_trace+(0.1*abs(max_trace))])
