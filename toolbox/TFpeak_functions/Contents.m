@@ -7,6 +7,7 @@
 %
 %   computeTFPeaks        - [Main function] run watershed pipeline to extract time-frequency peaks
 %
+%   displayTFPeaks        - plotting function to visualize detected time-frequency peaks overlaid on spectrogram
 %   extractTFPeaks        - determines the peak regions within a spectral topography and extracts a set of features
 %   filterStatsTable      - gets indices of peaks that pass the BW, duration,
 %   Ldata2graph           - label region border pixels and determine region adjacencies.
