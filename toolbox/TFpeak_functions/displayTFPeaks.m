@@ -62,8 +62,6 @@ end
 %% Plot hypnogram
 if isgraphics(hypn_spect_ax(1))
     axes(hypn_spect_ax(1));
-    %Adds artifacts raster below hypnogram, as computed in the time-domain,
-    %will not match up to the spectrogram due to windowing
     hypnoplot(stage_times/3600,stage_vals,'Artifacts',artifacts','ArtifactTimes',t_time_range/3600);
     th(1) = title('EEG Spectrogram and Detected TF-peaks');
     set(hypn_spect_ax(1), 'XTick', []);
@@ -87,7 +85,7 @@ if ~isgraphics(hypn_spect_ax(1))
     th(1) = title('EEG Spectrogram and Detected TF-peaks');
 end
 
-if isgraphics(hypn_spect_ax(3))
+if length(hypn_spect_ax) > 2 && isgraphics(hypn_spect_ax(3))
     set(hypn_spect_ax(2), 'XtickLabel', []);
 end
 
@@ -99,7 +97,7 @@ for ii = 1:length(bd)
 end
 
 %% Plot EEG trace
-if isgraphics(hypn_spect_ax(3))
+if length(hypn_spect_ax) > 2 && isgraphics(hypn_spect_ax(3))
     axes(hypn_spect_ax(3))
     plot(t_time_range/3600, data_time_range, 'linewidth', 1)
     min_trace = prctile(data_time_range, 1);
@@ -112,6 +110,7 @@ end
 xlabel('Time (hr)')
 
 %% Additional axes adjustments
+hypn_spect_ax = hypn_spect_ax(isgraphics(hypn_spect_ax));
 linkaxes(hypn_spect_ax, 'x');
 xlim([min(stimes)/3600, max(stimes)/3600])
 set(hypn_spect_ax, 'FontSize', 10)
