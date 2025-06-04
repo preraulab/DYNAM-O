@@ -22,6 +22,7 @@ function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, art
 %                                  features to be extracted from each peak region. Can be any subset of
 %                                  {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData',
 %                                   'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. Default = 'all'
+%       display_peaks (opt):       logical - whether to display all detected TF-peaks overlaid on spectrogram in a new figure
 %       artifacts (opt):           [nx1] logical - boolean indicating artifact time points. Default = logical([]), run detect_artifacts()
 %       artifact_filters (opt):    struct with 2 digitalFilter fields "hpFilt_high","hpFilt_broad" -
 %                                  filters to be used for artifact detection. Default = []
@@ -131,6 +132,7 @@ addRequired(p, 'stage_vals', @(x) validateattributes(x, {'double','single'}, {'r
 addOptional(p, 't_data', [], @(x) validateattributes(x,{'numeric'},{'real','finite','2d'}));
 addOptional(p, 'time_range', [], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
 addOptional(p, 'features', 'all',  @(x) validateattributes(x,{'char','cell'},{'nonempty'}));
+addOptional(p, 'display_peaks', false, @(x) validateattributes(x,{'logical'},{'scalar'}));
 
 addOptional(p, 'artifacts', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
 addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'double','struct'},{'nonnan'}));
@@ -271,6 +273,9 @@ end
 
 % Augment extracted features with necessary computation features that will be removed later if extra added
 compute_features = unique([features, {'PeakFrequency', 'PeakTime', 'Duration', 'Bandwidth', 'Height'}]);
+if display_peaks
+    compute_features = unique([compute_features, {'Boundaries'}]);
+end
 
 if double_watershed
     [stats_table, regions, borders] = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
@@ -365,6 +370,11 @@ if refinement
     if verbose
         disp(['TF peak refinement took ' datestr(seconds(toc(rft)),'HH:MM:SS'), newline]);
     end
+end
+
+%% Display detected TFpeaks on the most recent spectrogram used for TFpeak computation
+if display_peaks
+    displayTFPeaks(stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, stage_times, stage_vals);
 end
 
 %% Remove all features not requested to be extracted (added through compute_features)
