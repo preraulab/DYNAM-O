@@ -125,7 +125,6 @@ if isempty(stats_table)
 else
     % If stats table provided, check to be sure SOPH is requested by output
     assert(nargout==2, 'Nothing to compute. Must provide SOPH output if stats table is used as input.');
-
     if verbose
         disp('TF peaks stats table provided. Computing SOPH only.');
     end
@@ -163,14 +162,8 @@ if nargout==2
         'SOphase', SOphase, 'SOphase_times', SOphase_times,...
         'verbose', verbose, SOPH_options);
 
-    %Create SOPHs structure for output
-    SOPHs.SOpower_mat = SOpower_mat;
-    SOPHs.SOphase_mat = SOphase_mat;
-    SOPHs.SOpower_bins = SOpower_bins;
-    SOPHs.SOphase_bins = SOphase_bins;
-    SOPHs.freq_bins = freq_bins;
-    SOPHs.SOpower_TIB = SOpower_TIB;
-    SOPHs.SOphase_TIB = SOphase_TIB;
+    %Create a SOPHs structure for output
+    SOPHs = createSOPHsStruct(SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, SOpower_TIB, SOphase_TIB);
 
     if verbose
         disp([newline, 'Total time: ' char(datetime('now')-ttotal)]);
@@ -429,6 +422,18 @@ if plot_on
     end
 
 end
+end
+
+
+function [SOPHs] = createSOPHsStruct(SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, SOpower_TIB, SOphase_TIB)
+    SOPHs = struct;
+    SOPHs.SOpower_mat = SOpower_mat;
+    SOPHs.SOphase_mat = SOphase_mat;
+    SOPHs.SOpower_bins = SOpower_bins;
+    SOPHs.SOphase_bins = SOphase_bins;
+    SOPHs.freq_bins = freq_bins;
+    SOPHs.SOpower_TIB = SOpower_TIB;
+    SOPHs.SOphase_TIB = SOphase_TIB;
 end
 
 

@@ -38,6 +38,11 @@ addOptional(p, 'stage_times', [], @(x) validateattributes(x, {'double','single'}
 addOptional(p, 'stage_vals', [], @(x) validateattributes(x, {'double','single'}, {'real','finite','nonnegative','2d'}));
 
 parse(p,varargin{:});
+parser_results = struct2cell(p.Results); %#ok<NASGU>
+field_names = fieldnames(p.Results);
+
+%Automatically add parser results to the workspace
+eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 
 %% Create figure
 fh = figure('Color',[1 1 1],'units','inches','position',[5 5 8.5 6]);
