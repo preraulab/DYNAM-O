@@ -62,7 +62,7 @@ end
 %% Plot hypnogram
 if isgraphics(hypn_spect_ax(1))
     axes(hypn_spect_ax(1));
-    hypnoplot(stage_times/3600,stage_vals,'Artifacts',artifacts','ArtifactTimes',t_time_range/3600);
+    hypnoplot(stage_times/3600, stage_vals, 'Artifacts', artifacts, 'ArtifactTimes', t_time_range/3600);
     th(1) = title('EEG Spectrogram and Detected TF-peaks');
     set(hypn_spect_ax(1), 'XTick', []);
 end
