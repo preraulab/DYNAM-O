@@ -218,16 +218,17 @@ if plot_on
         linkaxes([hypn_spect_ax(2), ax(1)], 'y');
 
         % Set yaxis limits
-        ylimits = freq_limits;  % can be modified to change the figure limits
+        ylimits = freq_limits; % can be modified to change the figure limits
 
         % Plot hypnogram
         axes(hypn_spect_ax(1));
         %Adds artifacts raster below hypnogram, as computed in the time-domain,
         %will not match up to the spectrogram due to windowing
         hypnoplot(stage_times/3600,stage_vals,'Artifacts',artifacts','ArtifactTimes',t_time_range/3600);
+        ylim(hypn_spect_ax(1),[.3 5.1]) % <<< ASK MIKE ABOUT THIS
         xlim(time_range/3600)
-        ylim(hypn_spect_ax(1),[.3 5.1])
         th(1) = title('EEG Spectrogram');
+        set(hypn_spect_ax(1), 'XTick', []);
 
         % Plot spectrogram
         axes(hypn_spect_ax(2))
@@ -242,21 +243,20 @@ if plot_on
         c.Label.Rotation = -90; % rotate colorbar label
         c.Label.VerticalAlignment = "bottom";
 
-        ylabel('Frequency (Hz)');
-        xlabel('')
         ylim(ylimits);
-        hypn_spect_ax(1).XTick = [];
         xlim(time_range/3600)
+        ylabel('Frequency (Hz)');
+        set(hypn_spect_ax(2), 'XtickLabel', []);
 
         % Plot SO-Power trace
         axes(hypn_spect_ax(3))
         plot(SOpower_times/3600,SOpower_norm,'linewidth',2)
-        xlim(time_range/3600)
         min_SOP = min(SOpower_norm);
         max_SOP = max(SOpower_norm);
         ylim([min_SOP-(0.1*abs(min_SOP)), max_SOP+(0.1*abs(max_SOP))])
         hypn_spect_ax(3).YTick = [round(min_SOP, 2, 'significant') round((max_SOP+min_SOP)/2, 2, 'significant') round(max_SOP, 2, 'significant')];
         hypn_spect_ax(3).YTickLabel = num2str(get(hypn_spect_ax(3),'ytick')','%.1f');
+        xlim(time_range/3600)
 
         switch SOPH_options.SOpower_norm_method
             case 'percent'
@@ -266,7 +266,6 @@ if plot_on
             otherwise
                 ylab = 'SOP (dB)';
         end
-
         ylabel(ylab);
 
         % Plot time-frequency peak scatterplot
@@ -292,12 +291,11 @@ if plot_on
         c.XTick = [-pi -pi/2 0 pi/2 pi];
         c.XTickLabel = {'-\pi', '-\pi/2', '0', '\pi/2', '\pi'};
 
-        ylabel('Frequency (Hz)');
         ylim(ylimits);
-
+        xlim(time_range/3600)
+        ylabel('Frequency (Hz)');
         xlabel('Time (hrs)')
         th(2) = title('Extracted Time-Frequency Peaks');
-        xlim(time_range/3600)
 
         % Plot SO-power histogram
         axes(ax(2))
@@ -348,6 +346,7 @@ if plot_on
         ylim(ylimits);
         th(4) = title('SO-Phase Histogram');
 
+        %Set consistent fontsizes throughout the figure
         set([ax(1:3) hypn_spect_ax],'fontsize',10)
         set(th,'fontsize',15)
 
