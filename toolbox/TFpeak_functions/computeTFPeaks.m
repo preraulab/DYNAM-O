@@ -77,10 +77,8 @@ function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, art
 %   Outputs:
 %       stats_table:        table - features of each TFpeak
 %       spect:              2D double - spectrogram of data
-%       stimes:             1D double - timestamp bin center values for dimension 2 of
-%                           spect
-%       sfreqs:             1D double - frequency bin center values for dimension 1 of
-%                           spect
+%       stimes:             1D double - timestamp bin center values for dimension 2 of spect
+%       sfreqs:             1D double - frequency bin center values for dimension 1 of spect
 %       data_time_range:    [1xn] double - timeseries data in time_range
 %       t_time_range:       [1xn] double - timestamps for data in time_range
 %       artifacts:          1xT logical of times flagged as artifacts (logical OR of hf and bb artifacts)
