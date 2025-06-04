@@ -77,10 +77,13 @@ c.Label.Rotation = -90; % rotate colorbar label
 c.Label.VerticalAlignment = "bottom";
 
 ylabel('Frequency (Hz)');
-set(hypn_spect_ax(2), 'XtickLabel', []);
 
 if ~isgraphics(hypn_spect_ax(1))
     th(1) = title('EEG Spectrogram and Detected TF-peaks');
+end
+
+if isgraphics(hypn_spect_ax(3))
+    set(hypn_spect_ax(2), 'XtickLabel', []);
 end
 
 % overlay TF-peak boundaries on the spectrogram
