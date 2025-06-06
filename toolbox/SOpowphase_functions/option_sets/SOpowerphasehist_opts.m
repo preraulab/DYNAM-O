@@ -20,7 +20,7 @@ addOptional(p, 'SOpower_retain_Fs', SOpower_options.SOpower_retain_Fs, @(x) vali
 
 %SOpower Histogram specific settings
 addOptional(p, 'SOpower_min_time_in_bin', 10, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
-%Ranges and bin step sizes determined dynamically with empty input [], set to fixed values when comparing between subjects
+%Ranges and bin step sizes determined dynamically with empty input [], user should set to fixed values when comparing between subjects
 addOptional(p, 'SOpower_range', [], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
 addOptional(p, 'SOpower_binsizestep', [], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
 
