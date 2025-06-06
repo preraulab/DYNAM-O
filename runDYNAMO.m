@@ -150,7 +150,7 @@ stats_table = computePeakStage(stats_table, stage_times, stage_vals, t_time_rang
 
 %% PART 3: COMPUTE SO-POWER/PHASE HISTOGRAMS
 % See SOpowerphaseHistogram() for a full list of optional arguments for
-% finer control of Histogram generation
+% finer control of histogram generation
 
 if nargout==2
     [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins,...
@@ -207,7 +207,7 @@ if plot_on
 
         % Link axes of appropriate plots
         linkaxes([hypn_spect_ax, ax(1)], 'x');
-        linkaxes([hypn_spect_ax(2), ax(1)], 'y');
+        % linkaxes([hypn_spect_ax(2), ax(1)], 'xy');
 
         % Set yaxis limits
         ylimits = freq_limits; % can be modified to change the figure limits
