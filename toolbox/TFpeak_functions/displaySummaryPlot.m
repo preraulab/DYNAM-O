@@ -30,10 +30,10 @@ function [fh] = displaySummaryPlot(varargin)
 %                           Default = 'p2shift1234'
 %
 %    >> TIME-FREQUENCY PEAK SCATTERPLOT
-%       peak_size_prctiles: [1x2] double - percentiles used to scale the dot size of TF-peaks in the scatter plot.
-%                           Default = [5, 95]
 %       stats_table:        table - features of each TFpeak
 %       hist_peakidx        [1xP] logical - which TFpeaks are counted in the feature histograms
+%       peak_size_prctiles: [1x2] double - percentiles used to scale the dot size of TF-peaks in the scatter plot.
+%                           Default = [5, 95]
 %
 %    >> SOPH SETTINGS FOR BOTH SO-POWER AND SO-PHASE HISTOGRAMS
 %       freq_bins:          [1xF] double - frequency bin center values for dimension 2 of SOpower_mat and SOphase_mat
@@ -81,9 +81,9 @@ addParameter(p, 'SOpower_times', [], @(x) validateattributes(x, {'numeric'}, {'r
 addParameter(p, 'SOpower_norm_method', SOpower_opts().SOpower_norm_method, @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
 
 % TF-peak scatter plot needs these variables
-addParameter(p, 'peak_size_prctiles', [5, 95], @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
 addParameter(p, 'stats_table', [], @(x) validateattributes(x, {'double','table'}, {'real','2d'}));
 addParameter(p, 'hist_peakidx', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
+addParameter(p, 'peak_size_prctiles', [5, 95], @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
 
 % Both SOPH need these variables
 addParameter(p, 'freq_bins', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
