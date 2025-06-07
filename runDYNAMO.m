@@ -4,7 +4,7 @@
 % can adapt this function for customized applications.
 %
 %   Usage:
-%       [stats_table, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options, save_output_image, output_fname, verbose, plot_on)
+%       [stats_table, SOPHs, fh] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options, save_output_image, output_fname, verbose, plot_on)
 %
 %   Inputs:
 %       data: <number of samples> x 1 vector - time series data -- required
@@ -18,14 +18,15 @@
 %       detection_options: structure - parameters for detection algorithm (default: detection_opts())
 %       SOPH_options: structure - parameters for SO-power/phase histograms (default: SOpowerphasehist_opts())
 %       stats_table: table - TF peak stats_table output from computeTFPeaks for direct computation of SOPH (default: [])
+%       verbose: logical - flag for verbose output (default: true)
+%       plot_on: logical - flag to plot the results in a summary figure (default: true)
 %       save_output_image: logical - flag to save the output image (default: false)
 %       output_fname: char or string - filename for saving the output image (default: 'DYNAM-O_output')
-%       verbose: logical - flag for verbose output (default: true)
-%       plot_on: logical - flag to plot the results (default: true)
 %
 %   Outputs:
 %       stats_table: table - table of computed time-frequency peaks
 %       SOPHs: structure - structure containing SO-power/phase histograms
+%       fh: graphics handle - figure handle to the output image
 %
 %   Running with no arguments calls the example data.
 %       runDYNAMO();
@@ -38,7 +39,7 @@
 %       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
 %**********************************************************************
 
-function [stats_table, SOPHs] = runDYNAMO(varargin)
+function [stats_table, SOPHs, fh] = runDYNAMO(varargin)
 %%%% Example script showing how to compute time-frequency peaks and SO-power/phase histograms
 % Users are encouraged to edit this script and the data loading boilerplate
 % in runExampleData() for their specific analysis. This script is provided
@@ -79,10 +80,10 @@ addOptional(p, 'detection_options', detection_opts(), @(x) validateattributes(x,
 addOptional(p, 'SOPH_options', SOpowerphasehist_opts(), @(x) validateattributes(x, {'struct'}, {'nonempty'}));
 % additional inputs to control the outputs from runDYNAMO()
 addOptional(p, 'stats_table', [], @(x) validateattributes(x, {'double','table'}, {'real','2d'}));
-addOptional(p, 'save_output_image', false, @(x) validateattributes(x, {'logical'}, {'scalar'}));
-addOptional(p, 'output_fname', 'DYNAM-O_output', @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x, {'logical'}, {'scalar'}));
 addOptional(p, 'plot_on', true, @(x) validateattributes(x, {'logical'}, {'scalar'}));
+addOptional(p, 'save_output_image', false, @(x) validateattributes(x, {'logical'}, {'scalar'}));
+addOptional(p, 'output_fname', 'DYNAM-O_output', @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -123,7 +124,7 @@ if isempty(stats_table)
 
 else
     % If stats table provided, check to be sure SOPH is requested by output
-    assert(nargout==2, 'Nothing to compute. Must provide SOPH output if stats table is used as input.');
+    assert(nargout>1, 'Nothing to compute. Must request SOPH output if stats table is inputted.');
     if verbose
         disp('TF peaks stats table provided. Computing SOPH only.');
     end
@@ -152,7 +153,7 @@ stats_table = computePeakStage(stats_table, stage_times, stage_vals, t_time_rang
 % See SOpowerphaseHistogram() for a full list of optional arguments for
 % finer control of histogram generation
 
-if nargout==2
+if nargout>1
     [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins,...
         SOpower_TIB, SOphase_TIB, ~, ~, hist_peakidx] = SOpowerphaseHistogram(...
         data_time_range, Fs, stats_table.PeakFrequency, stats_table.PeakTime,...
@@ -173,254 +174,32 @@ else
         disp('Computing TF peaks only. No SOPH output requested.');
     end
 
-    % This index generally comes from the SOPH, otherwise set as all true
-    hist_peakidx = true(1, height(stats_table));
-
 end
 
-%% PLOT RESULTS FIGURE
+%% PLOT RESULTS SUMMARY FIGURE
 if plot_on
-
-    % COMPUTE SPECTROGRAM FOR DISPLAY
-    freq_limits = [2,25];
-    [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(data, Fs, freq_limits, [15 29], [30 15], [],'linear',[],false,false);
-
-    % Plot only TF peaks that contribute to SO-power/phase histograms
-    stats_table_SOPH = stats_table(hist_peakidx, :);
-
-    if nargout==2
-        % Create figure
-        fh = figure('Color',[1 1 1],'units','inches','position',[0 0 8.5 11]);
-        orient portrait;
-
-        %Hypnogram/spectrogram/SO-power axes
-        hypn_spect_ax(1) = axes('Parent',fh,'Position',[0.06 0.913 0.83 0.056]);
-        hypn_spect_ax(2) = axes('Parent',fh,'Position',[0.06 0.756 0.83 0.157]);
-        hypn_spect_ax(3) = axes('Parent',fh,'Position',[0.06 0.7   0.83 0.056]);
-
-        %Scatter plot axes
-        ax(1) = axes('Parent',fh,'Position',[0.06 0.45 0.83 0.2]);
-
-        %SO-power/phase axes
-        ax(2) = axes('Parent',fh,'Position',[0.06  0.07 0.335 0.3]);
-        ax(3) = axes('Parent',fh,'Position',[0.555 0.07 0.335 0.3]);
-
-        % Link axes of appropriate plots
-        linkaxes([hypn_spect_ax, ax(1)], 'x');
-        % linkaxes([hypn_spect_ax(2), ax(1)], 'xy');
-
-        % Set yaxis limits
-        ylimits = freq_limits; % can be modified to change the figure limits
-
-        % Plot hypnogram
-        axes(hypn_spect_ax(1));
-        %Adds artifacts raster below hypnogram, as computed in the time-domain,
-        %will not match up to the spectrogram due to windowing
-        hypnoplot(stage_times/3600,stage_vals,'Artifacts',artifacts','ArtifactTimes',t_time_range/3600);
-        ylim(hypn_spect_ax(1),[.3 5.1]) % <<< ASK MIKE ABOUT THIS
-        xlim(time_range/3600)
-        th(1) = title('EEG Spectrogram');
-        set(hypn_spect_ax(1), 'XTick', []);
-
-        % Plot spectrogram
-        axes(hypn_spect_ax(2))
-        stimes_inds = stimes_disp >= time_range(1) & stimes_disp <= time_range(2);
-        imagesc(stimes_disp(stimes_inds)/3600, sfreqs_disp, pow2db(spect_disp(:, stimes_inds)));
-        axis xy
-        colormap(hypn_spect_ax(2), rainbow4);
-        climscale;
-
-        c = colorbar_noresize; % set colobar
-        c.Label.String = 'Power (dB)'; % colobar label
-        c.Label.Rotation = -90; % rotate colorbar label
-        c.Label.VerticalAlignment = "bottom";
-
-        ylim(ylimits);
-        xlim(time_range/3600)
-        ylabel('Frequency (Hz)');
-        set(hypn_spect_ax(2), 'XtickLabel', []);
-
-        % Plot SO-Power trace
-        axes(hypn_spect_ax(3))
-        plot(SOpower_times/3600,SOpower_norm,'linewidth',2)
-        min_SOP = min(SOpower_norm);
-        max_SOP = max(SOpower_norm);
-        ylim([min_SOP-(0.1*abs(min_SOP)), max_SOP+(0.1*abs(max_SOP))])
-        hypn_spect_ax(3).YTick = [round(min_SOP, 2, 'significant') round((max_SOP+min_SOP)/2, 2, 'significant') round(max_SOP, 2, 'significant')];
-        hypn_spect_ax(3).YTickLabel = num2str(get(hypn_spect_ax(3),'ytick')','%.1f');
-        xlim(time_range/3600)
-
-        switch SOPH_options.SOpower_norm_method
-            case 'percent'
-                ylab = '%SOP';
-            case 'proportion'
-                ylab = 'SO Prop.';
-            otherwise
-                ylab = 'SOP (dB)';
-        end
-        ylabel(ylab);
-
-        % Plot time-frequency peak scatterplot
-        axes(ax(1))
-        %Compute peak dot size
-        pmin = prctile(stats_table_SOPH.Volume, 5); % get 5th ptile of volumes
-        peak_size = stats_table_SOPH.Volume / pmin * 0.5;  % 5th ptile fixed at size 0.5
-
-        %Do not plot larger than 95th ptile or else dots could obscure other things on the plot
-        pmax = prctile(stats_table_SOPH.Volume, 95); % get 95th ptile of volumes
-        pmax_inds = stats_table_SOPH.Volume> pmax;
-        peak_size(pmax_inds) = nan;
-
-        scatter(stats_table_SOPH.PeakTime/3600, stats_table_SOPH.PeakFrequency, peak_size, stats_table_SOPH.SOphase, 'filled'); % scatter plot all peaks
-
-        %Make circular colormap
-        colormap(ax(1),circshift(hsv(2^12),-650))
-
-        c = colorbar_noresize;
-        c.Label.String = 'Phase (radians)';
-        c.Label.Rotation = -90;
-        c.Label.VerticalAlignment = "bottom";
-        c.XTick = [-pi -pi/2 0 pi/2 pi];
-        c.XTickLabel = {'-\pi', '-\pi/2', '0', '\pi/2', '\pi'};
-
-        ylim(ylimits);
-        xlim(time_range/3600)
-        ylabel('Frequency (Hz)');
-        xlabel('Time (hrs)')
-        th(2) = title('Extracted Time-Frequency Peaks');
-
-        % Plot SO-power histogram
-        axes(ax(2))
-        imagesc(SOpower_bins, freq_bins, SOpower_mat');
-        axis xy;
-        colormap(ax(2), gouldian);
-
-        %Set colorscale
-        c_ptiles = prctile(SOpower_mat(:), [5, 98]);
-        clim(gca,[c_ptiles(1) c_ptiles(2)]);
-
-        c = colorbar_noresize;
-        c.Label.String = {'Density', '(peaks/min in bin)'};
-        c.Label.Rotation = -90;
-        c.Label.VerticalAlignment = "bottom";
-
-        switch SOPH_options.SOpower_norm_method
-            case 'percent'
-                xlab = '% SO-Power';
-            case 'proportion'
-                xlab = 'SO-Power Proportion';
-            otherwise
-                xlab = 'SO-Power (dB)';
-        end
-        xlabel(xlab);
-        ylabel('Frequency (Hz)');
-        ylim(ylimits);
-        th(3) = title('SO-Power Histogram');
-
-        % Plot SO-phase histogram
-        axes(ax(3))
-        imagesc(SOphase_bins, freq_bins, SOphase_mat');
-        axis xy;
-        colormap(ax(3), 'magma');
-
-        %Scale color limits
-        c_ptiles = prctile(SOphase_mat(:), [5, 98]);
-        clim([c_ptiles(1) c_ptiles(2)]);
-
-        c = colorbar_noresize;
-        c.Label.String = {'Proportion'};
-        c.Label.Rotation = -90;
-        c.Label.VerticalAlignment = "bottom";
-
-        xlabel('SO-Phase (rad)');
-        xticks([-pi -pi/2 0 pi/2 pi])
-        xticklabels({'-\pi', '-\pi/2', '0', '\pi/2', '\pi'});
-        ylim(ylimits);
-        th(4) = title('SO-Phase Histogram');
-
-        %Set consistent fontsizes throughout the figure
-        set([ax(1:3) hypn_spect_ax],'fontsize',10)
-        set(th,'fontsize',15)
-
+    if nargout>1
+        fh = displaySummaryPlot('stage_times',stage_times, 'stage_vals',stage_vals, 'artifacts',artifacts, 't_time_range',t_time_range,...
+            'data',data, 'Fs',Fs, 'time_range',time_range,...
+            'SOpower_norm',SOpower_norm, 'SOpower_times',SOpower_times, 'SOpower_norm_method',SOPH_options.SOpower_norm_method,...
+            'stats_table',stats_table, 'hist_peakidx',hist_peakidx,...
+            'freq_bins',freq_bins, 'SOpower_mat',SOpower_mat, 'SOpower_bins',SOpower_bins,...
+            'SOphase_mat',SOphase_mat, 'SOphase_bins',SOphase_bins);
     else
-        % Create figure
-        fh = figure('Color',[1 1 1],'units','inches','position',[0 0 8.5 11]);
-        orient portrait;
-
-        %Hypnogram/spectrogram/SO-power axes
-        hypn_spect_ax(1) = axes('Parent',fh,'Position',[0.06 0.913 0.83 0.056]);
-        hypn_spect_ax(2) = axes('Parent',fh,'Position',[0.06 0.756 0.83 0.157]);
-
-        %Scatter plot axes
-        ax(1) = axes('Parent',fh,'Position',[0.06 0.45 0.83 0.2]);
-
-        % Link axes of appropriate plots
-        linkaxes([hypn_spect_ax, ax(1)], 'x');
-        linkaxes([hypn_spect_ax(2), ax(1)], 'y');
-
-        % Set yaxis limits
-        ylimits = freq_limits;  % can be modified to change the figure limits
-
-        % Plot hypnogram
-        axes(hypn_spect_ax(1));
-        %Adds artifacts raster below hypnogram, as computed in the time-domain,
-        %will not match up to the spectrogram due to windowing
-        hypnoplot(stage_times/3600,stage_vals,'Artifacts',artifacts','ArtifactTimes',t_time_range/3600);
-        xlim(time_range/3600)
-        ylim(hypn_spect_ax(1),[.3 5.1])
-        th(1) = title('EEG Spectrogram');
-
-        % Plot spectrogram
-        axes(hypn_spect_ax(2))
-        stimes_inds = stimes_disp >= time_range(1) & stimes_disp <= time_range(2);
-        imagesc(stimes_disp(stimes_inds)/3600, sfreqs_disp, pow2db(spect_disp(:, stimes_inds)));
-        axis xy
-        colormap(hypn_spect_ax(2), rainbow4);
-        climscale;
-
-        c = colorbar_noresize; % set colobar
-        c.Label.String = 'Power (dB)'; % colobar label
-        c.Label.Rotation = -90; % rotate colorbar label
-        c.Label.VerticalAlignment = "bottom";
-
-        ylabel('Frequency (Hz)');
-        xlabel('')
-        ylim(ylimits);
-        hypn_spect_ax(1).XTick = [];
-        xlim(time_range/3600)
-
-        % Plot time-frequency peak scatterplot
-        axes(ax(1))
-        %Compute peak dot size
-        pmin = prctile(stats_table_SOPH.Volume, 5); % get 5th ptile of volumes
-        peak_size = stats_table_SOPH.Volume / pmin * 0.5;  % 5th ptile fixed at size 0.5
-
-        %Do not plot larger than 95th ptile or else dots could obscure other things on the plot
-        pmax = prctile(stats_table_SOPH.Volume, 95); % get 95th ptile of volumes
-        pmax_inds = stats_table_SOPH.Volume> pmax;
-        peak_size(pmax_inds) = nan;
-
-        scatter(stats_table.PeakTime/3600, stats_table.PeakFrequency, peak_size, 'k', 'filled'); % scatter plot all peaks
-
-        ylabel('Frequency (Hz)');
-        ylim(ylimits);
-
-        xlabel('Time (hrs)')
-        th(2) = title('Extracted Time-Frequency Peaks');
-        xlim(time_range/3600)
-
-        set([ax(1) hypn_spect_ax],'fontsize',10)
-        set(th,'fontsize',15)
-
+        fh = displaySummaryPlot('stage_times',stage_times, 'stage_vals',stage_vals, 'artifacts',artifacts, 't_time_range',t_time_range,...
+            'data',data, 'Fs',Fs, 'time_range',time_range,...
+            'stats_table',stats_table);
     end
 
-    %% PRINT OUTPUT
+    %% SAVE OUTPUT SUMMARY FIGURE
     if save_output_image
-        %Output filename
         print(fh,'-dpng','-r200',output_fname);
     end
 
+else
+    fh = [];
 end
+
 end
 
 
@@ -436,7 +215,7 @@ function [SOPHs] = createSOPHsStruct(SOpower_mat, SOphase_mat, SOpower_bins, SOp
 end
 
 
-function [stats_table, SOPHs] = runExampleData()
+function [stats_table, SOPHs, fh] = runExampleData()
 disp('Running Example Data...');
 
 %Load default options
@@ -479,5 +258,5 @@ switch data_range
 end
 
 %Call main function
-[stats_table, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options);
+[stats_table, SOPHs, fh] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options);
 end
