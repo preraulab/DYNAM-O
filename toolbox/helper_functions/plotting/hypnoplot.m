@@ -93,8 +93,7 @@ PlotBuffer = p.Results.PlotBuffer;
 GroupNREMColors = p.Results.GroupNREMColors;
 LabelPos = p.Results.LabelPos;
 
-
-%Do additional input checks
+%% Do additional input checks
 if iscolumn(stage_vals) %Force stage_vals to be a row vector for the horizontal concatenation
     stage_vals = transpose(stage_vals);
 end
