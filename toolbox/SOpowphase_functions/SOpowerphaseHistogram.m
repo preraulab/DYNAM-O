@@ -79,12 +79,11 @@ function [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, SOpow
 %       verbose: logical - Verbose output. Default = true
 %
 %   Outputs:
-%       SOpow_mat:    2D double - SO power histogram data
+%       SOpower_mat:  2D double - SO power histogram data
 %       SOphase_mat:  2D double - SO phase histogram data
-%       SOpow_bins:   1D double - SO power bin center values for dimension 1 of SOpow_mat
+%       SOpower_bins: 1D double - SO power bin center values for dimension 1 of SOpower_mat
 %       SOphase_bins: 1D double - SO phase bin center values for dimension 1 of SOphase_mat
-%       freq_bins:    1D double - frequency bin center values for dimension 2
-%                     of SOpow_mat and SOphase_mat
+%       freq_bins:    1D double - frequency bin center values for dimension 2 of SOpower_mat and SOphase_mat
 %       SOpow_TIB:    1xT double - time (minutes) in each SOpower bin for all stages 1-5 (0min if not in SOPH_stages)
 %       SOphase_TIB:  1xT double - time (minutes) in each SOphase bin for all stages 1-5 (0min if not in SOPH_stages)
 %       peak_SOpower: 1xP double - normalized slow oscillation power at each TFpeak
@@ -95,7 +94,6 @@ function [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, SOpow
 %       SOphase: 1xN double - SO phase timeseries data
 %       SOphase_times: 1xN double - SO phase timeseries times
 %       SOdata: 1xN double - SO filtered timeseries data
-%
 %
 %
 %   Please provide the following citation for all use:
