@@ -342,14 +342,12 @@ end
 %% Additional axes adjustments
 % Link spectrogram y-axis
 if isgraphics(hypn_spect_ax(2)) && isgraphics(ax(1))
-    isUpdating = struct('y', false);
-    addlistener(hypn_spect_ax(2), 'YLim', 'PostSet', @(~,~) syncY(hypn_spect_ax(2), ax(1), isUpdating, 'y'));
-    addlistener(ax(1), 'YLim', 'PostSet', @(~,~) syncY(ax(1), hypn_spect_ax(2), isUpdating, 'y'));
-    axes(hypn_spect_ax(2))
-    ylim(ylimits)
+    hy = linkprop([hypn_spect_ax(2), ax(1)], 'YLim');
+    setappdata(hypn_spect_ax(2), 'YLink', hy);
+    ylim(hypn_spect_ax(2), ylimits)
 end
 
-% Link axes of appropriate plots
+% Link x-axes of appropriate plots
 temp_axes = [hypn_spect_ax, ax(1)];
 temp_axes = temp_axes(isgraphics(temp_axes));
 if ~isempty(temp_axes)
