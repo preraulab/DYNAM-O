@@ -16,6 +16,8 @@ function sh = hypnoplot(stage_times,stage_vals,varargin)
 %       'Fs': Sampling frequency for artifacts.
 %             NOTE: Assumes time starts at 0, which is the time of the first stage
 %       'ArtifactTimes': 1xT vector of time values for artifacts
+%       'TimesUnit': 'seconds' or 'hours', unit of the time axis in stage_times and ArtifactTimes, default: 'seconds'
+%       'EpochSize': double, size of stage scoring epoch, default changes based on 'TimesUnit': 'seconds'=30; 'hours'=30/3600 
 %       'HypnogramLabels': 1x7 cell, stage name labels, default: {'Undef','N3','N2','N1','REM','Wake','Art'}
 %       'LabelPos': 'top' or 'left', label position, default: 'left'
 %       'StageColors': 7x3 double
@@ -69,6 +71,8 @@ addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','fi
 addOptional(p, 'Artifacts', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
 addOptional(p, 'Fs', [], @(x) isempty(x) || (isnumeric(x) && isscalar(x)));
 addOptional(p, 'ArtifactTimes', [], @(x) validateattributes(x,{'numeric'},{'real','finite','2d'}));
+addOptional(p, 'TimesUnit', 'seconds', @(x) any(validatestring(x, {'seconds', 'hours'})));
+addOptional(p, 'EpochSize', 0, @(x) validateattributes(x,{'numeric'},{'real','finite','positive','scalar'}));
 addOptional(p, 'HypnogramLabels', {'Undef','N3','N2','N1','REM','Wake','Art'}, @(x) validateattributes(x,{'cell'},{'numel',7}));
 addOptional(p, 'StageColors', default_colors, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','ncols',3}));
 addOptional(p, 'PlotBuffer', .3, @(x) validateattributes(x,{'numeric'},{'real','finite','positive','scalar'}));
@@ -78,14 +82,17 @@ addOptional(p, 'GroupNREMColors', true, @(x) validateattributes(x,{'logical'},{'
 parse(p,stage_times,stage_vals,varargin{:});
 
 % Manually assign variables
+artifacts = p.Results.Artifacts;
+Fs = p.Results.Fs;
+artifact_times = p.Results.ArtifactTimes;
+TimesUnit = p.Results.TimesUnit;
+EpochSize = p.Results.EpochSize;
 HypnogramLabels = p.Results.HypnogramLabels;
 StageColors = p.Results.StageColors;
 PlotBuffer = p.Results.PlotBuffer;
 GroupNREMColors = p.Results.GroupNREMColors;
 LabelPos = p.Results.LabelPos;
-artifacts = p.Results.Artifacts;
-Fs = p.Results.Fs;
-artifact_times = p.Results.ArtifactTimes;
+
 
 %Do additional input checks
 if iscolumn(stage_vals) %Force stage_vals to be a row vector for the horizontal concatenation
@@ -99,6 +106,17 @@ end
 
 assert(isequal(size(stage_times), size(stage_vals)), 'time and stage must be the same dimensions')
 
+%Set default EpochSize
+if EpochSize == 0
+    switch TimesUnit
+        case 'seconds'
+            EpochSize = 30;
+        case 'hours'
+            EpochSize = 30/3600;
+    end
+end
+
+%Handle additional artifacts input that is separate from the 6=Art in stage_vals
 if ~isempty(artifacts)
     assert(xor(~isempty(Fs), ~isempty(artifact_times)), 'Must provide either sampling frequency or time vector for artifacts')
     if iscolumn(artifacts) %Force artifacts to be a row vector for the horizontal concatenation
@@ -113,8 +131,8 @@ if ~isempty(artifacts)
 end
 
 %% Make the hypnoplot
-%Adds a 30s epoch at the end for plotting
-stage_times(end+1) = stage_times(end)+30;
+%Add another epoch at the end for plotting
+stage_times(end+1) = stage_times(end)+EpochSize;
 stage_vals(end+1) = stage_vals(end);
 
 %Simplify vector
@@ -187,7 +205,7 @@ end
 %Keep hypnogram trace on top
 uistack(sh,'top');
 
-%Plot the artifacts on the bottom
+%% Plot the additional artifacts input vector on the bottom
 if ~isempty(artifacts)
     if ~isempty(Fs) && isempty(artifact_times)
         artifact_times = (0:length(artifacts)-1)/Fs; % this is a row vector
@@ -218,5 +236,6 @@ if ~isempty(artifacts)
     fill([a;b;b;a],[c;c;d;d], StageColors(6 + 1,:),'edgecolor','k')
 end
 
+%%
 %Set limits
 axis tight

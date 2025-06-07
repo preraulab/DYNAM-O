@@ -144,8 +144,8 @@ end
 fh = figure('Color',[1 1 1],'units','inches','position',[0 0 8.5 11]);
 orient portrait;
 
-hypn_spect_ax = nan(1, 3);
-ax = nan(1, 3);
+hypn_spect_ax = gobjects(1, 3);
+ax = gobjects(1, 3);
 
 %Hypnogram/spectrogram/SO-power axes
 if ~isempty(stage_times) && ~isempty(stage_vals)
@@ -174,7 +174,7 @@ end
 %% Plot hypnogram
 if isgraphics(hypn_spect_ax(1))
     axes(hypn_spect_ax(1));
-    hypnoplot(stage_times/3600, stage_vals, 'Artifacts', artifacts, 'ArtifactTimes', t_time_range/3600);
+    hypnoplot(stage_times/3600, stage_vals, 'Artifacts', artifacts, 'ArtifactTimes', t_time_range/3600, 'TimesUnit', 'hours');
 
     if isgraphics(hypn_spect_ax(2))
         th(1) = title('EEG Spectrogram');
@@ -224,8 +224,8 @@ if isgraphics(hypn_spect_ax(3))
     min_SOP = min(SOpower_norm);
     max_SOP = max(SOpower_norm);
     ylim([min_SOP-(0.1*abs(min_SOP)), max_SOP+(0.1*abs(max_SOP))])
-    hypn_spect_ax(3).YTick = [round(min_SOP, 2, 'significant') round((max_SOP+min_SOP)/2, 2, 'significant') round(max_SOP, 2, 'significant')];
-    hypn_spect_ax(3).YTickLabel = num2str(get(hypn_spect_ax(3),'ytick')','%.1f');
+    set(hypn_spect_ax(3), 'YTick', [round(min_SOP, 2, 'significant') round((max_SOP+min_SOP)/2, 2, 'significant') round(max_SOP, 2, 'significant')]);
+    set(hypn_spect_ax(3), 'YTickLabel', num2str(get(hypn_spect_ax(3),'ytick')','%.1f'));
 
     switch SOpower_norm_method
         case 'percent'

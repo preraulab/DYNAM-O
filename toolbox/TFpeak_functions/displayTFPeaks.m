@@ -68,7 +68,7 @@ end
 %% Plot hypnogram
 if isgraphics(hypn_spect_ax(1))
     axes(hypn_spect_ax(1));
-    hypnoplot(stage_times/3600, stage_vals, 'Artifacts', artifacts, 'ArtifactTimes', t_time_range/3600);
+    hypnoplot(stage_times/3600, stage_vals, 'Artifacts', artifacts, 'ArtifactTimes', t_time_range/3600, 'TimesUnit', 'hours');
     th(1) = title('EEG Spectrogram and Detected TF-peaks');
     set(hypn_spect_ax(1), 'XTick', []);
 end
@@ -109,8 +109,8 @@ if length(hypn_spect_ax) > 2 && isgraphics(hypn_spect_ax(3))
     min_trace = prctile(data_time_range, 1);
     max_trace = prctile(data_time_range, 99);
     ylim([min_trace-(0.1*abs(min_trace)), max_trace+(0.1*abs(max_trace))])
-    hypn_spect_ax(3).YTick = [round(min_trace, 2, 'significant') 0 round(max_trace, 2, 'significant')];
-    hypn_spect_ax(3).YTickLabel = num2str(get(hypn_spect_ax(3),'ytick')','%.1f');
+    set(hypn_spect_ax(3), 'YTick', [round(min_trace, 2, 'significant') 0 round(max_trace, 2, 'significant')]);
+    set(hypn_spect_ax(3), 'YTickLabel', num2str(get(hypn_spect_ax(3),'ytick')','%.1f'));
     ylabel('Voltage (\muV)');
 end
 xlabel('Time (hr)')
