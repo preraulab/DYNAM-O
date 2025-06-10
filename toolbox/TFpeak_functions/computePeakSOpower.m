@@ -46,25 +46,22 @@ function [stats_table, SOpower, SOpower_times, norm_method] = computePeakSOpower
 %**********************************************************************
 
 %%
-% If a struct is input with the SOpower settings/params, detect and
-% reformat it to work with the input parser below.
+% If a struct is input with settings/params, detect and reformat it to work with the input parser below.
 struct_ind = cellfun(@isstruct,varargin); % Get index of the struct
 
 if any(struct_ind)
-
-    opt_struct = varargin{struct_ind}; % Store the struct
-    varargin = varargin(~struct_ind); % Remove struct from the varargin
+    locs = find(struct_ind==1);
+    struct_arguments = cellfun(@(x) struct2cell(x), varargin(locs), 'UniformOutput', false);
+    struct_fieldnames = cellfun(@(x) fieldnames(x), varargin(locs), 'UniformOutput', false);
+    opt_struct = cell2struct(vertcat(struct_arguments{:}), vertcat(struct_fieldnames{:}));
+    varargin = varargin(~struct_ind); % Remove structs from the varargin
 
     argcell = namedargs2cell(opt_struct); % Convert the struct to cell array
-    varargin = cat(2,varargin,argcell); % Add the new cell array with the params to the end of the varargin
+    varargin = cat(2, varargin, argcell); % Add the new cell array with the params to the end of the varargin
 
-    % Test to make sure that none of the additional parameters are already
-    % being included in the struct (if input)
+    % Test to make sure that none of the additional parameters are already included
     str_cell = cellstr(varargin(cellfun(@(x)(ischar(x)|isstring(x)),varargin)));
-    if length(str_cell)~=length(unique(str_cell))
-        error('Cannot include struct and duplicate parameters.');
-    end
-
+    assert(length(str_cell) == length(unique(str_cell)), 'Cannot include struct and duplicate parameters.')
 end
 
 %% Parse inputs
