@@ -318,7 +318,7 @@ if isgraphics(ax(3))
     colormap(ax(3), 'magma');
 
     %Scale color limits
-    c_ptiles = prctile(SOphase_mat(:), SOPH_clim_prctiles);
+    c_ptiles = prctile(SOphase_mat(SOphase_mat(:)~=0), SOPH_clim_prctiles);
     clim([c_ptiles(1) c_ptiles(2)]);
 
     c = colorbar_noresize;
