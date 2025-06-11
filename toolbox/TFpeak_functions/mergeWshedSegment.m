@@ -155,6 +155,11 @@ if num_regions == 1
 end
 [max_wt,max_idx] = max(ematr(:,3));
 
+% Set dynamic merge_thresh if merge_thresh is nan
+if isnan(merge_thresh)
+    merge_thresh = prctile(ematr(:,3), 96);
+end
+
 num_merges = 0;
 if f_verb > 0
     disp([verb_pref 'Merging regions...']);
