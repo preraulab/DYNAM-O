@@ -30,9 +30,9 @@ addRequired(p, 'stats_table', @(x) validateattributes(x, {'table'}, {'real','non
 detection_options = detection_opts(); % get the default parameters
 addOptional(p, 'freq_range', detection_options.mtm_freq_range, @(x) validateattributes(x,{'numeric'},{'real','finite','vector','numel',2}));
 addOptional(p, 't', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
-addOptional(p, 'baseline_opt', false, @(x) validateattributes(x,{'logical'},{'scalar'}));
+addOptional(p, 'baseline_opt', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'refine_method', 'spline_interp', @(x) any(validatestring(x, {'spline_interp', 'spline_opt', 'spect_max'})));
-addOptional(p, 'remove_edge_peaks', true, @(x) validateattributes(x,{'logical'},{'scalar'}));
+addOptional(p, 'remove_edge_peaks', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 
 parse(p,varargin{:});
 
