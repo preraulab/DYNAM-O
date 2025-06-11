@@ -24,7 +24,7 @@ addOptional(p, 'tapers', SOpower_options.SOpower_tapers, @(x) validateattributes
 addOptional(p, 'window_params', SOpower_options.SOpower_window_params, @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
 addOptional(p, 'SOpower_outlier_threshold', SOpower_options.SOpower_outlier_threshold, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 addOptional(p, 'norm_method', SOpower_options.SOpower_norm_method, @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
-addOptional(p, 'retain_Fs', SOpower_options.SOpower_retain_Fs, @(x) validateattributes(x,{'logical'},{'scalar'}));
+addOptional(p, 'retain_Fs', SOpower_options.SOpower_retain_Fs, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -190,7 +190,7 @@ addOptional(p, 'window_params', SOPH_options.SOpower_window_params, @(x) validat
 addOptional(p, 'smoothing_method', 'none', @(x) any(validatestring(x, {'none', 'movmean', 'movmedian', 'gaussian', 'lowess', 'loess', 'rlowess', 'rloess', 'sgolay'})));
 addOptional(p, 'smoothing_param', 60*5, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
 addOptional(p, 'interp_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
-addOptional(p, 'verbose', false, @(x) validateattributes(x,{'logical'},{'scalar'}));
+addOptional(p, 'verbose', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>

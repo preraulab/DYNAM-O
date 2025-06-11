@@ -11,7 +11,7 @@ addOptional(p, 'SOpower_tapers', [5, 9], @(x) validateattributes(x, {'numeric'},
 addOptional(p, 'SOpower_window_params', [5, .5], @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
 addOptional(p, 'SOpower_outlier_threshold', 3, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 addOptional(p, 'SOpower_norm_method', 'p2shift1234', @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
-addOptional(p, 'SOpower_retain_Fs', true, @(x) validateattributes(x,{'logical'},{'scalar'}));
+addOptional(p, 'SOpower_retain_Fs', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 
 parse(p,varargin{:});
 opts = p.Results;

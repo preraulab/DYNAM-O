@@ -122,7 +122,7 @@ addRequired(p, 'stage_vals', @(x) validateattributes(x, {'double','single'}, {'r
 addOptional(p, 't_data', [], @(x) validateattributes(x,{'numeric'},{'real','finite','2d'}));
 addOptional(p, 'time_range', [], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
 addOptional(p, 'features', 'all',  @(x) validateattributes(x,{'char','cell'},{'nonempty'}));
-addOptional(p, 'display_peaks', false, @(x) validateattributes(x,{'logical'},{'scalar'}));
+addOptional(p, 'display_peaks', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 
 addOptional(p, 'artifacts', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
 addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'double','struct'},{'nonnan'}));
@@ -136,8 +136,8 @@ addOptional(p, 'baseline_trim', baseline_options.baseline_trim, @(x) isa(x,'nume
 
 %TF peak detection struct parameters
 detection_options = detection_opts(); % get the default parameters
-addOptional(p, 'verbose', detection_options.verbose, @(x) validateattributes(x,{'logical'},{'scalar'}));
-addOptional(p, 'double_watershed', detection_options.double_watershed, @(x) validateattributes(x,{'logical'},{'scalar'}));
+addOptional(p, 'verbose', detection_options.verbose, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+addOptional(p, 'double_watershed', detection_options.double_watershed, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'mtm_dsfreqs', detection_options.mtm_dsfreqs, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 addOptional(p, 'mtm_freq_range', detection_options.mtm_freq_range, @(x) validateattributes(x,{'numeric'},{'real','finite','vector','numel',2}));
 addOptional(p, 'mtm_taper_params', detection_options.mtm_taper_params, @(x) validateattributes(x,{'numeric'},{'real','finite','vector','numel',2}));
@@ -152,7 +152,7 @@ addOptional(p, 'max_merges', detection_options.max_merges, @(x) validateattribut
 addOptional(p, 'trim_vol', detection_options.trim_vol, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 addOptional(p, 'dur_max', detection_options.dur_max, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 addOptional(p, 'bw_max', detection_options.bw_max, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
-addOptional(p, 'refinement', detection_options.refinement, @(x) validateattributes(x,{'logical'},{'scalar'}));
+addOptional(p, 'refinement', detection_options.refinement, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>

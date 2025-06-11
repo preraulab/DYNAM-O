@@ -84,7 +84,7 @@ addOptional(p, 'SOpower_tapers', SOpower_options.SOpower_tapers, @(x) validateat
 addOptional(p, 'SOpower_window_params', SOpower_options.SOpower_window_params, @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
 addOptional(p, 'SOpower_outlier_threshold', SOpower_options.SOpower_outlier_threshold, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 addOptional(p, 'SOpower_norm_method', SOpower_options.SOpower_norm_method, @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
-addOptional(p, 'SOpower_retain_Fs', SOpower_options.SOpower_retain_Fs, @(x) validateattributes(x,{'logical'},{'scalar'}));
+addOptional(p, 'SOpower_retain_Fs', SOpower_options.SOpower_retain_Fs, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>

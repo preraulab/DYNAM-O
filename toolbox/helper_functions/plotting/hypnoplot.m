@@ -77,7 +77,7 @@ addOptional(p, 'HypnogramLabels', {'Undef','N3','N2','N1','REM','Wake','Art'}, @
 addOptional(p, 'StageColors', default_colors, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','ncols',3}));
 addOptional(p, 'PlotBuffer', .3, @(x) validateattributes(x,{'numeric'},{'real','finite','positive','scalar'}));
 addOptional(p, 'LabelPos', 'left', @(x) any(validatestring(x, {'top', 'left'})));
-addOptional(p, 'GroupNREMColors', true, @(x) validateattributes(x,{'logical'},{'scalar'}));
+addOptional(p, 'GroupNREMColors', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 
 parse(p,stage_times,stage_vals,varargin{:});
 
