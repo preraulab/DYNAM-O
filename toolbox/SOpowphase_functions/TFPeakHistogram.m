@@ -157,7 +157,9 @@ end
 
 % Normalize along a dimension if desired
 if norm_dim
-    C_mat = C_mat ./ sum(C_mat, norm_dim, 'omitnan');
+    dim_sum = sum(C_mat, norm_dim, 'omitnan');
+    dim_sum(dim_sum == 0) = 1; % avoid 0/0 = nan
+    C_mat = C_mat ./ dim_sum;
 end
 
 %% Plot
