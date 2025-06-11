@@ -13,3 +13,6 @@
 [submodule "toolbox/helper_functions/artifact_detection"]
 	path = toolbox/helper_functions/artifact_detection
 	url = git@github.com:preraulab/artifact_detection.git
+[submodule "toolbox/SOPH_fit"]
+	path = toolbox/SOPH_fit
+	url = git@github.com:preraulab/SOPH_fit.git
