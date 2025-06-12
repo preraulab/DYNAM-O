@@ -5,9 +5,6 @@ p = inputParser;
 %************************************************
 % Generate TF peak Detection Option Structure
 %************************************************
-%Verbose option
-addOptional(p, 'verbose', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
-
 %Double vs single watershed
 addOptional(p, 'double_watershed', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 

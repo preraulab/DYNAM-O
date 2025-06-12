@@ -26,6 +26,7 @@ function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, art
 %       artifacts (opt):           [nx1] logical - boolean indicating artifact time points. Default = logical([]), run detect_artifacts()
 %       artifact_filters (opt):    struct with 2 digitalFilter fields "hpFilt_high","hpFilt_broad" -
 %                                  filters to be used for artifact detection. Default = []
+%       verbose (opt):             logical - whether to print out messages when performing each computation step. Default = true
 %
 %       BASELINE_OPTS STRUCTURE PARAMETERS - see baseline_opts()
 %       baseline_stages (opt):     [1xp] double - stages to include in spectrogram baseline computation. Default = [1,2,3,4,5]
@@ -36,7 +37,6 @@ function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, art
 %                                  buffer time (min) around the first and last sleep period. Default = [-inf, inf]
 %
 %       DETECTION_OPTS STRUCTURE PARAMETERS - see detection_opts()
-%       verbose (opt):             logical - whether to print out messages when performing each computation step. Default = true
 %       double_watershed (opt):    logical - whether to run two rounds of watershed to achieve better
 %                                  frequency resolution in addition to good temporal resolution. Default = true
 %       mtm_dsfreqs (opt):         scalar - frequency bin resolution between two consecutive frequency samples,
@@ -127,6 +127,8 @@ addOptional(p, 'display_peaks', false, @(x) validateattributes(x, {'logical', 'n
 addOptional(p, 'artifacts', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
 addOptional(p, 'artifact_filters', [], @(x) validateattributes(x,{'double','struct'},{'nonnan'}));
 
+addOptional(p, 'verbose', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'scalar'}));
+
 %Baseline struct parameters
 baseline_options = baseline_opts(); % get the default parameters
 addOptional(p, 'baseline_stages', baseline_options.baseline_stages, @(x) validateattributes(x,{'numeric'},{'real','vector'}));
@@ -136,7 +138,6 @@ addOptional(p, 'baseline_trim', baseline_options.baseline_trim, @(x) isa(x,'nume
 
 %TF peak detection struct parameters
 detection_options = detection_opts(); % get the default parameters
-addOptional(p, 'verbose', detection_options.verbose, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'double_watershed', detection_options.double_watershed, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'mtm_dsfreqs', detection_options.mtm_dsfreqs, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 addOptional(p, 'mtm_freq_range', detection_options.mtm_freq_range, @(x) validateattributes(x,{'numeric'},{'real','finite','vector','numel',2}));
@@ -269,10 +270,10 @@ end
 
 if double_watershed
     [stats_table, regions, borders] = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
-        dur_min, bw_min, merge_thresh, max_merges, trim_vol);
+        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1);
 else
     stats_table = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
-        dur_min, bw_min, merge_thresh, max_merges, trim_vol);
+        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1);
 end
 
 if verbose
@@ -332,7 +333,7 @@ if double_watershed
     end
 
     stats_table = runSegmentedData(spect_masked, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
-        dur_min, bw_min, merge_thresh, max_merges, trim_vol);
+        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1);
 
     if verbose
         disp(['[2nd] TF peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
