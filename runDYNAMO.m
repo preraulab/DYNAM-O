@@ -58,8 +58,8 @@ if any(strcmp({v.Name}, 'Parallel Computing Toolbox'))
     gcp;
 end
 
-% default verbose setting throughout processing in runDYNAMO
-default_verbose = false;
+% default verbose setting for all processing steps
+default_verbose = false; % no printout when running runDYNAMO()
 
 %% RUN EXAMPLE DATA IF CALLED WITHOUT INPUT
 if nargin == 0
