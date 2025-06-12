@@ -80,9 +80,9 @@ addOptional(p, 'detection_options', detection_opts(), @(x) validateattributes(x,
 addOptional(p, 'SOPH_options', SOpowerphasehist_opts(), @(x) validateattributes(x, {'struct'}, {'nonempty'}));
 % additional inputs to control the outputs from runDYNAMO()
 addOptional(p, 'stats_table', [], @(x) validateattributes(x, {'double','table'}, {'real','2d'}));
-addOptional(p, 'verbose', true, @(x) validateattributes(x, {'logical'}, {'scalar'}));
-addOptional(p, 'plot_on', true, @(x) validateattributes(x, {'logical'}, {'scalar'}));
-addOptional(p, 'save_output_image', false, @(x) validateattributes(x, {'logical'}, {'scalar'}));
+addOptional(p, 'verbose', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+addOptional(p, 'plot_on', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+addOptional(p, 'save_output_image', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'output_fname', 'DYNAM-O_output', @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
 
 parse(p,varargin{:});
