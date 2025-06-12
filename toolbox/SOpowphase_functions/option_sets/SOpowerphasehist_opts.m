@@ -4,7 +4,7 @@ p = inputParser;
 p.KeepUnmatched = true;
 
 %General settings
-addOptional(p, 'freq_range', [0, 40], @(x) validateattributes(x,{'numeric'},{'real','finite','vector','numel',2}));
+addOptional(p, 'freq_range', [0, 30], @(x) validateattributes(x,{'numeric'},{'real','finite','vector','numel',2}));
 addOptional(p, 'freq_binsizestep', [1, 0.2], @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
 addOptional(p, 'compute_rate', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'SOPH_stages', 1:3, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','vector'})); % W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
