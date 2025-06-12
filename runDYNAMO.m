@@ -200,6 +200,14 @@ else
     fh = [];
 end
 
+%% SOPH fit
+if false
+    [params, fitobj, gof, model_SOPH, power_wshed_img] = param_basis_power(SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins);%#ok<*UNRCH>
+    [params, fitobj, gof, model_SOPH, power_wshed_img] = param_basis_phase(SOPHs.SOphase_mat, SOPHs.SOphase_bins, SOPHs.freq_bins);
+    [splinefit, coefs, spline_obj, knots_x, knots_y] = SOPH2spline('power', SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins);
+    [splinefit, coefs, spline_obj, knots_x, knots_y] = SOPH2spline('phase', SOPHs.SOphase_mat, SOPHs.SOphase_bins, SOPHs.freq_bins);
+end
+
 end
 
 
