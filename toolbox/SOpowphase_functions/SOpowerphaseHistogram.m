@@ -37,7 +37,7 @@ function [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, SOpow
 %
 %       SOPOWERPHASEHIST_OPTS STRUCTURE PARAMETERS - see SOpowerphasehist_opts()
 %       freq_range: 1x2 double - min and max frequencies of TF peak to include in the histograms (Hz).
-%                   Default = [0, 40]
+%                   Default = [0, 30]
 %       freq_binsizestep: 1x2 double - [size, step] frequency bin size and bin step for frequency
 %                         axis of SO power/phase histograms (Hz). Default = [1, 0.2]
 %       compute_rate: logical - histogram output in terms of TFpeaks/min instead of count.
