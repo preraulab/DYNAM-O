@@ -59,7 +59,7 @@ if any(strcmp({v.Name}, 'Parallel Computing Toolbox'))
 end
 
 % default verbose setting for all processing steps
-default_verbose = false; % no printout when running runDYNAMO()
+default_verbose = true;
 
 %% RUN EXAMPLE DATA IF CALLED WITHOUT INPUT
 if nargin == 0
