@@ -46,7 +46,7 @@ function [stats_table, SOPHs, fh] = runDYNAMO(varargin)
 % Users are encouraged to edit this script and the data loading boilerplate
 % in runExampleData() for their specific analysis. This script is provided
 % only as a template for illustrative purposes on how to use various
-% functions in DYNAM-O in tantem.
+% functions in DYNAM-O in tandem.
 
 %% SYSTEM SETTINGS
 % Add necessary functions to path
