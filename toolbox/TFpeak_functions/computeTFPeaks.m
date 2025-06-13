@@ -363,13 +363,13 @@ if refinement
     end
 end
 
+%% Remove all features not requested to be extracted (added through compute_features)
+stats_table = removevars(stats_table, setdiff(stats_table.Properties.VariableNames, features));
+
 %% Display detected TFpeaks on the most recent spectrogram used for TFpeak computation
 if display_peaks
     displayTFPeaks(stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, stage_times, stage_vals);
 end
-
-%% Remove all features not requested to be extracted (added through compute_features)
-stats_table = removevars(stats_table, setdiff(stats_table.Properties.VariableNames, features));
 
 end
 
