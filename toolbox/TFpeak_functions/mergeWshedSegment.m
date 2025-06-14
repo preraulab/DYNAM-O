@@ -157,7 +157,7 @@ end
 
 % Set dynamic merge_thresh if merge_thresh is nan
 if isnan(merge_thresh)
-    merge_thresh = prctile(ematr(:,3), 96);
+    merge_thresh = prctile(ematr(:,3), 95);
 end
 
 num_merges = 0;
