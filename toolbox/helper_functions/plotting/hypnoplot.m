@@ -103,7 +103,7 @@ if ~isa(stage_vals,'double')
     stage_vals = double(stage_vals);
 end
 
-assert(isequal(size(stage_times), size(stage_vals)), 'time and stage must be the same dimensions')
+assert(length(stage_times) == length(stage_vals), 'time and stage must be the same length.')
 
 %Set default EpochSize
 if EpochSize == 0
