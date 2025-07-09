@@ -157,7 +157,9 @@ if ~debug_mode
             continue
         end
 
-        %Compute the stats table with optional regions and borders
+        %Compute the stats table with optional regions and borders.
+        %This construction with multiple function calls for num_out is most
+        %efficient for parallel processing
         if num_out == 1
             stats_tables{ii} = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref]);
         elseif num_out == 2
@@ -186,17 +188,19 @@ else
         end
 
         %Compute the stats table with optional regions and borders
-        if num_out == 1
-            stats_tables{ii} = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref]);
-        elseif num_out == 2
-            [stats_tables{ii}, regions{ii}] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref]);
-            regions{ii} = cellfun(@(x)x+pixel_shift(ii),regions{ii},'UniformOutput',false);
-        elseif num_out == 3
-            [stats_tables{ii}, regions{ii}, borders{ii}] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref]);
-            regions{ii} = cellfun(@(x)x+pixel_shift(ii),regions{ii},'UniformOutput',false);
-            borders{ii} = cellfun(@(x)x+pixel_shift(ii),borders{ii},'UniformOutput',false);
+        [stats_tables{ii}, reg, bord] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref]);
+
+        if num_out>1
+            regions{ii} = cellfun(@(x)x+pixel_shift(ii),reg,'UniformOutput',false);
         end
+
+        if num_out>2
+            borders{ii} = cellfun(@(x)x+pixel_shift(ii),bord,'UniformOutput',false);
+        end
+
+        h = waitbar(ii/n_segs, [num2str(ii) ' out of ' num2str(n_segs) ' (' num2str((ii/n_segs*100),'%.2f') '%) segments processed...']);
     end
+    delete(h); % delete loading bar
 end
 
 %Add a parallel friendly waitbar

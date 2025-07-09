@@ -334,7 +334,7 @@ if double_watershed
     end
 
     stats_table = runSegmentedData(spect_masked, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
-        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1, true);
+        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1, debug_mode);
 
     if verbose
         disp(['[2nd] TF peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
