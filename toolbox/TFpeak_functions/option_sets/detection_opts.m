@@ -62,5 +62,8 @@ all_features = {'all', 'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Durati
     'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume', 'PeakStage'};
 addOptional(p, 'features', 'all', @(x) all(ismember(x, all_features)))
 
+%Add debug mode to run in series
+addOptional(p, 'debug_mode', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+
 parse(p,varargin{:});
 opts = p.Results;
