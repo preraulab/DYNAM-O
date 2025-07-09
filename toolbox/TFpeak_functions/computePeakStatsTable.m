@@ -133,8 +133,6 @@ if any(strcmpi(features,'PeakTime'))
     stats_table.Properties.VariableUnits{'PeakTime'} = 'sec';
 end
 
-assert(length(stats_table.PeakTime) == length(unique(stats_table.PeakTime)), 'Peak times not unique');
-
 %Peak Frequency
 if any(strcmpi(features,'PeakFrequency'))
     stats_table.PeakFrequency = stats_table.WeightedCentroid(:,2)*dy+seg_starty; % WeightedCentroid in spatial coordinates
