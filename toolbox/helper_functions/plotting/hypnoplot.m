@@ -98,7 +98,7 @@ if iscolumn(stage_vals) %Force stage_vals to be a row vector for the horizontal 
     stage_vals = transpose(stage_vals);
 end
 
-if iscolumn(stage_times) %Force stage_vals to be a row vector for the horizontal concatenation
+if iscolumn(stage_times) %Force stage_times to be a row vector for the horizontal concatenation
     stage_times = transpose(stage_times);
 end
 
