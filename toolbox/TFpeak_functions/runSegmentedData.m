@@ -140,7 +140,7 @@ num_out = nargout;
 poolobj = gcp("nocreate");
 num_workers = poolobj.NumWorkers;
 
-if f_verb
+if f_verb > 0
     if num_workers>1 && ~debug_mode
         disp([verb_pref 'Processing segments in parallel on ' num2str(num_workers) ' workers...']);
     else
@@ -209,7 +209,7 @@ end
         segments_processed = segments_processed + 1;
     end
 
-if f_verb
+if f_verb > 0
     disp([verb_pref '  Computing took ' num2str(toc(computetime)/60) ' minutes.']);
 end
 
