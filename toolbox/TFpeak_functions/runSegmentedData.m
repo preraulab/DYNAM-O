@@ -4,7 +4,7 @@ function [stats_table, regions, borders] = runSegmentedData(spect, stimes, sfreq
 %
 %   Usage:
 %       [stats_table, regions, borders] = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, features, ...
-%           dur_min, bw_min, merge_thresh, max_merges, trim_vol, f_verb, verb_pref, debug_mode)
+%           dur_min, bw_min, merge_thresh, max_merges, trim_vol, f_verb, debug_mode)
 %
 %   Required Inputs:
 %       spect: 2D double array - Spectrogram data [freqs x time] -- required
@@ -226,11 +226,6 @@ end
 if nargout>2
     borders = cat(2, borders{:});  % linear indices here have been shifted to the entire spect
     borders = borders(sort_inds);
-end
-
-if debug_mode && num_workers>1
-    delete(gcp('nocreate'))
-    parpool(num_workers);
 end
 
 end
