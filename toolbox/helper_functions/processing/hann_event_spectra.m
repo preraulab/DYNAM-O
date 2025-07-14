@@ -33,7 +33,7 @@ function [hann_spectrogram,stimes,sfreqs] = hann_event_spectra(varargin)
 p = inputParser;
 addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','vector'}));
 addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','scalar'}));
-addRequired(p, 'event_times', @(x) validateattributes(x, {'numeric'}, {'real','increasing','vector'}));
+addRequired(p, 'event_times', @(x) validateattributes(x, {'numeric'}, {'real', 'nondecreasing', 'vector'}));
 
 addOptional(p, 't', [], @(x) validateattributes(x,{'numeric'},{'real','finite','increasing','2d'}));
 addOptional(p, 'frequency_range', [], @(x) isempty(x) || (isnumeric(x) && isvector(x) && numel(x) == 2));
