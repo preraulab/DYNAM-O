@@ -161,6 +161,18 @@ if nargout > 1
 
     %Create a SOPHs structure for output
     SOPHs = createSOPHsStruct(SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, SOpower_TIB, SOphase_TIB);
+
+    %Check for valid histogramas
+    valid_powerhist = ~all(isnan(SOPHs.SOpower_mat),'all');
+    valid_phasehist = ~all(isnan(SOPHs.SOphase_mat),'all');
+
+    if ~valid_powerhist
+        warning('Power histogram is empty. Consider changing time range or minimum time in bin.');
+    end
+
+    if ~valid_phasehist
+        warning('Phase histogram is empty. Consider changing time range or minimum time in bin.');
+    end
 else
     if verbose
         disp('Computing TF peaks only. No SOPH output requested.');
@@ -196,21 +208,38 @@ if nargout > 1 && fit_SOPH
         disp('Fitting SOPH with parametric models and splines...');
     end
 
+    if ~valid_powerhist
+        warning('Power histogram empty. Skipping parametrization');
+    end
+
+    if ~valid_phasehist
+        warning('Phase histogram empty. Skipping parametrization');
+    end
+
+
     % Parametric fit of SO-Power Histogram
-    [params, fitobj, gof, model_SOPH, wshed_img, f] = param_basis_power(SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins, 'verbose', verbose-1, 'plot_on', plot_on);
-    SOPHs.SOpower_paramfit = createSOPHparamfitStruct(params, fitobj, gof, model_SOPH, wshed_img, f);
+    if valid_powerhist
+        [params, fitobj, gof, model_SOPH, wshed_img, f] = param_basis_power(SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins, 'verbose', verbose-1, 'plot_on', plot_on);
+        SOPHs.SOpower_paramfit = createSOPHparamfitStruct(params, fitobj, gof, model_SOPH, wshed_img, f);
+    end
 
     % Parametric fit of SO-Phase Histogram
-    [params, fitobj, gof, model_SOPH, wshed_img, f] = param_basis_phase(SOPHs.SOphase_mat, SOPHs.SOphase_bins, SOPHs.freq_bins, 'verbose', verbose-1, 'plot_on', plot_on);
-    SOPHs.SOphase_paramfit = createSOPHparamfitStruct(params, fitobj, gof, model_SOPH, wshed_img, f);
+    if valid_phasehist
+        [params, fitobj, gof, model_SOPH, wshed_img, f] = param_basis_phase(SOPHs.SOphase_mat, SOPHs.SOphase_bins, SOPHs.freq_bins, 'verbose', verbose-1, 'plot_on', plot_on);
+        SOPHs.SOphase_paramfit = createSOPHparamfitStruct(params, fitobj, gof, model_SOPH, wshed_img, f);
+    end
 
     % Spline fit of SO-Power Histogram
-    [splinefit, coefs, spline_obj, knots_x, knots_y, f] = SOPH2spline('power', SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins, 'plot_on', plot_on);
-    SOPHs.SOpower_splinefit = createSOPHsplinefitStruct(splinefit, coefs, spline_obj, knots_x, knots_y, f);
+    if valid_powerhist
+        [splinefit, coefs, spline_obj, knots_x, knots_y, f] = SOPH2spline('power', SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins, 'plot_on', plot_on);
+        SOPHs.SOpower_splinefit = createSOPHsplinefitStruct(splinefit, coefs, spline_obj, knots_x, knots_y, f);
+    end
 
     % Spline fit of SO-Phase Histogram
-    [splinefit, coefs, spline_obj, knots_x, knots_y, f] = SOPH2spline('phase', SOPHs.SOphase_mat, SOPHs.SOphase_bins, SOPHs.freq_bins, 'plot_on', plot_on);
-    SOPHs.SOphase_splinefit = createSOPHsplinefitStruct(splinefit, coefs, spline_obj, knots_x, knots_y, f);
+    if valid_phasehist
+        [splinefit, coefs, spline_obj, knots_x, knots_y, f] = SOPH2spline('phase', SOPHs.SOphase_mat, SOPHs.SOphase_bins, SOPHs.freq_bins, 'plot_on', plot_on);
+        SOPHs.SOphase_splinefit = createSOPHsplinefitStruct(splinefit, coefs, spline_obj, knots_x, knots_y, f);
+    end
 
     if plot_on
         figure(fh); % bring the summary figure to front
