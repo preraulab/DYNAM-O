@@ -286,13 +286,15 @@ if isgraphics(ax(2))
     colormap(ax(2), gouldian);
 
     %Set colorscale
-    c_ptiles = prctile(SOpower_mat(:), SOPH_clim_prctiles);
-    clim(gca,[c_ptiles(1) c_ptiles(2)]);
+    if ~all(isnan(SOpower_mat),'all')
+        c_ptiles = prctile(SOpower_mat(:), SOPH_clim_prctiles);
+        clim(gca,[c_ptiles(1) c_ptiles(2)]);
 
-    c = colorbar_noresize;
-    c.Label.String = {'Density', '(peaks/min in bin)'};
-    c.Label.Rotation = -90;
-    c.Label.VerticalAlignment = "bottom";
+        c = colorbar_noresize;
+        c.Label.String = {'Density', '(peaks/min in bin)'};
+        c.Label.Rotation = -90;
+        c.Label.VerticalAlignment = "bottom";
+    end
 
     ylim(ylimits);
     ylabel('Frequency (Hz)');
@@ -318,13 +320,15 @@ if isgraphics(ax(3))
     colormap(ax(3), 'magma');
 
     %Scale color limits
-    c_ptiles = prctile(SOphase_mat(SOphase_mat(:)~=0), SOPH_clim_prctiles);
-    clim([c_ptiles(1) c_ptiles(2)]);
+    if ~all(isnan(SOphase_mat),'all')
+        c_ptiles = prctile(SOphase_mat(SOphase_mat(:)~=0), SOPH_clim_prctiles);
+        clim([c_ptiles(1) c_ptiles(2)]);
 
-    c = colorbar_noresize;
-    c.Label.String = {'Proportion'};
-    c.Label.Rotation = -90;
-    c.Label.VerticalAlignment = "bottom";
+        c = colorbar_noresize;
+        c.Label.String = {'Proportion'};
+        c.Label.Rotation = -90;
+        c.Label.VerticalAlignment = "bottom";
+    end
 
     ylim(ylimits);
 
