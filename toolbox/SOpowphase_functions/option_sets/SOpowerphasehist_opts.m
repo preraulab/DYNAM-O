@@ -1,7 +1,6 @@
 function opts = SOpowerphasehist_opts(varargin)
 %% Parse inputs
 p = inputParser;
-p.KeepUnmatched = true;
 
 %General settings
 addOptional(p, 'freq_range', [0, 30], @(x) validateattributes(x,{'numeric'},{'real','finite','vector','numel',2}));

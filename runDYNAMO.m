@@ -69,7 +69,6 @@ end
 
 %% PARSE INPUTS
 p = inputParser;
-p.KeepUnmatched=true;
 
 addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','vector'}));
 addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','scalar'}));
