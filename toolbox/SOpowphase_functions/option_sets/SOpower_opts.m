@@ -1,7 +1,6 @@
 function opts = SOpower_opts(varargin)
 %% Parse inputs
 p = inputParser;
-p.KeepUnmatched = true;
 
 %****************************************
 % Generate SOpower Options Structure

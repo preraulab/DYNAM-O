@@ -1,7 +1,6 @@
 function opts = SOphase_opts(varargin)
 %% Parse inputs
 p = inputParser;
-p.KeepUnmatched = true;
 
 %****************************************
 % Generate SOphase Options Structure

@@ -113,7 +113,8 @@ else
 end
 
 %Parse input options
-p=inputParser;
+p = inputParser;
+
 p.addOptional('numrows',@(x)validateattributes(x,{'numeric'},{'positive','integer'}));
 p.addOptional('numcols',@(x)validateattributes(x,{'numeric'},{'positive','integer'}));
 p.addOptional('margins',[.05 .05 .08 .05 .08 .08],@(x)validateattributes(x,{'numeric','1d','vector'},{'positive','<=',1}));
@@ -122,7 +123,6 @@ p.addOptional('merge','');
 p.addOptional('orient','portrait', @(x)any(validatestring(x,{'portrait','landscape','full'})));
 p.addOptional('type', 'usletter');
 p.addOptional('numberaxes', false);
-p.KeepUnmatched = true;
 
 p.parse(varargin{:});
 

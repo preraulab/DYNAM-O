@@ -32,7 +32,6 @@ function [ stats_table ] = computePeakStage(varargin)
 
 %% Parse inputs
 p = inputParser;
-p.KeepUnmatched=true;
 
 addRequired(p, 'stats_table', @(x) validateattributes(x, {'table'}, {'real','2d'}));
 addRequired(p, 'stage_times', @(x) validateattributes(x, {'double','single'}, {'real','finite','nondecreasing','2d'}));
