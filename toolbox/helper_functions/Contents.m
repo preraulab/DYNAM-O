@@ -1,15 +1,8 @@
 % HELPER_FUNCTIONS
 %
-% Files
-%   climscale                  - Rescale the color limits of an image to remove outliers with percentiles
-%   colorbar_noresize          - Makes a colorbar that does not resize the axis
-%   detect_artifacts           - Detect artifacts in the time domain by iteratively removing data above a given z-score criterion
-%   gouldian                   - colormap
-%   hypnoplot                  - Make a pretty plot of a hypnogram
-%   magma                      - colormap
-%   multitaper_spectrogram     - Compute the multitaper spectrogram for time series data
-%   multitaper_spectrogram_mex - MULTITAPER_SPECTROGRAM  Compute the multitaper spectrogram for time series data
-%   nanpow2db                  - Power to dB conversion, setting all bad values to nan
-%   nanzscore                  - compute zscores ignoring nans
-%   rainbow4                   - colormap
-%   create_bins                - Create bins with potential for overlap
+% Folders
+%   artifact_detection         - Detect artifacts in the time domain by iteratively removing data above a given z-score criterion
+%   data_processing            - Aid data processing and array manipulations
+%   multitaper_spectrogram     - Compute the multitaper spectrogram from time series data
+%   plotting                   - Enhance plotting various figures throughout the toolbox
+%   statistical_tests          - Facilitate statistical testing on entire SOPH controlling for multiple comparisons
