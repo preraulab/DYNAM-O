@@ -793,7 +793,7 @@ params = mainfig_h.UserData.params;
 fig_pos = get(mainfig_h,'Position');
 
 %Create the call string
-call_str = ['ax = figdesign(' num2str(params.num_rows) ', ' num2str(params.num_cols) ', ''PaperType'', ''' params.type ''', ''orient'', ''' params.orient ''' , ''margins'', [' num2str(params.margins) ']'];
+call_str = ['ax = figdesign(' num2str(params.num_rows) ', ' num2str(params.num_cols) ', ''type'', ''' params.type ''', ''orient'', ''' params.orient ''' , ''margins'', [' num2str(params.margins) ']'];
 
 %Add any mergers
 if ~isempty(mainfig_h.UserData.merged)
