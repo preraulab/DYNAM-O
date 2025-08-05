@@ -66,6 +66,7 @@ end
 
 %% Parse inputs
 p = inputParser;
+p.KeepUnmatched = true;
 
 addRequired(p, 'stats_table', @(x) validateattributes(x, {'table'}, {'real','2d'}));
 addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','vector'}));
