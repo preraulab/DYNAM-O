@@ -8,26 +8,26 @@ function [trimmed_regions, trimmed_borders] = trimWshedRegions(data,regions,vol_
 % INPUTS:
 %   data       -- 2D matrix of image data. defaults to peaks(100).
 %   regions    -- 1D cell array of vector lists of linear idx of all pixels for each region.
-%   vol_thresh -- fraction maximum trimmed volume (from 0 to 1), 
-%                 i.e. 1 means no trim. default 0.8. 
-%   shift_val  -- value to be subtracted from image prior to evaulation of trim volume. 
+%   vol_thresh -- fraction maximum trimmed volume (from 0 to 1),
+%                 i.e. 1 means no trim. default 0.8.
+%   shift_val  -- value to be subtracted from image prior to evaulation of trim volume.
 %                 default min(min(img_data)).
-%   conn       -- pixel connection to be used by trimRegionsWShed. default 8. 
+%   conn       -- pixel connection to be used by trimRegionsWShed. default 8.
 %   f_verb     -- number indicating depth of output text statements of progress.
 %                 0 - no output. 1 - output current function level.
-%                 >1 - output at subfunction levels. defaults to 0, unless using defaul data. 
+%                 >1 - output at subfunction levels. defaults to 0, unless using defaul data.
 %   verb_pref  -- prefix string for verbose output. defaults to ''.
-%   f_disp     -- flag indicator of whether to plot. 
+%   f_disp     -- flag indicator of whether to plot.
 %                 defaults to 0, unless using default data.
 % OUTPUTS:
 %   trimmed_regions -- 1D cell array of vector lists of linear idx of all pixels for each region.
-%   trimmed_borders -- 1D cell array of vector lists of linear idx of border pixels for each region. 
+%   trimmed_borders -- 1D cell array of vector lists of linear idx of border pixels for each region.
 %
-%      
+%
 %   Please provide the following citation for all use:
-%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach, 
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis 
-%       for Electroencephalographic Phenotyping and Biomarker Identification, 
+%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
+%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification,
 %       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
 %
 %**********************************************************************
@@ -38,7 +38,7 @@ function [trimmed_regions, trimmed_borders] = trimWshedRegions(data,regions,vol_
 if nargin < 1
     data = [];
 end
-if nargin < 2 
+if nargin < 2
     regions = [];
 end
 if nargin < 3
@@ -92,11 +92,11 @@ else
         if f_verb > 0
             disp([verb_pref 'Regions for image data not provided to trimRegionsWShed. Computing regions...']);
         end
-        [regions, rgn_lbls, Lborders, amatr] = peaksWShed(data); 
+        [regions, rgn_lbls, Lborders, amatr] = peaksWShed(data);
         [regions, ~] = regionMergeByWeight(data,regions,rgn_lbls,Lborders,amatr);
         f_valid_inputs = true;
 
-    else 
+    else
         f_valid_inputs = true;
     end
 end
@@ -111,100 +111,103 @@ if f_valid_inputs
     if f_verb > 1
         waitbar(0);
     end
-    
+
     % Constants and initialization
     [num_rows,num_cols] = size(data);
     num_regions = length(regions);
     trimmed_regions = regions;
     trimmed_borders = cell(1, num_regions);
-    
+
     % Shift data for determination of volume
     shift_data = data - shift_val;
     shift_data(shift_data<0) = 0;
-    
+
     for ii = 1:num_regions
         if ~isempty(regions{ii})
             % Get pixel list of current region and sort by height
             list_pixels = regions{ii};
             [list_vals,idx_sort] = sort(shift_data(list_pixels));
             list_pixels = list_pixels(idx_sort);
-            
+
             %***********************************
             % Convert to subimage for trimming *
             %***********************************
             % Get row-col locations of region pixels
             [i_full,j_full] = ind2sub([num_rows,num_cols],list_pixels);
-            
+
             % Size of padding around subimage
             im_buffer = 1;
-            
+
             % Get bounding box of region pixels
             i_min = max(min(i_full)-im_buffer,1);
             i_max = min(max(i_full)+im_buffer,num_rows);
             j_min = max(min(j_full)-im_buffer,1);
             j_max = min(max(j_full)+im_buffer,num_cols);
-            
+
+            % Get the subimage
+            sub_shift_data = shift_data(i_min:i_max, j_min:j_max);
+
             % Size of the subimage
             num_sub_rows = i_max-i_min+1;
             num_sub_cols = j_max-j_min+1;
-            
+
             % Convert row-col locations to those in subimage
             i_sub = i_full-(i_min-1);
             j_sub = j_full-(j_min-1);
-            
+
             % Get linear pixel indices in subimage
             sub_pixels = sub2ind([num_sub_rows num_sub_cols],i_sub,j_sub);
-            
+
             %***********************
             % Find cutoff and trim *
             %***********************
             % Get total region volume and cutoff index
             total_volume = sum(list_vals,'omitnan');
             jj = find(cumsum(list_vals)/total_volume >= (1-vol_thresh),1);
-            
+
             % Check for constant region, one pixel region, or impossible threshold
             if max(list_vals)~=min(list_vals) && length(list_vals)>1 && ~isempty(jj)
-                
+
                 % Find pixels above cutoff
                 level = list_vals(jj);
                 sub_trim = sub_pixels(list_vals>=level);
-                
+
                 % Form binary subimage
                 tmp_data = zeros(num_sub_rows,num_sub_cols);
                 tmp_data(sub_trim) = 1;
-                
+
                 % Fill any holes and get connected components
                 tmp_data = imfill(tmp_data,'holes');
                 tmp_cc = bwconncomp(tmp_data,conn);
-                
+
                 % Use largest connected component as trimmed region
-                trimmed_vols = cellfun(@(x)sum(shift_data(x),'omitnan'),tmp_cc.PixelIdxList);
+                trimmed_vols = cellfun(@(x)sum(sub_shift_data(x),'omitnan'),tmp_cc.PixelIdxList);
                 [~,idx] = max(trimmed_vols);
-                
+
                 % Get linear pixel indices of trimmed region in subimage
-                sub_trim_cc = tmp_cc.PixelIdxList{idx}; 
-                
+                sub_trim_cc = tmp_cc.PixelIdxList{idx};
+
                 % Convert pixel indices back to full image
                 trimmed_regions{ii} = subLidx2FullLidx(sub_trim_cc,[num_sub_rows num_sub_cols],[i_min j_min],[num_rows num_cols]);
-                
+
                 % Get boundaries of trimmed region
                 tmp_data = zeros(num_sub_rows,num_sub_cols);
                 tmp_data(sub_trim_cc) = 1;
                 tmp2 = bwboundaries(tmp_data,conn,'noholes');
-                
+
                 % Convert row-col subimage boundaries to full image
                 tmp2{1}(:,1) = tmp2{1}(:,1) + i_min-1;
                 tmp2{1}(:,2) = tmp2{1}(:,2) + j_min-1;
-                
+
                 % Convert row-col boundaries to linear pixel indices
                 trimmed_borders{ii} = sub2ind([num_rows num_cols],tmp2{1}(:,1),tmp2{1}(:,2));
-                
+
                 if f_verb > 1
                     if mod(ii,50)==0
                         waitbar(ii/num_regions);
                     end
                 end
-                
+
             else
                 % Check for constant region, one pixel region, or impossible threshold
                 if f_verb > 0
@@ -251,7 +254,7 @@ if f_valid_inputs
     if f_verb > 1
         waitbar(1);
     end
-    
+
     % Display trimmed regions
     if f_disp > 0
         tmp_Ldata = cell2Ldata(trimmed_regions,size(data),trimmed_borders);
@@ -270,10 +273,10 @@ if f_valid_inputs
         title(ax,['Regions Trimmed to ' num2str(vol_thresh*100) ' Percent Volume']);
     end
 
-% else
-%     % Image data not provided for regions
-%     disp('         Returning original regions and empty boundaries.');
-%     trimmed_regions = regions;
-%     trimmed_borders = cell(1, length(regions));
+    % else
+    %     % Image data not provided for regions
+    %     disp('         Returning original regions and empty boundaries.');
+    %     trimmed_regions = regions;
+    %     trimmed_borders = cell(1, length(regions));
 end
 
