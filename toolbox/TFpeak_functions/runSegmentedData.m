@@ -105,7 +105,7 @@ conn_wshed = 8;
 conn_trim = 8;
 merge_rule = 'absolute';
 bl_threshold = '';
-trim_shift = min(spect,[],'all');
+trim_shift = min(spect,[],'all'); % approximates a dynamic local baseline correction for each segment
 
 %% Segment spectrogram data
 [data_segs, x_segs, x_inds] = segmentData(spect, stimes, sfreqs, seg_time, f_verb, verb_pref);
