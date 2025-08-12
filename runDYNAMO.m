@@ -1,46 +1,58 @@
-%RUNDYNAMO: Compute time-frequency peaks and SO-power/phase histograms
-% This is an example pipeline of using the computeTFPeaks() and
-% SOpowerphaseHistogram() functions together for studying sleep EEG. One
-% can adapt this function for customized applications.
+%RUNDYNAMO  Compute time-frequency peaks and SO-power/phase histograms
+%
+%   This is a pipeline for identifying transient oscillatory events and their
+%   relationship to slow oscillations in sleep EEG using the computeTFPeaks()
+%   and SOpowerphaseHistogram() functions. It returns TF-peak features,
+%   associated histograms, and time-frequency representations. Optional
+%   parametric and spline fits are also computed.
 %
 %   Usage:
-%       [stats_table, SOPHs, fh] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options, verbose, plot_on, save_output_image, output_fname, fit_SOPH)
+%       [stats_table, SOPHs, spect, stimes, sfreqs, artifacts] = runDYNAMO(data, Fs, stage_times, stage_vals, ...)
 %
-%   Inputs:
-%       data: <number of samples> x 1 vector - time series data -- required
-%       Fs: double - sampling frequency in Hz -- required
-%       stage_times: 1 x <number of stages> vector - times of sleep stages in seconds -- required
-%       stage_vals: 1 x <number of stages> vector - values of sleep stages -- required
+%   Required Inputs:
+%       data:               [N x 1] double - time-domain EEG signal
+%       Fs:                 double - sampling frequency (Hz)
+%       stage_times:        [1 x S] double - sleep stage time markers (s)
+%       stage_vals:         [1 x S] double - sleep stage labels (1-5)
 %
-%   Optional inputs:
-%       time_range: 1x2 vector - [<start time>, <end time>] in seconds (default: range of scored data)
-%       baseline_options: structure - parameters for baseline algorithm (default: baseline_opts())
-%       detection_options: structure - parameters for detection algorithm (default: detection_opts())
-%       SOPH_options: structure - parameters for SO-power/phase histograms (default: SOpowerphasehist_opts())
-%       stats_table: table - TF peak stats_table output from computeTFPeaks for direct computation of SOPH (default: [])
-%       verbose: logical - flag for verbose output (default: true)
-%       plot_on: logical - flag to plot the results in a summary figure (default: true)
-%       save_output_image: logical - flag to save the output image (default: false)
-%       output_fname: char or string - filename for saving the output image (default: 'DYNAM-O_output')
-%       fit_SOPH: logical - flag to fit SOPH with parametric models and splines (default: true)
+%   Optional Inputs (Name-Value Pairs):
+%       time_range:         [1 x 2] double - start and end time in seconds (default: entire scored range)
+%       baseline_options:   struct - parameters for baseline estimation (default: baseline_opts())
+%       detection_options:  struct - parameters for TF-peak detection (default: detection_opts())
+%       SOPH_options:       struct - parameters for SO-power/phase histograms (default: SOpowerphasehist_opts())
+%       stats_table:        table - precomputed TF-peak table to bypass detection (default: [])
+%       verbose:            logical - print progress info (default: true)
+%       plot_on:            logical - generate summary figure (default: true)
+%       save_output_image:  logical - save summary figure to disk (default: false)
+%       output_fname:       string/char - output filename for image (default: 'DYNAM-O_output')
+%       fit_SOPH:           logical - run parametric and spline fitting (default: true)
 %
 %   Outputs:
-%       stats_table: table - table of computed time-frequency peaks
-%       SOPHs: structure - structure containing SO-power/phase histograms
-%       fh: graphics handle - figure handle to the output summary figure image
+%       stats_table:        table - features of detected time-frequency peaks
+%       SOPHs:              struct - SO-power and SO-phase histograms and fits
+%       spect:              [F x T] double - time-frequency spectrogram
+%       stimes:             [1 x T] double - spectrogram time centers (s)
+%       sfreqs:             [1 x F] double - frequency bins (Hz)
+%       artifacts:          [1 x T] logical - artifact mask for data
 %
-%   Running with no arguments calls the example data.
-%       runDYNAMO();
+%   Notes:
+%       - If no inputs are provided, the function runs an internal example using bundled data.
+%       - The SOPHs output includes histogram matrices, bin edges, time-in-bin info, and optionally
+%         parametric and spline fit results for both SO-power and SO-phase histograms.
 %
+%   Example:
+%       load('my_sleep_data.mat');  % should include data, Fs, stage_times, stage_vals
+%       [stats_table, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals);
 %
-%   Please provide the following citation for all use:
+%   Citation:
 %       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-%       for Electroencephalographic Phenotyping and Biomarker Identification,
-%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%       Robert Stickgold, Michael J Prerau, "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification", *Sleep*, 2022; zsac223.
+%       https://doi.org/10.1093/sleep/zsac223
+%
 %**********************************************************************
 
-function [stats_table, SOPHs, fh] = runDYNAMO(varargin)
+function [stats_table, SOPHs, spect, stimes, sfreqs, artifacts] = runDYNAMO(varargin)
 %%%% Example script showing how to compute time-frequency peaks and SO-power/phase histograms
 %
 % Users are encouraged to edit this script and the data loading boilerplate
@@ -159,7 +171,7 @@ if nargout > 1
         'SOpower', SOpower_norm, 'SOpower_times', SOpower_times, 'SOphase', SOphase, 'SOphase_times', SOphase_times);
 
     %Create a SOPHs structure for output
-    SOPHs = createSOPHsStruct(SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, SOpower_TIB, SOphase_TIB);
+    SOPHs = createSOPHsStruct(SOpower_mat, SOphase_mat, SOpower_bins, SOpower_norm, SOpower_times, SOphase_bins, freq_bins, SOpower_TIB, SOphase_TIB);
 
     %Check for valid histogramas
     valid_powerhist = ~all(isnan(SOPHs.SOpower_mat),'all');
@@ -252,7 +264,7 @@ end
 end
 
 
-function [SOPHs] = createSOPHsStruct(SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, SOpower_TIB, SOphase_TIB)
+function [SOPHs] = createSOPHsStruct(SOpower_mat, SOphase_mat, SOpower_bins, SOpower_norm, SOpower_times, SOphase_bins, freq_bins, SOpower_TIB, SOphase_TIB)
 SOPHs = struct;
 SOPHs.SOpower_mat = SOpower_mat;
 SOPHs.SOphase_mat = SOphase_mat;
@@ -261,6 +273,8 @@ SOPHs.SOphase_bins = SOphase_bins;
 SOPHs.freq_bins = freq_bins;
 SOPHs.SOpower_TIB = SOpower_TIB;
 SOPHs.SOphase_TIB = SOphase_TIB;
+SOPHs.SOpower_norm = SOpower_norm;
+SOPHs.SOpower_times = SOpower_times;
 end
 
 
