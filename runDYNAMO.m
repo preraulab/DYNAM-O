@@ -241,13 +241,13 @@ if nargout > 1 && fit_SOPH
 
     % Spline fit of SO-Power Histogram
     if valid_powerhist
-        [splinefit, coefs, spline_obj, knots_x, knots_y] = SOPH2spline('power', SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins, 'plot_on', plot_on);
+        [splinefit, coefs, spline_obj, knots_x, knots_y] = spline_basis('power', SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins, 'plot_on', plot_on);
         SOPHs.SOpower_splinefit = createSOPHsplinefitStruct(splinefit, coefs, spline_obj, knots_x, knots_y);
     end
 
     % Spline fit of SO-Phase Histogram
     if valid_phasehist
-        [splinefit, coefs, spline_obj, knots_x, knots_y] = SOPH2spline('phase', SOPHs.SOphase_mat, SOPHs.SOphase_bins, SOPHs.freq_bins, 'plot_on', plot_on);
+        [splinefit, coefs, spline_obj, knots_x, knots_y] = spline_basis('phase', SOPHs.SOphase_mat, SOPHs.SOphase_bins, SOPHs.freq_bins, 'plot_on', plot_on);
         SOPHs.SOphase_splinefit = createSOPHsplinefitStruct(splinefit, coefs, spline_obj, knots_x, knots_y);
     end
 
