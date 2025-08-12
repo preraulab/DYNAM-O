@@ -114,6 +114,7 @@ end
 
 %Parse input options
 p = inputParser;
+p.KeepUnmatched = true;
 
 p.addOptional('numrows',@(x)validateattributes(x,{'numeric'},{'positive','integer'}));
 p.addOptional('numcols',@(x)validateattributes(x,{'numeric'},{'positive','integer'}));
