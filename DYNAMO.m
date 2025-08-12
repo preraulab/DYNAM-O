@@ -121,13 +121,13 @@ classdef DYNAMO < handle
             obj.detection_options = R.detection_options;
             obj.SOPH_options = R.SOPH_options;
             obj.time_range = R.time_range;
-
-            % Run pipeline
-            [obj.stats_table, obj.SOPHs, obj.spect, obj.stimes, obj.sfreqs, obj.artifacts] = runDYNAMO(...
-                obj.data, obj.Fs, obj.stage_times, obj.stage_vals, ...
-                R.time_range, R.baseline_options, R.detection_options, ...
-                R.SOPH_options, R.stats_table, R.verbose, ...
-                R.plot_on, R.save_output_image, R.output_fname, R.fit_SOPH);
+            %
+            % % Run pipeline
+            % [obj.stats_table, obj.SOPHs, obj.spect, obj.stimes, obj.sfreqs, obj.artifacts] = runDYNAMO(...
+            %     obj.data, obj.Fs, obj.stage_times, obj.stage_vals, ...
+            %     R.time_range, R.baseline_options, R.detection_options, ...
+            %     R.SOPH_options, R.stats_table, R.verbose, ...
+            %     R.plot_on, R.save_output_image, R.output_fname, R.fit_SOPH);
         end
 
         function obj = rerun(obj, varargin)
@@ -294,381 +294,386 @@ classdef DYNAMO < handle
     end
 
     methods (Access = private)
-  function obj = DYNAMOOptionsApp(obj, verbose)
-        % DYNAMOOptionsApp - Simplified GUI for editing DYNAMO pipeline options
-        
-        if nargin == 1
-            verbose = false;
-        end
-        
-        % Create main figure
-        fig = uifigure('Name', 'DYNAMO Options', 'Position', [100 100 900 650]);
-        tabGroup = uitabgroup(fig, 'Position', [10 60 880 580]);
-        
-        % Option configurations
-        configs = {
-            struct('name', 'Detection', 'field', 'detection_options', 'constructor', @detection_opts)
-            struct('name', 'Baseline', 'field', 'baseline_options', 'constructor', @baseline_opts)
-            struct('name', 'SOPowerPhaseHist', 'field', 'SOPH_options', 'constructor', @SOpowerphasehist_opts)
-        };
-        
-        % Create tabs and tables
-        tables = cell(size(configs));
-        for i = 1:length(configs)
-            tab = uitab(tabGroup, 'Title', [configs{i}.name ' Options']);
-            tables{i} = createTable(tab, obj.(configs{i}.field), configs{i});
-        end
-        
-        % Buttons
-        uibutton(fig, 'Text', 'Reset All', 'Position', [250 10 130 40], 'ButtonPushedFcn', @resetAll);
-        uibutton(fig, 'Text', 'Rerun', 'Position', [390 10 100 40], 'ButtonPushedFcn', @rerunDynamo);
-        uibutton(fig, 'Text', 'Close', 'Position', [500 10 100 40], 'ButtonPushedFcn', @(~,~) delete(fig));
-        
-        uiwait(fig);
-        
-        function tbl = createTable(parent, opts, config)
-            % Build table data
-            fields = fieldnames(opts);
-            numFields = length(fields);
-            
-            % Create arrays for each column
-            paramNames = cell(numFields, 1);
-            descriptions = cell(numFields, 1);
-            values = cell(numFields, 1);
-            
-            for j = 1:numFields
-                paramNames{j} = fields{j};
-                descriptions{j} = getDescription(fields{j}, config.constructor);
-                
-                % Format value appropriately
-                formattedValue = formatValue(fields{j}, opts.(fields{j}), config.constructor);
-                values{j} = formattedValue;
+        function obj = DYNAMOOptionsApp(obj, verbose)
+            % DYNAMOOptionsApp - Simplified GUI for editing DYNAMO pipeline options
+
+            if nargin == 1
+                verbose = false;
             end
-            
-            % Create table data structure
-            tableData = table(paramNames, descriptions, values, ...
-                'VariableNames', {'Parameter', 'Description', 'Value'});
-            
-            % Create table
-            tbl = uitable(parent, 'Data', tableData, ...
-                'ColumnName', {'Parameter', 'Description', 'Value'}, ...
-                'ColumnWidth', {180, 500, 'auto'}, ...
-                'ColumnEditable', [false false true], ...
-                'Position', [10 10 860 540], ...
-                'CellEditCallback', @(src,ev) editCell(src, ev, config), ...
-                'CellSelectionCallback', @(src,ev) selectCell(src, ev, config));
-        end
-        
-        function editCell(src, event, config)
-            if event.Indices(2) ~= 3
-                return
+
+            % Create main figure
+            fig = uifigure('Name', 'DYNAMO Options', 'Position', [100 100 900 650]);
+            tabGroup = uitabgroup(fig, 'Position', [10 60 880 580]);
+
+            % Option configurations
+            configs = {
+                struct('name', 'Detection', 'field', 'detection_options', 'constructor', @detection_opts)
+                struct('name', 'Baseline', 'field', 'baseline_options', 'constructor', @baseline_opts)
+                struct('name', 'SOPowerPhaseHist', 'field', 'SOPH_options', 'constructor', @SOpowerphasehist_opts)
+                };
+
+            % Create tabs and tables
+            tables = cell(size(configs));
+            for ii = 1:length(configs)
+                tab = uitab(tabGroup, 'Title', [configs{ii}.name ' Options']);
+                tables{ii} = createTable(tab, obj.(configs{ii}.field), configs{ii});
             end
-            
-            row = event.Indices(1);
-            param = src.Data.Parameter{row};
-            value = event.NewData;
-            
-            % Handle categorical values (dropdowns)
-            if iscategorical(value)
-                value = char(value);
+
+            % Buttons
+            uibutton(fig, 'Text', 'Reset All', 'Position', [250 10 130 40], 'ButtonPushedFcn', @resetAll);
+            uibutton(fig, 'Text', 'Rerun', 'Position', [390 10 100 40], 'ButtonPushedFcn', @rerunDynamo);
+            uibutton(fig, 'Text', 'Close', 'Position', [500 10 100 40], 'ButtonPushedFcn', @(~,~) delete(fig));
+
+            uiwait(fig);
+
+            function tbl = createTable(parent, opts, config)
+                % Build table data
+                fields = fieldnames(opts);
+                numFields = length(fields);
+
+                % Create arrays for each column
+                paramNames = cell(numFields, 1);
+                descriptions = cell(numFields, 1);
+                values = cell(numFields, 1);
+
+                for j = 1:numFields
+                    paramNames{j} = fields{j};
+                    descriptions{j} = getDescription(fields{j}, config.constructor);
+
+                    % Format value appropriately
+                    formattedValue = formatValue(fields{j}, opts.(fields{j}), config.constructor);
+                    values{j} = formattedValue;
+                end
+
+                % Create table data structure
+                tableData = table(paramNames, descriptions, values, ...
+                    'VariableNames', {'Parameter', 'Description', 'Value'});
+
+                % Create table
+                tbl = uitable(parent, 'Data', tableData, ...
+                    'ColumnName', {'Parameter', 'Description', 'Value'}, ...
+                    'ColumnWidth', {180, 500, 'auto'}, ...
+                    'ColumnEditable', [false false true], ...
+                    'Position', [10 10 860 540], ...
+                    'CellEditCallback', @(src,ev) editCell(src, ev, config), ...
+                    'CellSelectionCallback', @(src,ev) selectCell(src, ev, config));
             end
-            
-            % Update DYNAMO object
-            try
-                newOpts = updateOption(obj.(config.field), param, value, config.constructor);
-                obj.(config.field) = newOpts; % Direct assignment to object property
-                if verbose
-                    fprintf('✅ Updated %s.%s = %s\n', config.field, param, mat2str(value));
+
+            function editCell(src, event, config)
+                if event.Indices(2) ~= 3
+                    return
                 end
-            catch ME
-                uialert(fig, ME.message, 'Validation Error');
-                src.Data.Value{row} = event.PreviousData; % Revert
-            end
-        end
-        
-        function selectCell(src, event, config)
-            if isempty(event.Indices) || event.Indices(2) ~= 3
-                return
-            end
-            
-            row = event.Indices(1);
-            param = src.Data.Parameter{row};
-            
-            % Handle features selection dialog
-            if strcmp(param, 'features') && isequal(config.constructor, @detection_opts)
-                current = src.Data.Value{row};
-                new = featuresDialog(current);
-                if ~isempty(new)
-                    try
-                        newOpts = updateOption(obj.(config.field), param, new, config.constructor);
-                        obj.(config.field) = newOpts; % Direct assignment to object property
-                        src.Data.Value{row} = formatValue(param, new, config.constructor);
-                        if verbose
-                            fprintf('✅ Updated %s.%s = %s\n', config.field, param, mat2str(new));
-                        end
-                    catch ME
-                        uialert(fig, ME.message, 'Validation Error');
-                    end
+
+                row = event.Indices(1);
+                param = src.Data.Parameter{row};
+                value = event.NewData;
+
+                % Handle categorical values (dropdowns)
+                if iscategorical(value)
+                    value = char(value);
                 end
-            end
-        end
-        
-        function resetAll(~, ~)
-            try
-                for i = 1:length(configs)
-                    defaultOpts = configs{i}.constructor();
-                    obj.(configs{i}.field) = defaultOpts; % Direct assignment to object property
-                    
-                    % Update table data
-                    fields = fieldnames(defaultOpts);
-                    newData = tables{i}.Data;
-                    for j = 1:length(fields)
-                        newData.Value{j} = formatValue(fields{j}, defaultOpts.(fields{j}), configs{i}.constructor);
-                    end
-                    tables{i}.Data = newData;
-                    if verbose
-                        fprintf('✅ Reset %s to defaults\n', configs{i}.field);
-                    end
-                end
-                if verbose
-                    fprintf('✅ All options reset to defaults - DYNAMO object updated\n');
-                end
-            catch ME
-                uialert(fig, ME.message, 'Reset Error');
-            end
-        end
-        
-        function rerunDynamo(~, ~)
-            try
-                % Show progress dialog
-                progressDlg = uiprogressdlg(fig, 'Title', 'Running DYNAMO...', ...
-                    'Message', 'Processing with updated options...', ...
-                    'Indeterminate', 'on');
-                
-                % Rerun DYNAMO with current options
-                obj = obj.rerun('time_range', obj.time_range, ...
-                    'baseline_options', obj.baseline_options, ...
-                    'detection_options', obj.detection_options, ...
-                    'SOPH_options', obj.SOPH_options, ...
-                    'verbose', verbose, ...
-                    'plot_on', true, ...
-                    'save_output_image', false, ...
-                    'fit_SOPH', true);
-                
-                % Close progress dialog
-                if isvalid(progressDlg)
-                    close(progressDlg);
-                end
-                
-                if verbose
-                    fprintf('✅ DYNAMO rerun completed successfully\n');
-                end
-                
-                % Show success message
-                uialert(fig, 'DYNAMO pipeline completed successfully!', 'Success', 'Icon', 'success');
-                
-            catch ME
-                % Close progress dialog if still open
-                if exist('progressDlg', 'var') && isvalid(progressDlg)
-                    close(progressDlg);
-                end
-                
-                % Show error message
-                uialert(fig, ['Error during rerun: ' ME.message], 'Rerun Error');
-                
-                if verbose
-                    fprintf('❌ DYNAMO rerun failed: %s\n', ME.message);
-                end
-            end
-        end
-        
-        % Helper functions (copy from original app)
-        function newOpts = updateOption(opts, param, value, constructor)
-            % Parse value
-            if ischar(value) || isstring(value)
-                value = parseValue(param, char(value));
-            end
-            
-            % Update struct
-            opts.(param) = value;
-            
-            % Validate with constructor
-            args = struct2args(opts);
-            newOpts = constructor(args{:});
-        end
-        
-        function value = parseValue(param, str)
-            str = strtrim(str);
-            if isempty(str)
-                value = [];
-            elseif strcmp(str, 'all')
-                value = str;
-            elseif startsWith(str, '{') && endsWith(str, '}')
-                value = parseCell(str);
-            elseif startsWith(str, '[') && endsWith(str, ']')
-                value = eval(str);
-                if strcmp(param, 'baseline_exclude')
-                    value = logical(value);
-                end
-            else
+
+                % Update DYNAMO object
                 try
-                    value = evalin('base', str);
-                catch
+                    newOpts = updateOption(obj.(config.field), param, value, config.constructor);
+                    obj.(config.field) = newOpts; % Direct assignment to object property
+                    if verbose
+                        fprintf('✅ Updated %s.%s = %s\n', config.field, param, mat2str(value));
+                    end
+                catch ME
+                    uialert(fig, ME.message, 'Validation Error');
+                    src.Data.Value{row} = event.PreviousData; % Revert
+                end
+            end
+
+            function selectCell(src, event, config)
+                if isempty(event.Indices) || event.Indices(2) ~= 3
+                    return
+                end
+
+                row = event.Indices(1);
+                param = src.Data.Parameter{row};
+
+                % Handle features selection dialog
+                if strcmp(param, 'features') && isequal(config.constructor, @detection_opts)
+                    current = src.Data.Value{row};
+                    new = featuresDialog(current);
+                    if ~isempty(new)
+                        try
+                            newOpts = updateOption(obj.(config.field), param, new, config.constructor);
+                            obj.(config.field) = newOpts; % Direct assignment to object property
+                            src.Data.Value{row} = formatValue(param, new, config.constructor);
+                            if verbose
+                                fprintf('✅ Updated %s.%s = %s\n', config.field, param, mat2str(new));
+                            end
+                        catch ME
+                            uialert(fig, ME.message, 'Validation Error');
+                        end
+                    end
+                end
+            end
+
+            function resetAll(~, ~)
+                try
+                    for ii = 1:length(configs)
+                        defaultOpts = configs{ii}.constructor();
+                        obj.(configs{ii}.field) = defaultOpts; % Direct assignment to object property
+
+                        % Update table data
+                        fields = fieldnames(defaultOpts);
+                        newData = tables{ii}.Data;
+                        for j = 1:length(fields)
+                            newData.Value{j} = formatValue(fields{j}, defaultOpts.(fields{j}), configs{ii}.constructor);
+                        end
+                        tables{ii}.Data = newData;
+                        if verbose
+                            fprintf('✅ Reset %s to defaults\n', configs{ii}.field);
+                        end
+                    end
+                    if verbose
+                        fprintf('✅ All options reset to defaults - DYNAMO object updated\n');
+                    end
+                catch ME
+                    uialert(fig, ME.message, 'Reset Error');
+                end
+            end
+
+            function rerunDynamo(~, ~)
+                try
+                    % Show progress dialog
+                    progressDlg = uiprogressdlg(fig, 'Title', 'Running DYNAMO...', ...
+                        'Message', 'Processing with updated options...', ...
+                        'Indeterminate', 'on');
+
+                    % Rerun DYNAMO with current options
+                    obj = obj.rerun('time_range', obj.time_range, ...
+                        'baseline_options', obj.baseline_options, ...
+                        'detection_options', obj.detection_options, ...
+                        'SOPH_options', obj.SOPH_options, ...
+                        'verbose', verbose, ...
+                        'plot_on', true, ...
+                        'save_output_image', false, ...
+                        'fit_SOPH', true);
+
+                    % Close progress dialog
+                    if isvalid(progressDlg)
+                        close(progressDlg);
+                    end
+
+                    if verbose
+                        fprintf('✅ DYNAMO rerun completed successfully\n');
+                    end
+
+                    % Show success message
+                    uialert(fig, 'DYNAMO pipeline completed successfully!', 'Success', 'Icon', 'success');
+
+                catch ME
+                    % Close progress dialog if still open
+                    if exist('progressDlg', 'var') && isvalid(progressDlg)
+                        close(progressDlg);
+                    end
+
+                    % Show error message
+                    uialert(fig, ['Error during rerun: ' ME.message], 'Rerun Error');
+
+                    if verbose
+                        fprintf('❌ DYNAMO rerun failed: %s\n', ME.message);
+                    end
+                end
+            end
+
+            % Helper functions (copy from original app)
+            function newOpts = updateOption(opts, param, value, constructor)
+                % Parse value
+                if ischar(value) || isstring(value)
+                    value = parseValue(param, char(value));
+                end
+
+                % Update struct
+                opts.(param) = value;
+
+                % Validate with constructor
+                args = struct2args(opts);
+                newOpts = constructor(args{:});
+            end
+
+            function value = parseValue(param, str)
+                str = strtrim(str);
+                if isempty(str)
+                    value = [];
+                elseif strcmp(str, 'all')
                     value = str;
-                end
-            end
-        end
-        
-        function cellArray = parseCell(str)
-            content = strtrim(str(2:end-1));
-            if isempty(content)
-                cellArray = {};
-            else
-                parts = strsplit(content, ',');
-                cellArray = cellfun(@(x) strtrim(strrep(strrep(x, '''', ''), '"', '')), parts, 'UniformOutput', false);
-            end
-        end
-        
-        function args = struct2args(s)
-            fields = fieldnames(s);
-            args = cell(1, 2*length(fields));
-            for i = 1:length(fields)
-                args{2*i-1} = fields{i};
-                args{2*i} = s.(fields{i});
-            end
-        end
-        
-        function str = formatValue(param, value, constructor)
-            % Handle categorical options (dropdowns)
-            if isequal(constructor, @detection_opts) && strcmp(param, 'quality_setting')
-                % Create categorical with proper categories for dropdown
-                str = categorical(string(value), {'default', 'precision', 'stokes_2023'});
-            elseif strcmp(param, 'features') && isequal(constructor, @detection_opts)
-                if ischar(value) && strcmp(value, 'all')
-                    str = 'all';
-                elseif iscell(value)
-                    str = ['{' strjoin(cellfun(@(x) ['''' x ''''], value, 'UniformOutput', false), ', ') '}'];
+                elseif startsWith(str, '{') && endsWith(str, '}')
+                    value = parseCell(str);
+                elseif startsWith(str, '[') && endsWith(str, ']')
+                    value = eval(str);
+                    if strcmp(param, 'baseline_exclude')
+                        value = logical(value);
+                    end
                 else
-                    str = char(value);
+                    try
+                        value = evalin('base', str);
+                    catch
+                        value = str;
+                    end
                 end
-            elseif islogical(value) && isscalar(value)
-                str = value;  % Keep as logical for checkbox
-            elseif ischar(value) || isstring(value)
-                str = char(value);
-            elseif isnumeric(value)
-                if isempty(value)
-                    str = '[]';
-                elseif isscalar(value)
-                    str = num2str(value);
+            end
+
+            function cellArray = parseCell(str)
+                content = strtrim(str(2:end-1));
+                if isempty(content)
+                    cellArray = {};
+                else
+                    parts = strsplit(content, ',');
+                    cellArray = cellfun(@(x) strtrim(strrep(strrep(x, '''', ''), '"', '')), parts, 'UniformOutput', false);
+                end
+            end
+
+            function args = struct2args(s)
+                fields = fieldnames(s);
+                args = cell(1, 2*length(fields));
+                for ii = 1:length(fields)
+                    args{2*ii-1} = fields{ii};
+                    args{2*ii} = s.(fields{ii});
+                end
+            end
+
+            function str = formatValue(param, value, constructor)
+                % Handle categorical options (dropdowns)
+                if isequal(constructor, @detection_opts) && strcmp(param, 'quality_setting')
+                    % Create categorical with proper categories for dropdown
+                    str = categorical(string(value), {'default', 'precision', 'stokes_2023'});
+                elseif strcmp(param, 'features') && isequal(constructor, @detection_opts)
+                    if ischar(value) && strcmp(value, 'all')
+                        str = 'all';
+                    elseif iscell(value)
+                        str = ['{' strjoin(cellfun(@(x) ['''' x ''''], value, 'UniformOutput', false), ', ') '}'];
+                    else
+                        str = char(value);
+                    end
+                elseif islogical(value) && isscalar(value)
+                    str = value;  % Keep as logical for checkbox
+                elseif ischar(value) || isstring(value)
+                    str = char(value);
+                elseif isnumeric(value)
+                    if isempty(value)
+                        str = '[]';
+                    elseif isscalar(value)
+                        str = num2str(value);
+                    else
+                        str = mat2str(value);
+                    end
                 else
                     str = mat2str(value);
                 end
-            else
-                str = mat2str(value);
-            end
-        end
-        
-        function desc = getDescription(param, constructor)
-            descriptions = getDescMap(constructor);
-            if isfield(descriptions, param)
-                desc = descriptions.(param);
-            else
-                desc = '';
-            end
-        end
-        
-        function map = getDescMap(constructor)
-            if isequal(constructor, @detection_opts)
-                map = struct(...
-                    'double_watershed', 'Run 2nd pass watershed (logical)', ...
-                    'mtm_dsfreqs', 'Frequency bin resolution (Hz)', ...
-                    'mtm_freq_range', 'Frequency range [min max] (Hz)', ...
-                    'mtm_taper_params', '[time-halfbandwidth, tapers]', ...
-                    'mtm_window_length_1', '1st pass window size (s)', ...
-                    'mtm_window_length_2', '2nd pass window size (s)', ...
-                    'mtm_window_stepsize', 'Window step size (s)', ...
-                    'downsample_spect', '[time, freq] downsample steps', ...
-                    'seg_time', 'Segment length (s)', ...
-                    'merge_thresh', 'Merge threshold', ...
-                    'quality_setting', 'Parameter preset (dropdown)', ...
-                    'max_merges', 'Max merges per segment', ...
-                    'trim_vol', 'Volume trim fraction', ...
-                    'dur_max', 'Max duration (s)', ...
-                    'bw_max', 'Max bandwidth (Hz)', ...
-                    'refinement', 'Refine peak frequency (logical)', ...
-                    'features', 'Features to compute (click to select)', ...
-                    'debug_mode', 'Debug mode (logical)');
-            elseif isequal(constructor, @baseline_opts)
-                map = struct(...
-                    'baseline_stages', 'Sleep stages for baseline (vector)', ...
-                    'baseline_exclude', 'Exclude time points (logical array)', ...
-                    'baseline_ptile', 'Percentile for baseline', ...
-                    'baseline_trim', 'Trim times (min)');
-            elseif isequal(constructor, @SOpowerphasehist_opts)
-                map = struct(...
-                    'freq_range', 'Frequency range (Hz)', ...
-                    'freq_binsizestep', '[bin size, step] (Hz)', ...
-                    'compute_rate', 'Compute event rate (logical)', ...
-                    'SOPH_stages', 'Sleep stages (vector)', ...
-                    'SO_freqrange', 'SO frequency range (Hz)', ...
-                    'SOpower_tapers', '[time-halfbandwidth, tapers]', ...
-                    'SOpower_window_params', '[window length, step] (s)', ...
-                    'SOpower_outlier_threshold', 'Outlier threshold', ...
-                    'SOpower_norm_method', 'Normalization method', ...
-                    'SOpower_retain_Fs', 'Retain sampling freq (logical)', ...
-                    'SOpower_min_time_in_bin', 'Min time in bin (s)', ...
-                    'SOpower_range', 'Power range (auto if empty)', ...
-                    'SOpower_binsizestep', 'Power bin size/step', ...
-                    'SOphase_filter', 'Phase filter settings', ...
-                    'SOphase_norm_dim', 'Phase norm dimension', ...
-                    'SOphase_range', 'Phase range (radians)', ...
-                    'SOphase_binsizestep', 'Phase bin size/step');
-            else
-                map = struct();
-            end
-        end
-        
-        function result = featuresDialog(current)
-            features = {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', ...
-                'Height', 'HeightData', 'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume', 'PeakStage'};
-            
-            % Parse current selection
-            if ischar(current) && strcmp(current, 'all')
-                selected = features;
-            elseif iscell(current)
-                selected = current;
-            else
-                selected = {};
-            end
-            
-            % Simple dialog
-            dlg = uifigure('Name', 'Select Features', 'Position', [300 300 300 400], 'WindowStyle', 'modal');
-            
-            listbox = uilistbox(dlg, 'Items', features, 'Value', selected, 'Multiselect', 'on', ...
-                'Position', [20 80 260 280]);
-            
-            result = [];
-            uibutton(dlg, 'Text', 'OK', 'Position', [150 20 50 30], ...
-                'ButtonPushedFcn', @(~,~) setResult());
-            uibutton(dlg, 'Text', 'Cancel', 'Position', [210 20 60 30], ...
-                'ButtonPushedFcn', @(~,~) delete(dlg));
-            
-            uiwait(dlg);
-            
-            function setResult()
-                if isvalid(dlg)
-                    vals = listbox.Value;
-                    if length(vals) == length(features)
-                        result = 'all';
-                    else
-                        result = vals;
-                    end
-                    delete(dlg);
+
+                if isequal(constructor, @SOpowerphasehist_opts) && ((strcmp(param, 'SOphase_binsizestep') || strcmp(param, 'SOphase_range')))
+                    str = ['[', obj.double2pifracstr(value(1)), ', ', obj.double2pifracstr(value(2)), ']'];
                 end
             end
+
+            function desc = getDescription(param, constructor)
+                descriptions = getDescMap(constructor);
+                if isfield(descriptions, param)
+                    desc = descriptions.(param);
+                else
+                    desc = '';
+                end
+            end
+
+            function map = getDescMap(constructor)
+                if isequal(constructor, @detection_opts)
+                    map = struct(...
+                        'double_watershed', 'Run 2nd pass watershed (logical)', ...
+                        'mtm_dsfreqs', 'Frequency bin resolution (Hz)', ...
+                        'mtm_freq_range', 'Frequency range [min max] (Hz)', ...
+                        'mtm_taper_params', '[time-halfbandwidth, tapers]', ...
+                        'mtm_window_length_1', '1st pass window size (s)', ...
+                        'mtm_window_length_2', '2nd pass window size (s)', ...
+                        'mtm_window_stepsize', 'Window step size (s)', ...
+                        'downsample_spect', '[time, freq] downsample steps', ...
+                        'seg_time', 'Segment length (s)', ...
+                        'merge_thresh', 'Merge threshold', ...
+                        'quality_setting', 'Parameter preset (dropdown)', ...
+                        'max_merges', 'Max merges per segment', ...
+                        'trim_vol', 'Volume trim fraction', ...
+                        'dur_max', 'Max duration (s)', ...
+                        'bw_max', 'Max bandwidth (Hz)', ...
+                        'refinement', 'Refine peak frequency (logical)', ...
+                        'features', 'Features to compute (click to select)', ...
+                        'debug_mode', 'Debug mode (logical)');
+                elseif isequal(constructor, @baseline_opts)
+                    map = struct(...
+                        'baseline_stages', 'Sleep stages for baseline (vector)', ...
+                        'baseline_exclude', 'Exclude time points (logical array)', ...
+                        'baseline_ptile', 'Percentile for baseline', ...
+                        'baseline_trim', 'Trim times (min)');
+                elseif isequal(constructor, @SOpowerphasehist_opts)
+                    map = struct(...
+                        'freq_range', 'Frequency range (Hz)', ...
+                        'freq_binsizestep', '[bin size, step] (Hz)', ...
+                        'compute_rate', 'Compute event rate (logical)', ...
+                        'SOPH_stages', 'Sleep stages (vector)', ...
+                        'SO_freqrange', 'SO frequency range (Hz)', ...
+                        'SOpower_tapers', '[time-halfbandwidth, tapers]', ...
+                        'SOpower_window_params', '[window length, step] (s)', ...
+                        'SOpower_outlier_threshold', 'Outlier threshold', ...
+                        'SOpower_norm_method', 'Normalization method', ...
+                        'SOpower_retain_Fs', 'Retain sampling freq (logical)', ...
+                        'SOpower_min_time_in_bin', 'Min time in bin (s) required to display', ...
+                        'SOpower_range', 'Power range (auto if empty)', ...
+                        'SOpower_binsizestep', 'Power bin size/step', ...
+                        'SOphase_filter', 'Phase filter settings', ...
+                        'SOphase_norm_dim', 'Phase norm dimension', ...
+                        'SOphase_range', 'Phase range (radians)', ...
+                        'SOphase_binsizestep', 'Phase bin size/step',...
+                        'SOphase_min_peaks_in_bin', 'Min number of peaks required to display');
+                else
+                    map = struct();
+                end
+            end
+
+            function result = featuresDialog(current)
+                features = {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', ...
+                    'Height', 'HeightData', 'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume', 'PeakStage'};
+
+                % Parse current selection
+                if ischar(current) && strcmp(current, 'all')
+                    selected = features;
+                elseif iscell(current)
+                    selected = current;
+                else
+                    selected = {};
+                end
+
+                % Simple dialog
+                dlg = uifigure('Name', 'Select Features', 'Position', [300 300 300 400], 'WindowStyle', 'modal');
+
+                listbox = uilistbox(dlg, 'Items', features, 'Value', selected, 'Multiselect', 'on', ...
+                    'Position', [20 80 260 280]);
+
+                result = [];
+                uibutton(dlg, 'Text', 'OK', 'Position', [150 20 50 30], ...
+                    'ButtonPushedFcn', @(~,~) setResult());
+                uibutton(dlg, 'Text', 'Cancel', 'Position', [210 20 60 30], ...
+                    'ButtonPushedFcn', @(~,~) delete(dlg));
+
+                uiwait(dlg);
+
+                function setResult()
+                    if isvalid(dlg)
+                        vals = listbox.Value;
+                        if length(vals) == length(features)
+                            result = 'all';
+                        else
+                            result = vals;
+                        end
+                        delete(dlg);
+                    end
+                end
+            end
+
         end
-        
-    end
 
         function tf = isInitialized(obj)
             %ISINITIALIZED  Check if required fields are present
@@ -708,6 +713,31 @@ classdef DYNAMO < handle
             SOPH_splinefit.knots_x = knots_x;
             SOPH_splinefit.knots_y = knots_y;
             SOPH_splinefit.fh = fh;
+        end
+
+        function pi_str = double2pifracstr(val, tol)
+            if nargin < 2
+                tol = 1e-10;
+            end
+
+            [n,d] = rat(val/pi,tol);
+
+            if n<100 && d<100
+
+                if n == -1
+                    pi_str = '-pi';
+                elseif n == 1
+                    pi_str = 'pi';
+                else
+                    pi_str = [num2str(n) '*pi'];
+                end
+
+                if d>1
+                    pi_str = [pi_str '/' num2str(d)];
+                end
+            else
+                pi_str = [];
+            end
         end
     end
 end
