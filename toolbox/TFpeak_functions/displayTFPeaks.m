@@ -51,18 +51,12 @@ field_names = fieldnames(p.Results);
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 
 %% Create figure
-fh = figure('Color',[1 1 1],'units','inches','position',[5 5 8.5 6]);
-orient portrait;
-
-%Hypnogram/spectrogram/eeg axes
-if ~isempty(stage_times) && ~isempty(stage_vals)
-    hypn_spect_ax(1) = axes('Parent',fh,'Position',[0.10 0.80 0.80 0.15]);
-end
-
-hypn_spect_ax(2) = axes('Parent',fh,'Position',[0.10 0.30 0.80 0.50]);
+fh = figure;
 
 if ~isempty(data_time_range) && ~isempty(t_time_range)
-    hypn_spect_ax(3) = axes('Parent',fh,'Position',[0.10 0.10 0.80 0.20]);
+    hypn_spect_ax = figdesign(6, 1, 'PaperType', 'usletter', 'orient', 'landscape' , 'margins', [0.067917 0.05 0.083427 0.0456 0.08 0.0021714], 'merge', {[2 3 4 5]}, 'Position', [0.14041 0.19722 0.70262 0.61597]);
+else
+    hypn_spect_ax = figdesign(6, 1, 'PaperType', 'usletter', 'orient', 'landscape' , 'margins', [0.067917 0.05 0.083427 0.0456 0.08 0.0021714], 'merge', {[2 3 4 5 6]}, 'Position', [0.14041 0.19722 0.70262 0.61597]);
 end
 
 %% Plot hypnogram
@@ -123,3 +117,5 @@ set(hypn_spect_ax, 'FontSize', 10)
 if exist('th', 'var')
     set(th, 'FontSize', 15)
 end
+
+scrollzoompan;
