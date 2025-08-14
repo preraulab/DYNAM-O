@@ -1,7 +1,7 @@
 function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_at_freq, peak_SOphase, peak_selection_inds, SOphase, SOphase_times] = SOphaseHistogram(v1,v2,varargin)
 % SOPHASEHISTOGRAM computes slow-oscillation phase histogram matrix
 % Usage:
-%   [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOphase, peak_selection_inds] = ...
+%   [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_at_freq, peak_SOphase, peak_selection_inds] = ...
 %                                 SOphaseHistogram(EEG, Fs, TFpeak_freqs, TFpeak_times, <options>)
 %
 %  Inputs:
@@ -42,7 +42,7 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_at_freq, 
 %       min_time_in_bin: numerical - time (minutes) required in each SO phase bin to include
 %                                  in SOphase analysis. Otherwise all values in that SO phase bin will
 %                                  be NaN. Default = 0.
-%       min peak_at_freq: numerical - number of TF peaks required in each frequency bin to include
+%       min_peak_at_freq: numerical - number of TF peaks required in each frequency bin to include
 %                                  in SOphase analysis. Otherwise all values in that frequency bin will
 %                                  be NaN. Default = 100.
 %       SOphase_filter: 1xF double - custom filter that will be used to estimate SOphase
