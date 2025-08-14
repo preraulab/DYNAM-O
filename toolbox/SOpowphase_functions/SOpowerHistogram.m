@@ -1,7 +1,7 @@
 function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_at_freq, peak_SOpower, peak_selection_inds, SOpower, SOpower_times] = SOpowerHistogram(v1,v2,varargin)
 % SOPOWERHISTOGRAM computes slow-oscillation power histogram matrix
 % Usage:
-%   [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds] = ...
+%   [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_at_freq, peak_SOpower_norm, peak_selection_inds] = ...
 %                                 SOpowerHistogram(EEG, Fs, TFpeak_times, TFpeak_freqs, <options>)
 %
 %  Inputs:
@@ -39,7 +39,7 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_at_freq, 
 %       min_time_in_bin: numerical - time (minutes) required in each SO power bin to include
 %                                  in SOpower analysis. Otherwise all values in that SO power bin will
 %                                  be NaN. Default = 10.
-%       min peak_at_freq: numerical - number of TF peaks required in each frequency bin to include
+%       min_peak_at_freq: numerical - number of TF peaks required in each frequency bin to include
 %                                  in SOpower analysis. Otherwise all values in that frequency bin will
 %                                  be NaN. Default = 0.
 %       SOpower_outlier_threshold: double - cutoff threshold in standard deviation for excluding outlier SOpower values.

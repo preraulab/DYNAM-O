@@ -1,9 +1,9 @@
-function [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, peak_at_freq, SOpower_TIB, SOphase_TIB, peak_SOpower, peak_SOphase, peak_selection_inds, ...
+function [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, num_peaks_at_freq, SOpower_TIB, SOphase_TIB, peak_SOpower, peak_SOphase, peak_selection_inds, ...
     SOpower, SOpower_times, SOphase, SOphase_times, SOdata] = SOpowerphaseHistogram(varargin)
 % SOPOWERPHASEHISTOGRAM: Computes slow-oscillation power and phase histogram matrices
 %
 %   Usage:
-%       [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds] = ...
+%       [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, num_peaks_at_freq, SOpower_TIB, SOphase_TIB, peak_SOpower, peak_SOphase, peak_selection_inds] = ...
 %                                 SOpowerphaseHistogram(data, Fs, TFpeak_freqs, TFpeak_times, <options>)
 %
 %   Inputs:
@@ -17,22 +17,22 @@ function [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, peak_
 %       see SOpowerphasehist_opts() for optional parameters
 %
 %   Outputs:
-%       SOpower_mat:  2D double - SO power histogram data
-%       SOphase_mat:  2D double - SO phase histogram data
-%       SOpower_bins: 1D double - SO power bin center values for dimension 1 of SOpower_mat
-%       SOphase_bins: 1D double - SO phase bin center values for dimension 1 of SOphase_mat
-%       freq_bins:    1D double - frequency bin center values for dimension 2 of SOpower_mat and SOphase_mat
-%       peak_at_freq: 1D double - number of TFpeaks in each frequency bin
-%       SOpow_TIB:    1xT double - time (minutes) in each SOpower bin for all stages 1-5 (0min if not in SOPH_stages)
-%       SOphase_TIB:  1xT double - time (minutes) in each SOphase bin for all stages 1-5 (0min if not in SOPH_stages)
-%       peak_SOpower: 1xP double - normalized slow oscillation power at each TFpeak
-%       peak_SOphase: 1xP double - slow oscillation phase at each TFpeak
-%       peak_selection_inds: 1xP logical - which TFpeaks are counted in the histogram
-%       SOpower: 1xM double - SO power timeseries data
-%       SOpower_times: 1xM double - SO power timeseries times
-%       SOphase: 1xN double - SO phase timeseries data
-%       SOphase_times: 1xN double - SO phase timeseries times
-%       SOdata: 1xN double - SO filtered timeseries data
+%       SOpower_mat:            2D double - SO power histogram data
+%       SOphase_mat:            2D double - SO phase histogram data
+%       SOpower_bins:           1D double - SO power bin center values for dimension 1 of SOpower_mat
+%       SOphase_bins:           1D double - SO phase bin center values for dimension 1 of SOphase_mat
+%       freq_bins:              1D double - frequency bin center values for dimension 2 of SOpower_mat and SOphase_mat
+%       num_peaks_at_freq:      1D double - number of TFpeaks in each frequency bin
+%       SOpow_TIB:              1xT double - time (minutes) in each SOpower bin for all stages 1-5 (0min if not in SOPH_stages)
+%       SOphase_TIB:            1xT double - time (minutes) in each SOphase bin for all stages 1-5 (0min if not in SOPH_stages)
+%       peak_SOpower:           1xP double - normalized slow oscillation power at each TFpeak
+%       peak_SOphase:           1xP double - slow oscillation phase at each TFpeak
+%       peak_selection_inds:    1xP logical - which TFpeaks are counted in the histogram
+%       SOpower:                1xM double - SO power timeseries data
+%       SOpower_times:          1xM double - SO power timeseries times
+%       SOphase:                1xN double - SO phase timeseries data
+%       SOphase_times:          1xN double - SO phase timeseries times
+%       SOdata:                 1xN double - SO filtered timeseries data
 %
 %
 %   Please provide the following citation for all use:
@@ -174,7 +174,7 @@ if verbose
     disp('Computing SO-phase histogram...');
 end
 
-[SOphase_mat, ~, SOphase_bins, SOphase_TIB, ~, peak_at_freq, peak_SOphase, hist_peakidx_SOphase, SOphase, SOphase_times] =...
+[SOphase_mat, ~, SOphase_bins, SOphase_TIB, ~, num_peaks_at_freq, peak_SOphase, hist_peakidx_SOphase, SOphase, SOphase_times] =...
     SOphaseHistogram(SOphase, SOphase_times, TFpeak_freqs, TFpeak_times,...
     'TFpeak_stages', TFpeak_stages, 'stage_times', stage_times, 'stage_vals', stage_vals,...
     'freq_range', freq_range, 'freq_binsizestep', freq_binsizestep, 'SO_range', SOphase_range, 'SO_binsizestep', SOphase_binsizestep, ...
