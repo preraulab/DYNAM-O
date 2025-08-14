@@ -75,7 +75,7 @@ default_verbose = true;
 
 %% RUN EXAMPLE DATA IF CALLED WITHOUT INPUT
 if nargin == 0
-    [stats_table, SOPHs, fh] = runExampleData(default_verbose);
+    [stats_table, SOPHs, spect, stimes, sfreqs, artifacts] = runExampleData(default_verbose);
     return;
 end
 
@@ -299,7 +299,7 @@ SOPH_splinefit.knots_y = knots_y;
 end
 
 
-function [stats_table, SOPHs, fh] = runExampleData(verbose)
+function [stats_table, SOPHs, spect, stimes, sfreqs, artifacts] = runExampleData(verbose)
 if verbose
     disp('Running Example Data...');
 end
@@ -346,5 +346,5 @@ switch data_range
 end
 
 %Call main function
-[stats_table, SOPHs, fh] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options);
+[stats_table, SOPHs, spect, stimes, sfreqs, artifacts] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options);
 end
