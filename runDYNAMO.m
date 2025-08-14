@@ -165,13 +165,13 @@ stats_table = computePeakStage(stats_table, stage_times, stage_vals, t_time_rang
 % finer control of histogram generation
 
 if nargout > 1
-    [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins,...
+    [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, peak_at_freq,...
         SOpower_TIB, SOphase_TIB, ~, ~, hist_peakidx] = SOpowerphaseHistogram(data_time_range, Fs, stats_table.PeakFrequency, stats_table.PeakTime,...
         'stage_times', stage_times, 'stage_vals', stage_vals, 'verbose', verbose, SOPH_options,...
         'SOpower', SOpower_norm, 'SOpower_times', SOpower_times, 'SOphase', SOphase, 'SOphase_times', SOphase_times);
 
     %Create a SOPHs structure for output
-    SOPHs = createSOPHsStruct(SOpower_mat, SOphase_mat, SOpower_bins, SOpower_norm, SOpower_times, SOphase_bins, freq_bins, SOpower_TIB, SOphase_TIB);
+    SOPHs = createSOPHsStruct(SOpower_mat, SOphase_mat, SOpower_bins, SOpower_norm, SOpower_times, SOphase_bins, freq_bins, peak_at_freq, SOpower_TIB, SOphase_TIB);
 
     %Check for valid histogramas
     valid_powerhist = ~all(isnan(SOPHs.SOpower_mat),'all');
@@ -264,13 +264,14 @@ end
 end
 
 
-function [SOPHs] = createSOPHsStruct(SOpower_mat, SOphase_mat, SOpower_bins, SOpower_norm, SOpower_times, SOphase_bins, freq_bins, SOpower_TIB, SOphase_TIB)
+function [SOPHs] = createSOPHsStruct(SOpower_mat, SOphase_mat, SOpower_bins, SOpower_norm, SOpower_times, SOphase_bins, freq_bins, peak_at_freq, SOpower_TIB, SOphase_TIB)
 SOPHs = struct;
 SOPHs.SOpower_mat = SOpower_mat;
 SOPHs.SOphase_mat = SOphase_mat;
 SOPHs.SOpower_bins = SOpower_bins;
 SOPHs.SOphase_bins = SOphase_bins;
 SOPHs.freq_bins = freq_bins;
+SOPHs.peak_at_freq = peak_at_freq;
 SOPHs.SOpower_TIB = SOpower_TIB;
 SOPHs.SOphase_TIB = SOphase_TIB;
 SOPHs.SOpower_norm = SOpower_norm;

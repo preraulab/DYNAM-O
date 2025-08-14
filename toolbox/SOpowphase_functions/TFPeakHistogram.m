@@ -1,4 +1,4 @@
-function [C_mat, freq_cbins, C_cbins, time_in_bin, prop_in_bin] = TFPeakHistogram(varargin)
+function [C_mat, freq_cbins, C_cbins, time_in_bin, prop_in_bin, peak_at_freq] = TFPeakHistogram(varargin)
 % TFPEAKHISTOGRAM computes 2D histogram values for TFpeaks frequency
 % (y-axis) against an arbitrary C metric (x-axis)
 
@@ -32,6 +32,7 @@ addOptional(p, 'norm_dim', 0, @(x) validateattributes(x,{'numeric'},{'real','fin
 addOptional(p, 'compute_rate', SOPH_options.compute_rate, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'norm_method', '', @(x) validateattributes(x, {'char','string'}, {'scalartext'}));
 addOptional(p, 'min_time_in_bin', 0, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
+addOptional(p, 'min_peak_at_freq', 0, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
 
 %Display settings
 addOptional(p, 'plot_on', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
@@ -81,28 +82,35 @@ if compute_TIB
     prop_in_bin = zeros(num_Cbins, 5);
 end
 
+% Pre-compute the indices of peaks at each freq bin
+all_infreqbin_inds = zeros(length(TFpeak_freqs), num_freqbins);
+for f = 1:num_freqbins
+    % Get indices of TFpeaks that occur in this freq bin
+    all_infreqbin_inds(:, f) = (TFpeak_freqs >= freq_bin_edges(1,f)) & (TFpeak_freqs < freq_bin_edges(2,f));
+end
+
 for s = 1:num_Cbins
 
     if circular_Cmetric
-        % Check for bins that need to be wrapped because Cmetric is circular
+        % Check for bins that need to be wrapped when Cmetric is circular
         if (C_bin_edges(1,s) <= circular_low) % Lower limit should be wrapped
             wrapped_edge_lowlim = C_bin_edges(1,s) + circular_range;
-            
+
             if compute_TIB
                 TIB_inds = (Cmetric >= wrapped_edge_lowlim) | (Cmetric < C_bin_edges(2,s));
             end
             inCbin_inds = (peak_Cmetric >= wrapped_edge_lowlim) | (peak_Cmetric < C_bin_edges(2,s));
-            
+
         elseif (C_bin_edges(2,s) >= circular_high) % Upper limit should be wrapped
             wrapped_edge_highlim = C_bin_edges(2,s) - circular_range;
-            
+
             if compute_TIB
                 TIB_inds = (Cmetric < wrapped_edge_highlim) | (Cmetric >= C_bin_edges(1,s));
             end
             inCbin_inds = (peak_Cmetric < wrapped_edge_highlim) | (peak_Cmetric >= C_bin_edges(1,s));
-            
+
         else % Both limits are within circular_bounds, no wrapping necessary
-            if compute_TIB 
+            if compute_TIB
                 TIB_inds = (Cmetric >= C_bin_edges(1,s)) & (Cmetric < C_bin_edges(2,s));
             end
             inCbin_inds = (peak_Cmetric >= C_bin_edges(1,s)) & (peak_Cmetric < C_bin_edges(2,s));
@@ -116,21 +124,18 @@ for s = 1:num_Cbins
 
         % Get indices of valid TFpeaks that occur in this Cmetric bin
         inCbin_inds = (peak_Cmetric >= C_bin_edges(1,s)) & (peak_Cmetric < C_bin_edges(2,s));
-
     end
 
     % Get time in bin (min) and proportion of time in bin
     if compute_TIB
         for stage = 1:5
-            
             Cmetric_stages_ind = Cmetric_stages == stage;
-            
             time_in_bin(s,stage) = (sum(TIB_inds & Cmetric_valid & Cmetric_stages_ind) * Cmetric_times_step) / 60;
         end
-        
+
         time_in_bin_allstages = (sum(TIB_inds & Cmetric_valid_allstages) * Cmetric_times_step) / 60;
         prop_in_bin(s,:) = time_in_bin(s,:) / time_in_bin_allstages;
-        
+
         % if less than threshold time in C bin, nan the whole column of CPH
         if sum(time_in_bin(s,:)) < min_time_in_bin
             continue
@@ -140,7 +145,7 @@ for s = 1:num_Cbins
     if sum(inCbin_inds) >= 1
         for f = 1:num_freqbins
             % Get indices of TFpeaks that occur in this freq bin
-            infreqbin_inds = (TFpeak_freqs >= freq_bin_edges(1,f)) & (TFpeak_freqs < freq_bin_edges(2,f));
+            infreqbin_inds = all_infreqbin_inds(:, f);
 
             % Fill histogram with count of peaks in this freq/Cmetric bin
             C_mat(s, f) = sum(inCbin_inds & infreqbin_inds);
@@ -154,6 +159,10 @@ for s = 1:num_Cbins
     end
 
 end
+
+% Mask out freq bins with too few peaks
+peak_at_freq = sum(all_infreqbin_inds, 1);
+C_mat(:, peak_at_freq < min_peak_at_freq) = nan;
 
 % Normalize along a dimension if desired
 if norm_dim
