@@ -1,4 +1,4 @@
-function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower, peak_selection_inds, SOpower, SOpower_times] = SOpowerHistogram(v1,v2,varargin)
+function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_at_freq, peak_SOpower, peak_selection_inds, SOpower, SOpower_times] = SOpowerHistogram(v1,v2,varargin)
 % SOPOWERHISTOGRAM computes slow-oscillation power histogram matrix
 % Usage:
 %   [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower_norm, peak_selection_inds] = ...
@@ -39,6 +39,9 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower, 
 %       min_time_in_bin: numerical - time (minutes) required in each SO power bin to include
 %                                  in SOpower analysis. Otherwise all values in that SO power bin will
 %                                  be NaN. Default = 10.
+%       min peak_at_freq: numerical - number of TF peaks required in each frequency bin to include
+%                                  in SOpower analysis. Otherwise all values in that frequency bin will
+%                                  be NaN. Default = 0.
 %       SOpower_outlier_threshold: double - cutoff threshold in standard deviation for excluding outlier SOpower values.
 %                                  Default = 3.
 %       norm_method: char - normalization method for SOpower. Options: 'pNshiftS', 'percent', 'proportion', 'none'. Default: 'p2shift1234'
@@ -61,6 +64,7 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOpower, 
 %       time_in_bin: 1xTx5 double - minutes spent in each power bin for each stage
 %       prop_in_bin: 1xT double - proportion of total time (all stages) in each bin spent in
 %                          the selected stages
+%       peak_at_freq: 1xF - number of peaks in each frequency bin
 %       peak_SOpower: 1xP double - normalized slow oscillation power at each TFpeak
 %       peak_selection_inds: 1xP logical - which TFpeaks are counted in the histogram
 %       SOpower: 1xM double - SO power timeseries data
@@ -119,6 +123,7 @@ addOptional(p, 'SOPH_stages', SOPH_options.SOPH_stages, @(x) validateattributes(
 addOptional(p, 'norm_dim', 0, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
 addOptional(p, 'compute_rate', SOPH_options.compute_rate, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'min_time_in_bin', SOPH_options.SOpower_min_time_in_bin, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
+addOptional(p, 'min_peak_at_freq', 0, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
 
 %SOpower specific settings
 addOptional(p, 'SOpower_outlier_threshold', SOPH_options.SOpower_outlier_threshold, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
@@ -258,14 +263,15 @@ if isempty(SO_binsizestep)
     SO_binsizestep(2) = (SO_range(2) - SO_range(1)) / 100;
 end
 
-[SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin] = TFPeakHistogram(SOpower,...
+[SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_at_freq] = TFPeakHistogram(SOpower,...
     SOpower_stages, SOpower_times_step, SOpower_valid, SOpower_valid_allstages,...
     TFpeak_freqs(peak_selection_inds), peak_SOpower(peak_selection_inds),...
     'norm_method', norm_method,... # specific to SOpower histogram
     'Cmetric_label', 'SO-Power', 'xlabel_text', 'SO Power (normalized)',...
     'C_range', SO_range, 'C_binsizestep', SO_binsizestep,...
     'freq_range', freq_range, 'freq_binsizestep', freq_binsizestep,...
-    'norm_dim', norm_dim, 'compute_rate', compute_rate, 'min_time_in_bin', min_time_in_bin,...
+    'norm_dim', norm_dim, 'compute_rate', compute_rate,...
+    'min_time_in_bin', min_time_in_bin, 'min_peak_at_freq', min_peak_at_freq,...
     'plot_on', plot_on, 'verbose', verbose);
 
 end
