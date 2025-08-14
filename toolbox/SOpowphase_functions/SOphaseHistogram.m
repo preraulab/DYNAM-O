@@ -1,7 +1,7 @@
-function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOphase, peak_selection_inds, SOphase, SOphase_times] = SOphaseHistogram(v1,v2,varargin)
+function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_at_freq, peak_SOphase, peak_selection_inds, SOphase, SOphase_times] = SOphaseHistogram(v1,v2,varargin)
 % SOPHASEHISTOGRAM computes slow-oscillation phase histogram matrix
 % Usage:
-%   [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOphase, peak_selection_inds] = ...
+%   [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_at_freq, peak_SOphase, peak_selection_inds] = ...
 %                                 SOphaseHistogram(EEG, Fs, TFpeak_freqs, TFpeak_times, <options>)
 %
 %  Inputs:
@@ -19,6 +19,11 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOphase, 
 %       TFpeak_stages: Px1 - sleep stage each TF peak occurs 5=W,4=R,3=N1,2=N2,1=N3
 %       stage_times: 1xS double - stage times
 %       stage_vals: 1xS double - numeric stage values 5=W,4=R,3=N1,2=N2,1=N3
+%       EEG_times: 1xN double - times for each EEG sample. Default = (0:length(EEG)-1)/Fs
+%       time_range: 1x2 double - min and max times for which to include TFpeaks.
+%                                Default = [EEG_times(1), EEG_times(end)]
+%       isexcluded: 1xN logical - marks each time point of data to be excluded or not, e.g., due to artifacts. Default = all false.
+%
 %       freq_range: 1x2 double - min and max frequencies of TF peak to include in the histogram
 %                   (Hz). Default = [0,40]
 %       freq_binsizestep: 1x2 double - [size, step] frequency bin size and bin step for frequency
@@ -37,11 +42,10 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOphase, 
 %       min_time_in_bin: numerical - time (minutes) required in each SO phase bin to include
 %                                  in SOphase analysis. Otherwise all values in that SO phase bin will
 %                                  be NaN. Default = 0.
+%       min_peak_at_freq: numerical - number of TF peaks required in each frequency bin to include
+%                                  in SOphase analysis. Otherwise all values in that frequency bin will
+%                                  be NaN. Default = 100.
 %       SOphase_filter: 1xF double - custom filter that will be used to estimate SOphase
-%       EEG_times: 1xN double - times for each EEG sample. Default = (0:length(EEG)-1)/Fs
-%       time_range: 1x2 double - min and max times for which to include TFpeaks.
-%                                Default = [EEG_times(1), EEG_times(end)]
-%       isexcluded: 1xN logical - marks each time point of data to be excluded or not, e.g., due to artifacts. Default = all false.
 %
 %       plot_on: logical - SO phase histogram plots. Default = false
 %       verbose: logical - Verbose output. Default = true
@@ -53,6 +57,7 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_SOphase, 
 %       time_in_bin: 1xTx5 - minutes spent in each phase bin for each stage
 %       prop_in_bin: 1xT - proportion of total time (all stages) in each bin spent in
 %                          the selected stages
+%       peak_at_freq: 1xF - number of peaks in each frequency bin
 %       peak_SOphase: 1xP double - slow oscillation phase at each TFpeak
 %       peak_selection_inds: 1xP logical - which TFpeaks are counted in the histogram
 %       SOphase: 1xN double - SO phase timeseries data
@@ -111,6 +116,7 @@ addOptional(p, 'SOPH_stages', SOPH_options.SOPH_stages, @(x) validateattributes(
 addOptional(p, 'norm_dim', SOPH_options.SOphase_norm_dim, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
 addOptional(p, 'compute_rate', SOPH_options.compute_rate, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'min_time_in_bin', 0, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
+addOptional(p, 'min_peak_at_freq', SOPH_options.SOphase_min_peak_at_freq, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
 
 %SOphase specific settings
 addOptional(p, 'SOphase_filter', SOPH_options.SOphase_filter);
@@ -238,14 +244,15 @@ SOphase_valid_allstages = SOphase_excluded_valid & SOphase_times_valid;
 clear SOphase_stages_valid SOphase_excluded_valid SOphase_times_valid
 
 %% Compute the SO phase histogram
-[SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin] = TFPeakHistogram(SOphase,...
+[SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_at_freq] = TFPeakHistogram(SOphase,...
     SOphase_stages, SOphase_times_step, SOphase_valid, SOphase_valid_allstages,...
     TFpeak_freqs(peak_selection_inds), peak_SOphase(peak_selection_inds),...
     'circular_Cmetric', true, 'circular_bounds', SO_range,... # specific to SOphase histogram
     'Cmetric_label', 'SO-Phase', 'xlabel_text', 'SO Phase (radians)',...
     'C_range', SO_range, 'C_binsizestep', SO_binsizestep,...
     'freq_range', freq_range, 'freq_binsizestep', freq_binsizestep,...
-    'norm_dim', norm_dim, 'compute_rate', compute_rate, 'min_time_in_bin', min_time_in_bin,...
+    'norm_dim', norm_dim, 'compute_rate', compute_rate,...
+    'min_time_in_bin', min_time_in_bin, 'min_peak_at_freq', min_peak_at_freq,...
     'plot_on', plot_on, 'verbose', verbose);
 
 end
