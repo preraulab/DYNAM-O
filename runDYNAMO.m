@@ -75,7 +75,7 @@ default_verbose = true;
 
 %% RUN EXAMPLE DATA IF CALLED WITHOUT INPUT
 if nargin == 0
-    [stats_table, SOPHs, fh] = runExampleData(default_verbose);
+    [stats_table, SOPHs, spect, stimes, sfreqs, artifacts] = runExampleData(default_verbose);
     return;
 end
 
@@ -166,24 +166,24 @@ stats_table = computePeakStage(stats_table, stage_times, stage_vals, t_time_rang
 % finer control of histogram generation
 
 if nargout > 1
-    [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins,...
+    [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, num_peaks_at_freq,...
         SOpower_TIB, SOphase_TIB, ~, ~, hist_peakidx] = SOpowerphaseHistogram(data_time_range, Fs, stats_table.PeakFrequency, stats_table.PeakTime,...
         'stage_times', stage_times, 'stage_vals', stage_vals, 'verbose', verbose, SOPH_options,...
         'SOpower', SOpower_norm, 'SOpower_times', SOpower_times, 'SOphase', SOphase, 'SOphase_times', SOphase_times);
 
     %Create a SOPHs structure for output
-    SOPHs = createSOPHsStruct(SOpower_mat, SOphase_mat, SOpower_bins, SOpower_norm, SOpower_times, SOphase_bins, freq_bins, SOpower_TIB, SOphase_TIB);
+    SOPHs = createSOPHsStruct(SOpower_mat, SOphase_mat, SOpower_bins, SOpower_norm, SOpower_times, SOphase_bins, freq_bins, num_peaks_at_freq, SOpower_TIB, SOphase_TIB);
 
     %Check for valid histogramas
     valid_powerhist = ~all(isnan(SOPHs.SOpower_mat),'all');
     valid_phasehist = ~all(isnan(SOPHs.SOphase_mat),'all');
 
     if ~valid_powerhist
-        warning('Power histogram is empty. Consider changing time range or minimum time in bin.');
+        warning('Power histogram is empty. Consider changing time range or minimum time in bin or minimum peak at frequency.');
     end
 
     if ~valid_phasehist
-        warning('Phase histogram is empty. Consider changing time range or minimum time in bin.');
+        warning('Phase histogram is empty. Consider changing time range or minimum time in bin or minimum peak at frequency.');
     end
 else
     if verbose
@@ -275,13 +275,14 @@ end
 end
 
 
-function [SOPHs] = createSOPHsStruct(SOpower_mat, SOphase_mat, SOpower_bins, SOpower_norm, SOpower_times, SOphase_bins, freq_bins, SOpower_TIB, SOphase_TIB)
+function [SOPHs] = createSOPHsStruct(SOpower_mat, SOphase_mat, SOpower_bins, SOpower_norm, SOpower_times, SOphase_bins, freq_bins, num_peaks_at_freq, SOpower_TIB, SOphase_TIB)
 SOPHs = struct;
 SOPHs.SOpower_mat = SOpower_mat;
 SOPHs.SOphase_mat = SOphase_mat;
 SOPHs.SOpower_bins = SOpower_bins;
 SOPHs.SOphase_bins = SOphase_bins;
 SOPHs.freq_bins = freq_bins;
+SOPHs.num_peaks_at_freq = num_peaks_at_freq;
 SOPHs.SOpower_TIB = SOpower_TIB;
 SOPHs.SOphase_TIB = SOphase_TIB;
 SOPHs.SOpower_norm = SOpower_norm;
@@ -309,7 +310,7 @@ SOPH_splinefit.knots_y = knots_y;
 end
 
 
-function [stats_table, SOPHs, fh] = runExampleData(verbose)
+function [stats_table, SOPHs, spect, stimes, sfreqs, artifacts] = runExampleData(verbose)
 if verbose
     disp('Running Example Data...');
 end
@@ -356,5 +357,5 @@ switch data_range
 end
 
 %Call main function
-[stats_table, SOPHs, fh] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options);
+[stats_table, SOPHs, spect, stimes, sfreqs, artifacts] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options);
 end
