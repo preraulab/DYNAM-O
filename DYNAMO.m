@@ -34,7 +34,7 @@ classdef DYNAMO < handle
     %       baseline_options, detection_options, SOPH_options
     %
     %   Methods:
-    %       rerun(...)             - rerun pipeline with optional overrides
+    %       run(...)               - run pipeline
     %       updateOptions(...)     - update baseline/detection/SOPH options
     %       displaySummaryPlot()   - plot SOPH and TF peak summary figure
     %       displayTFPeaks()       - plot raw spectrogram and overlaid peaks
@@ -44,14 +44,15 @@ classdef DYNAMO < handle
     %   Examples:
     %       % Run analysis with defaults
     %       d = DYNAMO(data, Fs, stage_times, stage_vals);
+    %       d.run;
     %
     %       % Re-run with a different time window
-    %       d.rerun('time_range', [0 3600]);
+    %       d.run('time_range', [0 3600]);
     %
     %       % Update detection parameters and reprocess
     %       opts = detection_opts(); opts.peak_power_thresh = 3;
     %       d.updateOptions('detection_options', opts);
-    %       d.rerun();
+    %       d.run();
     %
     %       % Visualize output and fit models
     %       d.displaySummaryPlot();
@@ -68,16 +69,20 @@ classdef DYNAMO < handle
     %**************************************************************************
 
     properties
-        data               % EEG time series
-        Fs                 % Sampling frequency
-        stage_times        % Sleep stage timestamps
-        stage_vals         % Sleep stage values
-        stats_table        % Time-frequency peaks table
-        SOPHs              % SO-power/phase histograms structure
-        baseline_options   % Options for baseline correction
-        detection_options  % Options for peak detection
-        SOPH_options       % Options for SOPH computation
-        time_range         % Time range for data
+        data                        % EEG time series
+        Fs                          % Sampling frequency
+        stage_times                 % Sleep stage timestamps
+        stage_vals                  % Sleep stage values
+        stats_table                 % Time-frequency peaks table
+        SOPHs                       % SO-power/phase histograms structure
+        baseline_options            % Options for baseline correction
+        detection_options           % Options for peak detection
+        SOPH_options                % Options for SOPH computation
+        param_basis_power_options
+        param_basis_phase_options
+        spline_basis_power_options
+        spline_basis_phase_options
+        time_range                  % Time range for data
         spect
         stimes
         sfreqs
@@ -98,9 +103,15 @@ classdef DYNAMO < handle
             addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','vector'}));
 
             addOptional(p, 'time_range', [], @(x) isempty(x) || (isnumeric(x) && numel(x)==2));
+
             addOptional(p, 'baseline_options', baseline_opts(), @(x) isstruct(x));
             addOptional(p, 'detection_options', detection_opts(), @(x) isstruct(x));
             addOptional(p, 'SOPH_options', SOpowerphasehist_opts(), @(x) isstruct(x));
+            addOptional(p, 'param_basis_power_options', param_basis_opts('power'), @(x) isstruct(x));
+            addOptional(p, 'param_basis_phase_options', param_basis_opts('phase'), @(x) isstruct(x));
+            addOptional(p, 'spline_basis_power_options', spline_basis_opts('power'), @(x) isstruct(x));
+            addOptional(p, 'spline_basis_phase_options', spline_basis_opts('phase'), @(x) isstruct(x));
+
             addOptional(p, 'stats_table', [], @(x) istable(x) || isempty(x));
             addOptional(p, 'verbose', default_verbose, @(x) islogical(x) || isnumeric(x));
             addOptional(p, 'plot_on', true, @(x) islogical(x) || isnumeric(x));
@@ -119,32 +130,27 @@ classdef DYNAMO < handle
             obj.stage_vals = single(R.stage_vals);
             obj.baseline_options = R.baseline_options;
             obj.detection_options = R.detection_options;
+            obj.param_basis_power_options = R.param_basis_power_options;
+            obj.param_basis_phase_options = R.param_basis_phase_options;
+            obj.spline_basis_power_options = R.spline_basis_power_options;
+            obj.spline_basis_phase_options = R.spline_basis_phase_options;
             obj.SOPH_options = R.SOPH_options;
             obj.time_range = R.time_range;
-            %
-            % % Run pipeline
-            % [obj.stats_table, obj.SOPHs, obj.spect, obj.stimes, obj.sfreqs, obj.artifacts] = runDYNAMO(...
-            %     obj.data, obj.Fs, obj.stage_times, obj.stage_vals, ...
-            %     R.time_range, R.baseline_options, R.detection_options, ...
-            %     R.SOPH_options, R.stats_table, R.verbose, ...
-            %     R.plot_on, R.save_output_image, R.output_fname, R.fit_SOPH);
         end
 
-        function obj = rerun(obj, varargin)
-            %RERUN  Re-execute the DYNAM-O pipeline
+        function obj = run(obj)
+            %RUN  Re-execute the DYNAM-O pipeline
             %
-            %   obj = obj.rerun(...)
+            %   obj = obj.run
             %   Reruns the analysis with updated parameters such as time range, verbosity,
             %   plotting, or whether to save output.
 
             % Rerun the full DYNAMO pipeline
             assert(obj.isInitialized(), 'DYNAMO object is not fully initialized.');
 
-
-
             [obj.stats_table, obj.SOPHs, obj.spect, obj.stimes, obj.sfreqs, obj.artifacts] = runDYNAMO(...
-                obj.data, obj.Fs, obj.stage_times, obj.stage_vals, ...
-                varargin{:});
+                obj.data, obj.Fs, obj.stage_times, obj.stage_vals, obj.time_range, obj.baseline_options, obj.detection_options, obj.SOPH_options);
+
         end
 
         function obj = updateOptions(obj, varargin)
@@ -252,15 +258,29 @@ classdef DYNAMO < handle
             assert(obj.isInitialized(), 'Object not initialized properly.');
             assert(~isempty(obj.SOPHs), 'SOPHs not computed.');
 
-            [params, fitobj, gof, model, wshed, f] = param_basis_power(...
-                obj.SOPHs.SOpower_mat, obj.SOPHs.SOpower_bins, obj.SOPHs.freq_bins, ...
-                'verbose', false, 'plot_on', plot_on);
-            obj.SOPHs.SOpower_paramfit = obj.createSOPHparamfitStruct(params, fitobj, gof, model, wshed, f);
+            opts_pow = obj.param_basis_power_options;
+            opts_pow.plot_on = false;
 
-            [params, fitobj, gof, model, wshed, f] = param_basis_phase(...
-                obj.SOPHs.SOphase_mat, obj.SOPHs.SOphase_bins, obj.SOPHs.freq_bins, ...
-                'verbose', false, 'plot_on', plot_on);
-            obj.SOPHs.SOphase_paramfit = obj.createSOPHparamfitStruct(params, fitobj, gof, model, wshed, f);
+            opts_phase = obj.param_basis_phase_options;
+            opts_phase.plot_on = false;
+
+            [params_pow, fitobj_pow, gof_pow, model_SOPH_pow, power_wshed_img] = ...
+                param_basis_power(obj.SOPHs.SOpower_mat, obj.SOPHs.SOpower_bins, obj.SOPHs.freq_bins, ...
+                'verbose', false, 'plot_on', false); % plot_off for merged plot
+            obj.SOPHs.SOpower_paramfit = obj.createSOPHparamfitStruct(params_pow, fitobj_pow, gof_pow, model_SOPH_pow, power_wshed_img, []);
+
+            [params_phase, fitobj_phase, gof_phase, model_SOPhH_phase, phase_wshed_img] = ...
+                param_basis_phase(obj.SOPHs.SOphase_mat, obj.SOPHs.SOphase_bins, obj.SOPHs.freq_bins, ...
+                'verbose', false, 'plot_on', false);
+            obj.SOPHs.SOphase_paramfit = obj.createSOPHparamfitStruct(params_phase, fitobj_phase, gof_phase, model_SOPhH_phase, phase_wshed_img, []);
+
+            if plot_on
+                obj.plot_param_basis( ...
+                    obj.SOPHs.SOpower_bins, obj.SOPHs.freq_bins, power_wshed_img, obj.SOPHs.SOpower_mat, model_SOPH_pow, params_pow, opts_pow.SOPH_clim_prctiles, opts_pow.ylimits, ...
+                    obj.SOPHs.SOphase_bins, phase_wshed_img, obj.SOPHs.SOphase_mat, model_SOPhH_phase, params_phase, opts_phase.SOPH_clim_prctiles, opts_phase.ylimits, ...
+                    obj.SOPHs.SOpower_paramfit.fitobj, obj.SOPHs.SOphase_paramfit.fitobj);
+            end
+
         end
 
         function obj = fitSplineBasis(obj, plot_on)
@@ -270,15 +290,34 @@ classdef DYNAMO < handle
             %   Computes flexible B-spline surfaces to characterize SOPH structure.
 
             % Fit SOPH with spline models and store the result
-            if nargin < 2, plot_on = true; end
             assert(obj.isInitialized(), 'Object not initialized properly.');
             assert(~isempty(obj.SOPHs), 'SOPHs not computed.');
 
-            [fit, coefs, s, kx, ky, f] = SOPH2spline('power', obj.SOPHs.SOpower_mat, obj.SOPHs.SOpower_bins, obj.SOPHs.freq_bins, 'plot_on', plot_on);
-            obj.SOPHs.SOpower_splinefit = obj.createSOPHsplinefitStruct(fit, coefs, s, kx, ky, f);
+            if nargin<2
+                plot_on = true;
+            end
 
-            [fit, coefs, s, kx, ky, f] = SOPH2spline('phase', obj.SOPHs.SOphase_mat, obj.SOPHs.SOphase_bins, obj.SOPHs.freq_bins, 'plot_on', plot_on);
-            obj.SOPHs.SOphase_splinefit = obj.createSOPHsplinefitStruct(fit, coefs, s, kx, ky, f);
+            opts_pow = obj.spline_basis_power_options;
+            opts_pow.plot_on = false;
+
+            opts_phase = obj.spline_basis_phase_options;
+            opts_phase.plot_on = false;
+
+
+            [fit_pow, coefs_pow, s_pow, knots_x_pow, knots_y_pow] = ...
+                spline_basis('power', obj.SOPHs.SOpower_mat, obj.SOPHs.SOpower_bins, obj.SOPHs.freq_bins, opts_pow);
+            obj.SOPHs.SOpower_splinefit = obj.createSOPHsplinefitStruct(fit_pow, coefs_pow, s_pow, knots_x_pow, knots_y_pow, []);
+
+            [fit_phase, coefs_phase, s_phase, knots_x_phase, knots_y_phase] = ...
+                spline_basis('phase', obj.SOPHs.SOphase_mat, obj.SOPHs.SOphase_bins, obj.SOPHs.freq_bins, opts_phase);
+            obj.SOPHs.SOphase_splinefit = obj.createSOPHsplinefitStruct(fit_phase, coefs_phase, s_phase, knots_x_phase, knots_y_phase, []);
+
+            if plot_on
+                obj.plot_SOPH_splinefits( ...
+                    obj.SOPHs.SOpower_mat, obj.SOPHs.SOpower_bins, fit_pow, coefs_pow, knots_x_pow, knots_y_pow, opts_pow, ...
+                    obj.SOPHs.SOphase_mat, obj.SOPHs.SOphase_bins, fit_phase, coefs_phase, knots_x_phase, knots_y_phase, opts_phase, ...
+                    obj.SOPHs.freq_bins);
+            end
         end
 
         function fh = plot(obj)
@@ -309,14 +348,18 @@ classdef DYNAMO < handle
             configs = {
                 struct('name', 'Detection', 'field', 'detection_options', 'constructor', @detection_opts)
                 struct('name', 'Baseline', 'field', 'baseline_options', 'constructor', @baseline_opts)
-                struct('name', 'SOPowerPhaseHist', 'field', 'SOPH_options', 'constructor', @SOpowerphasehist_opts)
+                struct('name', 'SOPHs', 'field', 'SOPH_options', 'constructor', @SOpowerphasehist_opts)
+                struct('name', 'Param Power', 'field', 'param_basis_power_options', 'constructor', @(x)param_basis_opts('power'))
+                struct('name', 'Param Phase', 'field', 'param_basis_phase_options', 'constructor', @(x)param_basis_opts('phase'))
+                struct('name', 'Spline Power', 'field', 'spline_basis_power_options', 'constructor', @(x)spline_basis_opts('power'))
+                struct('name', 'Spline Phase', 'field', 'spline_basis_phase_options', 'constructor', @(x)spline_basis_opts('phase'))
                 };
 
             % Create tabs and tables
             tables = cell(size(configs));
-            for ii = 1:length(configs)
-                tab = uitab(tabGroup, 'Title', [configs{ii}.name ' Options']);
-                tables{ii} = createTable(tab, obj.(configs{ii}.field), configs{ii});
+            for jj = 1:length(configs)
+                tab = uitab(tabGroup, 'Title', [configs{jj}.name ' Options']);
+                tables{jj} = createTable(tab, obj.(configs{jj}.field), configs{jj});
             end
 
             % Buttons
@@ -338,8 +381,8 @@ classdef DYNAMO < handle
 
                 for j = 1:numFields
                     paramNames{j} = fields{j};
-                    descriptions{j} = getDescription(fields{j}, config.constructor);
 
+                    descriptions{j} = getDescription(paramNames{j}, config.constructor);
                     % Format value appropriately
                     formattedValue = formatValue(fields{j}, opts.(fields{j}), config.constructor);
                     values{j} = formattedValue;
@@ -446,7 +489,7 @@ classdef DYNAMO < handle
                         'Indeterminate', 'on');
 
                     % Rerun DYNAMO with current options
-                    obj = obj.rerun('time_range', obj.time_range, ...
+                    obj = obj.run('time_range', obj.time_range, ...
                         'baseline_options', obj.baseline_options, ...
                         'detection_options', obj.detection_options, ...
                         'SOPH_options', obj.SOPH_options, ...
@@ -494,7 +537,18 @@ classdef DYNAMO < handle
 
                 % Validate with constructor
                 args = struct2args(opts);
-                newOpts = constructor(args{:});
+
+                if strcmp(func2str(constructor), '@(x)param_basis_opts(''power'')')
+                    newOpts = param_basis_opts('power', args{:});
+                elseif strcmp(func2str(constructor), '@(x)param_basis_opts(''phase'')')
+                    newOpts = param_basis_opts('phase', args{:});
+                elseif strcmp(func2str(constructor), '@(x)spline_basis_opts(''power'')')
+                    newOpts = spline_basis_opts('power', args{:});
+                elseif strcmp(func2str(constructor), '@(x)spline_basis_opts(''phase'')')
+                    newOpts = spline_basis_opts('phase', args{:});
+                else
+                    newOpts = constructor(args{:});
+                end
             end
 
             function value = parseValue(param, str)
@@ -543,6 +597,9 @@ classdef DYNAMO < handle
                 if isequal(constructor, @detection_opts) && strcmp(param, 'quality_setting')
                     % Create categorical with proper categories for dropdown
                     str = categorical(string(value), {'default', 'precision', 'stokes_2023'});
+                elseif (strcmp(func2str(constructor), '@(x)param_basis_opts(''power'')') || strcmp(func2str(constructor), '@(x)param_basis_opts(''phase'')')) &&  strcmp(param, 'criterion')
+                    % Create categorical with proper categories for dropdown
+                    str = categorical(string(value), {'minpctr2', 'max', 'mindr2', 'kneedle'});
                 elseif strcmp(param, 'features') && isequal(constructor, @detection_opts)
                     if ischar(value) && strcmp(value, 'all')
                         str = 'all';
@@ -567,8 +624,12 @@ classdef DYNAMO < handle
                     str = mat2str(value);
                 end
 
-                if isequal(constructor, @SOpowerphasehist_opts) && ((strcmp(param, 'SOphase_binsizestep') || strcmp(param, 'SOphase_range')))
-                    str = ['[', obj.double2pifracstr(value(1)), ', ', obj.double2pifracstr(value(2)), ']'];
+                if ismember(param, {'SOphase_binsizestep', 'SOphase_range', 'LB_default', 'UB_default',  'watershed_params'})
+                    str = '[';
+                    for ii = 1:length(value)
+                        str = [str obj.double2pifracstr(value(ii)) ' '];
+                    end
+                    str = [str ']'];
                 end
             end
 
@@ -628,6 +689,53 @@ classdef DYNAMO < handle
                         'SOphase_range', 'Phase range (radians)', ...
                         'SOphase_binsizestep', 'Phase bin size/step',...
                         'SOphase_min_peaks_in_bin', 'Min number of peaks required to display');
+                elseif strcmp(func2str(constructor), '@(x)param_basis_opts(''power'')')
+                    map = struct(...
+                        'ylimits', 'Frequency limits for watershed and parameterization (Hz)', ...
+                        'watershed_params', '[merge_thresh, dur_min, bw_min, height_min, trim_vol]', ...
+                        'wshed_exp', 'Watershed expansion flag (logical)', ...
+                        'max_peaks', 'Maximum number of peaks to fit (-1 for unlimited)', ...
+                        'prefix_modes', 'Prefix modes fitting parameters [amp0, fmean0, fstd0, pmean0, pstd0, theta0]', ...
+                        'prefix_modes_order', 'Prefix modes order (-1: after, 0: only, 1: before watershed)', ...
+                        'max_overlap', 'Maximum allowed mode overlap', ...
+                        'min_amp', 'Minimum amplitude for a peak', ...
+                        'min_freq_diff', 'Minimum allowed frequency difference (Hz)', ...
+                        'criterion', 'Model selection criterion (max, mindr2, minpctr2, kneedle)', ...
+                        'min_dr2', 'Minimum acceptable change in R-squared', ...
+                        'min_pctr2', 'Minimum percentage change in R-squared', ...
+                        'kneedle_tol', 'Kneedle algorithm iteration tolerance', ...
+                        'UB_default', 'Upper bounds [amp0, fmean0, fstd0, pmean0, pstd0, theta0]', ...
+                        'LB_default', 'Lower bounds [amp0, fmean0, fstd0, pmean0, pstd0, theta0]', ...
+                        'plot_on', 'Plot flag (0: none, 1: final, 2: iterations, 3: both)', ...
+                        'SOPH_clim_prctiles', 'Heatmap color scaling percentiles [low, high]', ...
+                        'verbose', 'Display detailed output (logical)');
+                elseif strcmp(func2str(constructor), '@(x)param_basis_opts(''phase'')')
+                    map = struct(...
+                        'ylimits', 'Frequency limits for watershed and parameterization (Hz)', ...
+                        'watershed_params', '[merge_thresh, dur_min, bw_min, height_min, trim_vol]', ...
+                        'gauss_filt_std', 'Gaussian filter std dev [row, col] for spectrogram smoothing', ...
+                        'wshed_exp', 'Watershed expansion flag (logical)', ...
+                        'max_peaks', 'Maximum number of peaks to fit (-1 for unlimited)', ...
+                        'prefix_modes', 'Prefix modes fitting parameters [amp0, fmean0, fstd0, pmean0, pstd0, theta0]', ...
+                        'prefix_modes_order', 'Prefix modes order (-1: after, 0: only, 1: before watershed)', ...
+                        'max_overlap', 'Maximum allowed mode overlap', ...
+                        'min_amp', 'Minimum amplitude for a peak', ...
+                        'criterion', 'Model selection criterion (max, mindr2, minpctr2, kneedle)', ...
+                        'min_dr2', 'Minimum acceptable change in R-squared', ...
+                        'min_pctr2', 'Minimum percentage change in R-squared', ...
+                        'kneedle_tol', 'Kneedle algorithm iteration tolerance', ...
+                        'UB_default', 'Upper bounds [amp0, fmean0, fstd0, pmean0, pstd0, theta0]', ...
+                        'LB_default', 'Lower bounds [amp0, fmean0, fstd0, pmean0, pstd0, theta0]', ...
+                        'plot_on', 'Plot flag (0: none, 1: final, 2: iterations, 3: both)', ...
+                        'SOPH_clim_prctiles', 'Heatmap color scaling percentiles [low, high]', ...
+                        'verbose', 'Display detailed output (logical)');
+                elseif strcmp(func2str(constructor), '@(x)spline_basis_opts(''power'')') || strcmp(func2str(constructor), '@(x)spline_basis_opts(''phase'')')
+                    map = struct(...
+                        'ylimits', 'Frequency limits for splines (Hz)', ...
+                        'num_knots_x', 'Number of spline knots in the x dimension', ...
+                        'num_knots_y', 'Number of spline knots in the y dimension', ...
+                        'plot_on', 'Plot flag ', ...
+                        'SOPH_clim_prctiles', 'Heatmap color scaling percentiles [low, high]');
                 else
                     map = struct();
                 end
@@ -722,7 +830,7 @@ classdef DYNAMO < handle
 
             [n,d] = rat(val/pi,tol);
 
-            if n<100 && d<100
+            if n<100 && d<100 && n~=0 && d~=0
 
                 if n == -1
                     pi_str = '-pi';
@@ -736,8 +844,337 @@ classdef DYNAMO < handle
                     pi_str = [pi_str '/' num2str(d)];
                 end
             else
-                pi_str = [];
+                pi_str = num2str(val);
             end
         end
+
+        function plot_SOPH_splinefits( ...
+                SOpower_mat, SOpower_bins, fit_pow, coefs_pow, knots_x_pow, knots_y_pow, opts_pow, ...
+                SOphase_mat, SOphase_bins, fit_phase, coefs_phase, knots_x_phase, knots_y_phase, opts_phase, ...
+                freq_bins)
+            %PLOT_SOPH_SPLINEFITS  Plot SOPH histograms and spline reconstructions in one figure.
+            %
+            %   Plots SO-Power (top row) and SO-Phase (bottom row) histograms,
+            %   their spline reconstructions, and spline coefficients in a 2x3 layout.
+            %
+            %   See also: SPLINE_BASIS
+
+            f = figure;
+            ax = figdesign(f, 2, 3, ...
+                'type', 'usletter', ...
+                'orient', 'landscape', ...
+                'margins', [0.05 0.05 0.08 0.1 0.1 0.1], ...
+                'position',[0.0404 0.1764 0.4840 0.6576]);
+
+            % Helper: plot one set into 3 adjacent axes
+            function plot_splinefit(ax_handles, hist_mat, x_bins, fit_mat, coefs, knots_x, knots_y, opts, freq_bins, cmap_hist, cmap_fit, labels)
+                % Histogram
+                axes(ax_handles(1))
+                imagesc(x_bins, freq_bins, hist_mat');
+                axis xy
+                ylabel('Frequency (Hz)')
+                colormap(gca, cmap_hist)
+                xlabel(labels.x)
+                title(sprintf('%s Histogram: %d Parameters', labels.name, numel(hist_mat)))
+                colorbar_noresize;
+
+                % Spline reconstruction
+                axes(ax_handles(2))
+                imagesc(knots_x, knots_y, fit_mat');
+                axis xy
+                ylabel('Frequency (Hz)')
+                c = colorbar_noresize;
+                c.Label.String = labels.fitLabel;
+                c.Label.Rotation = -90;
+                c.Label.VerticalAlignment = "bottom";
+                colormap(gca, cmap_fit)
+                xlabel(labels.x)
+                title(sprintf('Spline Reconstruction: %d Parameters', numel(coefs)))
+
+                % Coefficients
+                axes(ax_handles(3))
+                imagesc(1:size(coefs,2), 1:size(coefs,1), coefs);
+                axis xy;
+                clim(max(coefs,[],'all')*[-1 1]);
+                c = colorbar_noresize;
+                c.Label.String = {'Coefficient'};
+                c.Label.Rotation = -90;
+                c.Label.VerticalAlignment = "bottom";
+                colormap(gca, flipud(redblue_equalized));
+                xlabel('x coeff knots')
+                ylabel('y coeff knots')
+                title('Spline Coefficients')
+
+                % Equalize & limits
+                equalize_axes(ax_handles(1:2),'dimension','xyc');
+                axes(ax_handles(1))
+                axis tight
+                ylim(opts.ylimits)
+                c_ptiles = prctile(hist_mat(hist_mat(:)~=0), opts.SOPH_clim_prctiles);
+                clim(ax_handles(1), [c_ptiles(1) c_ptiles(2)]);
+            end
+
+            % Top row: SO-Power
+            plot_splinefit(ax(1:3), SOpower_mat, SOpower_bins, fit_pow, coefs_pow, knots_x_pow, knots_y_pow, ...
+                opts_pow, freq_bins, gouldian, gouldian, ...
+                struct('x','SO-Power (dB)', 'name','SO-Power', 'fitLabel',{{'Density','(peaks/min in bin)'}}));
+
+            % Bottom row: SO-Phase
+            plot_splinefit(ax(4:6), SOphase_mat, SOphase_bins, fit_phase, coefs_phase, knots_x_phase, knots_y_phase, ...
+                opts_phase, freq_bins, magma, magma, ...
+                struct('x','SO-Phase (rad)', 'name','SO-Phase', 'fitLabel',{{'Proportion'}}));
+
+            set(ax,'fontsize',10);
+        end
+
+
+
+
+        function plot_param_basis_good( ...
+                power_bins, freq_bins, power_wshed_img, SOPH_pow, model_SOPH_pow, params_pow, SOPH_clim_prctiles_pow, ylimits_pow, ...
+                phase_bins, phase_wshed_img, SOPhH_phase, model_SOPhH_phase, params_phase, SOPH_clim_prctiles_phase, ylimits_phase, power_fitobj, phase_fitobj)
+
+            % Hover distance threshold (fraction of axis diagonal). Tweak this value as desired.
+            hover_dist_threshold = 0.05;  % 0.05 = 5% of axis diagonal
+
+            f = figure;
+            ax = figdesign(f, 2, 3, ...
+                'type', 'usletter', ...
+                'orient', 'landscape', ...
+                'margins', [0.05 0.05 0.08 0.1 0.1 0.1], ...
+                'position',[0.0404 0.1764 0.4840 0.6576]);
+
+            % Store all necessary data in the figure's application data
+            setappdata(f, 'power_fitobj', power_fitobj);
+            setappdata(f, 'phase_fitobj', phase_fitobj);
+            setappdata(f, 'power_bins', power_bins);
+            setappdata(f, 'phase_bins', phase_bins);
+            setappdata(f, 'freq_bins', freq_bins);
+            setappdata(f, 'power_ax', ax(3));
+            setappdata(f, 'phase_ax', ax(6));
+
+            % Helper function for one row
+            function plot_paramfit(ax_handles, x_bins, freq_bins, wshed_img, hist_mat, model_mat, params, cmap, type_str, xlabel_str, fitLabel, clim_prctiles, ylimits, plot_type)
+                % --- Watershed segmentation
+                axes(ax_handles(1))
+                hImg1 = imagesc(x_bins, freq_bins, wshed_img);
+                set(hImg1, 'HitTest', 'off', 'PickableParts', 'none'); % images shouldn't capture datatips
+                axis xy
+                ylabel('Frequency (Hz)');
+                title('Watershed Segmentation')
+
+                % --- Original histogram
+                axes(ax_handles(2))
+                hImg2 = imagesc(x_bins, freq_bins, hist_mat');
+                set(hImg2, 'HitTest', 'off', 'PickableParts', 'none');
+                axis xy
+                colorbar_noresize;
+                colormap(gca, cmap);
+                xlabel(xlabel_str);
+                title(['Original ' type_str ' Histogram'])
+
+                % --- Fitted modes
+                axes(ax_handles(3))
+                hImg3 = imagesc(x_bins, freq_bins, model_mat);
+                set(hImg3, 'HitTest', 'off', 'PickableParts', 'none'); % disable datatips for image
+                axis xy
+                hold on
+
+                % --- Plot the mode points (single line object with multiple markers)
+                hPts = plot(params(:, 4), params(:, 2), 'o', ...
+                    'markersize', 8, 'MarkerEdgeColor', 'k', 'MarkerFaceColor', 'r', 'LineStyle', 'none');
+
+                % Clear default data tip rows - most compatible method (old-style approach)
+                try
+                    hPts.DataTipTemplate.DataTipRows = dataTipTextRow.empty();
+                catch
+                    try
+                        delete(hPts.DataTipTemplate.DataTipRows);
+                    catch
+                        % fallback - overwrite later
+                    end
+                end
+
+                % Choose parameter names depending on type (using the latex-like names you provided)
+                if strcmpi(type_str,'Power')
+                    colNames = {'amp','freq_{mean}','freq_{std}','power_{mean}','power_{std}','\theta'};
+                else
+                    colNames = {'amp','freq_{mean}','freq_{std}','phase_{mean}','phase_{std}','\theta'};
+                end
+
+                % Add custom data tip rows for each parameter (vector values per marker)
+                try
+                    for k = 1:length(colNames)
+                        hPts.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow(colNames{k}, params(:,k), '%.3f');
+                    end
+                catch
+                    % ignore if DataTipTemplate not supported exactly
+                end
+
+                % Make the marker object pickable (so datatips work) but do not let images steal hits
+                set(hPts, 'HitTest', 'on', 'PickableParts', 'all');
+
+                % Store mode data and point handle in axes appdata
+                setappdata(ax_handles(3), [plot_type '_mode_pts'], hPts);
+                setappdata(ax_handles(3), [plot_type '_params'], params);
+                setappdata(ax_handles(3), [plot_type '_x_bins'], x_bins);
+                setappdata(ax_handles(3), [plot_type '_mode_x'], params(:, 4));
+                setappdata(ax_handles(3), [plot_type '_mode_y'], params(:, 2));
+
+                % --- Plot contours for each mode (initially invisible)
+                fitobj = getappdata(f, [plot_type '_fitobj']);
+                x_fine = linspace(x_bins(1), x_bins(end), 200);
+                freq_fine = linspace(freq_bins(1), freq_bins(end), 100);
+                contours = gobjects(size(params,1),1);
+                for k = 1:size(params,1)
+                    try
+                        cdata = select_modes(fitobj, k, x_fine, freq_fine);
+                    catch
+                        cdata = nan(length(freq_fine), length(x_fine));
+                    end
+                    try
+                        % Capture the graphics object handle returned by contour
+                        [~, contours(k)] = contour(ax_handles(3), x_fine, freq_fine, cdata, 'w-', 'LineWidth', 2);
+                        if isgraphics(contours(k))
+                            % make contours non-pickable so they don't steal picks from markers
+                            set(contours(k), 'Visible','off', 'Tag','mode_contour', 'HitTest','off', 'PickableParts','none');
+                        end
+                    catch
+                        contours(k) = gobjects(1);
+                    end
+                end
+                setappdata(ax_handles(3), [plot_type '_contours'], contours);
+
+                % Now ensure points are visually on top of contours
+                try
+                    uistack(hPts, 'top');
+                catch
+                    % ignore if uistack unavailable
+                end
+
+                % Colorbar, colormap and titles
+                c = colorbar_noresize;
+                c.Label.String = fitLabel;
+                c.Label.Rotation = -90;
+                c.Label.VerticalAlignment = "bottom";
+                colormap(gca, cmap);
+                title(['Model ' type_str ' Histogram and Modes'])
+
+                % Additional layout / scaling adjustments
+                linkcaxes(ax_handles(2:3));
+                axes(ax_handles(2))
+                if any(hist_mat(:) ~= 0)
+                    c_ptiles = prctile(hist_mat(hist_mat(:)~=0), clim_prctiles);
+                else
+                    c_ptiles = prctile(hist_mat(:), clim_prctiles);
+                end
+                clim([c_ptiles(1) c_ptiles(2)]);
+                linkaxes(ax_handles)
+                axis tight
+                ylim(ylimits)
+                set(ax_handles, 'fontsize', 10)
+            end
+
+            % --- SO-Power row ---
+            plot_paramfit(ax(1:3), power_bins, freq_bins, power_wshed_img, SOPH_pow, model_SOPH_pow, params_pow, ...
+                gouldian, 'Power', 'SO-Power (dB)', {'Density','(peaks/min in bin)'}, SOPH_clim_prctiles_pow, ylimits_pow, 'power');
+
+            % --- SO-Phase row ---
+            plot_paramfit(ax(4:6), phase_bins, freq_bins, phase_wshed_img(:,length(phase_bins)+1:end-length(phase_bins),:), SOPhH_phase, model_SOPhH_phase, params_phase, ...
+                magma, 'Phase', 'SO-Phase (rad)', {'Proportion'}, SOPH_clim_prctiles_phase, ylimits_phase, 'phase');
+
+            % --- Enable datacursor mode (so clicking markers produces the enhanced datatip) ---
+            dcm = datacursormode(f);
+            set(dcm, 'Enable','on');
+
+            % --- Hover function to toggle contours (with axis-aware threshold) ---
+            set(f, 'WindowButtonMotionFcn', @(src,evt) hoverModeContour(src));
+
+            function hoverModeContour(fig_handle)
+                % Only act if there's a current axes under the pointer
+                curr_ax = get(fig_handle, 'CurrentAxes');
+                if isempty(curr_ax) || ~isgraphics(curr_ax)
+                    return
+                end
+
+                % For each plot type (power/phase) check if this axes contains its data
+                for plot_type = {'power','phase'}
+                    plot_type_str = plot_type{1};
+                    if ~isappdata(curr_ax, [plot_type_str '_mode_pts'])
+                        continue
+                    end
+
+                    hPts = getappdata(curr_ax, [plot_type_str '_mode_pts']);
+                    if isempty(hPts) || ~isvalid(hPts)
+                        continue
+                    end
+
+                    % If cursor is over any mode point, do not update contours (let datatips work)
+                    curr_obj = hittest(fig_handle);
+                    if ~isempty(curr_obj) && any(curr_obj == hPts)
+                        return
+                    end
+
+                    % Mouse in axis coordinates
+                    pt = get(curr_ax,'CurrentPoint');
+                    x_mouse = pt(1,1);
+                    y_mouse = pt(1,2);
+
+                    % Mode points and contours
+                    mode_x = getappdata(curr_ax, [plot_type_str '_mode_x']);
+                    mode_y = getappdata(curr_ax, [plot_type_str '_mode_y']);
+                    contours = getappdata(curr_ax, [plot_type_str '_contours']);
+                    if isempty(contours), continue; end
+
+                    % Compute normalized distances so threshold is axis-aware:
+                    xlim_curr = get(curr_ax, 'XLim');
+                    ylim_curr = get(curr_ax, 'YLim');
+                    xrange = diff(xlim_curr);
+                    yrange = diff(ylim_curr);
+                    if xrange == 0, xrange = eps; end
+                    if yrange == 0, yrange = eps; end
+
+                    norm_dx = (mode_x - x_mouse) ./ xrange;
+                    norm_dy = (mode_y - y_mouse) ./ yrange;
+                    norm_dist = sqrt(norm_dx.^2 + norm_dy.^2);  % axis-normalized Euclidean distance
+
+                    % Find closest mode
+                    [min_dist, idx] = min(norm_dist);
+
+                    % If not within threshold, hide all contours
+                    if min_dist > hover_dist_threshold
+                        for k = 1:length(contours)
+                            try
+                                if isgraphics(contours(k))
+                                    set(contours(k),'Visible','off');
+                                end
+                            catch
+                                % ignore individual errors
+                            end
+                        end
+                        return
+                    end
+
+                    % Otherwise show only the selected contour
+                    for k = 1:length(contours)
+                        try
+                            if isgraphics(contours(k))
+                                if k == idx
+                                    set(contours(k),'Visible','on');
+                                else
+                                    set(contours(k),'Visible','off');
+                                end
+                            end
+                        catch
+                            % ignore individual errors
+                        end
+                    end
+                end
+            end
+
+            % Clean up on figure close
+            set(f, 'DeleteFcn', @(src,evt) delete(findobj(f, 'Tag', 'mode_contour')));
+        end
+
     end
 end
