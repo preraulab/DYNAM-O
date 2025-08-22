@@ -22,7 +22,7 @@ addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric'}, {'real',
 addOptional(p, 'isexcluded', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
 
 %SOphase computation params
-SOphase_options = SOphase_opts(); % get the default parameters
+SOphase_options = SOpowerphasehist_opts(); % get the default parameters
 addOptional(p, 'SO_freqrange', SOphase_options.SO_freqrange, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','vector','numel',2}));
 addOptional(p, 'SOphase_filter', SOphase_options.SOphase_filter);
 
