@@ -46,24 +46,24 @@ classdef DYNAMO < handle
     %       % Create and run DYNAMO with defaults
     %       d = DYNAMO(data, Fs, stage_times, stage_vals);
     %       % Compute TF peaks
-    %       d = d.runDYNAMO();
+    %       d.runDYNAMO();
     %       d.displaySummaryPlot(); %Show TF-peak summary plot
     %       d.displayTFPeaks();
     %
     %       % Re-run analysis with a different time window
     %       d.time_range = [0 3600];
-    %       d = d.runDYNAMO();
+    %       d.runDYNAMO();
     %
     %       % Update detection parameters programmatically, then re-run
     %       opts = detection_opts();
     %       opts.peak_power_thresh = 3;
-    %       d = d.updateOptions('detection_options', opts);
-    %       d = d.runDYNAMO();
+    %       d.updateOptions('detection_options', opts);
+    %       d.runDYNAMO();
     %
     %       % Visualize and fit SOPH models
     %       fh = d.displaySummaryPlot();
-    %       d = d.fitParamBasis();
-    %       d = d.fitSplineBasis();
+    %       d.fitParamBasis();
+    %       d.fitSplineBasis();
     %
     %   Citation:
     %       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun
@@ -104,6 +104,12 @@ classdef DYNAMO < handle
         % Misc
         time_range
     end
+    
+    properties (Access = private)
+        data_validated = false
+        staging_validated = false
+        options_validated = false
+    end
 
     methods
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -131,10 +137,10 @@ classdef DYNAMO < handle
             p = inputParser;
             p.KeepUnmatched = true;
 
-            addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','vector'}));
-            addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','scalar'}));
-            addRequired(p, 'stage_times', @(x) validateattributes(x, {'numeric'}, {'real','finite','nondecreasing','vector'}));
-            addRequired(p, 'stage_vals', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','vector'}));
+            addRequired(p, 'data', @(x) isnumeric(x));
+            addRequired(p, 'Fs', @(x) isnumeric(x) && isscalar(x) && x > 0);
+            addRequired(p, 'stage_times', @(x) isnumeric(x));
+            addRequired(p, 'stage_vals', @(x) isnumeric(x));
 
             addOptional(p, 'time_range', [], @(x) isempty(x) || (isnumeric(x) && numel(x)==2));
             addOptional(p, 'baseline_options', baseline_opts(), @(x) isstruct(x));
@@ -155,8 +161,13 @@ classdef DYNAMO < handle
             parse(p, varargin{:});
             R = p.Results;
 
-            % Assign to object (preserve original code semantics)
-            obj.data = R.data(:);
+            % Avoid unnecessary data copying
+            if iscolumn(R.data)
+                obj.data = R.data;  % No copy needed
+            else
+                obj.data = R.data(:);  % Only reshape if necessary
+            end
+            
             obj.Fs = R.Fs;
             obj.stage_times = R.stage_times;
             obj.stage_vals = single(R.stage_vals);
@@ -170,6 +181,24 @@ classdef DYNAMO < handle
             obj.time_range = R.time_range;
         end
 
+        % Lazy validation methods
+        function validateData(obj)
+            %VALIDATEDATA Perform expensive data validation only when needed
+            if ~obj.data_validated
+                validateattributes(obj.data, {'numeric'}, {'real','vector'});
+                obj.data_validated = true;
+            end
+        end
+        
+        function validateStaging(obj)
+            %VALIDATESTAGING Validate staging data only when needed
+            if ~obj.staging_validated
+                validateattributes(obj.stage_times, {'numeric'}, {'real','finite','nondecreasing','vector'});
+                validateattributes(obj.stage_vals, {'numeric'}, {'real','finite','nonnegative','vector'});
+                obj.staging_validated = true;
+            end
+        end
+
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % runDYNAMO
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -178,7 +207,7 @@ classdef DYNAMO < handle
             %peaks and SOPH
             %
             %   Usage:
-            %       obj = obj.runDYNAMO()
+            %       obj.runDYNAMO()
             %
             %   Description:
             %       Runs the full DYNAM-O pipeline (wrapped runDYNAMO function)
@@ -193,10 +222,12 @@ classdef DYNAMO < handle
             %       obj: DYNAMO object with updated analysis outputs
             %
             %   Example:
-            %       d = d.runDYNAMO();
+            %       d.runDYNAMO();
             %
 
-            % Ensure object has necessary inputs
+            % Lazy validation - only validate when running
+            obj.validateData();
+            obj.validateStaging();
             assert(obj.isInitialized(), 'DYNAMO object is not fully initialized.');
 
             [obj.stats_table, obj.SOPHs, obj.spect, obj.stimes, obj.sfreqs, obj.artifacts] = runDYNAMO(...
@@ -234,16 +265,16 @@ classdef DYNAMO < handle
             %       obj: DYNAMO object with updated options
             %
             %   Example (programmatic):
-            %       obj = obj.updateOptions('detection_options', new_detection_opts, ...
-            %                               'baseline_options', new_baseline_opts);
+            %       obj.updateOptions('detection_options', new_detection_opts, ...
+            %                         'baseline_options', new_baseline_opts);
             %
             %   Example (GUI):
-            %       obj = obj.updateOptions();
+            %       obj.updateOptions();
             %
 
             % Launch GUI if no additional inputs (interactive editing)
             if nargin == 1
-                obj = obj.DYNAMOOptionsApp(false);
+                obj.DYNAMOOptionsApp(false);
                 return;
             end
 
@@ -402,7 +433,7 @@ classdef DYNAMO < handle
             %       obj: DYNAMO object with updated SOPH parametric fits
             %
             %   Example:
-            %       obj = obj.fitParamBasis(true);
+            %       obj.fitParamBasis(true);
             %
 
             if nargin < 2, plot_on = true; end
@@ -457,7 +488,7 @@ classdef DYNAMO < handle
             %       obj: DYNAMO object updated with spline fit fields
             %
             %   Example:
-            %       obj = obj.fitSplineBasis();
+            %       obj.fitSplineBasis();
             %
 
             assert(obj.isInitialized(), 'Object not initialized properly.');
@@ -941,14 +972,14 @@ classdef DYNAMO < handle
                     else
                         str = mat2str(value);
                     end
-                    % Special formatting for some named parameters to show pi fractions
+                    % Efficient string building for pi fractions
                     if ismember(param, {'SOphase_binsizestep', 'SOphase_range', 'LB_default', 'UB_default', 'watershed_params'})
-                        s = '[';
+                        % Build cell array of strings first, then join
+                        pi_strings = cell(1, length(value));
                         for ii = 1:length(value)
-                            s = [s obj.double2pifracstr(value(ii)) ' ']; %#ok<AGROW>
+                            pi_strings{ii} = obj.double2pifracstr(value(ii));
                         end
-                        s = [s ']'];
-                        str = s;
+                        str = ['[' strjoin(pi_strings, ' ') ']'];
                     end
                     return;
                 end
@@ -1194,6 +1225,7 @@ classdef DYNAMO < handle
             end
             [n,d] = rat(val/pi,tol);
             if n<100 && d<100 && n~=0 && d~=0
+                % Build string efficiently
                 if n == -1
                     pi_str = '-pi';
                 elseif n == 1
@@ -1201,7 +1233,7 @@ classdef DYNAMO < handle
                 else
                     pi_str = [num2str(n) '*pi'];
                 end
-                if d>1
+                if d > 1
                     pi_str = [pi_str '/' num2str(d)];
                 end
             else
