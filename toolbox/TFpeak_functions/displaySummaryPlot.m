@@ -78,7 +78,7 @@ addParameter(p, 'ylimits', [], @(x) isa(x,'numeric') && (isempty(x) || length(x)
 % SO-power trace needs these variables
 addParameter(p, 'SOpower_norm', [], @(x) validateattributes(x, {'numeric'}, {'real','2d'}));
 addParameter(p, 'SOpower_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
-addParameter(p, 'SOpower_norm_method', SOpower_opts().SOpower_norm_method, @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
+addParameter(p, 'SOpower_norm_method', 'p2shift1234', @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
 
 % TF-peak scatter plot needs these variables
 addParameter(p, 'stats_table', [], @(x) validateattributes(x, {'double','table'}, {'real','2d'}));

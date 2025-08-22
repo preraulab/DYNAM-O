@@ -297,13 +297,14 @@ if nargout > 1
             [splinefit_phase, coefs_phase, spline_obj_phase, knots_x_phase, knots_y_phase] = spline_basis('phase', SOPHs.SOphase_mat, SOPHs.SOphase_bins, SOPHs.freq_bins, opts);
             SOPHs.SOphase_splinefit = createSOPHsplinefitStruct(splinefit_phase, coefs_phase, spline_obj_phase, knots_x_phase, knots_y_phase);
         end
-    end
 
-    if plot_both
-        plot_SOPH_splinefits( ...
-            SOPHs.SOpower_mat, SOPHs.SOpower_bins, splinefit_pow, coefs_pow, knots_x_pow, knots_y_pow, spline_basis_power_options, ...
-            SOPHs.SOphase_mat, SOPHs.SOphase_bins, splinefit_phase, coefs_phase, knots_x_phase, knots_y_phase, spline_basis_phase_options, ...
-            SOPHs.freq_bins);
+
+        if plot_both
+            plot_SOPH_splinefits( ...
+                SOPHs.SOpower_mat, SOPHs.SOpower_bins, splinefit_pow, coefs_pow, knots_x_pow, knots_y_pow, spline_basis_power_options, ...
+                SOPHs.SOphase_mat, SOPHs.SOphase_bins, splinefit_phase, coefs_phase, knots_x_phase, knots_y_phase, spline_basis_phase_options, ...
+                SOPHs.freq_bins);
+        end
     end
 
     if plot_on

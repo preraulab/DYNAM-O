@@ -115,7 +115,6 @@ addOptional(p, 'SO_freqrange', SOPH_options.SO_freqrange, @(x) validateattribute
 addOptional(p, 'SOPH_stages', SOPH_options.SOPH_stages, @(x) validateattributes(x,{'numeric'},{'real','nonnegative','vector'})); % W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
 addOptional(p, 'norm_dim', SOPH_options.SOphase_norm_dim, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
 addOptional(p, 'compute_rate', SOPH_options.compute_rate, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
-addOptional(p, 'min_time_in_bin', 0, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
 addOptional(p, 'min_peak_at_freq', SOPH_options.SOphase_min_peak_at_freq, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
 
 %SOphase specific settings
@@ -252,7 +251,7 @@ clear SOphase_stages_valid SOphase_excluded_valid SOphase_times_valid
     'C_range', SO_range, 'C_binsizestep', SO_binsizestep,...
     'freq_range', freq_range, 'freq_binsizestep', freq_binsizestep,...
     'norm_dim', norm_dim, 'compute_rate', compute_rate,...
-    'min_time_in_bin', min_time_in_bin, 'min_peak_at_freq', min_peak_at_freq,...
+    'min_peak_at_freq', min_peak_at_freq,...
     'plot_on', plot_on, 'verbose', verbose);
 
 end
