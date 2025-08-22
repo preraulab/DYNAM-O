@@ -1,79 +1,79 @@
 classdef DYNAMO < handle
-% DYNAMO  Class wrapper for running the DYNAM-O pipeline for time-frequency
-% peak and SO-power/phase histogram analysis
-%
-%   Usage:
-%       d = DYNAMO(data, Fs, stage_times, stage_vals, ...)
-%
-%   Input:
-%       data: [N x 1] vector - EEG time series data -- required
-%       Fs: double - sampling frequency in Hz -- required
-%       stage_times: [1 x T] vector - time markers for sleep staging (s) -- required
-%       stage_vals: [1 x T] vector - corresponding sleep stage values (1-5) -- required
-%
-%   Optional Name-Value Inputs:
-%       time_range: [1 x 2] double - start and end analysis time in seconds
-%       baseline_options: struct - baseline preprocessing options
-%       detection_options: struct - TF-peak detection options
-%       SOPH_options: struct - SO-power/phase histogram options
-%       param_basis_power_options: struct - parametric basis options (power)
-%       param_basis_phase_options: struct - parametric basis options (phase)
-%       spline_basis_power_options: struct - spline basis options (power)
-%       spline_basis_phase_options: struct - spline basis options (phase)
-%       stats_table: table - precomputed TF peak table (bypass detection)
-%       verbose: logical - flag for printing progress (default: true)
-%       plot_on: logical - whether to show summary figure (default: true)
-%       save_output_image: logical - save summary image to disk (default: false)
-%       output_fname: char - output filename for saved figure
-%       fit_SOPH: logical - compute SOPH model fits (default: true)
-%
-%   Public Properties:
-%       stats_table, SOPHs, spect, stimes, sfreqs, artifacts
-%       data, Fs, stage_times, stage_vals, time_range
-%       baseline_options, detection_options, SOPH_options
-%       param_basis_*_options, spline_basis_*_options
-%
-%   Methods:
-%       runDYNAMO(...)         - run DYNAM-O pipeline. Compute TF-peaks and SOPHs
-%       updateOptions(...)    - update baseline/detection/SOPH options
-%       displaySummaryPlot()  - plot SOPH and TF peak summary figure
-%       displayTFPeaks()      - plot raw spectrogram and overlaid peaks
-%       fitParamBasis()       - fit parametric models to SOPHs
-%       fitSplineBasis()      - fit spline models to SOPHs
-%       plot()                - alias to displaySummaryPlot()
-%
-%   Example:
-%       % Create and run DYNAMO with defaults
-%       d = DYNAMO(data, Fs, stage_times, stage_vals);
-%       % Compute TF peaks 
-%       d = d.runDYNAMO();
-%       d.displaySummaryPlot(); %Show TF-peak summary plot
-%       d.displayTFPeaks();
-%
-%       % Re-run analysis with a different time window
-%       d.time_range = [0 3600];
-%       d = d.runDYNAMO();
-%
-%       % Update detection parameters programmatically, then re-run
-%       opts = detection_opts();
-%       opts.peak_power_thresh = 3;
-%       d = d.updateOptions('detection_options', opts);
-%       d = d.runDYNAMO();
-%
-%       % Visualize and fit SOPH models
-%       fh = d.displaySummaryPlot();
-%       d = d.fitParamBasis();
-%       d = d.fitSplineBasis();
-%
-%   Citation:
-%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun
-%       Purcell, Dara S Manoach, Robert Stickgold, Michael J Prerau,
-%       "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-%       for Electroencephalographic Phenotyping and Biomarker Identification",
-%       Sleep, 2022; zsac223. https://doi.org/10.1093/sleep/zsac223
-%
-%   Copyright 2025 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
-% *************************************************************************
+    % DYNAMO  Class wrapper for running the DYNAM-O pipeline for time-frequency
+    % peak and SO-power/phase histogram analysis
+    %
+    %   Usage:
+    %       d = DYNAMO(data, Fs, stage_times, stage_vals, ...)
+    %
+    %   Input:
+    %       data: [N x 1] vector - EEG time series data -- required
+    %       Fs: double - sampling frequency in Hz -- required
+    %       stage_times: [1 x T] vector - time markers for sleep staging (s) -- required
+    %       stage_vals: [1 x T] vector - corresponding sleep stage values (1-5) -- required
+    %
+    %   Optional Name-Value Inputs:
+    %       time_range: [1 x 2] double - start and end analysis time in seconds
+    %       baseline_options: struct - baseline preprocessing options
+    %       detection_options: struct - TF-peak detection options
+    %       SOPH_options: struct - SO-power/phase histogram options
+    %       param_basis_power_options: struct - parametric basis options (power)
+    %       param_basis_phase_options: struct - parametric basis options (phase)
+    %       spline_basis_power_options: struct - spline basis options (power)
+    %       spline_basis_phase_options: struct - spline basis options (phase)
+    %       stats_table: table - precomputed TF peak table (bypass detection)
+    %       verbose: logical - flag for printing progress (default: true)
+    %       plot_on: logical - whether to show summary figure (default: true)
+    %       save_output_image: logical - save summary image to disk (default: false)
+    %       output_fname: char - output filename for saved figure
+    %       fit_SOPH: logical - compute SOPH model fits (default: true)
+    %
+    %   Public Properties:
+    %       stats_table, SOPHs, spect, stimes, sfreqs, artifacts
+    %       data, Fs, stage_times, stage_vals, time_range
+    %       baseline_options, detection_options, SOPH_options
+    %       param_basis_*_options, spline_basis_*_options
+    %
+    %   Methods:
+    %       runDYNAMO(...)         - run DYNAM-O pipeline. Compute TF-peaks and SOPHs
+    %       updateOptions(...)    - update baseline/detection/SOPH options
+    %       displaySummaryPlot()  - plot SOPH and TF peak summary figure
+    %       displayTFPeaks()      - plot raw spectrogram and overlaid peaks
+    %       fitParamBasis()       - fit parametric models to SOPHs
+    %       fitSplineBasis()      - fit spline models to SOPHs
+    %       plot()                - alias to displaySummaryPlot()
+    %
+    %   Example:
+    %       % Create and run DYNAMO with defaults
+    %       d = DYNAMO(data, Fs, stage_times, stage_vals);
+    %       % Compute TF peaks
+    %       d = d.runDYNAMO();
+    %       d.displaySummaryPlot(); %Show TF-peak summary plot
+    %       d.displayTFPeaks();
+    %
+    %       % Re-run analysis with a different time window
+    %       d.time_range = [0 3600];
+    %       d = d.runDYNAMO();
+    %
+    %       % Update detection parameters programmatically, then re-run
+    %       opts = detection_opts();
+    %       opts.peak_power_thresh = 3;
+    %       d = d.updateOptions('detection_options', opts);
+    %       d = d.runDYNAMO();
+    %
+    %       % Visualize and fit SOPH models
+    %       fh = d.displaySummaryPlot();
+    %       d = d.fitParamBasis();
+    %       d = d.fitSplineBasis();
+    %
+    %   Citation:
+    %       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun
+    %       Purcell, Dara S Manoach, Robert Stickgold, Michael J Prerau,
+    %       "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+    %       for Electroencephalographic Phenotyping and Biomarker Identification",
+    %       Sleep, 2022; zsac223. https://doi.org/10.1093/sleep/zsac223
+    %
+    %   Copyright 2025 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
+    % *************************************************************************
 
     properties
         % EEG / staging / outputs
@@ -205,29 +205,37 @@ classdef DYNAMO < handle
                 'fit_param_basis', false, 'fit_spline_basis', false, 'plot_on', false);
         end
 
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        % updateOptions
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function obj = updateOptions(obj, varargin)
             %UPDATEOPTIONS  Update internal processing options
             %
             %   Usage:
             %       obj = obj.updateOptions('detection_options', new_opts, ...)
+            %       obj = obj.updateOptions()  % Launch GUI
             %
             %   Description:
             %       Update one or more option structs: baseline_options,
-            %       detection_options, SOPH_options, or launch a GUI when called
+            %       detection_options, SOPH_options, param_basis_power_options,
+            %       param_basis_phase_options, spline_basis_power_options,
+            %       spline_basis_phase_options, or launch a GUI when called
             %       without arguments to interactively edit options.
             %
             %   Inputs:
             %       obj: DYNAMO object
-            %       Name-Value pairs: 'baseline_options', 'detection_options', 'SOPH_options'
+            %       Name-Value pairs: Any combination of the following option structs:
+            %         'baseline_options'
+            %         'detection_options'
+            %         'SOPH_options'
+            %         'param_basis_power_options'
+            %         'param_basis_phase_options'
+            %         'spline_basis_power_options'
+            %         'spline_basis_phase_options'
             %
             %   Outputs:
             %       obj: DYNAMO object with updated options
             %
             %   Example (programmatic):
-            %       obj = obj.updateOptions('detection_options', new_opts);
+            %       obj = obj.updateOptions('detection_options', new_detection_opts, ...
+            %                               'baseline_options', new_baseline_opts);
             %
             %   Example (GUI):
             %       obj = obj.updateOptions();
@@ -239,13 +247,19 @@ classdef DYNAMO < handle
                 return;
             end
 
-            % Original updateOptions code for programmatic use
+            % Set up parser for all option types
             p = inputParser;
             addParameter(p, 'baseline_options', [], @(x) isstruct(x) || isempty(x));
             addParameter(p, 'detection_options', [], @(x) isstruct(x) || isempty(x));
             addParameter(p, 'SOPH_options', [], @(x) isstruct(x) || isempty(x));
+            addParameter(p, 'param_basis_power_options', [], @(x) isstruct(x) || isempty(x));
+            addParameter(p, 'param_basis_phase_options', [], @(x) isstruct(x) || isempty(x));
+            addParameter(p, 'spline_basis_power_options', [], @(x) isstruct(x) || isempty(x));
+            addParameter(p, 'spline_basis_phase_options', [], @(x) isstruct(x) || isempty(x));
+
             parse(p, varargin{:});
 
+            % Update each option struct if provided
             if ~isempty(p.Results.baseline_options)
                 obj.baseline_options = p.Results.baseline_options;
             end
@@ -254,6 +268,18 @@ classdef DYNAMO < handle
             end
             if ~isempty(p.Results.SOPH_options)
                 obj.SOPH_options = p.Results.SOPH_options;
+            end
+            if ~isempty(p.Results.param_basis_power_options)
+                obj.param_basis_power_options = p.Results.param_basis_power_options;
+            end
+            if ~isempty(p.Results.param_basis_phase_options)
+                obj.param_basis_phase_options = p.Results.param_basis_phase_options;
+            end
+            if ~isempty(p.Results.spline_basis_power_options)
+                obj.spline_basis_power_options = p.Results.spline_basis_power_options;
+            end
+            if ~isempty(p.Results.spline_basis_phase_options)
+                obj.spline_basis_phase_options = p.Results.spline_basis_phase_options;
             end
         end
 
@@ -385,6 +411,7 @@ classdef DYNAMO < handle
 
             opts_pow = obj.param_basis_power_options;
             opts_pow.plot_on = false;
+
             opts_phase = obj.param_basis_phase_options;
             opts_phase.plot_on = false;
 
@@ -483,6 +510,7 @@ classdef DYNAMO < handle
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % DYNAMOOptionsApp
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
         function obj = DYNAMOOptionsApp(obj, verbose)
             %DYNAMOOPTIONSAPP  Simplified GUI for editing DYNAMO pipeline options
             %
@@ -510,30 +538,95 @@ classdef DYNAMO < handle
             fig = uifigure('Name', 'DYNAMO Options', 'Position', [100 100 900 650]);
             tabGroup = uitabgroup(fig, 'Position', [10 60 880 580]);
 
-            % Option configurations
-            configs = {
+            % Basic option configurations (no changes)
+            basic_configs = {
                 struct('name', 'Detection', 'field', 'detection_options', 'constructor', @detection_opts)
                 struct('name', 'Baseline', 'field', 'baseline_options', 'constructor', @baseline_opts)
                 struct('name', 'SOPHs', 'field', 'SOPH_options', 'constructor', @SOpowerphasehist_opts)
-                struct('name', 'Param Power', 'field', 'param_basis_power_options', 'constructor', @(x)param_basis_opts('power'))
-                struct('name', 'Param Phase', 'field', 'param_basis_phase_options', 'constructor', @(x)param_basis_opts('phase'))
-                struct('name', 'Spline Power', 'field', 'spline_basis_power_options', 'constructor', @(x)spline_basis_opts('power'))
-                struct('name', 'Spline Phase', 'field', 'spline_basis_phase_options', 'constructor', @(x)spline_basis_opts('phase'))
-            };
+                };
 
-            % Create tabs and tables
-            tables = cell(size(configs));
-            for jj = 1:length(configs)
-                tab = uitab(tabGroup, 'Title', [configs{jj}.name ' Options']);
-                tables{jj} = createTable(tab, obj.(configs{jj}.field), configs{jj});
+            % Create basic tabs and tables
+            basic_tables = cell(size(basic_configs));
+            for jj = 1:length(basic_configs)
+                tab = uitab(tabGroup, 'Title', [basic_configs{jj}.name ' Options']);
+                basic_tables{jj} = createTable(tab, obj.(basic_configs{jj}.field), basic_configs{jj});
             end
 
-            % Buttons
-            uibutton(fig, 'Text', 'Reset All', 'Position', [250 10 130 40], 'ButtonPushedFcn', @resetAll);
-            uibutton(fig, 'Text', 'Rerun', 'Position', [390 10 100 40], 'ButtonPushedFcn', @rerunDynamo);
-            uibutton(fig, 'Text', 'Close', 'Position', [500 10 100 40], 'ButtonPushedFcn', @(~,~) delete(fig));
+            % Create Parametric Fit main tab with subtabs
+            param_tab = uitab(tabGroup, 'Title', 'Parametric Fit');
+            param_subtab_group = uitabgroup(param_tab, 'Position', [10 10 860 540]);
+
+            % Parametric subtab configurations
+            param_configs = {
+                struct('name', 'Power Fit', 'field', 'param_basis_power_options', 'constructor', @(x)param_basis_opts('power'))
+                struct('name', 'Phase Fit', 'field', 'param_basis_phase_options', 'constructor', @(x)param_basis_opts('phase'))
+                };
+
+            param_tables = cell(size(param_configs));
+            for jj = 1:length(param_configs)
+                subtab = uitab(param_subtab_group, 'Title', param_configs{jj}.name);
+                param_tables{jj} = createSubTable(subtab, obj.(param_configs{jj}.field), param_configs{jj});
+            end
+
+            % Create Spline Fit main tab with subtabs
+            spline_tab = uitab(tabGroup, 'Title', 'Spline Fit');
+            spline_subtab_group = uitabgroup(spline_tab, 'Position', [10 10 860 540]);
+
+            % Spline subtab configurations
+            spline_configs = {
+                struct('name', 'Power Fit', 'field', 'spline_basis_power_options', 'constructor', @(x)spline_basis_opts('power'))
+                struct('name', 'Phase Fit', 'field', 'spline_basis_phase_options', 'constructor', @(x)spline_basis_opts('phase'))
+                };
+
+            spline_tables = cell(size(spline_configs));
+            for jj = 1:length(spline_configs)
+                subtab = uitab(spline_subtab_group, 'Title', spline_configs{jj}.name);
+                spline_tables{jj} = createSubTable(subtab, obj.(spline_configs{jj}.field), spline_configs{jj});
+            end
+
+            % Combine all configs and tables for reset functionality
+            all_configs = [basic_configs; param_configs; spline_configs];
+            all_tables = [basic_tables; param_tables; spline_tables];
+
+            % ---- Buttons ----
+            buttonLabels = {'Reset All','Run DYNAMO','Param Fit','Spline Fit','Close'};
+            buttonCallbacks = {@resetAll, @rerunDynamo, @runParamFit, @runSplineFit, @(~,~) delete(fig)};
+
+            nButtons = numel(buttonLabels);
+            buttonWidth = 120;
+            buttonHeight = 40;
+            spacing = 20;
+            totalWidth = nButtons*buttonWidth + (nButtons-1)*spacing;
+            startX = (fig.Position(3) - totalWidth)/2; % center align
+
+            for ii = 1:nButtons
+                xpos = startX + (ii-1)*(buttonWidth+spacing);
+                uibutton(fig, 'Text', buttonLabels{ii}, ...
+                    'Position', [xpos 10 buttonWidth buttonHeight], ...
+                    'ButtonPushedFcn', buttonCallbacks{ii});
+            end
 
             uiwait(fig);
+
+            % --- Button callbacks ---
+            function resetAll(~,~)
+                if verbose, disp('Resetting all options...'); end
+                for k = 1:length(all_configs)
+                    obj.(all_configs{k}.field) = all_configs{k}.constructor();
+                    % refresh the table
+                    all_tables{k}.Data = struct2table(obj.(all_configs{k}.field),'AsArray',true);
+                end
+            end
+
+            function runParamFit(~,~)
+                if verbose, disp('Running parametric fit...'); end
+                obj.fitParamBasis;
+            end
+
+            function runSplineFit(~,~)
+                if verbose, disp('Running spline fit...'); end
+                obj.fitSplineBasis
+            end
 
             %------------------------------------------------------------------
             function tbl = createTable(parent, opts, config)
@@ -567,6 +660,41 @@ classdef DYNAMO < handle
                     'ColumnWidth', {180, 500, 'auto'}, ...
                     'ColumnEditable', [false false true], ...
                     'Position', [10 10 860 540], ...
+                    'CellEditCallback', @(src,ev) editCell(src, ev, config), ...
+                    'CellSelectionCallback', @(src,ev) selectCell(src, ev, config));
+            end
+
+            %------------------------------------------------------------------
+            function tbl = createSubTable(parent, opts, config)
+                %CREATESUBTABLE  Build an editable uitable for subtab (smaller size)
+                %
+                %   tbl = createSubTable(parent, opts, config)
+                %
+                %   Similar to createTable but with adjusted positioning for subtabs.
+                %
+
+                fields = fieldnames(opts);
+                numFields = length(fields);
+
+                paramNames = cell(numFields, 1);
+                descriptions = cell(numFields, 1);
+                values = cell(numFields, 1);
+
+                for j = 1:numFields
+                    paramNames{j} = fields{j};
+                    descriptions{j} = getDescription(paramNames{j}, config.constructor);
+                    formattedValue = formatValue(fields{j}, opts.(fields{j}), config.constructor);
+                    values{j} = formattedValue;
+                end
+
+                tableData = table(paramNames, descriptions, values, ...
+                    'VariableNames', {'Parameter', 'Description', 'Value'});
+
+                tbl = uitable(parent, 'Data', tableData, ...
+                    'ColumnName', {'Parameter', 'Description', 'Value'}, ...
+                    'ColumnWidth', {180, 480, 'auto'}, ...
+                    'ColumnEditable', [false false true], ...
+                    'Position', [5 5 850 510], ...
                     'CellEditCallback', @(src,ev) editCell(src, ev, config), ...
                     'CellSelectionCallback', @(src,ev) selectCell(src, ev, config));
             end
@@ -624,34 +752,6 @@ classdef DYNAMO < handle
                             uialert(fig, ME.message, 'Validation Error');
                         end
                     end
-                end
-            end
-
-            %------------------------------------------------------------------
-            function resetAll(~, ~)
-                %RESETALL  Reset all option structs to their defaults
-                try
-                    for ii = 1:length(configs)
-                        defaultOpts = configs{ii}.constructor();
-                        obj.(configs{ii}.field) = defaultOpts; % Direct assignment
-
-                        % Update table view
-                        fields = fieldnames(defaultOpts);
-                        newData = tables{ii}.Data;
-                        for j = 1:length(fields)
-                            newData.Value{j} = formatValue(fields{j}, defaultOpts.(fields{j}), configs{ii}.constructor);
-                        end
-                        tables{ii}.Data = newData;
-
-                        if verbose
-                            fprintf('✅ Reset %s to defaults\n', configs{ii}.field);
-                        end
-                    end
-                    if verbose
-                        fprintf('✅ All options reset to defaults - DYNAMO object updated\n');
-                    end
-                catch ME
-                    uialert(fig, ME.message, 'Reset Error');
                 end
             end
 
@@ -818,6 +918,16 @@ classdef DYNAMO < handle
                     return;
                 end
 
+                % Special handling for numeric verbose parameters in param/spline basis options
+                if strcmp(param, 'verbose') && isnumeric(value) && isscalar(value) && ...
+                        (strcmp(func2str(constructor), '@(x)param_basis_opts(''power'')') || ...
+                        strcmp(func2str(constructor), '@(x)param_basis_opts(''phase'')') || ...
+                        strcmp(func2str(constructor), '@(x)spline_basis_opts(''power'')') || ...
+                        strcmp(func2str(constructor), '@(x)spline_basis_opts(''phase'')'))
+                    str = num2str(value); % Keep as numeric string, not logical
+                    return;
+                end
+
                 if ischar(value) || isstring(value)
                     str = char(value);
                     return;
@@ -906,7 +1016,7 @@ classdef DYNAMO < handle
                         'SOphase_norm_dim', 'Phase norm dimension', ...
                         'SOphase_range', 'Phase range (radians)', ...
                         'SOphase_binsizestep', 'Phase bin size/step', ...
-                        'SOphase_min_peaks_in_bin', 'Min number of peaks required to display');
+                        'SOphase_min_peak_at_freq', 'Min number of peaks required to display');
                 elseif strcmp(func2str(constructor), '@(x)param_basis_opts(''power'')')
                     map = struct(...
                         'ylimits', 'Frequency limits for watershed and parameterization (Hz)', ...
@@ -926,7 +1036,7 @@ classdef DYNAMO < handle
                         'LB_default', 'Lower bounds [amp0, fmean0, fstd0, pmean0, pstd0, theta0]', ...
                         'plot_on', 'Plot flag (0: none, 1: final, 2: iterations, 3: both)', ...
                         'SOPH_clim_prctiles', 'Heatmap color scaling percentiles [low, high]', ...
-                        'verbose', 'Display detailed output (logical)');
+                        'verbose', 'Display detailed output (numeric)');
                 elseif strcmp(func2str(constructor), '@(x)param_basis_opts(''phase'')')
                     map = struct(...
                         'ylimits', 'Frequency limits for watershed and parameterization (Hz)', ...
@@ -1006,7 +1116,7 @@ classdef DYNAMO < handle
                 end
             end
         end % end DYNAMOOptionsApp
-
+        
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % isInitialized
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1017,7 +1127,7 @@ classdef DYNAMO < handle
             %
             %   Returns true if the object contains valid data and configuration.
             tf = ~isempty(obj.data) && ~isempty(obj.Fs) && ...
-                 ~isempty(obj.stage_times) && ~isempty(obj.stage_vals);
+                ~isempty(obj.stage_times) && ~isempty(obj.stage_vals);
         end
     end
 
