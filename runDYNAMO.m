@@ -7,7 +7,7 @@
 %   parametric and spline fits are also computed.
 %
 %   Usage:
-%       [stats_table, SOPHs, spect, stimes, sfreqs, artifacts] = runDYNAMO(data, Fs, stage_times, stage_vals, ...)
+%       [stats_table, spect, stimes, sfreqs, artifacts, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, ...)
 %
 %   Required Inputs:
 %       data:               [N x 1] double - time-domain EEG signal
@@ -34,22 +34,21 @@
 %
 %   Outputs:
 %       stats_table:        table - features of detected time-frequency peaks
-%       SOPHs:              struct - SO-power and SO-phase histograms and fits
 %       spect:              [F x T] double - time-frequency spectrogram
 %       stimes:             [1 x T] double - spectrogram time centers (s)
 %       sfreqs:             [1 x F] double - frequency bins (Hz)
 %       artifacts:          [1 x T] logical - artifact mask for data
+%       SOPHs:              struct - SO-power and SO-phase histograms (and fits if fit_param_basis or fit_spline_basis is true)
 %
 %   Notes:
 %       - If no inputs are provided, the function runs an internal example using bundled data.
-%               a single input of 'segment' or 'night' toggles the example
-%               data time range (default: 'segment')
+%       - A single input of 'segment' or 'night' toggles the example data time range (default: 'segment')
 %       - The SOPHs output includes histogram matrices, bin edges, time-in-bin info, and optionally
 %         parametric and spline fit results for both SO-power and SO-phase histograms.
 %
 %   Example:
 %       load('my_sleep_data.mat');  % should include data, Fs, stage_times, stage_vals
-%       [stats_table, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals);
+%       [stats_table, spect, stimes, sfreqs, artifacts, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals);
 %
 %   Citation:
 %       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
@@ -59,8 +58,7 @@
 %
 %**********************************************************************
 
-
-function [stats_table, SOPHs, spect, stimes, sfreqs, artifacts] = runDYNAMO(varargin)
+function [stats_table, spect, stimes, sfreqs, artifacts, SOPHs] = runDYNAMO(varargin)
 %%%% Example script showing how to compute time-frequency peaks and SO-power/phase histograms
 %
 % Users are encouraged to edit this script and the data loading boilerplate
@@ -91,7 +89,7 @@ if nargin <= 1
 
     assert(ismember(lower(data_range), {'segment','night'}), 'Select ''segment'' or ''night'' as input for example data.');
 
-    [stats_table, SOPHs, spect, stimes, sfreqs, artifacts] = runExampleData(data_range, default_verbose);
+    [stats_table, spect, stimes, sfreqs, artifacts, SOPHs] = runExampleData(data_range, default_verbose);
     return;
 end
 
@@ -129,16 +127,16 @@ field_names = fieldnames(p.Results);
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 
 %Force data to be a column vector
-if isrow(data)
+if isrow(data) %#ok<*NODEF>
     data = data(:);
 end
 
 %Check sleep stages
-valid_stages = stage_vals>0 & stage_vals<6;
+valid_stages = stage_vals > 0 & stage_vals < 6;
 assert(~isempty(valid_stages),'No valid stages found');
 
 %Set to range of valid scored data by default
-if isempty(time_range) %#ok<*NODEF>
+if isempty(time_range)
     valid_stage_inds = find(valid_stages);
     time_range = stage_times(valid_stage_inds([1, end]));
 end
@@ -156,16 +154,20 @@ ttotal = datetime('now');
 if isempty(stats_table)
     % If no stats table provided
     [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts]= computeTFPeaks(data, Fs, stage_times, stage_vals,...
-        'time_range', time_range, 'verbose', verbose, detection_options, baseline_options); %#ok<*ASGLU>
+        'time_range', time_range, 'verbose', verbose, detection_options, baseline_options);
 else
     % If stats table provided, check to be sure SOPH is requested by output
-    assert(nargout>1, 'Nothing to compute. Must request SOPH output if stats table is inputted.');
+    assert(nargout > 5, 'Nothing to compute. Must request SOPH output if stats table is inputted.');
+
     if verbose
         disp('TF peaks stats table provided. Computing SOPH only.');
     end
 
     data_time_range = data;
     t_time_range = (0:length(data)-1)/Fs;
+    spect = [];
+    stimes = [];
+    sfreqs = [];
     artifacts = detect_artifacts(data, Fs);
 end
 
@@ -185,7 +187,7 @@ stats_table = computePeakStage(stats_table, stage_times, stage_vals, t_time_rang
 % See SOpowerphaseHistogram() for a full list of optional arguments for
 % finer control of histogram generation
 
-if nargout > 1
+if nargout > 5
     [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, num_peaks_at_freq,...
         SOpower_TIB, SOphase_TIB, ~, ~, hist_peakidx] = SOpowerphaseHistogram(data_time_range, Fs, stats_table.PeakFrequency, stats_table.PeakTime,...
         'stage_times', stage_times, 'stage_vals', stage_vals, 'verbose', verbose, SOPH_options,...
@@ -195,15 +197,15 @@ if nargout > 1
     SOPHs = createSOPHsStruct(SOpower_mat, SOphase_mat, SOpower_bins, SOpower_norm, SOpower_times, SOphase_bins, freq_bins, num_peaks_at_freq, SOpower_TIB, SOphase_TIB);
 
     %Check for valid histogramas
-    valid_powerhist = ~all(isnan(SOPHs.SOpower_mat),'all');
-    valid_phasehist = ~all(isnan(SOPHs.SOphase_mat),'all');
+    valid_powerhist = any(isfinite(SOPHs.SOpower_mat), 'all');
+    valid_phasehist = any(isfinite(SOPHs.SOphase_mat), 'all');
 
     if ~valid_powerhist
-        warning('Power histogram is empty. Consider changing time range or minimum time in bin or minimum peak at frequency.');
+        warning('Power histogram is empty. Consider changing time range, minimum time in bin, minimum number of peaks at frequency.');
     end
 
     if ~valid_phasehist
-        warning('Phase histogram is empty. Consider changing time range or minimum time in bin or minimum peak at frequency.');
+        warning('Phase histogram is empty. Consider changing time range, minimum time in bin, minimum number of peaks at frequency.');
     end
 else
     if verbose
@@ -213,7 +215,7 @@ end
 
 %% PLOT OUTPUT SUMMARY FIGURE
 if plot_on
-    if nargout > 1
+    if nargout > 5
         fh = displaySummaryPlot('stage_times',stage_times, 'stage_vals',stage_vals, 'artifacts',artifacts, 't_time_range',t_time_range,...
             'data',data, 'Fs',Fs, 'time_range',time_range,...
             'SOpower_norm',SOpower_norm, 'SOpower_times',SOpower_times, 'SOpower_norm_method',SOPH_options.SOpower_norm_method,...
@@ -235,17 +237,17 @@ else
 end
 
 %% DIMENSIONALITY REDUCTION OF SO-POWER/PHASE HISTOGRAMS
-if nargout > 1
+if nargout > 5 && (fit_param_basis || fit_spline_basis)
     if verbose
         disp('Fitting SOPHs...');
     end
 
     if ~valid_powerhist
-        warning('Power histogram empty. Skipping parametrization');
+        warning('Power histogram is empty. Skipping parametrization.');
     end
 
     if ~valid_phasehist
-        warning('Phase histogram empty. Skipping parametrization');
+        warning('Phase histogram is empty. Skipping parametrization.');
     end
 
     if fit_param_basis
@@ -257,8 +259,8 @@ if nargout > 1
 
         % Parametric fit of SO-Power Histogram
         if valid_powerhist
-            [params_pow, fitobj_pow, gof_pow, model_SOPH_pow, wshed_img_pow] = param_basis_power(SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins, 'verbose', verbose-1, 'plot_on', ~plot_both);
-            SOPHs.SOpower_paramfit = createSOPHparamfitStruct(params_pow, fitobj_pow, gof_pow, model_SOPH_pow, wshed_img_pow);
+            [params_power, fitobj_power, gof_power, model_SOPH_power, wshed_img_power] = param_basis_power(SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins, 'verbose', verbose-1, 'plot_on', ~plot_both);
+            SOPHs.SOpower_paramfit = createSOPHparamfitStruct(params_power, fitobj_power, gof_power, model_SOPH_power, wshed_img_power);
         end
 
         % Parametric fit of SO-Phase Histogram
@@ -269,7 +271,7 @@ if nargout > 1
 
         if plot_both
             plot_SOPH_paramfits( ...
-                SOPHs.SOpower_bins, SOPHs.freq_bins, SOPHs.SOpower_paramfit.wshed_img, SOPHs.SOpower_mat, model_SOPH_pow, params_pow, param_basis_power_options.SOPH_clim_prctiles, param_basis_power_options.ylimits, ...
+                SOPHs.SOpower_bins, SOPHs.freq_bins, SOPHs.SOpower_paramfit.wshed_img, SOPHs.SOpower_mat, model_SOPH_power, params_power, param_basis_power_options.SOPH_clim_prctiles, param_basis_power_options.ylimits, ...
                 SOPHs.SOphase_bins, SOPHs.SOphase_paramfit.wshed_img, SOPHs.SOphase_mat, model_SOPH_phase, params_phase, param_basis_phase_options.SOPH_clim_prctiles, param_basis_phase_options.ylimits, ...
                 SOPHs.SOpower_paramfit.fitobj, SOPHs.SOphase_paramfit.fitobj);
         end
@@ -286,8 +288,8 @@ if nargout > 1
         if valid_powerhist
             opts = spline_basis_power_options;
             opts.plot_on = ~plot_both;
-            [splinefit_pow, coefs_pow, spline_obj_pow, knots_x_pow, knots_y_pow] = spline_basis('power', SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins, opts);
-            SOPHs.SOpower_splinefit = createSOPHsplinefitStruct(splinefit_pow, coefs_pow, spline_obj_pow, knots_x_pow, knots_y_pow);
+            [splinefit_power, coefs_power, spline_obj_power, knots_x_power, knots_y_power] = spline_basis('power', SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins, opts);
+            SOPHs.SOpower_splinefit = createSOPHsplinefitStruct(splinefit_power, coefs_power, spline_obj_power, knots_x_power, knots_y_power);
         end
 
         % Spline fit of SO-Phase Histogram
@@ -298,10 +300,9 @@ if nargout > 1
             SOPHs.SOphase_splinefit = createSOPHsplinefitStruct(splinefit_phase, coefs_phase, spline_obj_phase, knots_x_phase, knots_y_phase);
         end
 
-
         if plot_both
             plot_SOPH_splinefits( ...
-                SOPHs.SOpower_mat, SOPHs.SOpower_bins, splinefit_pow, coefs_pow, knots_x_pow, knots_y_pow, spline_basis_power_options, ...
+                SOPHs.SOpower_mat, SOPHs.SOpower_bins, splinefit_power, coefs_power, knots_x_power, knots_y_power, spline_basis_power_options, ...
                 SOPHs.SOphase_mat, SOPHs.SOphase_bins, splinefit_phase, coefs_phase, knots_x_phase, knots_y_phase, spline_basis_phase_options, ...
                 SOPHs.freq_bins);
         end
@@ -355,7 +356,7 @@ SOPH_splinefit.knots_y = knots_y;
 end
 
 
-function [stats_table, SOPHs, spect, stimes, sfreqs, artifacts] = runExampleData(data_range, verbose)
+function [stats_table, spect, stimes, sfreqs, artifacts, SOPHs] = runExampleData(data_range, verbose)
 if verbose
     disp('Running Example Data...');
 end
@@ -404,5 +405,5 @@ switch data_range
 end
 
 %Call main function
-[stats_table, SOPHs, spect, stimes, sfreqs, artifacts] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options);
+[stats_table, spect, stimes, sfreqs, artifacts, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options);
 end
