@@ -16,7 +16,7 @@ function [stats_table, SOpower, SOpower_times, norm_method] = computePeakSOpower
 %                   SOpower. Default = [EEG_times(1), EEG_times(end)]
 %       isexcluded: 1xN logical - marks each time point of data to be excluded or not, e.g., due to artifacts. Default = all false.
 %
-%       SOPOWER_OPTS STRUCTURE PARAMETERS - see SOpower_opts()
+%       SO-POWER HISTOGRAM STRUCTURE PARAMETERS - see SOpowerphasehist_opts()
 %       SO_freqrange: 1x2 double - min and max frequencies (Hz) considered to be "slow oscillation".
 %                     Default = [0.3, 1.5]
 %       SOpower_tapers: 1x2 double - multitaper method parameters. [time half-bandwidth product, number of tapers].

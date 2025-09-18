@@ -19,43 +19,13 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_at_freq, 
 %       TFpeak_stages: Px1 - sleep stage each TF peak occurs 5=W,4=R,3=N1,2=N2,1=N3
 %       stage_times: 1xS double - stage times
 %       stage_vals: 1xS double - numeric stage values 5=W,4=R,3=N1,2=N2,1=N3
-%       freq_range: 1x2 double - min and max frequencies of TF peak to include in the histogram
-%                   (Hz). Default = [0,40]
-%       freq_binsizestep: 1x2 double - [size, step] frequency bin size and bin step for frequency
-%                         axis of SO power histograms (Hz). Default = [1, 0.2]
-%       SO_range: 1x2 double - min and max SO power values to consider in SO power analysis.
-%                 Default calculated using min and max of SO power
-%       SO_binsizestep: 1x2 double - [size, step] SO power bin size and step for SO power axis
-%                            of histogram. Units are radians. Default
-%                            size is (SO_range(2)-SOrange(1))/5, default step is
-%                            (SO_range(2)-SOrange(1))/100
-%       SO_freqrange: 1x2 double - min and max frequencies (Hz) considered to be "slow oscillation".
-%                     Default = [0.3, 1.5]
-%       SOPH_stages: stages in which to restrict the SOPH. Default: 1:3 (NREM only)
-%                    W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
-%       norm_dim: double - histogram dimension to normalize, not related to norm_method (default: 0 = no normalization)
-%       compute_rate: logical - histogram output in terms of TFpeaks/min instead of count.
-%                               Default = true.
-%       min_time_in_bin: numerical - time (minutes) required in each SO power bin to include
-%                                  in SOpower analysis. Otherwise all values in that SO power bin will
-%                                  be NaN. Default = 10.
-%       min_peak_at_freq: numerical - number of TF peaks required in each frequency bin to include
-%                                  in SOpower analysis. Otherwise all values in that frequency bin will
-%                                  be NaN. Default = 0.
-%       SOpower_outlier_threshold: double - cutoff threshold in standard deviation for excluding outlier SOpower values.
-%                                  Default = 3.
-%       norm_method: char - normalization method for SOpower. Options: 'pNshiftS', 'percent', 'proportion', 'none'. Default: 'p2shift1234'
-%                         For shift, it follows the format pNshiftS where N is the percentile and S is the list of stages (5=W,4=R,3=N1,2=N2,1=N3).
-%                         (e.g. p2shift1234 = use the 2nd percentile of stages N3, N2, N1, and REM,
-%                               p5shift123 = use the 5th percentile of stages N3, N2 and N1)
-%       retain_Fs: logical - whether to upsample calculated SOpower to the sampling rate of EEG. Default = true
 %       EEG_times: 1xN double - times for each EEG sample. Default = (0:length(EEG)-1)/Fs
-%       time_range: 1x2 double - min and max times for which to include TFpeaks. Also used to normalize
-%                   SOpower. Default = [EEG_times(1), EEG_times(end)]
+%       time_range: 1x2 double - min and max times for which to include TFpeaks.
+%                                Default = [EEG_times(1), EEG_times(end)]
 %       isexcluded: 1xN logical - marks each time point of data to be excluded or not, e.g., due to artifacts. Default = all false.
 %
-%       plot_on: logical - SO power histogram plots. Default = false
-%       verbose: logical - Verbose output. Default = true
+%    HISTOGRAM OPTIONAL:
+%       see SOpowerphasehist_opts() for optional parameters
 %
 %  Outputs:
 %       SO_mat: SO power histogram (SOpower x frequency)
@@ -122,10 +92,9 @@ addOptional(p, 'SO_freqrange', SOPH_options.SO_freqrange, @(x) validateattribute
 addOptional(p, 'SOPH_stages', SOPH_options.SOPH_stages, @(x) validateattributes(x,{'numeric'},{'real','nonempty','nonnegative','vector'})); % W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
 addOptional(p, 'norm_dim', 0, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
 addOptional(p, 'compute_rate', SOPH_options.compute_rate, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
-addOptional(p, 'min_time_in_bin', SOPH_options.SOpower_min_time_in_bin, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
-addOptional(p, 'min_peak_at_freq', 0, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
 
 %SOpower specific settings
+addOptional(p, 'min_time_in_bin', SOPH_options.SOpower_min_time_in_bin, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
 addOptional(p, 'SOpower_outlier_threshold', SOPH_options.SOpower_outlier_threshold, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 addOptional(p, 'norm_method', '', @(x) validateattributes(x, {'char','string'}, {'scalartext'}));
 addOptional(p, 'retain_Fs', SOPH_options.SOpower_retain_Fs, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
@@ -271,7 +240,7 @@ end
     'C_range', SO_range, 'C_binsizestep', SO_binsizestep,...
     'freq_range', freq_range, 'freq_binsizestep', freq_binsizestep,...
     'norm_dim', norm_dim, 'compute_rate', compute_rate,...
-    'min_time_in_bin', min_time_in_bin, 'min_peak_at_freq', min_peak_at_freq,...
+    'min_time_in_bin', min_time_in_bin,... # specific to SOpower histogram
     'plot_on', plot_on, 'verbose', verbose);
 
 end

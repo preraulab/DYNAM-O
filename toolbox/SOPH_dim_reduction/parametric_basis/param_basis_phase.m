@@ -265,6 +265,7 @@ switch prefix_modes_order
     case 0
         mode_params = prefix_modes;
 end
+
 if verbose > 0
     if size(prefix_modes, 1) > 0
         if prefix_modes_order

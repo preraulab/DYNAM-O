@@ -14,7 +14,7 @@ function [stats_table, SOphase, SOphase_times, SOdata] = computePeakSOphase(vara
 %       EEG_times: 1xN double - times for each EEG data sample. Default = (0:length(data)-1)/Fs
 %       isexcluded: 1xN logical - marks each time point of data to be excluded or not, e.g., due to artifacts. Default = all false.
 %
-%       SOPHASE_OPTS STRUCTURE PARAMETERS - see SOphase_opts()
+%       SO-PHASE HISTOGRAM STRUCTURE PARAMETERS - see SOpowerphasehist_opts()
 %       SO_freqrange: 1x2 double - min and max frequencies (Hz) considered to be "slow oscillation".
 %                     Default = [0.3, 1.5]
 %       SOphase_filter: 1xF double - custom filter that will be used to estimate SOphase
