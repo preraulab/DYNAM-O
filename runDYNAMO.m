@@ -201,11 +201,11 @@ if nargout > 5
     valid_phasehist = any(isfinite(SOPHs.SOphase_mat), 'all');
 
     if ~valid_powerhist
-        warning('Power histogram is empty. Consider changing time range, minimum time in bin, minimum number of peaks at frequency.');
+        warning('Power histogram is empty. Consider changing time range or minimum time in bin.');
     end
 
     if ~valid_phasehist
-        warning('Phase histogram is empty. Consider changing time range, minimum time in bin, minimum number of peaks at frequency.');
+        warning('Phase histogram is empty. Consider changing time range or minimum peak at frequency.');
     end
 else
     if verbose
@@ -238,56 +238,51 @@ end
 
 %% DIMENSIONALITY REDUCTION OF SO-POWER/PHASE HISTOGRAMS
 if nargout > 5 && (fit_param_basis || fit_spline_basis)
-    if verbose
+    if verbose && (valid_powerhist || valid_phasehist)
         disp('Fitting SOPHs...');
     end
 
-    if ~valid_powerhist
-        warning('Power histogram is empty. Skipping parametrization.');
-    end
-
-    if ~valid_phasehist
-        warning('Phase histogram is empty. Skipping parametrization.');
-    end
+    plot_both = plot_on && valid_powerhist && valid_phasehist;
+    plot_each = plot_on && ~plot_both;
 
     if fit_param_basis
-        if verbose
-            disp('Fitting parametric basis...');
+        if verbose && (valid_powerhist || valid_phasehist)
+            disp('  Fitting parametric basis...');
         end
-
-        plot_both = valid_powerhist & valid_phasehist & plot_on;
 
         % Parametric fit of SO-Power Histogram
         if valid_powerhist
-            [params_power, fitobj_power, gof_power, model_SOPH_power, wshed_img_power] = param_basis_power(SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins, 'verbose', verbose-1, 'plot_on', ~plot_both);
+            opts = param_basis_power_options;
+            opts.plot_on = plot_each;
+            [params_power, fitobj_power, gof_power, model_SOPH_power, wshed_img_power] = param_basis_power(SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins, 'verbose', verbose-1, opts);
             SOPHs.SOpower_paramfit = createSOPHparamfitStruct(params_power, fitobj_power, gof_power, model_SOPH_power, wshed_img_power);
         end
 
         % Parametric fit of SO-Phase Histogram
         if valid_phasehist
-            [params_phase, fitobj_phase, gof_phase, model_SOPH_phase, wshed_img_phase] = param_basis_phase(SOPHs.SOphase_mat, SOPHs.SOphase_bins, SOPHs.freq_bins, 'verbose', verbose-1, 'plot_on', ~plot_both);
+            opts = param_basis_phase_options;
+            opts.plot_on = plot_each;
+            [params_phase, fitobj_phase, gof_phase, model_SOPH_phase, wshed_img_phase] = param_basis_phase(SOPHs.SOphase_mat, SOPHs.SOphase_bins, SOPHs.freq_bins, 'verbose', verbose-1, opts);
             SOPHs.SOphase_paramfit = createSOPHparamfitStruct(params_phase, fitobj_phase, gof_phase, model_SOPH_phase, wshed_img_phase);
         end
 
         if plot_both
             plot_SOPH_paramfits( ...
-                SOPHs.SOpower_bins, SOPHs.freq_bins, SOPHs.SOpower_paramfit.wshed_img, SOPHs.SOpower_mat, model_SOPH_power, params_power, param_basis_power_options.SOPH_clim_prctiles, param_basis_power_options.ylimits, ...
+                SOPHs.SOpower_bins, SOPHs.SOpower_paramfit.wshed_img, SOPHs.SOpower_mat, model_SOPH_power, params_power, param_basis_power_options.SOPH_clim_prctiles, param_basis_power_options.ylimits, ...
                 SOPHs.SOphase_bins, SOPHs.SOphase_paramfit.wshed_img, SOPHs.SOphase_mat, model_SOPH_phase, params_phase, param_basis_phase_options.SOPH_clim_prctiles, param_basis_phase_options.ylimits, ...
-                SOPHs.SOpower_paramfit.fitobj, SOPHs.SOphase_paramfit.fitobj);
+                SOPHs.freq_bins, SOPHs.SOpower_paramfit.fitobj, SOPHs.SOphase_paramfit.fitobj);
         end
     end
 
     if fit_spline_basis
-        if verbose
-            disp('Fitting spline basis...');
+        if verbose && (valid_powerhist || valid_phasehist)
+            disp('  Fitting spline basis...');
         end
-
-        plot_both = valid_powerhist & valid_phasehist & plot_on;
 
         % Spline fit of SO-Power Histogram
         if valid_powerhist
             opts = spline_basis_power_options;
-            opts.plot_on = ~plot_both;
+            opts.plot_on = plot_each;
             [splinefit_power, coefs_power, spline_obj_power, knots_x_power, knots_y_power] = spline_basis('power', SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins, opts);
             SOPHs.SOpower_splinefit = createSOPHsplinefitStruct(splinefit_power, coefs_power, spline_obj_power, knots_x_power, knots_y_power);
         end
@@ -295,7 +290,7 @@ if nargout > 5 && (fit_param_basis || fit_spline_basis)
         % Spline fit of SO-Phase Histogram
         if valid_phasehist
             opts = spline_basis_phase_options;
-            opts.plot_on = ~plot_both;
+            opts.plot_on = plot_each;
             [splinefit_phase, coefs_phase, spline_obj_phase, knots_x_phase, knots_y_phase] = spline_basis('phase', SOPHs.SOphase_mat, SOPHs.SOphase_bins, SOPHs.freq_bins, opts);
             SOPHs.SOphase_splinefit = createSOPHsplinefitStruct(splinefit_phase, coefs_phase, spline_obj_phase, knots_x_phase, knots_y_phase);
         end
@@ -321,6 +316,7 @@ end
 end
 
 
+%% Helper functions
 function [SOPHs] = createSOPHsStruct(SOpower_mat, SOphase_mat, SOpower_bins, SOpower_norm, SOpower_times, SOphase_bins, freq_bins, num_peaks_at_freq, SOpower_TIB, SOphase_TIB)
 SOPHs = struct;
 SOPHs.SOpower_mat = SOpower_mat;
@@ -357,6 +353,9 @@ end
 
 
 function [stats_table, spect, stimes, sfreqs, artifacts, SOPHs] = runExampleData(data_range, verbose)
+if ~exist('verbose', 'var')
+    verbose = false;
+end
 if verbose
     disp('Running Example Data...');
 end
@@ -383,7 +382,7 @@ switch data_range
         % Choose an example segment from the data
         time_range = [8420 13446];
 
-        %Set the minimum time in SO-power bin to include in the SOPH
+        %Set the minimum time in SO-power bin and minimum peak in SO-phase frequency to include in the SOPHs
         SOPH_options.SOpower_min_time_in_bin = 5;
         SOPH_options.SOphase_min_peak_at_freq = 10;
         if verbose
@@ -391,14 +390,15 @@ switch data_range
         end
     case 'night'
         % Choose an example segment from the data
-        wake_buffer = 5*60; %5 minute buffer before/after first/last wake
+        wake_buffer = 5*60; % 5 minute buffer before/after first/last wake
         start_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'first')) - wake_buffer;
         end_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'last')) + wake_buffer;
 
         time_range = [start_time end_time];
 
-        %Set the minimum time in SO-power bin to include in the SOPH
+        %Set the minimum time in SO-power bin and minimum peak in SO-phase frequency to include in the SOPHs
         SOPH_options.SOpower_min_time_in_bin = 10;
+        SOPH_options.SOphase_min_peak_at_freq = 100;
         if verbose
             disp(['Running full night', newline])
         end
