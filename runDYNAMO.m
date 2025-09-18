@@ -63,10 +63,9 @@
 function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runDYNAMO(varargin)
 %%%% Example script showing how to compute time-frequency peaks and SO-power/phase histograms
 %
-% Users are encouraged to edit this script and the data loading boilerplate
-% in runExampleData() for their specific analysis. This script is provided
-% only as a template for illustrative purposes on how to use various
-% functions in DYNAM-O in tandem.
+% Users are encouraged to edit this script and the data loading boilerplate in runExampleData() 
+% for their specific analysis. This script is provided only as a template for illustrative 
+% purposes on how to use various functions in DYNAM-O in tandem.
 
 %% SYSTEM SETTINGS
 % Add necessary functions to path
@@ -81,16 +80,19 @@ end
 % default verbose setting for all processing steps
 default_verbose = true;
 
-%% RUN EXAMPLE DATA IF CALLED WITHOUT INPUT
+%% RUN EXAMPLE DATA IF CALLED WITHOUT DATA INPUTS
+run_app = false;
 if nargin <= 1
     if nargin == 0
         data_range = 'segment';
+    elseif strcmpi(varargin{1}, 'app')
+        data_range = 'night';
+        run_app = true;
     else
         data_range = varargin{1};
         assert(ismember(lower(data_range), {'segment','night'}), 'Select ''segment'' or ''night'' as input for example data.');
     end
-
-    [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runExampleData(data_range, default_verbose);
+    [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runExampleData(data_range, default_verbose, run_app);
     return;
 end
 
@@ -166,9 +168,7 @@ else
 
     data_time_range = data;
     t_time_range = (0:length(data)-1)/Fs;
-    spect = [];
-    stimes = [];
-    sfreqs = [];
+    [spect, stimes, sfreqs] = deal([]);
     artifacts = detect_artifacts(data, Fs);
 end
 
@@ -361,7 +361,7 @@ end
 end
 
 
-function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runExampleData(data_range, verbose)
+function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runExampleData(data_range, verbose, run_app)
 if ~exist('verbose', 'var')
     verbose = false;
 end
@@ -410,6 +410,13 @@ switch data_range
         end
 end
 
-%Call main function
-[stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options);
+if run_app
+    %Open up app with DYNAMO class
+    stats_table = DYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options, 'app', true);
+    [spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = deal([]);
+else
+    %Call main function runDYNAMO()
+    [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options);
+end
+
 end

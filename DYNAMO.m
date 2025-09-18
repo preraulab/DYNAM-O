@@ -48,7 +48,11 @@ classdef DYNAMO < handle
     %       d = DYNAMO(data, Fs, stage_times, stage_vals);
     %
     %       % Launch a GUI to set parameters and run DYNAMO
-    %       d.updateOptions();
+    %       d.app % recommended way
+    %       open(d) % alternative way
+    %
+    %       % Instantiate a DYNAMO object and launch GUI directly
+    %       d = DYNAMO(data, Fs, stage_times, stage_vals, 'app', true);
     %
     %       % Compute TF peaks
     %       d.runDYNAMO();
@@ -163,6 +167,7 @@ classdef DYNAMO < handle
             addOptional(p, 'save_output_image', false, @(x) islogical(x) || isnumeric(x));
             addOptional(p, 'output_fname', 'DYNAM-O_output', @(x) ischar(x) || isstring(x));
             addOptional(p, 'fit_SOPH', true, @(x) islogical(x) || isnumeric(x));
+            addOptional(p, 'app', false, @(x) islogical(x) || isnumeric(x));
 
             % Parse inputs
             parse(p, varargin{:});
@@ -186,6 +191,11 @@ classdef DYNAMO < handle
             obj.spline_basis_phase_options = R.spline_basis_phase_options;
             obj.SOPH_options = R.SOPH_options;
             obj.time_range = R.time_range;
+
+            % Launch GUI from the constructor
+            if R.app
+                obj.app();
+            end
         end
 
         % Lazy validation methods
@@ -204,6 +214,19 @@ classdef DYNAMO < handle
                 validateattributes(obj.stage_vals, {'numeric'}, {'real','finite','nonnegative','vector'});
                 obj.staging_validated = true;
             end
+        end
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % App GUI
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        function app(obj)
+            % APP  Open the DYNAMO options GUI
+            obj.DYNAMOOptionsApp(false);
+        end
+
+        function open(obj)
+            % OPEN  Alias to APP so users can call open(d)
+            obj.app();
         end
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -249,7 +272,7 @@ classdef DYNAMO < handle
             %
             %   Usage:
             %       obj = obj.updateOptions('detection_options', new_opts, ...)
-            %       obj = obj.updateOptions()  % Launch GUI
+            %       obj = obj.updateOptions() % Launch GUI
             %
             %   Description:
             %       Update one or more option structs: baseline_options,
