@@ -145,57 +145,69 @@ classdef DYNAMO < handle
 
             default_verbose = true;
 
-            % Set up parser
-            p = inputParser;
-            p.KeepUnmatched = true;
-
-            addRequired(p, 'data', @(x) isnumeric(x));
-            addRequired(p, 'Fs', @(x) isnumeric(x) && isscalar(x) && x > 0);
-            addRequired(p, 'stage_times', @(x) isnumeric(x));
-            addRequired(p, 'stage_vals', @(x) isnumeric(x));
-
-            addOptional(p, 'time_range', [], @(x) isempty(x) || (isnumeric(x) && numel(x)==2));
-            addOptional(p, 'baseline_options', baseline_opts(), @(x) isstruct(x));
-            addOptional(p, 'detection_options', detection_opts(), @(x) isstruct(x));
-            addOptional(p, 'SOPH_options', SOpowerphasehist_opts(), @(x) isstruct(x));
-            addOptional(p, 'param_basis_power_options', param_basis_opts('power'), @(x) isstruct(x));
-            addOptional(p, 'param_basis_phase_options', param_basis_opts('phase'), @(x) isstruct(x));
-            addOptional(p, 'spline_basis_power_options', spline_basis_opts('power'), @(x) isstruct(x));
-            addOptional(p, 'spline_basis_phase_options', spline_basis_opts('phase'), @(x) isstruct(x));
-            addOptional(p, 'stats_table', [], @(x) istable(x) || isempty(x));
-            addOptional(p, 'verbose', default_verbose, @(x) islogical(x) || isnumeric(x));
-            addOptional(p, 'plot_on', true, @(x) islogical(x) || isnumeric(x));
-            addOptional(p, 'save_output_image', false, @(x) islogical(x) || isnumeric(x));
-            addOptional(p, 'output_fname', 'DYNAM-O_output', @(x) ischar(x) || isstring(x));
-            addOptional(p, 'fit_SOPH', true, @(x) islogical(x) || isnumeric(x));
-            addOptional(p, 'app', false, @(x) islogical(x) || isnumeric(x));
-
-            % Parse inputs
-            parse(p, varargin{:});
-            R = p.Results;
-
-            % Avoid unnecessary data copying
-            if iscolumn(R.data)
-                obj.data = R.data;  % No copy needed
+            if nargin <= 1
+                if nargin == 0
+                    data_range = 'segment';
+                elseif any(strcmpi(varargin{1}, {'app', 'demo'}))
+                    data_range = 'night';
+                else
+                    data_range = varargin{1};
+                    assert(ismember(lower(data_range), {'segment','night'}), 'Select ''segment'' or ''night'' as input for example data.');
+                end
+                obj = runExampleData(data_range, default_verbose, true);
             else
-                obj.data = R.data(:);  % Only reshape if necessary
-            end
+                % Set up parser
+                p = inputParser;
+                p.KeepUnmatched = true;
 
-            obj.Fs = R.Fs;
-            obj.stage_times = R.stage_times;
-            obj.stage_vals = single(R.stage_vals);
-            obj.baseline_options = R.baseline_options;
-            obj.detection_options = R.detection_options;
-            obj.param_basis_power_options = R.param_basis_power_options;
-            obj.param_basis_phase_options = R.param_basis_phase_options;
-            obj.spline_basis_power_options = R.spline_basis_power_options;
-            obj.spline_basis_phase_options = R.spline_basis_phase_options;
-            obj.SOPH_options = R.SOPH_options;
-            obj.time_range = R.time_range;
+                addRequired(p, 'data', @(x) isnumeric(x));
+                addRequired(p, 'Fs', @(x) isnumeric(x) && isscalar(x) && x > 0);
+                addRequired(p, 'stage_times', @(x) isnumeric(x));
+                addRequired(p, 'stage_vals', @(x) isnumeric(x));
 
-            % Launch GUI from the constructor
-            if R.app
-                obj.app();
+                addOptional(p, 'time_range', [], @(x) isempty(x) || (isnumeric(x) && numel(x)==2));
+                addOptional(p, 'baseline_options', baseline_opts(), @(x) isstruct(x));
+                addOptional(p, 'detection_options', detection_opts(), @(x) isstruct(x));
+                addOptional(p, 'SOPH_options', SOpowerphasehist_opts(), @(x) isstruct(x));
+                addOptional(p, 'param_basis_power_options', param_basis_opts('power'), @(x) isstruct(x));
+                addOptional(p, 'param_basis_phase_options', param_basis_opts('phase'), @(x) isstruct(x));
+                addOptional(p, 'spline_basis_power_options', spline_basis_opts('power'), @(x) isstruct(x));
+                addOptional(p, 'spline_basis_phase_options', spline_basis_opts('phase'), @(x) isstruct(x));
+                addOptional(p, 'stats_table', [], @(x) istable(x) || isempty(x));
+                addOptional(p, 'verbose', default_verbose, @(x) islogical(x) || isnumeric(x));
+                addOptional(p, 'plot_on', true, @(x) islogical(x) || isnumeric(x));
+                addOptional(p, 'save_output_image', false, @(x) islogical(x) || isnumeric(x));
+                addOptional(p, 'output_fname', 'DYNAM-O_output', @(x) ischar(x) || isstring(x));
+                addOptional(p, 'fit_SOPH', true, @(x) islogical(x) || isnumeric(x));
+                addOptional(p, 'app', false, @(x) islogical(x) || isnumeric(x));
+
+                % Parse inputs
+                parse(p, varargin{:});
+                R = p.Results;
+
+                % Avoid unnecessary data copying
+                if iscolumn(R.data)
+                    obj.data = R.data;  % No copy needed
+                else
+                    obj.data = R.data(:);  % Only reshape if necessary
+                end
+
+                obj.Fs = R.Fs;
+                obj.stage_times = R.stage_times;
+                obj.stage_vals = single(R.stage_vals);
+                obj.baseline_options = R.baseline_options;
+                obj.detection_options = R.detection_options;
+                obj.param_basis_power_options = R.param_basis_power_options;
+                obj.param_basis_phase_options = R.param_basis_phase_options;
+                obj.spline_basis_power_options = R.spline_basis_power_options;
+                obj.spline_basis_phase_options = R.spline_basis_phase_options;
+                obj.SOPH_options = R.SOPH_options;
+                obj.time_range = R.time_range;
+
+                % Launch GUI from the constructor
+                if R.app
+                    obj.app();
+                end
             end
         end
 
