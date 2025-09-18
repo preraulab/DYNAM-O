@@ -24,31 +24,8 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_at_freq, 
 %                                Default = [EEG_times(1), EEG_times(end)]
 %       isexcluded: 1xN logical - marks each time point of data to be excluded or not, e.g., due to artifacts. Default = all false.
 %
-%       freq_range: 1x2 double - min and max frequencies of TF peak to include in the histogram
-%                   (Hz). Default = [0,40]
-%       freq_binsizestep: 1x2 double - [size, step] frequency bin size and bin step for frequency
-%                         axis of SO phase histograms (Hz). Default = [1, 0.2]
-%       SO_range: 1x2 double - min and max SO phase values (radians) to consider in SO phase analysis.
-%                              Default is [-pi, pi]
-%       SO_binsizestep: 1x2 double - [size, step] SO phase bin size and step for SO phase axis
-%                       of histogram. Units are radians. Default size is 2*pi/5, default step is 2*pi/100
-%       SO_freqrange: 1x2 double - min and max frequencies (Hz) considered to be "slow oscillation".
-%                     Default = [0.3, 1.5]
-%       SOPH_stages: stages in which to restrict the SOPH. Default: 1:3 (NREM only)
-%                    W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
-%       norm_dim: double - histogram dimension to normalize (default: 1 = normalize across each frequency)
-%       compute_rate: logical - histogram output in terms of TFpeaks/min instead of count.
-%                               Default = true.
-%       min_time_in_bin: numerical - time (minutes) required in each SO phase bin to include
-%                                  in SOphase analysis. Otherwise all values in that SO phase bin will
-%                                  be NaN. Default = 0.
-%       min_peak_at_freq: numerical - number of TF peaks required in each frequency bin to include
-%                                  in SOphase analysis. Otherwise all values in that frequency bin will
-%                                  be NaN. Default = 100.
-%       SOphase_filter: 1xF double - custom filter that will be used to estimate SOphase
-%
-%       plot_on: logical - SO phase histogram plots. Default = false
-%       verbose: logical - Verbose output. Default = true
+%    HISTOGRAM OPTIONAL:
+%       see SOpowerphasehist_opts() for optional parameters
 %
 %  Outputs:
 %       SO_mat: SO phase histogram (SOphase x frequency)
@@ -115,10 +92,9 @@ addOptional(p, 'SO_freqrange', SOPH_options.SO_freqrange, @(x) validateattribute
 addOptional(p, 'SOPH_stages', SOPH_options.SOPH_stages, @(x) validateattributes(x,{'numeric'},{'real','nonnegative','vector'})); % W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
 addOptional(p, 'norm_dim', SOPH_options.SOphase_norm_dim, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
 addOptional(p, 'compute_rate', SOPH_options.compute_rate, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
-addOptional(p, 'min_time_in_bin', 0, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
-addOptional(p, 'min_peak_at_freq', SOPH_options.SOphase_min_peak_at_freq, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
 
 %SOphase specific settings
+addOptional(p, 'min_peak_at_freq', SOPH_options.SOphase_min_peak_at_freq, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
 addOptional(p, 'SOphase_filter', SOPH_options.SOphase_filter);
 
 %Display settings
@@ -252,7 +228,7 @@ clear SOphase_stages_valid SOphase_excluded_valid SOphase_times_valid
     'C_range', SO_range, 'C_binsizestep', SO_binsizestep,...
     'freq_range', freq_range, 'freq_binsizestep', freq_binsizestep,...
     'norm_dim', norm_dim, 'compute_rate', compute_rate,...
-    'min_time_in_bin', min_time_in_bin, 'min_peak_at_freq', min_peak_at_freq,...
+    'min_peak_at_freq', min_peak_at_freq,... # specific to SOphase histogram
     'plot_on', plot_on, 'verbose', verbose);
 
 end
