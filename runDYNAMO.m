@@ -395,20 +395,17 @@ switch data_range
         %Set the minimum time in SO-power bin and minimum peak in SO-phase frequency to include in the SOPHs
         SOPH_options.SOpower_min_time_in_bin = 5;
         SOPH_options.SOphase_min_peak_at_freq = 10;
+
         if verbose
             disp(['Running example segment', newline])
         end
     case 'night'
-        % Choose an example segment from the data
+        % Use the full night from the example data
         wake_buffer = 5*60; % 5 minute buffer before/after first/last wake
         start_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'first')) - wake_buffer;
         end_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'last')) + wake_buffer;
-
         time_range = [start_time end_time];
 
-        %Set the minimum time in SO-power bin and minimum peak in SO-phase frequency to include in the SOPHs
-        SOPH_options.SOpower_min_time_in_bin = 10;
-        SOPH_options.SOphase_min_peak_at_freq = 100;
         if verbose
             disp(['Running full night', newline])
         end

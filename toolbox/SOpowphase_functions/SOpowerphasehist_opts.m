@@ -4,29 +4,7 @@ function opts = SOpowerphasehist_opts(varargin)
 %   Usage:
 %       opts = SOpowerphasehist_opts(varargin)
 %
-%   Optional inputs:
-%       TFpeak_stages: Px1 - sleep stage each TF peak occurs 5=W,4=R,3=N1,2=N2,1=N3
-%       stage_times: 1xS double or single - stage times
-%       stage_vals: 1xS double or single - numeric stage values 5=W,4=R,3=N1,2=N2,1=N3
-%       EEG_times: 1xN double - times for each EEG data sample. Default = (0:length(data)-1)/Fs
-%       time_range: 1x2 double - min and max times for which to include TFpeaks. Also used to normalize
-%                   SOpower. Default = [EEG_times(1), EEG_times(end)]
-%       isexcluded: 1xN logical - marks each time point of data to be excluded or not, e.g., due to artifacts. Default = all false.
-%
-%       SOpower: 1xM double - spectral power of slow oscillation computed
-%                with multitaper spectral estimation. At a coarser
-%                resolution than the original data timeseries since
-%                windowing is used. Should be calculated using
-%                computeSOpower(), with typical window parameters used at
-%                [5, .5]. Default = [].
-%       SOpower_times: 1xM double - times for each SOpower data sample.
-%                      Also output by computeSOpower(). Default = [].
-%       SOphase: 1xN double - unwrapped phase of slow oscillation. Should
-%                be calculated using computeSOphase(). Default = [].
-%       SOphase_times: 1xN double - times for each SOphase data sample.
-%                      Also output by computeSOphase(). Default = [].
-%
-%       SOPOWERPHASEHIST_OPTS STRUCTURE PARAMETERS - see SOpowerphasehist_opts()
+%   SOPOWERPHASEHIST_OPTS STRUCTURE PARAMETERS
 %       freq_range: 1x2 double - min and max frequencies of TF peak to include in the histograms (Hz).
 %                   Default = [0, 30]
 %       freq_binsizestep: 1x2 double - [size, step] frequency bin size and bin step for frequency
@@ -61,7 +39,7 @@ function opts = SOpowerphasehist_opts(varargin)
 %       SOphase_filter: 1xF double - custom filter that will be used to estimate SOphase
 %
 %       SOphase_min_peak_at_freq: numerical - number of TF peaks required at a frequency to include in SOphase analysis. Otherwise all values
-%                                in that frequency bin will be NaN. Default = 100.
+%                                in that frequency bin will be NaN. Default = 0.
 %       SOphase_norm_dim: integer - which dimension of the SOphase histogram to normalize to add to 1. Default = 1
 %       SOphase_range: 1x2 double - min and max SO phase values (radians) to consider in SO phase analysis.
 %                      Default is [-pi, pi]
@@ -97,22 +75,26 @@ addOptional(p, 'SOPH_stages', 1:3, @(x) validateattributes(x,{'numeric'},{'real'
 
 %SOpower computation params
 addOptional(p, 'SO_freqrange', [0.3, 1.5], @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','vector','numel',2}));
-addOptional(p, 'SOpower_range', [], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
 addOptional(p, 'SOpower_tapers', [5, 9], @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
 addOptional(p, 'SOpower_window_params', [5, .5], @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
 addOptional(p, 'SOpower_outlier_threshold', 3, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 addOptional(p, 'SOpower_norm_method', 'p2shift1234', @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
 addOptional(p, 'SOpower_retain_Fs', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
-addOptional(p, 'SOpower_min_time_in_bin', 10, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
 
 %SOpower Histogram specific settings
+addOptional(p, 'SOpower_min_time_in_bin', 10, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
 %Ranges and bin step sizes determined dynamically with empty input [], user should set to fixed values when comparing between subjects
+addOptional(p, 'SOpower_range', [], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
 addOptional(p, 'SOpower_binsizestep', [], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
+
+%SOphase computation params
+addOptional(p, 'SOphase_filter', []);
+
+%SOphase Histogram specific settings
 addOptional(p, 'SOphase_min_peak_at_freq', 0, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
 addOptional(p, 'SOphase_norm_dim', 1, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
 addOptional(p, 'SOphase_range', [-pi, pi], @(x) validateattributes(x, {'numeric'}, {'real','finite','vector','numel',2}));
 addOptional(p, 'SOphase_binsizestep', [(2*pi)/5, (2*pi)/100], @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
-addOptional(p, 'SOphase_filter', []);
 
 parse(p,varargin{:});
 opts = p.Results;
