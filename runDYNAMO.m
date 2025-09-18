@@ -85,9 +85,8 @@ if nargin <= 1
         data_range = 'segment';
     else
         data_range = varargin{1};
+        assert(ismember(lower(data_range), {'segment','night'}), 'Select ''segment'' or ''night'' as input for example data.');
     end
-
-    assert(ismember(lower(data_range), {'segment','night'}), 'Select ''segment'' or ''night'' as input for example data.');
 
     [stats_table, spect, stimes, sfreqs, artifacts, SOPHs] = runExampleData(data_range, default_verbose);
     return;
