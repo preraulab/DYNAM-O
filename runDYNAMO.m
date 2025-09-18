@@ -395,7 +395,7 @@ switch data_range
         SOPH_options.SOphase_min_peak_at_freq = 10;
 
         if verbose
-            disp(['Running example segment', newline])
+            disp(['  Running example segment...', newline])
         end
     case 'night'
         % Use the full night from the example data
@@ -405,7 +405,7 @@ switch data_range
         time_range = [start_time end_time];
 
         if verbose
-            disp(['Running full night', newline])
+            disp(['  Running full night...', newline])
         end
 end
 
