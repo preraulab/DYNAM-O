@@ -28,9 +28,10 @@ classdef DYNAMO < handle
     %       fit_SOPH: logical - compute SOPH model fits (default: true)
     %
     %   Public Properties:
-    %       stats_table, SOPHs, spect, stimes, sfreqs, artifacts
-    %       data, Fs, stage_times, stage_vals, time_range
-    %       baseline_options, detection_options, SOPH_options
+    %       stats_table, SOPHs, spect, stimes, sfreqs,
+    %       data_time_range, t_time_range, artifacts,
+    %       data, Fs, stage_times, stage_vals, time_range,
+    %       baseline_options, detection_options, SOPH_options,
     %       param_basis_*_options, spline_basis_*_options
     %
     %   Methods:
@@ -43,11 +44,15 @@ classdef DYNAMO < handle
     %       plot()                - alias to displaySummaryPlot()
     %
     %   Example:
-    %       % Create and run DYNAMO with defaults
+    %       % Instantiate a DYNAMO object
     %       d = DYNAMO(data, Fs, stage_times, stage_vals);
+    %
+    %       % Launch a GUI to set parameters and run DYNAMO
+    %       d.updateOptions();
+    %
     %       % Compute TF peaks
     %       d.runDYNAMO();
-    %       d.displaySummaryPlot(); %Show TF-peak summary plot
+    %       d.displaySummaryPlot();
     %       d.displayTFPeaks();
     %
     %       % Re-run analysis with a different time window
@@ -88,6 +93,8 @@ classdef DYNAMO < handle
         spect               % Spectrogram matrix
         stimes              % Spectrogram time vector
         sfreqs              % Spectrogram frequency vector
+        data_time_range     % Data within time range
+        t_time_range        % Time axis for data within time range
         artifacts           % Artifact mask / info
 
         % Options
@@ -104,7 +111,7 @@ classdef DYNAMO < handle
         % Misc
         time_range
     end
-    
+
     properties (Access = private)
         data_validated = false
         staging_validated = false
@@ -167,7 +174,7 @@ classdef DYNAMO < handle
             else
                 obj.data = R.data(:);  % Only reshape if necessary
             end
-            
+
             obj.Fs = R.Fs;
             obj.stage_times = R.stage_times;
             obj.stage_vals = single(R.stage_vals);
@@ -189,7 +196,7 @@ classdef DYNAMO < handle
                 obj.data_validated = true;
             end
         end
-        
+
         function validateStaging(obj)
             %VALIDATESTAGING Validate staging data only when needed
             if ~obj.staging_validated
@@ -230,7 +237,8 @@ classdef DYNAMO < handle
             obj.validateStaging();
             assert(obj.isInitialized(), 'DYNAMO object is not fully initialized.');
 
-            [obj.stats_table, obj.spect, obj.stimes, obj.sfreqs, obj.artifacts, obj.SOPHs] = runDYNAMO(...
+            [obj.stats_table, obj.spect, obj.stimes, obj.sfreqs,...
+                obj.data_time_range, obj.t_time_range, obj.artifacts, obj.SOPHs] = runDYNAMO(...
                 obj.data, obj.Fs, obj.stage_times, obj.stage_vals, obj.time_range, ...
                 obj.baseline_options, obj.detection_options, obj.SOPH_options, ...
                 'fit_param_basis', false, 'fit_spline_basis', false, 'plot_on', false);
@@ -343,6 +351,8 @@ classdef DYNAMO < handle
 
             fh = displaySummaryPlot('stage_times', obj.stage_times, ...
                 'stage_vals', obj.stage_vals, ...
+                'artifacts', obj.artifacts, ...
+                't_time_range', obj.t_time_range, ...
                 'data', obj.data, ...
                 'Fs', obj.Fs, ...
                 'time_range', obj.time_range, ...
@@ -388,23 +398,10 @@ classdef DYNAMO < handle
             assert(~isempty(obj.stimes), 'stimes is empty.');
             assert(~isempty(obj.sfreqs), 'sfreqs is empty.');
 
-            % Compute optional inputs
-            if isempty(obj.time_range)
-                % Use full data
-                data_time_range = obj.data;
-                t_time_range = (0:length(obj.data)-1) / obj.Fs;
-            else
-                % Use time_range subset
-                sample_inds = round(obj.time_range(1) * obj.Fs) + 1 : round(obj.time_range(2) * obj.Fs);
-                sample_inds = sample_inds(sample_inds >= 1 & sample_inds <= length(obj.data)); % ensure in bounds
-                data_time_range = obj.data(sample_inds);
-                t_time_range = (sample_inds - 1) / obj.Fs;
-            end
-
             % Call the plotting function (keeps original signature)
             fh = displayTFPeaks(obj.stats_table, obj.spect, obj.stimes, obj.sfreqs, ...
-                'data_time_range', data_time_range, ...
-                't_time_range', t_time_range, ...
+                'data_time_range', obj.data_time_range, ...
+                't_time_range', obj.t_time_range, ...
                 'stage_times', obj.stage_times, ...
                 'stage_vals', obj.stage_vals, ...
                 'artifacts', obj.artifacts);
@@ -620,8 +617,8 @@ classdef DYNAMO < handle
             all_tables = [basic_tables; param_tables; spline_tables];
 
             % ---- Buttons ----
-            buttonLabels = {'Reset All','Run DYNAMO','Param Fit','Spline Fit','Close'};
-            buttonCallbacks = {@resetAll, @rerunDynamo, @runParamFit, @runSplineFit, @(~,~) delete(fig)};
+            buttonLabels = {'Reset All','Run DYNAMO','Plot Summary','Param Fit','Spline Fit','Close'};
+            buttonCallbacks = {@resetAll, @rerunDynamo, @plotSummary, @runParamFit, @runSplineFit, @(~,~) delete(fig)};
 
             nButtons = numel(buttonLabels);
             buttonWidth = 120;
@@ -630,11 +627,11 @@ classdef DYNAMO < handle
             totalWidth = nButtons*buttonWidth + (nButtons-1)*spacing;
             startX = (fig.Position(3) - totalWidth)/2; % center align
 
-            for ii = 1:nButtons
-                xpos = startX + (ii-1)*(buttonWidth+spacing);
-                uibutton(fig, 'Text', buttonLabels{ii}, ...
+            for jj = 1:nButtons
+                xpos = startX + (jj-1)*(buttonWidth+spacing);
+                uibutton(fig, 'Text', buttonLabels{jj}, ...
                     'Position', [xpos 10 buttonWidth buttonHeight], ...
-                    'ButtonPushedFcn', buttonCallbacks{ii});
+                    'ButtonPushedFcn', buttonCallbacks{jj});
             end
 
             uiwait(fig);
@@ -647,6 +644,10 @@ classdef DYNAMO < handle
                     % refresh the table
                     all_tables{k}.Data = struct2table(obj.(all_configs{k}.field),'AsArray',true);
                 end
+            end
+
+            function plotSummary(~,~)
+                obj.displaySummaryPlot;
             end
 
             function runParamFit(~,~)
@@ -1147,7 +1148,7 @@ classdef DYNAMO < handle
                 end
             end
         end % end DYNAMOOptionsApp
-        
+
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % isInitialized
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

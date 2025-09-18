@@ -7,7 +7,7 @@
 %   parametric and spline fits are also computed.
 %
 %   Usage:
-%       [stats_table, spect, stimes, sfreqs, artifacts, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, ...)
+%       [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, ...)
 %
 %   Required Inputs:
 %       data:               [N x 1] double - time-domain EEG signal
@@ -34,10 +34,12 @@
 %
 %   Outputs:
 %       stats_table:        table - features of detected time-frequency peaks
-%       spect:              [F x T] double - time-frequency spectrogram
-%       stimes:             [1 x T] double - spectrogram time centers (s)
+%       spect:              [F x N] double - time-frequency spectrogram
+%       stimes:             [1 x N] double - spectrogram time centers (s)
 %       sfreqs:             [1 x F] double - frequency bins (Hz)
-%       artifacts:          [1 x T] logical - artifact mask for data
+%       data_time_range:    [1 x T] double - data within time range and are analyzed
+%       t_time_range:       [1 x T] double - time axis vector for data within time range
+%       artifacts:          [1 x T] logical - artifact mask for data within time range
 %       SOPHs:              struct - SO-power and SO-phase histograms (and fits if fit_param_basis or fit_spline_basis is true)
 %
 %   Notes:
@@ -58,7 +60,7 @@
 %
 %**********************************************************************
 
-function [stats_table, spect, stimes, sfreqs, artifacts, SOPHs] = runDYNAMO(varargin)
+function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runDYNAMO(varargin)
 %%%% Example script showing how to compute time-frequency peaks and SO-power/phase histograms
 %
 % Users are encouraged to edit this script and the data loading boilerplate
@@ -88,7 +90,7 @@ if nargin <= 1
         assert(ismember(lower(data_range), {'segment','night'}), 'Select ''segment'' or ''night'' as input for example data.');
     end
 
-    [stats_table, spect, stimes, sfreqs, artifacts, SOPHs] = runExampleData(data_range, default_verbose);
+    [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runExampleData(data_range, default_verbose);
     return;
 end
 
@@ -359,7 +361,7 @@ end
 end
 
 
-function [stats_table, spect, stimes, sfreqs, artifacts, SOPHs] = runExampleData(data_range, verbose)
+function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runExampleData(data_range, verbose)
 if ~exist('verbose', 'var')
     verbose = false;
 end
@@ -409,5 +411,5 @@ switch data_range
 end
 
 %Call main function
-[stats_table, spect, stimes, sfreqs, artifacts, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options);
+[stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options);
 end
