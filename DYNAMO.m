@@ -141,6 +141,7 @@ classdef DYNAMO < handle
             %   Example:
             %       d = DYNAMO(data, Fs, stage_times, stage_vals);
             %
+            addpath(genpath(fileparts(which('DYNAMO.m'))))
 
             default_verbose = true;
 
