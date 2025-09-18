@@ -18,7 +18,7 @@ addOptional(p, 'time_range', [], @(x) isa(x,'numeric') && (isempty(x) || length(
 addOptional(p, 'isexcluded', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
 
 %SOpower computation params
-SOpower_options = SOpower_opts(); % get the default parameters
+SOpower_options = SOpowerphasehist_opts(); % get the default parameters
 addOptional(p, 'SO_freqrange', SOpower_options.SO_freqrange, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','vector','numel',2}));
 addOptional(p, 'tapers', SOpower_options.SOpower_tapers, @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
 addOptional(p, 'window_params', SOpower_options.SOpower_window_params, @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));

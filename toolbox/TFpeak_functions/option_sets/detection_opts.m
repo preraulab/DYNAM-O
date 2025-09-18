@@ -2,13 +2,7 @@ function opts = detection_opts(varargin)
 %% Parse inputs
 p = inputParser;
 
-%************************************************
-% Generate TF peak Detection Option Structure
-%************************************************
-%Double vs single watershed
-addOptional(p, 'double_watershed', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
-
-%Multitaper method parameters
+%% Multitaper method parameters
 %Frequency bin resolution of the spectrogram
 addOptional(p, 'mtm_dsfreqs', 0.1, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 %Frequency range to compute spectrogram over (Hz)
@@ -22,7 +16,9 @@ addOptional(p, 'mtm_window_length_2', 2, @(x) validateattributes(x,{'numeric'},{
 %Window step size in spectrogram computations
 addOptional(p, 'mtm_window_stepsize', 0.05, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 
-%Watershed parameters
+%% Watershed parameters
+%Double vs single watershed
+addOptional(p, 'double_watershed', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 %Decimation steps for the spectrogram prior to watershed: first index along the time axis; second index along frequency
 addOptional(p, 'downsample_spect', [], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2)); % set by quality_setting
 %Segment size for spectrogram parallelization
@@ -44,7 +40,7 @@ addOptional(p, 'merge_thresh', [], @(x) isa(x,'numeric') && (isempty(x) || issca
 %   merge_thresh = 11; (merge weight unit)
 addOptional(p, 'quality_setting', 'default', @(x) any(validatestring(x, {'stokes_2023', 'precision', 'default'})));
 
-%Merging and trimming parameters
+%% Merging and trimming parameters
 %Maximum number of merges to perform
 addOptional(p, 'max_merges', inf, @(x) validateattributes(x,{'numeric'},{'real','positive','scalar'}));
 %Fraction maximum trimmed volume
@@ -54,16 +50,17 @@ addOptional(p, 'dur_max', 5, @(x) validateattributes(x,{'numeric'},{'real','fini
 %Max bandwidth allowed
 addOptional(p, 'bw_max', 15, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 
-%Frequency refinement using 1Hz df hann spectrum for final PeakFrequency feature computation
+%% Frequency refinement using 1Hz df hann spectrum for final PeakFrequency feature computation
 addOptional(p, 'refinement', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 
-%Features to compute
+%% Features to compute
 all_features = {'all', 'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height',  'HeightData',...
     'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume', 'PeakStage'};
 addOptional(p, 'features', 'all', @(x) all(ismember(x, all_features)))
 
-%Add debug mode to run in series
+%% Add debug mode to run in series
 addOptional(p, 'debug_mode', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 
+%%
 parse(p,varargin{:});
 opts = p.Results;

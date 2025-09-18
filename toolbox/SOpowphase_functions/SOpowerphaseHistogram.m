@@ -14,6 +14,28 @@ function [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, num_p
 %       TFpeak_times: Px1 - times each TF peak occurs (s) --required
 %
 %    OPTIONAL:
+%       TFpeak_stages: Px1 - sleep stage each TF peak occurs 5=W,4=R,3=N1,2=N2,1=N3
+%       stage_times: 1xS double or single - stage times
+%       stage_vals: 1xS double or single - numeric stage values 5=W,4=R,3=N1,2=N2,1=N3
+%       EEG_times: 1xN double - times for each EEG data sample. Default = (0:length(data)-1)/Fs
+%       time_range: 1x2 double - min and max times for which to include TFpeaks. Also used to normalize
+%                   SOpower. Default = [EEG_times(1), EEG_times(end)]
+%       isexcluded: 1xN logical - marks each time point of data to be excluded or not, e.g., due to artifacts. Default = all false.
+%
+%       SOpower: 1xM double - spectral power of slow oscillation computed
+%                with multitaper spectral estimation. At a coarser
+%                resolution than the original data timeseries since
+%                windowing is used. Should be calculated using
+%                computeSOpower(), with typical window parameters used at
+%                [5, .5]. Default = [].
+%       SOpower_times: 1xM double - times for each SOpower data sample.
+%                      Also output by computeSOpower(). Default = [].
+%       SOphase: 1xN double - unwrapped phase of slow oscillation. Should
+%                be calculated using computeSOphase(). Default = [].
+%       SOphase_times: 1xN double - times for each SOphase data sample.
+%                      Also output by computeSOphase(). Default = [].
+%
+%    HISTOGRAM OPTIONAL:
 %       see SOpowerphasehist_opts() for optional parameters
 %
 %   Outputs:

@@ -16,7 +16,7 @@ function [stats_table, SOpower, SOpower_times, norm_method] = computePeakSOpower
 %                   SOpower. Default = [EEG_times(1), EEG_times(end)]
 %       isexcluded: 1xN logical - marks each time point of data to be excluded or not, e.g., due to artifacts. Default = all false.
 %
-%       SOPOWER_OPTS STRUCTURE PARAMETERS - see SOpower_opts()
+%       SO-POWER HISTOGRAM STRUCTURE PARAMETERS - see SOpowerphasehist_opts()
 %       SO_freqrange: 1x2 double - min and max frequencies (Hz) considered to be "slow oscillation".
 %                     Default = [0.3, 1.5]
 %       SOpower_tapers: 1x2 double - multitaper method parameters. [time half-bandwidth product, number of tapers].
@@ -78,7 +78,7 @@ addOptional(p, 'time_range', [], @(x) isa(x,'numeric') && (isempty(x) || length(
 addOptional(p, 'isexcluded', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
 
 %SOpower computation params
-SOpower_options = SOpower_opts(); % get the default parameters
+SOpower_options = SOpowerphasehist_opts(); % get the default parameters
 addOptional(p, 'SO_freqrange', SOpower_options.SO_freqrange, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','vector','numel',2}));
 addOptional(p, 'SOpower_tapers', SOpower_options.SOpower_tapers, @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
 addOptional(p, 'SOpower_window_params', SOpower_options.SOpower_window_params, @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
