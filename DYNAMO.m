@@ -145,7 +145,7 @@ classdef DYNAMO < handle
 
             default_verbose = true;
 
-            if nargin <= 1
+            if nargin <= 1 && strcmp(class(obj),"DYNAMO")
                 if nargin == 0
                     data_range = 'segment';
                 elseif any(strcmpi(varargin{1}, {'app', 'demo'}))
@@ -160,10 +160,13 @@ classdef DYNAMO < handle
                 p = inputParser;
                 p.KeepUnmatched = true;
 
-                addRequired(p, 'data', @(x) isnumeric(x));
-                addRequired(p, 'Fs', @(x) isnumeric(x) && isscalar(x) && x > 0);
-                addRequired(p, 'stage_times', @(x) isnumeric(x));
-                addRequired(p, 'stage_vals', @(x) isnumeric(x));
+                % Removes requirements as a subclass
+                if strcmp(class(obj),"DYNAMO")
+                    addRequired(p, 'data', @(x) isnumeric(x));
+                    addRequired(p, 'Fs', @(x) isnumeric(x) && isscalar(x) && x > 0);
+                    addRequired(p, 'stage_times', @(x) isnumeric(x));
+                    addRequired(p, 'stage_vals', @(x) isnumeric(x));
+                end
 
                 addOptional(p, 'time_range', [], @(x) isempty(x) || (isnumeric(x) && numel(x)==2));
                 addOptional(p, 'baseline_options', baseline_opts(), @(x) isstruct(x));
@@ -174,11 +177,12 @@ classdef DYNAMO < handle
                 addOptional(p, 'spline_basis_power_options', spline_basis_opts('power'), @(x) isstruct(x));
                 addOptional(p, 'spline_basis_phase_options', spline_basis_opts('phase'), @(x) isstruct(x));
                 addOptional(p, 'stats_table', [], @(x) istable(x) || isempty(x));
-                addOptional(p, 'verbose', default_verbose, @(x) islogical(x) || isnumeric(x));
-                addOptional(p, 'plot_on', true, @(x) islogical(x) || isnumeric(x));
-                addOptional(p, 'save_output_image', false, @(x) islogical(x) || isnumeric(x));
-                addOptional(p, 'output_fname', 'DYNAM-O_output', @(x) ischar(x) || isstring(x));
-                addOptional(p, 'fit_SOPH', true, @(x) islogical(x) || isnumeric(x));
+                %% COME BACK TO THIS- RUN DYNAMO INPUTS
+                % addOptional(p, 'verbose', default_verbose, @(x) islogical(x) || isnumeric(x));
+                % addOptional(p, 'plot_on', true, @(x) islogical(x) || isnumeric(x));
+                % addOptional(p, 'save_output_image', false, @(x) islogical(x) || isnumeric(x));
+                % addOptional(p, 'output_fname', 'DYNAM-O_output', @(x) ischar(x) || isstring(x));
+                % addOptional(p, 'fit_SOPH', true, @(x) islogical(x) || isnumeric(x));
                 addOptional(p, 'app', false, @(x) islogical(x) || isnumeric(x));
 
                 % Parse inputs
@@ -186,15 +190,18 @@ classdef DYNAMO < handle
                 R = p.Results;
 
                 % Avoid unnecessary data copying
-                if iscolumn(R.data)
-                    obj.data = R.data;  % No copy needed
-                else
-                    obj.data = R.data(:);  % Only reshape if necessary
+                if strcmp(class(obj),"DYNAMO")
+                    if iscolumn(R.data)
+                        obj.data = R.data;  % No copy needed
+                    else
+                        obj.data = R.data(:);  % Only reshape if necessary
+                    end
+
+                    obj.Fs = R.Fs;
+                    obj.stage_times = R.stage_times;
+                    obj.stage_vals = single(R.stage_vals);
                 end
 
-                obj.Fs = R.Fs;
-                obj.stage_times = R.stage_times;
-                obj.stage_vals = single(R.stage_vals);
                 obj.baseline_options = R.baseline_options;
                 obj.detection_options = R.detection_options;
                 obj.param_basis_power_options = R.param_basis_power_options;
@@ -243,10 +250,10 @@ classdef DYNAMO < handle
         end
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        % runDYNAMO
+        % run
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function obj = runDYNAMO(obj)
-            %runDYNAMO  Re-execute the DYNAM-O pipeline and compute TF
+        function obj = run(obj)
+            %run  Re-execute the DYNAM-O pipeline and compute TF
             %peaks and SOPH
             %
             %   Usage:
@@ -833,7 +840,7 @@ classdef DYNAMO < handle
                         'Indeterminate', 'on');
 
                     % Rerun DYNAMO with current options (uses runDYNAMO wrapper)
-                    obj.runDYNAMO();
+                    obj.run();
 
                     % Close progress dialog if open
                     if isvalid(progressDlg)

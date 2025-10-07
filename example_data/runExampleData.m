@@ -1,4 +1,4 @@
-function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runExampleData(data_range, verbose, run_app)
+function varargout = runExampleData(data_range, verbose, run_app)
 if ~exist('verbose', 'var')
     verbose = false;
 end
@@ -33,7 +33,7 @@ switch data_range
         SOPH_options.SOphase_min_peak_at_freq = 10;
 
         if verbose
-            disp(['  Running example segment...', newline])
+            disp(['  Loading example segment...', newline])
         end
     case 'night'
         % Use the full night from the example data
@@ -43,17 +43,23 @@ switch data_range
         time_range = [start_time end_time];
 
         if verbose
-            disp(['  Running full night...', newline])
+            disp(['  Loading full night...', newline])
         end
 end
 
 if run_app
     %Open up app with DYNAMO class
-    stats_table = DYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options, 'app', true);
-    [spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = deal([]);
+    h = msgbox('Example data loaded. Launching app...');
+    pause(1);
+    if ishandle(h)
+        close(h);
+    end
+    d = DYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options, 'app', true);
+    varargout = {d};
 else
     %Call main function runDYNAMO()
     [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options);
+    varargout = {stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs};
 end
 
 end
