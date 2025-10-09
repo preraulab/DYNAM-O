@@ -33,6 +33,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         SaveParamImagesCheckBox matlab.ui.control.CheckBox
         SaveSplineBasisCheckBox matlab.ui.control.CheckBox
         SaveSplineImagesCheckBox matlab.ui.control.CheckBox
+        SaveDateTimeCheckBox matlab.ui.control.CheckBox
         
         % Main control
         RunBatchButton matlab.ui.control.Button
@@ -54,6 +55,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         output_SOPH_name = '' 
         output_param_name = ''
         output_spline_name = ''
+        date_time_save = ''
         
         % UI dimensions
         WindowWidth = 1200
@@ -468,19 +470,15 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 if app.SavePeakStatsCheckBox.Value
                     
                     % Check if location exists
-                    if ~exist(strcat(app.OutputDirEditField.Value,'/TFpeaks/'),'dir')
-                        mkdir(strcat(app.OutputDirEditField.Value,'/TFpeaks/'))
-                        app.output_stats_name = strcat(app.OutputDirEditField.Value,'/TFpeaks/',app.input_fbase,'_stats_table.mat');
-                    end
-
-                    if ~exist(app.output_SOPH_name,'file')
-                        mkdir(strcat(app.OutputDirEditField.Value,'/SOPHs/'))
+                    if ~exist(strcat(app.OutputDirEditField.Value,'/results/'),'dir')
+                        mkdir(strcat(app.OutputDirEditField.Value,'/results/'))
+                        %app.output_stats_name = strcat(app.OutputDirEditField.Value,'/results/',app.input_fbase,'_stats_table.mat');
                     end
 
                     app.run();
 
-                    app.output_stats_name = strcat(app.OutputDirEditField.Value,'/TFpeaks/',app.input_fbase,'_stats_table.mat');
-                    app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/SOPHs/',app.input_fbase,'_SOPHs.mat');
+                    app.output_stats_name = strcat(app.OutputDirEditField.Value,'/results/',app.input_fbase,'_stats_table.mat');
+                    app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/results/',app.input_fbase,'_SOPHs.mat');
 
                     stats_table = app.stats_table;
                     SOPHs = app.SOPHs;
@@ -500,36 +498,42 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                     fh = app.displaySummaryPlot;
 
                     app.output_fig_name = strcat(app.OutputDirEditField.Value,'/summary_figures/',app.input_fbase,'_summary_figure.png');
-                    print(fh,'-dpng','-r200',app.output_fig_name);
+                    print(fh,'-dpng','-r300',app.output_fig_name);
+                    %exportgraphics(fh,app.output_fig_name,'Resolution',300);
                     close all;
                 end
 
                 % If Param Basis Requested
                 if app.SaveParamBasisCheckBox.Value
 
-                    if ~exist(strcat(app.OutputDirEditField.Value,'/param_basis/'),'dir')
-                        mkdir(strcat(app.OutputDirEditField.Value,'/param_basis/'))
+                    if ~exist(strcat(app.OutputDirEditField.Value,'/summary_figures/'),'dir')
+                        mkdir(strcat(app.OutputDirEditField.Value,'/summary_figures/'))
                     end
                     
                     if isempty(app.SOPHs)
                         app.run();
                     end
+                  
 
                     app.fitParamBasis();
                     fh = gcf;
                     if app.SaveParamImagesCheckBox.Value
-                        app.output_param_name = strcat(app.OutputDirEditField.Value,'/param_basis/',app.input_fbase,'_param_basis_figure.png');
-                        print(fh,'-dpng','-r200',app.output_param_name);
+                        app.output_param_name = strcat(app.OutputDirEditField.Value,'/summary_figures/',app.input_fbase,'_param_basis_figure.png');
+                        exportgraphics(fh,app.output_param_name,'Resolution',300);
                     end
                     close all;
+
+                    app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/results/',app.input_fbase,'_SOPHs.mat');
+                    SOPHs = app.SOPHs;
+                    save(app.output_SOPH_name,'SOPHs');
 
                 end
 
                 % If Spline Basis Requested
                 if app.SaveSplineBasisCheckBox.Value
 
-                    if ~exist(strcat(app.OutputDirEditField.Value,'/spline_basis/'),'dir')
-                        mkdir(strcat(app.OutputDirEditField.Value,'/spline_basis/'))
+                    if ~exist(strcat(app.OutputDirEditField.Value,'/summary_figures/'),'dir')
+                        mkdir(strcat(app.OutputDirEditField.Value,'/summary_figures/'))
                     end
                     
                     if isempty(app.SOPHs)
@@ -539,10 +543,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                     app.fitSplineBasis();
                     fh = gcf;
                     if app.SaveSplineImagesCheckBox.Value
-                        app.output_spline_name = strcat(app.OutputDirEditField.Value,'/spline_basis/',app.input_fbase,'_spline_basis_figure.png');
-                        print(fh,'-dpng','-r200',app.output_spline_name);
+                        app.output_spline_name = strcat(app.OutputDirEditField.Value,'/summary_figures/',app.input_fbase,'_spline_basis_figure.png');
+                        exportgraphics(fh,app.output_spline_name,'Resolution',300);
                     end
                     close all;
+
+                    app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/results/',app.input_fbase,'_SOPHs.mat');
+                    SOPHs = app.SOPHs;
+                    save(app.output_SOPH_name,'SOPHs');
 
                 end
 
