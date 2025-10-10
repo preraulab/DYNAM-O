@@ -140,7 +140,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'FontWeight','bold','HorizontalAlignment','center');
             
             % Help button
-            app.HelpButton = uibutton(app.UIFigure,'push','Text','Help','Position',[app.WindowWidth-120,app.WindowHeight-28,100,22],...
+            app.HelpButton = uibutton(app.UIFigure,'push','Text','Help','Icon','Info','Position',[app.WindowWidth-120,app.WindowHeight-28,100,22],...
                 'ButtonPushedFcn',@(src,event) showHelp(app));
             
             % Create Tab Group
