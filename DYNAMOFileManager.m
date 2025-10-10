@@ -2,6 +2,10 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
     
     properties (Access = public)
         UIFigure matlab.ui.Figure
+        TabGroup matlab.ui.container.TabGroup
+        FileSelectionTab matlab.ui.container.Tab
+        OutputOptionsTab matlab.ui.container.Tab
+        DYNAMOOptionsTab matlab.ui.container.Tab
         
         % Summary Label
         SummaryLabel matlab.ui.control.Label
@@ -20,6 +24,10 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         StagingListBox matlab.ui.control.ListBox
         StagingButtonGroup matlab.ui.container.ButtonGroup
         StagingDirectionLabel matlab.ui.control.Label
+        
+        % Staging options panel components
+        StagingOptionsPanel matlab.ui.container.Panel
+        StagingOptionsLabel matlab.ui.control.Label
         
         % Output options panel components
         OutputPanel matlab.ui.container.Panel
@@ -58,9 +66,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         date_time_save = ''
         
         % UI dimensions
-        WindowWidth = 1200
-        WindowHeight = 650
+        WindowWidth = 1400
+        WindowHeight = 850
         PanelMargin = 20
+        PanelMarginVertical = 50
+        PanelMarginHorizontal = 20
         ButtonHeight = 30
     end
     
@@ -76,9 +86,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             if ~isempty(p.Results.BatchCallback), app.BatchProcessCallback = p.Results.BatchCallback; end
             if ~isempty(p.Results.ValidationCallback), app.FileValidationCallback = p.Results.ValidationCallback; end
             
-            createComponents(app,p.Results.Title,p.Results.Position);
-
-            app.open; % Opens updateFileOptions app
+            createComponents(app,p.Results.Title,p.Results.Position);         
 
         end
         
@@ -123,41 +131,53 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 y = (scr(4)-app.WindowHeight)/2;
                 position = [x,y,app.WindowWidth,app.WindowHeight];
             end
-            app.UIFigure = uifigure('Position',position,'Name',windowTitle, ...
-                'Resize','on'); %'SizeChangedFcn',@app.onWindowResize);
+            app.UIFigure = uifigure('Position',position,'Name',windowTitle,'Resize','on');
             
             % Summary label
             app.SummaryLabel = uilabel(app.UIFigure,'Text',...
                 'Add data and staging files, select output directory, choose options, then run batch.',...
-                'Position',[app.PanelMargin,app.WindowHeight-40,app.WindowWidth-150,30],...
+                'Position',[app.PanelMargin,app.WindowHeight-30,app.WindowWidth-150,20],...
                 'FontWeight','bold','HorizontalAlignment','center');
             
             % Help button
-            app.HelpButton = uibutton(app.UIFigure,'push','Text','Help','Position',[app.WindowWidth-120,app.WindowHeight-35,100,25],...
+            app.HelpButton = uibutton(app.UIFigure,'push','Text','Help','Position',[app.WindowWidth-120,app.WindowHeight-28,100,22],...
                 'ButtonPushedFcn',@(src,event) showHelp(app));
             
-            createDataPanel(app);
-            createStagingPanel(app);
-            createOutputPanel(app);
+            % Create Tab Group
+            app.TabGroup = uitabgroup(app.UIFigure,'Position',[app.PanelMargin,80,app.WindowWidth-2*app.PanelMargin,app.WindowHeight-120]);
+            
+            % Create Tabs
+            app.FileSelectionTab = uitab(app.TabGroup,'Title','File Selection');
+            app.OutputOptionsTab = uitab(app.TabGroup,'Title','Output Options');
+            
+            createFileSelectionTab(app);
+            createOutputOptionsTab(app);
             createMainControls(app);
             
             updateRunBatchButton(app);
         end
         
-        function createDataPanel(app)
-            panelWidth = (app.WindowWidth-4*app.PanelMargin)/3;
-            app.DataPanel = uipanel(app.UIFigure,'Title','',...
-                'Position',[app.PanelMargin,80,panelWidth,app.WindowHeight-150]);
+        function createFileSelectionTab(app)
+            % Get tab dimensions
+            tabWidth = app.WindowWidth - 2*app.PanelMargin;
+            tabHeight = app.WindowHeight - 120;
+            
+            % Three equal panels for Data, Staging, and Staging Options
+            panelWidth = (tabWidth - 4*app.PanelMarginHorizontal)/3;
+            panelHeight = tabHeight - 2*app.PanelMarginVertical;
+            
+            % Data Panel
+            app.DataPanel = uipanel(app.FileSelectionTab,'Title','',...
+                'Position',[app.PanelMarginHorizontal,app.PanelMarginVertical,panelWidth,panelHeight]);
             
             app.DataLabel = uilabel(app.DataPanel,'Text','Data (0 Files)',...
                 'FontWeight','bold','HorizontalAlignment','center',...
-                'Position',[10,app.WindowHeight-180,panelWidth-20,20]);
+                'Position',[10,panelHeight-40,panelWidth-20,20]);
             
-            % Direction label
             app.DataDirectionLabel = uilabel(app.DataPanel,'Text','Add your primary data files (EDF format). Use buttons to remove/reorder.',...
-                'Position',[10,app.WindowHeight-210,panelWidth-20,20],'FontAngle','italic','FontSize',10);
+                'Position',[10,panelHeight-70,panelWidth-20,20],'FontAngle','italic','FontSize',10);
             
-            app.DataListBox = uilistbox(app.DataPanel,'Position',[10,50,panelWidth-20,app.WindowHeight-260],...
+            app.DataListBox = uilistbox(app.DataPanel,'Position',[10,50,panelWidth-20,panelHeight-120],...
                 'Multiselect','on','Items',{},'Value',{});
             
             app.DataButtonGroup = uibuttongroup(app.DataPanel,'Position',[15,10,panelWidth-30,35],'BorderType','none');
@@ -170,24 +190,20 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Text','Up','ButtonPushedFcn',@app.DataMoveUpButtonPushed);
             uibutton(app.DataButtonGroup,'push','Position',[3*buttonWidth+20,5,buttonWidth,app.ButtonHeight],...
                 'Text','Down','ButtonPushedFcn',@app.DataMoveDownButtonPushed);
-        end
-        
-        function createStagingPanel(app)
-            panelWidth = (app.WindowWidth-4*app.PanelMargin)/3;
-            xPos = 2*app.PanelMargin+panelWidth;
             
-            app.StagingPanel = uipanel(app.UIFigure,'Title','',...
-                'Position',[xPos,80,panelWidth,app.WindowHeight-150]);
+            % Staging Panel
+            xPos = 2*app.PanelMarginHorizontal + panelWidth;
+            app.StagingPanel = uipanel(app.FileSelectionTab,'Title','',...
+                'Position',[xPos,app.PanelMarginVertical,panelWidth,panelHeight]);
             
             app.StagingLabel = uilabel(app.StagingPanel,'Text','Staging (0 Files)',...
                 'FontWeight','bold','HorizontalAlignment','center',...
-                'Position',[10,app.WindowHeight-180,panelWidth-20,20]);
+                'Position',[10,panelHeight-40,panelWidth-20,20]);
             
-            % Direction label
             app.StagingDirectionLabel = uilabel(app.StagingPanel,'Text','Add staging files (CSV/TXT). Ensure order matches data files.',...
-                'Position',[10,app.WindowHeight-210,panelWidth-20,20],'FontAngle','italic','FontSize',10);
+                'Position',[10,panelHeight-70,panelWidth-20,20],'FontAngle','italic','FontSize',10);
             
-            app.StagingListBox = uilistbox(app.StagingPanel,'Position',[10,50,panelWidth-20,app.WindowHeight-260],...
+            app.StagingListBox = uilistbox(app.StagingPanel,'Position',[10,50,panelWidth-20,panelHeight-120],...
                 'Multiselect','on','Items',{},'Value',{});
             
             app.StagingButtonGroup = uibuttongroup(app.StagingPanel,'Position',[15,10,panelWidth-30,35],'BorderType','none');
@@ -196,28 +212,44 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             uibutton(app.StagingButtonGroup,'push','Position',[buttonWidth+10,5,buttonWidth,app.ButtonHeight],'Text','Remove','ButtonPushedFcn',@app.StagingRemoveButtonPushed);
             uibutton(app.StagingButtonGroup,'push','Position',[2*buttonWidth+15,5,buttonWidth,app.ButtonHeight],'Text','Up','ButtonPushedFcn',@app.StagingMoveUpButtonPushed);
             uibutton(app.StagingButtonGroup,'push','Position',[3*buttonWidth+20,5,buttonWidth,app.ButtonHeight],'Text','Down','ButtonPushedFcn',@app.StagingMoveDownButtonPushed);
+            
+            % Staging Options Panel
+            xPos = 3*app.PanelMarginHorizontal + 2*panelWidth;
+            app.StagingOptionsPanel = uipanel(app.FileSelectionTab,'Title','',...
+                'Position',[xPos,app.PanelMarginVertical,panelWidth,panelHeight]);
+            
+            app.StagingOptionsLabel = uilabel(app.StagingOptionsPanel,'Text','Staging Options',...
+                'FontWeight','bold','HorizontalAlignment','center',...
+                'Position',[10,panelHeight-40,panelWidth-20,20]);
+            
+            % Placeholder for future staging options content
         end
         
-        function createOutputPanel(app)
-            panelWidth = (app.WindowWidth-4*app.PanelMargin)/3;
-            xPos = 3*app.PanelMargin+2*panelWidth;
+        function createOutputOptionsTab(app)
+            % Get tab dimensions
+            tabWidth = app.WindowWidth - 2*app.PanelMargin;
+            tabHeight = app.WindowHeight - 120;
             
-            app.OutputPanel = uipanel(app.UIFigure,'Title','',...
-                'Position',[xPos,80,panelWidth,app.WindowHeight-150]);
+            % Single centered panel for output options
+            panelWidth = min(600, tabWidth - 2*app.PanelMarginHorizontal);
+            panelHeight = tabHeight - 2*app.PanelMarginVertical;
+            xPos = (tabWidth - panelWidth)/2;
+            
+            app.OutputPanel = uipanel(app.OutputOptionsTab,'Title','',...
+                'Position',[xPos,app.PanelMarginVertical,panelWidth,panelHeight]);
             
             app.OutputLabel = uilabel(app.OutputPanel,'Text','Output Options','FontWeight','bold',...
-                'HorizontalAlignment','center','Position',[10,app.WindowHeight-180,panelWidth-20,20]);
+                'HorizontalAlignment','center','Position',[10,panelHeight-40,panelWidth-20,20]);
             
-            % Direction label
             app.OutputDirLabel = uilabel(app.OutputPanel,'Text','Select output directory and choose what to save.',...
-                'Position',[10,app.WindowHeight-210,panelWidth-20,20],'FontAngle','italic','FontSize',10);
+                'Position',[10,panelHeight-70,panelWidth-20,20],'FontAngle','italic','FontSize',10);
             
-            app.OutputDirEditField = uieditfield(app.OutputPanel,'text','Position',[10,app.WindowHeight-240,panelWidth-90,25],...
+            app.OutputDirEditField = uieditfield(app.OutputPanel,'text','Position',[10,panelHeight-100,panelWidth-90,25],...
                 'ValueChangedFcn',@(src,event) outputDirChanged(app));
-            app.OutputDirButton = uibutton(app.OutputPanel,'push','Text','Browse','Position',[panelWidth-70,app.WindowHeight-240,60,25],...
+            app.OutputDirButton = uibutton(app.OutputPanel,'push','Text','Browse','Position',[panelWidth-70,panelHeight-100,60,25],...
                 'ButtonPushedFcn',@(src,event) browseOutputDir(app));
             
-            yPos = app.WindowHeight-280; spacing = 30;
+            yPos = panelHeight-140; spacing = 30;
             app.SavePeakStatsCheckBox = uicheckbox(app.OutputPanel,'Text','Peak Stats Tables','Position',[10,yPos,panelWidth-20,22]);
             app.SaveDataSummaryCheckBox = uicheckbox(app.OutputPanel,'Text','Data Summary Images','Position',[10,yPos-spacing,panelWidth-20,22]);
             app.SaveParamBasisCheckBox = uicheckbox(app.OutputPanel,'Text','Parametric Basis','Position',[10,yPos-2*spacing,panelWidth-20,22]);
@@ -236,9 +268,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         %% ================== HELP ==================
         function showHelp(app)
             msg = ['Instructions:' newline ...
-                '1. Add Data files (EDF) and Staging files (CSV/TXT).' newline ...
+                '1. In File Selection tab: Add Data files (EDF) and Staging files (CSV/TXT).' newline ...
                 '2. Make sure the file counts match and order corresponds.' newline ...
-                '3. Choose an output directory and select save options.' newline ...
+                '3. In Output Options tab: Choose an output directory and select save options.' newline ...
                 '4. Click Run Batch to process files.'];
             uialert(app.UIFigure,msg,'Help','Icon','info');
         end
@@ -380,49 +412,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             updateRunBatchButton(app);
         end
         
-        %% ================== WINDOW RESIZE ==================
-        function onWindowResize(app,~,~)
-            newPos = app.UIFigure.Position;
-            app.WindowWidth=newPos(3); app.WindowHeight=newPos(4);
-            
-            panelWidth = (app.WindowWidth-4*app.PanelMargin)/3;
-            % Summary & Help
-            app.SummaryLabel.Position=[app.PanelMargin,app.WindowHeight-40,app.WindowWidth-150,30];
-            app.HelpButton.Position=[app.WindowWidth-120,app.WindowHeight-35,100,25];
-            
-            % Panels
-            app.DataPanel.Position=[app.PanelMargin,80,panelWidth,app.WindowHeight-150];
-            app.DataLabel.Position=[10,app.WindowHeight-180,panelWidth-20,20];
-            app.DataDirectionLabel.Position=[10,app.WindowHeight-210,panelWidth-20,20];
-            app.DataListBox.Position=[10,50,panelWidth-20,app.WindowHeight-260];
-            app.DataButtonGroup.Position=[15,10,panelWidth-30,35];
-            
-            xPos = 2*app.PanelMargin+panelWidth;
-            app.StagingPanel.Position=[xPos,80,panelWidth,app.WindowHeight-150];
-            app.StagingLabel.Position=[10,app.WindowHeight-180,panelWidth-20,20];
-            app.StagingDirectionLabel.Position=[10,app.WindowHeight-210,panelWidth-20,20];
-            app.StagingListBox.Position=[10,50,panelWidth-20,app.WindowHeight-260];
-            app.StagingButtonGroup.Position=[15,10,panelWidth-30,35];
-            
-            xPos = 3*app.PanelMargin+2*panelWidth;
-            app.OutputPanel.Position=[xPos,80,panelWidth,app.WindowHeight-150];
-            app.OutputLabel.Position=[10,app.WindowHeight-180,panelWidth-20,20];
-            app.OutputDirLabel.Position=[10,app.WindowHeight-210,panelWidth-20,20];
-            app.OutputDirEditField.Position=[10,app.WindowHeight-240,panelWidth-90,25];
-            app.OutputDirButton.Position=[panelWidth-70,app.WindowHeight-240,60,25];
-            
-            yPos = app.WindowHeight-280; spacing = 30;
-            app.SavePeakStatsCheckBox.Position=[10,yPos,panelWidth-20,22];
-            app.SaveDataSummaryCheckBox.Position=[10,yPos-spacing,panelWidth-20,22];
-            app.SaveParamBasisCheckBox.Position=[10,yPos-2*spacing,panelWidth-20,22];
-            app.SaveParamImagesCheckBox.Position=[10,yPos-3*spacing,panelWidth-20,22];
-            app.SaveSplineBasisCheckBox.Position=[10,yPos-4*spacing,panelWidth-20,22];
-            app.SaveSplineImagesCheckBox.Position=[10,yPos-5*spacing,panelWidth-20,22];
-            
-            % Run button
-            app.RunBatchButton.Position=[app.WindowWidth/2-60,20,120,40];
-        end
-        
         %% ================== RUN BATCH ==================
         function RunBatchButtonPushed(app,~,~)
             if length(app.DataList) ~= length(app.StagingList)
@@ -456,7 +445,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
         function runBatch(app,~)
 
-            % % Loop through objects
+            % Loop through objects
             for ii = 1:length(app.DataList)
 
                 [~,app.input_fbase] = fileparts(app.DataList{ii});
@@ -472,7 +461,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                     % Check if location exists
                     if ~exist(strcat(app.OutputDirEditField.Value,'/results/'),'dir')
                         mkdir(strcat(app.OutputDirEditField.Value,'/results/'))
-                        %app.output_stats_name = strcat(app.OutputDirEditField.Value,'/results/',app.input_fbase,'_stats_table.mat');
                     end
 
                     app.run();
@@ -499,7 +487,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
                     app.output_fig_name = strcat(app.OutputDirEditField.Value,'/summary_figures/',app.input_fbase,'_summary_figure.png');
                     print(fh,'-dpng','-r300',app.output_fig_name);
-                    %exportgraphics(fh,app.output_fig_name,'Resolution',300);
                     close all;
                 end
 
@@ -514,7 +501,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                         app.run();
                     end
                   
-
                     app.fitParamBasis();
                     fh = gcf;
                     if app.SaveParamImagesCheckBox.Value
@@ -553,7 +539,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                     save(app.output_SOPH_name,'SOPHs');
 
                 end
-
 
             end
      
