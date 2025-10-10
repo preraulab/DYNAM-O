@@ -239,10 +239,28 @@ classdef DYNAMO < handle
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % App GUI
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function app(obj)
+        function app(obj, verbose, fig, tab)
             % APP  Open the DYNAMO options GUI
-            obj.DYNAMOOptionsApp(false);
+            if nargin<2
+                obj.DYNAMOOptionsApp(false);
+            end
+
+            if nargin==2
+                obj.DYNAMOOptionsApp(verbose);
+            end
+
+            if nargin==3
+                obj.DYNAMOOptionsApp(verbose, fig);
+            end
+
+             if nargin==4
+                obj.DYNAMOOptionsApp(verbose, fig, tab);
+            end
+           
+            DYNAMOOptionsApp(obj, verbose, fig, tab);
         end
+
+
 
         function open(obj)
             % OPEN  Alias to APP so users can call open(d)
@@ -582,7 +600,7 @@ classdef DYNAMO < handle
         % DYNAMOOptionsApp
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        function obj = DYNAMOOptionsApp(obj, verbose)
+        function obj = DYNAMOOptionsApp(obj, verbose, fig, tab)
             %DYNAMOOPTIONSAPP  Simplified GUI for editing DYNAMO pipeline options
             %
             %   Usage:
@@ -606,8 +624,12 @@ classdef DYNAMO < handle
             end
 
             % Create main figure
-            fig = uifigure('Name', 'DYNAMO Options', 'Position', [100 100 900 650]);
-            tabGroup = uitabgroup(fig, 'Position', [10 60 880 580]);
+            if nargin<3 || isempty(fig)
+                fig = uifigure('Name', 'DYNAMO Options', 'Position', [100 100 900 650]);
+                tabGroup = uitabgroup(fig, 'Position', [10 60 880 580]);
+            elseif nargin == 4
+                tabGroup = uitabgroup(tab, 'Position', [10 60 880 580]);
+            end
 
             % Basic option configurations (no changes)
             basic_configs = {
