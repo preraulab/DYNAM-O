@@ -469,16 +469,18 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 % If Stats Table Requested
                 if app.SavePeakStatsCheckBox.Value
                     
-                    % Check if location exists
-                    if ~exist(strcat(app.OutputDirEditField.Value,'/results/'),'dir')
-                        mkdir(strcat(app.OutputDirEditField.Value,'/results/'))
-                        %app.output_stats_name = strcat(app.OutputDirEditField.Value,'/results/',app.input_fbase,'_stats_table.mat');
+                    % Check if locations exist
+                    if ~exist(strcat(app.OutputDirEditField.Value,'/results/TFpeaks/'),'dir')
+                        mkdir(strcat(app.OutputDirEditField.Value,'/results/TFpeaks/'))
+                    end
+                    if ~exist(strcat(app.OutputDirEditField.Value,'/results/SOPHs/'),'dir')
+                        mkdir(strcat(app.OutputDirEditField.Value,'/results/SOPHs/'))
                     end
 
                     app.run();
 
-                    app.output_stats_name = strcat(app.OutputDirEditField.Value,'/results/',app.input_fbase,'_stats_table.mat');
-                    app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/results/',app.input_fbase,'_SOPHs.mat');
+                    app.output_stats_name = strcat(app.OutputDirEditField.Value,'/results/TFpeaks/',app.input_fbase,'_stats_table.mat');
+                    app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/results/SOPHs/',app.input_fbase,'_SOPHs.mat');
 
                     stats_table = app.stats_table;
                     SOPHs = app.SOPHs;
@@ -491,39 +493,37 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 % If Data Summary Image Requested
                 if  app.SaveDataSummaryCheckBox.Value
 
-                    if ~exist(strcat(app.OutputDirEditField.Value,'/summary_figures/'),'dir')
-                        mkdir(strcat(app.OutputDirEditField.Value,'/summary_figures/'))
+                    if ~exist(strcat(app.OutputDirEditField.Value,'/figures/summary/'),'dir')
+                        mkdir(strcat(app.OutputDirEditField.Value,'/figures/summary/'))
                     end
 
                     fh = app.displaySummaryPlot;
 
-                    app.output_fig_name = strcat(app.OutputDirEditField.Value,'/summary_figures/',app.input_fbase,'_summary_figure.png');
+                    app.output_fig_name = strcat(app.OutputDirEditField.Value,'/figures/summary/',app.input_fbase,'_summary_figure.png');
                     print(fh,'-dpng','-r300',app.output_fig_name);
-                    %exportgraphics(fh,app.output_fig_name,'Resolution',300);
                     close all;
                 end
 
                 % If Param Basis Requested
                 if app.SaveParamBasisCheckBox.Value
 
-                    if ~exist(strcat(app.OutputDirEditField.Value,'/summary_figures/'),'dir')
-                        mkdir(strcat(app.OutputDirEditField.Value,'/summary_figures/'))
+                    if ~exist(strcat(app.OutputDirEditField.Value,'/figures/param_basis/'),'dir')
+                        mkdir(strcat(app.OutputDirEditField.Value,'/figures/param_basis/'))
                     end
                     
                     if isempty(app.SOPHs)
                         app.run();
                     end
                   
-
                     app.fitParamBasis();
                     fh = gcf;
                     if app.SaveParamImagesCheckBox.Value
-                        app.output_param_name = strcat(app.OutputDirEditField.Value,'/summary_figures/',app.input_fbase,'_param_basis_figure.png');
-                        exportgraphics(fh,app.output_param_name,'Resolution',300);
+                        app.output_param_name = strcat(app.OutputDirEditField.Value,'/figures/param_basis/',app.input_fbase,'_param_basis_figure.png');
+                        print(fh,'-dpng','-r300',app.output_param_name);
                     end
                     close all;
 
-                    app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/results/',app.input_fbase,'_SOPHs.mat');
+                    app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/results/SOPHs/',app.input_fbase,'_SOPHs.mat');
                     SOPHs = app.SOPHs;
                     save(app.output_SOPH_name,'SOPHs');
 
@@ -532,8 +532,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 % If Spline Basis Requested
                 if app.SaveSplineBasisCheckBox.Value
 
-                    if ~exist(strcat(app.OutputDirEditField.Value,'/summary_figures/'),'dir')
-                        mkdir(strcat(app.OutputDirEditField.Value,'/summary_figures/'))
+                    if ~exist(strcat(app.OutputDirEditField.Value,'/figures/spline_basis/'),'dir')
+                        mkdir(strcat(app.OutputDirEditField.Value,'/figures/spline_basis/'))
                     end
                     
                     if isempty(app.SOPHs)
@@ -543,12 +543,12 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                     app.fitSplineBasis();
                     fh = gcf;
                     if app.SaveSplineImagesCheckBox.Value
-                        app.output_spline_name = strcat(app.OutputDirEditField.Value,'/summary_figures/',app.input_fbase,'_spline_basis_figure.png');
-                        exportgraphics(fh,app.output_spline_name,'Resolution',300);
+                        app.output_spline_name = strcat(app.OutputDirEditField.Value,'/figures/spline_basis/',app.input_fbase,'_spline_basis_figure.png');
+                        print(fh,'-dpng','-r300',app.output_spline_name);
                     end
                     close all;
 
-                    app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/results/',app.input_fbase,'_SOPHs.mat');
+                    app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/results/SOPHs/',app.input_fbase,'_SOPHs.mat');
                     SOPHs = app.SOPHs;
                     save(app.output_SOPH_name,'SOPHs');
 
