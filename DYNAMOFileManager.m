@@ -365,7 +365,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 validFiles={};
                 for i=1:length(files)
                     if app.FileValidationCallback(files{i})
-                        validFiles{end+1}=files{i};
+                        validFiles{end+1}=files{i}; %#ok<AGROW>
                     end
                 end
                 files = validFiles;
@@ -458,18 +458,12 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 % If Stats Table Requested
                 if app.SavePeakStatsCheckBox.Value
                     
-<<<<<<< HEAD
                     % Check if locations exist
                     if ~exist(strcat(app.OutputDirEditField.Value,'/results/TFpeaks/'),'dir')
                         mkdir(strcat(app.OutputDirEditField.Value,'/results/TFpeaks/'))
                     end
                     if ~exist(strcat(app.OutputDirEditField.Value,'/results/SOPHs/'),'dir')
                         mkdir(strcat(app.OutputDirEditField.Value,'/results/SOPHs/'))
-=======
-                    % Check if location exists
-                    if ~exist(strcat(app.OutputDirEditField.Value,'/results/'),'dir')
-                        mkdir(strcat(app.OutputDirEditField.Value,'/results/'))
->>>>>>> 1baa9ea3278cfa91369f22e1d84512122c9c6156
                     end
 
                     app.run();
