@@ -12,6 +12,7 @@ function [staging, annotations] = read_staging(varargin)
 %   Name-Value Pairs:
 %       'stage_vals'  : 1x7 cell array of strings or cell arrays with stage strings (default: predefined mapping)
 %       'header_lines': integer - number of header lines to skip (default: 0)
+%       'delimeter'   : string - file delimeter
 %       'start_time'  : string in 'HH:MM:SS' format (default: nan) - reference start time
 %       'epoch_dur'   : scalar - epoch duration in seconds (default: 30)
 %       'plot_on'     : logical - if true, plot hypnogram with hypnoplot (default: true)
@@ -42,7 +43,9 @@ function [staging, annotations] = read_staging(varargin)
     addRequired(p, 'stage_col', @(x) isnumeric(x) && isscalar(x) && x>0 && mod(x,1)==0);
 
     addOptional(p, 'stage_vals', default_stage_vals, @(x) isempty(x) || (iscell(x) && numel(x)==7));
-    addOptional(p, 'header_lines', 0, @(x) isnumeric(x) && isscalar(x) && x>=0);
+    %addOptional(p, 'header_lines', 0, @(x) isnumeric(x) && isscalar(x) && x>=0);
+    addOptional(p, 'header_lines', []);
+    addOptional(p, 'delimeter', ',');
     addOptional(p, 'start_time', NaN, @(x) ischar(x) || isstring(x) || isnan(x));
     addOptional(p, 'epoch_dur', 30, @(x) isnumeric(x) && isscalar(x) && x>0);
     addOptional(p, 'plot_on', true, @(x) islogical(x) && isscalar(x));
@@ -54,6 +57,7 @@ function [staging, annotations] = read_staging(varargin)
     stage_col   = p.Results.stage_col;
     stage_vals  = p.Results.stage_vals;
     header_lines= p.Results.header_lines;
+    delimeter   = p.Results.delimeter;
     start_time  = p.Results.start_time;
     epoch_dur   = p.Results.epoch_dur;
     plot_on     = p.Results.plot_on;
@@ -72,7 +76,11 @@ function [staging, annotations] = read_staging(varargin)
     end
 
     % ---------------- Read CSV ----------------
-    raw_data = readcell(file_name, 'Delimiter', ',', 'NumHeaderLines', header_lines);
+    if ~isempty(header_lines)
+        raw_data = readcell(file_name, 'Delimiter', delimeter, 'NumHeaderLines', header_lines);
+    else
+        raw_data = readcell(file_name, 'Delimiter', delimeter);
+    end
 
     num_cols = size(raw_data, 2);
     if time_col > num_cols
@@ -191,18 +199,31 @@ function adjusted_times = handle_midnight_crossover(raw_seconds)
 end
 
 % ============================================================
-function [stage_values, unmatched_idx] = process_stage_data(stage_data, stage_vals)
+function [stage_values, unmatched_idx] = process_stage_data(stage_data, stage_labels)
     stage_numbers = [6, 5, 4, 3, 2, 1, 0]; % Artifact → Unknown
     stage_values = nan(size(stage_data));   % start unassigned
 
-    for stage_idx = 1:length(stage_vals)
-        strs = lower(string(stage_vals{stage_idx}));
-        for i = 1:length(stage_data)
-            cur = lower(string(stage_data(i)));
-            if any(contains(cur, strs))
-                stage_values(i) = stage_numbers(stage_idx);
-            end
+    valid_stages = false;
+
+    for stage_idx = 1:length(stage_labels)
+        strs = lower(string(stage_labels{stage_idx}));
+        inds = ismember(string(stage_data),strs);
+        if any(inds)
+            stage_values(inds) = stage_numbers(stage_idx);
+            valid_stages = true;
         end
+        % %% FIND ON GITHUB
+        % for i = 1:length(stage_data)
+        %     cur = lower(string(stage_data(i)));
+        %     %% TO-DO: TEST (ismember)
+        %     if ismember(cur, strs)
+        %         stage_values(i) = stage_numbers(stage_idx);
+        %     end
+        % end
+    end
+
+    if ~valid_stages
+        error('No valid stages found. Check stage label inputs and staging files.');
     end
 
     unmatched_idx = find(isnan(stage_values));

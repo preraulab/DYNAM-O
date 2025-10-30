@@ -7,10 +7,11 @@ addRequired(p, 'edf_fpath', @(x) validateattributes(x, {'char','cell'},{}));
 addRequired(p, 'scoring_fpath', @(x) validateattributes(x, {'char','cell'},{}));
 addRequired(p, 'stage_col', @(x) validateattributes(x,{'double'},{'real','positive'}));
 addRequired(p, 'time_col', @(x) validateattributes(x,{'double'},{'real','positive'}));
-addRequired(p,'channels',@(x)validateattributes(x,{'char','cell'},{}));
+addRequired(p, 'channels',@(x)validateattributes(x,{'char','cell'},{}));
 % Optional inputs for reading stages
 addOptional(p, 'stage_vals_in', [], @(x) isempty(x) || iscell(x));
-addOptional(p, 'header_lines', 0, @(x) isnumeric(x) && isscalar(x) && x>=0);
+addOptional(p, 'header_lines', []);
+addOptional(p, 'delimeter',',');
 addOptional(p, 'start_time', NaN, @(x) ischar(x) || isstring(x) || isnan(x));
 addOptional(p, 'epoch_dur', 30, @(x) isnumeric(x) && isscalar(x) && x>0);
 addOptional(p, 'plot_on', false, @(x) islogical(x) && isscalar(x));
@@ -32,13 +33,23 @@ if iscell(channels)
     for ii = 1:length(channels)
         chan_inds(ii) = find(strcmpi(labels,channels{ii}));
         if isempty(chan_inds(ii))
-            error([channels{ii}, ' is not a valid channel.'])
+            error(char(strcat(channels{ii},' is not a valid channel. Valid channels:',{' '},sprintf('%s ',labels{:}))))
+            % data = ['Channel ',channels{ii},' does not exist.'];
+            % Fs = [];
+            % stage_times = [];
+            % stage_vals = [];
+            % return
         end
     end
 else
     chan_inds = find(strcmpi(labels,channels));
     if isempty(chan_inds)
-            error([channels, ' is not a valid channel.'])
+        error(char(strcat(channels,' is not a valid channel. Valid channels:',{' '},sprintf('%s ',labels{:}))))
+        % data = ['Channel ',channels,' does not exist.'];
+        % Fs = [];
+        % stage_times = [];
+        % stage_vals = [];
+        % return
     end
     labels = labels(chan_inds);
 end
@@ -48,7 +59,12 @@ data = cell2mat(signalCell(chan_inds));
 Fs = header.samplingfrequency(chan_inds);
 
 %% LOAD SCORING
-[staging] = read_staging(scoring_fpath,time_col,stage_col,stage_vals_in,header_lines,start_time,epoch_dur,plot_on);
+if isnumeric(header_lines)
+    [staging] = read_staging(scoring_fpath,time_col,stage_col,'stage_vals',stage_vals_in,'header_lines',header_lines,'delimeter',delimeter,'start_time',start_time,'epoch_dur',epoch_dur,'plot_on',plot_on);
+else
+    [staging] = read_staging(scoring_fpath,time_col,stage_col,'stage_vals',stage_vals_in,'start_time',start_time,'delimeter',delimeter,'epoch_dur',epoch_dur,'plot_on',plot_on);
+end
+    
 stage_times = staging.times;
 stage_vals = staging.vals;
 
