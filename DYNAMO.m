@@ -595,12 +595,12 @@ classdef DYNAMO < handle
         end
     end
 
-    methods (Access = private)
+    methods (Access = protected)
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % DYNAMOOptionsApp
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        function obj = DYNAMOOptionsApp(obj, verbose, fig, tab)
+        function obj = DYNAMOOptionsApp(obj, verbose, fig, tab, showButtons)
             %DYNAMOOPTIONSAPP  Simplified GUI for editing DYNAMO pipeline options
             %
             %   Usage:
@@ -614,6 +614,9 @@ classdef DYNAMO < handle
             %   Inputs:
             %       obj: DYNAMO object
             %       verbose: logical - display console messages (default: false)
+            %       fig: figure handle - parent figure
+            %       tab: tab handle - parent tab
+            %       showButtons: logical - display buttons to run analyses (default: true)
             %
             %   Outputs:
             %       obj: DYNAMO object possibly modified via GUI interaction
@@ -627,8 +630,37 @@ classdef DYNAMO < handle
             if nargin<3 || isempty(fig)
                 fig = uifigure('Name', 'DYNAMO Options', 'Position', [100 100 900 650]);
                 tabGroup = uitabgroup(fig, 'Position', [10 60 880 580]);
-            elseif nargin == 4
-                tabGroup = uitabgroup(tab, 'Position', [10 60 880 580]);
+                fig.AutoResizeChildren = true;
+            else
+                tabPos = tab.Position;
+                main_gap = 30;
+                main_pos = [tabPos(1), tabPos(2), tabPos(3), tabPos(4) - main_gap];
+                tabGroup = uitabgroup(tab, 'Position', main_pos);
+            end
+
+            if nargin<5
+                showButtons = true;
+            end
+
+            % Create main menu
+            mSettings = uimenu(fig, 'Text', 'Batch Settings');
+         
+            % Create submenu items
+            uimenu(mSettings, 'Text', 'Load DYNAM-O Settings...', ...
+                'MenuSelectedFcn', @loadSettingsCallback);
+         
+            uimenu(mSettings, 'Text', 'Save DYNAM-O Settings...', ...
+                'MenuSelectedFcn', @saveSettingsCallback);
+         
+            % --- Callback functions ---
+            function loadSettingsCallback(~, ~)
+                uialert(fig, 'Load DYNAM-O Settings selected.', 'Load');
+                % Add your code to load settings here
+            end
+         
+            function saveSettingsCallback(~, ~)
+                uialert(fig, 'Save DYNAM-O Settings selected.', 'Save');
+                % Add your code to save settings here
             end
 
             % Basic option configurations (no changes)
@@ -645,9 +677,19 @@ classdef DYNAMO < handle
                 basic_tables{jj} = createTable(tab, obj.(basic_configs{jj}.field), basic_configs{jj});
             end
 
+            %% TO-DO: COME BACK TO THIS LATER
+            if showButtons
+                param_tab_gap = 90;
+            else
+                param_tab_gap = 30;
+            end
+            param_tab_pos = tabGroup.Position;
+            param_tab_pos(4) = param_tab_pos(4) - param_tab_gap;
+
             % Create Parametric Fit main tab with subtabs
             param_tab = uitab(tabGroup, 'Title', 'Parametric Fit');
-            param_subtab_group = uitabgroup(param_tab, 'Position', [10 10 860 540]);
+            param_subtab_group = uitabgroup(param_tab, 'Position', param_tab_pos);
+            %param_subtab_group = uitabgroup(param_tab);
 
             % Parametric subtab configurations
             param_configs = {
@@ -663,7 +705,7 @@ classdef DYNAMO < handle
 
             % Create Spline Fit main tab with subtabs
             spline_tab = uitab(tabGroup, 'Title', 'Spline Fit');
-            spline_subtab_group = uitabgroup(spline_tab, 'Position', [10 10 860 540]);
+            spline_subtab_group = uitabgroup(spline_tab, 'Position', param_tab_pos);
 
             % Spline subtab configurations
             spline_configs = {
@@ -682,24 +724,26 @@ classdef DYNAMO < handle
             all_tables = [basic_tables; param_tables; spline_tables];
 
             % ---- Buttons ----
-            buttonLabels = {'Reset All','Run DYNAMO','Plot Summary','Param Fit','Spline Fit','Close'};
-            buttonCallbacks = {@resetAll, @rerunDynamo, @plotSummary, @runParamFit, @runSplineFit, @(~,~) delete(fig)};
-
-            nButtons = numel(buttonLabels);
-            buttonWidth = 120;
-            buttonHeight = 40;
-            spacing = 20;
-            totalWidth = nButtons*buttonWidth + (nButtons-1)*spacing;
-            startX = (fig.Position(3) - totalWidth)/2; % center align
-
-            for jj = 1:nButtons
-                xpos = startX + (jj-1)*(buttonWidth+spacing);
-                uibutton(fig, 'Text', buttonLabels{jj}, ...
-                    'Position', [xpos 10 buttonWidth buttonHeight], ...
-                    'ButtonPushedFcn', buttonCallbacks{jj});
+            if showButtons
+                buttonLabels = {'Reset All','Run DYNAMO','Plot Summary','Param Fit','Spline Fit','Close'};
+                buttonCallbacks = {@resetAll, @rerunDynamo, @plotSummary, @runParamFit, @runSplineFit, @(~,~) delete(fig)};
+    
+                nButtons = numel(buttonLabels);
+                buttonWidth = 120;
+                buttonHeight = 40;
+                spacing = 20;
+                totalWidth = nButtons*buttonWidth + (nButtons-1)*spacing;
+                startX = (fig.Position(3) - totalWidth)/2; % center align
+    
+                for jj = 1:nButtons
+                    xpos = startX + (jj-1)*(buttonWidth+spacing);
+                    uibutton(fig, 'Text', buttonLabels{jj}, ...
+                        'Position', [xpos 10 buttonWidth buttonHeight], ...
+                        'ButtonPushedFcn', buttonCallbacks{jj});
+                end
+    
+                uiwait(fig);
             end
-
-            uiwait(fig);
 
             % --- Button callbacks ---
             function resetAll(~,~)
@@ -752,11 +796,15 @@ classdef DYNAMO < handle
                 tableData = table(paramNames, descriptions, values, ...
                     'VariableNames', {'Parameter', 'Description', 'Value'});
 
+                table_gap = 30;
+                table_pos = parent.Position;
+                table_pos(4) = table_pos(4) - table_gap;
+
                 tbl = uitable(parent, 'Data', tableData, ...
                     'ColumnName', {'Parameter', 'Description', 'Value'}, ...
                     'ColumnWidth', {180, 500, 'auto'}, ...
                     'ColumnEditable', [false false true], ...
-                    'Position', [10 10 860 540], ...
+                    'Position', table_pos, ...
                     'CellEditCallback', @(src,ev) editCell(src, ev, config), ...
                     'CellSelectionCallback', @(src,ev) selectCell(src, ev, config));
             end
@@ -786,12 +834,16 @@ classdef DYNAMO < handle
 
                 tableData = table(paramNames, descriptions, values, ...
                     'VariableNames', {'Parameter', 'Description', 'Value'});
+                
+                sub_table_gap = 30;
+                sub_table_pos = parent.Position;
+                sub_table_pos(4) = sub_table_pos(4) - sub_table_gap;
 
                 tbl = uitable(parent, 'Data', tableData, ...
                     'ColumnName', {'Parameter', 'Description', 'Value'}, ...
                     'ColumnWidth', {180, 480, 'auto'}, ...
                     'ColumnEditable', [false false true], ...
-                    'Position', [5 5 850 510], ...
+                    'Position', sub_table_pos, ...
                     'CellEditCallback', @(src,ev) editCell(src, ev, config), ...
                     'CellSelectionCallback', @(src,ev) selectCell(src, ev, config));
             end
