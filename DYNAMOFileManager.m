@@ -1,98 +1,134 @@
 classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
     
     properties (Access = public)
-        UIFigure matlab.ui.Figure
-        TabGroup matlab.ui.container.TabGroup
-        FileSelectionTab matlab.ui.container.Tab
-        OutputOptionsTab matlab.ui.container.Tab
-        DYNAMOOptionsTab matlab.ui.container.Tab
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % Overall figure structure %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+        UIFigure            matlab.ui.Figure
+        TabGroup            matlab.ui.container.TabGroup
+        FileSelectionTab    matlab.ui.container.Tab
+        DYNAMOSettingsTab  matlab.ui.container.Tab
         
         % Summary Label
-        SummaryLabel matlab.ui.control.Label
-        HelpButton matlab.ui.control.Button
+        SummaryLabel        matlab.ui.control.Label
+        HelpButton          matlab.ui.control.Button
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % File selection panel structures and components %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
         % Data panel components
-        DataPanel matlab.ui.container.Panel
-        DataLabel matlab.ui.control.Label
-        DataListBox matlab.ui.control.ListBox
-        DataButtonGroup matlab.ui.container.ButtonGroup
-        DataDirectionLabel matlab.ui.control.Label
+        DataPanel           matlab.ui.container.Panel
+        DataLabel           matlab.ui.control.Label
+        FigureLabel         matlab.ui.control.Label
+        DataListBox         matlab.ui.control.ListBox
+        DataButtonGroup     matlab.ui.container.ButtonGroup
+        DataDirectionLabel  matlab.ui.control.Label
         
         % Staging panel components  
-        StagingPanel matlab.ui.container.Panel
-        StagingLabel matlab.ui.control.Label
-        StagingListBox matlab.ui.control.ListBox
-        StagingButtonGroup matlab.ui.container.ButtonGroup
-        StagingDirectionLabel matlab.ui.control.Label
+        StagingPanel            matlab.ui.container.Panel
+        StagingLabel            matlab.ui.control.Label
+        StagingListBox          matlab.ui.control.ListBox
+        StagingButtonGroup      matlab.ui.container.ButtonGroup
+        StagingDirectionLabel   matlab.ui.control.Label
         
-        % Staging options panel components
-        StagingOptionsPanel matlab.ui.container.Panel
-        StagingOptionsLabel matlab.ui.control.Label
-        ChannelEditField matlab.ui.control.EditField
-        ChannelEditFieldLabel matlab.ui.control.Label
-        DelimeterOptionField matlab.ui.control.DropDown
-        DelimeterOptionFieldLabel matlab.ui.control.Label
-        HeaderRowsEditField matlab.ui.control.NumericEditField
-        HeaderRowsEditFieldLabel matlab.ui.control.Label
-        TimesColumnEditField matlab.ui.control.NumericEditField
-        TimesColumnEditFieldLabel matlab.ui.control.Label
-        StagesColumnEditField_2 matlab.ui.control.NumericEditField
-        HeaderrowsLabel matlab.ui.control.Label
-        UnknownEditField        matlab.ui.control.EditField
-        UnknownEditFieldLabel   matlab.ui.control.Label
-        N3EditField             matlab.ui.control.EditField
-        N3EditFieldLabel        matlab.ui.control.Label
-        N2EditField             matlab.ui.control.EditField
-        N2EditFieldLabel        matlab.ui.control.Label
-        N1EditField             matlab.ui.control.EditField
-        N1EditFieldLabel        matlab.ui.control.Label
-        REMEditField            matlab.ui.control.EditField
-        REMEditFieldLabel       matlab.ui.control.Label
-        WakeEditField           matlab.ui.control.EditField
-        WakeEditFieldLabel      matlab.ui.control.Label
-        ArtifactEditField       matlab.ui.control.EditField
-        ArtifactEditFieldLabel  matlab.ui.control.Label
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % Runtime options panel components (2 panes + misc) %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        % TO;DO, make neater
-        RightPanelTop matlab.ui.container.Panel
-        RightPanelMid matlab.ui.container.Panel
-        RightPanelBottom matlab.ui.container.Panel
+        % Runtime options panel layout
+        RuntimeOptionsPanel         matlab.ui.container.Panel   % full panel
+        RuntimeOptionsLabel         matlab.ui.control.Label
+        StagingOptionsInputPanel    matlab.ui.container.Panel   % Top pane
+        SavingOptionsPanel          matlab.ui.container.Panel
+        OutputPanel             matlab.ui.container.Panel       % Bottom pane
+        OutputLabel             matlab.ui.control.Label
+
+        % Channel input components
+        ChannelHelp             matlab.ui.control.Label
+        ChannelEditField        matlab.ui.control.EditField
+        ChannelEditFieldLabel   matlab.ui.control.Label
         
-        % Output options panel components
-        OutputPanel matlab.ui.container.Panel
-        OutputLabel matlab.ui.control.Label
-        OutputDirEditField matlab.ui.control.EditField
-        OutputDirButton matlab.ui.control.Button
-        OutputDirLabel matlab.ui.control.Label
+        %%%%%%%% STAGING INPUT PANE %%%%%%%%
 
-        % TO-DO
-        SavePeakStatsCheckBox matlab.ui.control.CheckBox
-        SaveDataSummaryCheckBox matlab.ui.control.CheckBox
-        SaveParamBasisCheckBox matlab.ui.control.CheckBox
-        SaveParamImagesCheckBox matlab.ui.control.CheckBox
-        SaveSplineBasisCheckBox matlab.ui.control.CheckBox
-        SaveSplineImagesCheckBox matlab.ui.control.CheckBox
-        SaveDateTimeCheckBox matlab.ui.control.CheckBox
-
-        OverwriteExistingFilesCheckBox matlab.ui.control.CheckBox
+        % Staging input components
+        ArtifactEditField           matlab.ui.control.EditField
+        ArtifactEditFieldLabel      matlab.ui.control.Label
+        WakeEditField               matlab.ui.control.EditField
+        WakeEditFieldLabel          matlab.ui.control.Label
+        REMEditField                matlab.ui.control.EditField
+        REMEditFieldLabel           matlab.ui.control.Label
+        N1EditField                 matlab.ui.control.EditField
+        N1EditFieldLabel            matlab.ui.control.Label
+        N2EditField                 matlab.ui.control.EditField
+        N2EditFieldLabel            matlab.ui.control.Label
+        N3EditField                 matlab.ui.control.EditField
+        N3EditFieldLabel            matlab.ui.control.Label
+        UnknownEditField            matlab.ui.control.EditField
+        UnknownEditFieldLabel       matlab.ui.control.Label
         
+        % Staging file input options
+        DelimeterOptionField        matlab.ui.control.DropDown
+        DelimeterOptionFieldLabel   matlab.ui.control.Label
+        StagesColumnEditField       matlab.ui.control.NumericEditField
+        StagesColumnEditFieldLabel  matlab.ui.control.Label
+        TimesColumnEditField        matlab.ui.control.NumericEditField
+        TimesColumnEditFieldLabel   matlab.ui.control.Label
+        HeaderRowsEditField         matlab.ui.control.NumericEditField
+        HeaderRowsEditFieldLabel    matlab.ui.control.Label
+
+        % Misc
+        StagesHelp                  matlab.ui.control.Label
+        
+        %%%%%%%% SAVING OPTIONS PANE %%%%%%%%
+
+        % Computations to run components
+        SavePeakStatsCheckBox       matlab.ui.control.CheckBox
+        SaveSOPHsCheckBox           matlab.ui.control.CheckBox
+        SaveDataSummaryCheckBox     matlab.ui.control.CheckBox
+        SaveParamBasisCheckBox      matlab.ui.control.CheckBox
+        SaveParamImagesCheckBox     matlab.ui.control.CheckBox
+        SaveSplineBasisCheckBox     matlab.ui.control.CheckBox
+        SaveSplineImagesCheckBox    matlab.ui.control.CheckBox
+
+        % Saving options panel components
+        OutputDirEditField      matlab.ui.control.EditField
+        OutputDirButton         matlab.ui.control.Button
+        OutputDirLabel          matlab.ui.control.Label
+        OutputOptionField       matlab.ui.control.DropDown
+        OutputOptionFieldLabel  matlab.ui.control.Label
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % RUNNING COMPONENTS BELOW MAIN PANEL STRUCTURE %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
         % Main control
-        RunBatchButton matlab.ui.control.Button
-        %RunReverseButton matlab.ui.control.Button
-        RunInReverse matlab.ui.control.CheckBox
+        RunBatchButton  matlab.ui.control.Button
+        StopBatchButton matlab.ui.control.Button
+
+        % Run misc options
+        RunInReverse                    matlab.ui.control.CheckBox
+        OverwriteExistingFilesCheckBox  matlab.ui.control.CheckBox
         
+        % Output text
+        TextArea       matlab.ui.control.TextArea
+        TextAreaLabel  matlab.ui.control.Label
+
         % Callback handles
-        BatchProcessCallback function_handle
-        FileValidationCallback function_handle
+        BatchProcessCallback    function_handle
+        FileValidationCallback  function_handle
 
     end
-    
+
     properties (Access = private)
+
+        % File storing
         DataList cell = {}
         StagingList cell = {}
-        run_error_list cell = {''};
 
-        % Misc for processing
+        % File names
         input_fbase = ''
         output_fig_name = ''
         output_stats_name = ''
@@ -100,13 +136,12 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         output_param_name = ''
         output_spline_name = ''
         date_time_save = ''
+        icon_filepath = '/autofs/vast/preraugp/users/ss097/DYNAM-O_dev/icons/'
 
-        % Misc for saving
-        structs
-        struct_names
-        delimeter
+        % User inputs
+        channel
+        ChannelList
 
-        % TO-DO
         ArtifactUserInput
         N1UserInput
         N2UserInput
@@ -114,10 +149,31 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         REMUserInput
         WakeUserInput
         UnknownUserInput
+        
+        delimeter
 
-        ChannelList
+        % Misc for saving
+        options_structs
+        struct_names
+        
+        % Misc for internal processing
+        run_error_list = {};
+        isStopBatchButtonPushed = false
         anything_run
-        header_lines
+        ypos
+        curr_datetime
+        curr_iteration
+
+        % Output logs info
+        runlog_fname
+        runlog_fpath
+        runlog_fid
+        consolelog_fname
+        consolelog_fpath
+        consolelog_fid
+        
+        % Misc UI
+        pb % progress bar
         
         % UI dimensions
         WindowWidth = 1400
@@ -129,6 +185,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
     end
     
     methods (Access = public)
+
         function app = DYNAMOFileManager(varargin)
             p = inputParser;
             addParameter(p,'BatchCallback',[],@(x) isempty(x)||isa(x,'function_handle'));
@@ -202,16 +259,21 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             
             % Create Tabs
             app.FileSelectionTab = uitab(app.TabGroup,'Title','File Selection');
-            % app.OutputOptionsTab = uitab(app.TabGroup,'Title','Output Options');
+            %app.FileSelectionTab.AutoResizeChildren = true;
+            app.DYNAMOSettingsTab = uitab(app.TabGroup,'Title','DYNAM-O Options');
             
             createFileSelectionTab(app);
-            createOutputOptionsTab(app);
+            createDYNAMOSettingsTab(app);
             createMainControls(app);
-            
-            %updateRunBatchButton(app);
+
         end
         
         function createFileSelectionTab(app)
+
+            %%%%%%%%%%%%%%%%%%%%%
+            % OVERALL STRUCTURE %
+            %%%%%%%%%%%%%%%%%%%%%
+
             % Get tab dimensions
             tabWidth = app.WindowWidth - 2*app.PanelMargin;
             tabHeight = app.WindowHeight - 120;
@@ -219,8 +281,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % Three equal panels for Data, Staging, and Staging Options
             panelWidth = (tabWidth - 4*app.PanelMarginHorizontal)/3;
             panelHeight = tabHeight - 2*app.PanelMarginVertical;
-            
-            % Data Panel
+              
+            %%%%%%%%%%%%%%%%%%%
+            % DATA FILE PANEL %
+            %%%%%%%%%%%%%%%%%%%
+
             app.DataPanel = uipanel(app.FileSelectionTab,'Title','',...
                 'Position',[app.PanelMarginHorizontal,app.PanelMarginVertical,panelWidth,panelHeight]);
             
@@ -232,24 +297,26 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Position',[10,panelHeight-70,panelWidth-20,20],'FontAngle','italic','FontSize',10);
             
             app.DataListBox = uilistbox(app.DataPanel,'Position',[10,50,panelWidth-20,panelHeight-120],...
-                'Multiselect','on','Items',{},'Value',{});
-            
-            icon_filepath = '/autofs/vast/preraugp/users/ss097/DYNAM-O_dev/icons/'; %% TO-DO: MAKE THIS PORTABLE
+                'Multiselect','on','Items',{},'Value',{}); 
 
+            % Interact buttons
             app.DataButtonGroup = uibuttongroup(app.DataPanel,'Position',[15,10,panelWidth-30,35],'BorderType','none');
             buttonWidth = (panelWidth-60)/5;
             uibutton(app.DataButtonGroup,'push','Position',[5,5,buttonWidth,app.ButtonHeight],...
-                'Text','','Icon',strcat(icon_filepath,'add_file.png'),'ButtonPushedFcn',@app.DataAddFileButtonPushed);
+                'Text','','Icon',strcat(app.icon_filepath,'add_file.png'),'tooltip','Add File','ButtonPushedFcn',@app.DataAddFileButtonPushed);
             uibutton(app.DataButtonGroup,'push','Position',[buttonWidth+10,5,buttonWidth,app.ButtonHeight],...
-                'Text','','Icon',strcat(icon_filepath,'add_folder.png'),'ButtonPushedFcn',@app.DataAddFolderButtonPushed);
+                'Text','','Icon',strcat(app.icon_filepath,'add_folder.png'),'tooltip','Add Folder','ButtonPushedFcn',@app.DataAddFolderButtonPushed);
             uibutton(app.DataButtonGroup,'push','Position',[2*buttonWidth+15,5,buttonWidth,app.ButtonHeight],...
-                'Text','','Icon',strcat(icon_filepath,'garbage.png'),'ButtonPushedFcn',@app.DataRemoveButtonPushed);
+                'Text','','Icon',strcat(app.icon_filepath,'garbage.png'),'tooltip','Delete File','ButtonPushedFcn',@app.DataRemoveButtonPushed);
             uibutton(app.DataButtonGroup,'push','Position',[3*buttonWidth+20,5,buttonWidth,app.ButtonHeight],...
-                'Text','','Icon',strcat(icon_filepath,'up_arrow.png'),'ButtonPushedFcn',@app.DataMoveUpButtonPushed);
+                'Text','','Icon',strcat(app.icon_filepath,'up_arrow.png'),'tooltip','Browse files up','ButtonPushedFcn',@app.DataMoveUpButtonPushed);
             uibutton(app.DataButtonGroup,'push','Position',[4*buttonWidth+25,5,buttonWidth,app.ButtonHeight],...
-                'Text','','Icon',strcat(icon_filepath,'down_arrow.png'),'ButtonPushedFcn',@app.DataMoveDownButtonPushed);
+                'Text','','Icon',strcat(app.icon_filepath,'down_arrow.png'),'tooltip','Browse files down','ButtonPushedFcn',@app.DataMoveDownButtonPushed);
             
-            % Staging Panel
+            %%%%%%%%%%%%%%%%%%%%%%
+            % STAGING FILE PANEL %
+            %%%%%%%%%%%%%%%%%%%%%%
+
             xPos = 2*app.PanelMarginHorizontal + panelWidth;
             app.StagingPanel = uipanel(app.FileSelectionTab,'Title','',...
                 'Position',[xPos,app.PanelMarginVertical,panelWidth,panelHeight]);
@@ -264,246 +331,299 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StagingListBox = uilistbox(app.StagingPanel,'Position',[10,50,panelWidth-20,panelHeight-120],...
                 'Multiselect','on','Items',{},'Value',{});
             
+            % Interact buttons
             app.StagingButtonGroup = uibuttongroup(app.StagingPanel,'Position',[15,10,panelWidth-30,35],'BorderType','none');
             buttonWidth = (panelWidth-60)/5;
-            %% TO-DO: FIGURE OUT WHY TEXT IS NECESSARY
-            uibutton(app.StagingButtonGroup,'push','Position',[5,5,buttonWidth,app.ButtonHeight],'Text','','Icon',strcat(icon_filepath,'add_file.png'),'ButtonPushedFcn',@app.StagingAddFileButtonPushed);
-            uibutton(app.StagingButtonGroup,'push','Position',[buttonWidth+10,5,buttonWidth,app.ButtonHeight],'Text','','Icon',strcat(icon_filepath,'add_folder.png'),'ButtonPushedFcn',@app.StagingAddFolderButtonPushed);
-            uibutton(app.StagingButtonGroup,'push','Position',[2*buttonWidth+15,5,buttonWidth,app.ButtonHeight],'Text','','Icon',strcat(icon_filepath,'garbage.png'),'ButtonPushedFcn',@app.StagingRemoveButtonPushed);
-            uibutton(app.StagingButtonGroup,'push','Position',[3*buttonWidth+20,5,buttonWidth,app.ButtonHeight],'Text','','Icon',strcat(icon_filepath,'up_arrow.png'),'ButtonPushedFcn',@app.StagingMoveUpButtonPushed);
-            uibutton(app.StagingButtonGroup,'push','Position',[4*buttonWidth+25,5,buttonWidth,app.ButtonHeight],'Text','','Icon',strcat(icon_filepath,'down_arrow.png'),'ButtonPushedFcn',@app.StagingMoveDownButtonPushed);
+            uibutton(app.StagingButtonGroup,'push','Position',[5,5,buttonWidth,app.ButtonHeight],'Text','','Icon',strcat(app.icon_filepath,'add_file.png'),'tooltip','Add File','ButtonPushedFcn',@app.StagingAddFileButtonPushed);
+            uibutton(app.StagingButtonGroup,'push','Position',[buttonWidth+10,5,buttonWidth,app.ButtonHeight],'Text','','Icon',strcat(app.icon_filepath,'add_folder.png'),'tooltip','Add Folder','ButtonPushedFcn',@app.StagingAddFolderButtonPushed);
+            uibutton(app.StagingButtonGroup,'push','Position',[2*buttonWidth+15,5,buttonWidth,app.ButtonHeight],'Text','','Icon',strcat(app.icon_filepath,'garbage.png'),'tooltip','Delete File','ButtonPushedFcn',@app.StagingRemoveButtonPushed);
+            uibutton(app.StagingButtonGroup,'push','Position',[3*buttonWidth+20,5,buttonWidth,app.ButtonHeight],'Text','','Icon',strcat(app.icon_filepath,'up_arrow.png'),'tooltip','Browse files up','ButtonPushedFcn',@app.StagingMoveUpButtonPushed);
+            uibutton(app.StagingButtonGroup,'push','Position',[4*buttonWidth+25,5,buttonWidth,app.ButtonHeight],'Text','','Icon',strcat(app.icon_filepath,'down_arrow.png'),'tooltip','Browse files down','ButtonPushedFcn',@app.StagingMoveDownButtonPushed);
             
-            % Staging Options Panel
-            xPos = 3*app.PanelMarginHorizontal + 2*panelWidth;
-            app.StagingOptionsPanel = uipanel(app.FileSelectionTab,'Title','',...
-                'Position',[xPos,app.PanelMarginVertical,panelWidth,panelHeight]);
-            
-            app.StagingOptionsLabel = uilabel(app.StagingOptionsPanel,'Text','Options',...
-                'FontWeight','bold','HorizontalAlignment','center',...
-                'Position',[10,panelHeight-40,panelWidth-20,20]);
+            %%%%%%%%%%%%%%%%%%%%%%%%%
+            % RUNTIME OPTIONS PANEL %
+            %%%%%%%%%%%%%%%%%%%%%%%%%
 
-            % SUBPANELS
-            % TO-DO: CLEAN THIS UP
-            app.RightPanelTop = uipanel(app.StagingOptionsPanel);
-            app.RightPanelTop.Title = 'Output Options';
-            app.RightPanelTop.Position = [0 panelHeight-271 panelWidth panelHeight-431];
-
-            app.RightPanelMid = uipanel(app.StagingOptionsPanel);
-            app.RightPanelMid.Title = 'Staging Options';
-            app.RightPanelMid.Position = [0 104 panelWidth 261];
-
-            app.RightPanelBottom = uipanel(app.StagingOptionsPanel);
-            app.RightPanelBottom.Title = 'Output Directory';
-            app.RightPanelBottom.Position = [0 0 panelWidth 105];
-
-            yPos = app.RightPanelTop.Position(4)-50; spacing = 30;
-            app.SavePeakStatsCheckBox = uicheckbox(app.RightPanelTop,'Text','Peak Stats Tables','Position',[10,yPos,panelWidth-20,22]);
-            app.SaveDataSummaryCheckBox = uicheckbox(app.RightPanelTop,'Text','Data Summary Images','Position',[10,yPos-spacing,panelWidth-20,22]);
-            app.SaveParamBasisCheckBox = uicheckbox(app.RightPanelTop,'Text','Parametric Basis','Position',[10,yPos-2*spacing,panelWidth-20,22]);
-            app.SaveParamImagesCheckBox = uicheckbox(app.RightPanelTop,'Text','Parametric Basis Images','Position',[panelWidth/2,yPos,panelWidth-20,22]);
-            app.SaveSplineBasisCheckBox = uicheckbox(app.RightPanelTop,'Text','Spline Basis','Position',[panelWidth/2,yPos-spacing,panelWidth-20,22]);
-            app.SaveSplineImagesCheckBox = uicheckbox(app.RightPanelTop,'Text','Spline Basis Images','Position',[panelWidth/2,yPos-2*spacing,panelWidth-20,22]);
-            
-            app.OverwriteExistingFilesCheckBox = uicheckbox(app.RightPanelTop,'Text','Overwrite Existing Files','Position',[panelWidth/2-((panelWidth-20)/2),yPos-3.25*spacing,panelWidth-20,22]);
-            
-            % Create ChannelEditFieldLabel
-            app.ChannelEditFieldLabel = uilabel(app.RightPanelTop);
-            app.ChannelEditFieldLabel.HorizontalAlignment = 'right';
-            app.ChannelEditFieldLabel.Position = [105 20 60 22];
-            app.ChannelEditFieldLabel.Text = 'Channel(s)';
-
-            % Create ChannelEditField
-            app.ChannelEditField = uieditfield(app.RightPanelTop, 'text');
-            app.ChannelEditField.Position = [170 20 100 22];
-            
-            %% CHECK
-            yPos = app.RightPanelMid.Position(4)-60; spacing = 30;
-
-            % Create DelimeterLabel
-            app.DelimeterOptionFieldLabel = uilabel(app.RightPanelMid,'HorizontalAlignment','right');
-            app.DelimeterOptionFieldLabel.Position = [(panelWidth/2 - 5) yPos 90 22];
-            app.DelimeterOptionFieldLabel.Text = 'File Delimeter';
-
-            app.DelimeterOptionField = uidropdown(app.RightPanelMid,'Items',{'Comma','Tab','Space','Semicolon'});
-            app.DelimeterOptionField.Position = [(panelWidth/2 + 95) yPos 100 22];
-
-            % Create HeaderrowsLabel
-            app.HeaderrowsLabel = uilabel(app.RightPanelMid,'HorizontalAlignment','right');
-            app.HeaderrowsLabel.Position = [(panelWidth/2 - 5) yPos-spacing*2 90 22];
-            app.HeaderrowsLabel.Text = 'Stages Column';
-
-            % Create StagesColumnEditField_2
-            app.StagesColumnEditField_2 = uieditfield(app.RightPanelMid, 'numeric');
-            app.StagesColumnEditField_2.AllowEmpty = 'on';
-            app.StagesColumnEditField_2.Value = [];
-            app.StagesColumnEditField_2.RoundFractionalValues = 'on';
-            app.StagesColumnEditField_2.Limits = [0 Inf];
-            app.StagesColumnEditField_2.Position = [(panelWidth/2 + 95) yPos-spacing*2 100 22];
-
-            % Create TimesColumnEditFieldLabel
-            app.TimesColumnEditFieldLabel = uilabel(app.RightPanelMid,'HorizontalAlignment','right');
-            app.TimesColumnEditFieldLabel.Position = [(panelWidth/2 - 5) yPos-spacing*3 90 22];
-            app.TimesColumnEditFieldLabel.Text = 'Times Column';
-
-            % Create TimesColumnEditField
-            app.TimesColumnEditField = uieditfield(app.RightPanelMid, 'numeric');
-            app.TimesColumnEditField.AllowEmpty = 'on';
-            app.TimesColumnEditField.Value = [];
-            app.TimesColumnEditField.RoundFractionalValues = 'on';
-            app.TimesColumnEditField.Limits = [0 Inf];
-            app.TimesColumnEditField.Position = [(panelWidth/2 + 95) yPos-spacing*3 100 22];
-
-            % Create HeaderRowsEditFieldLabel
-            app.HeaderRowsEditFieldLabel = uilabel(app.RightPanelMid,'HorizontalAlignment','right');
-            app.HeaderRowsEditFieldLabel.Position = [(panelWidth/2 - 5) yPos-spacing*4 90 22];
-            app.HeaderRowsEditFieldLabel.Text = 'Header Rows';
-
-            % Create HeaderRowsEditField
-            app.HeaderRowsEditField = uieditfield(app.RightPanelMid,'numeric');
-            app.HeaderRowsEditField.AllowEmpty = 'on';
-            app.HeaderRowsEditField.Value = [];
-            app.HeaderRowsEditField.RoundFractionalValues = 'on';
-            app.HeaderRowsEditField.Limits = [0 Inf];
-            app.HeaderRowsEditField.Position = [(panelWidth/2 + 95) yPos-spacing*4 100 22];
-
+            %% TO-DO:
             % Create UIFigure and hide until all components are created
             % app.UIFigure = uifigure('Visible', 'off');
             % app.UIFigure.Position = [100 100 640 480];
             % app.UIFigure.Name = 'MATLAB App';
 
+            % Overall runtime options panel structure
+            xPos = 3*app.PanelMarginHorizontal + 2*panelWidth;
+            app.RuntimeOptionsPanel = uipanel(app.FileSelectionTab,'Title','',...
+                'Position',[xPos,app.PanelMarginVertical,panelWidth,panelHeight]);
+            
+            app.RuntimeOptionsLabel = uilabel(app.RuntimeOptionsPanel,'Text','Runtime Options',...
+                'FontWeight','bold','HorizontalAlignment','center',...
+                'Position',[10,panelHeight-40,panelWidth-20,20]);
+
+            %%%%%%%% SUBPANEL STRUCTURE %%%%%%%%
+            app.StagingOptionsInputPanel = uipanel(app.RuntimeOptionsPanel);
+            app.StagingOptionsInputPanel.Title = 'Staging Options';
+            app.StagingOptionsInputPanel.Position = [0 panelHeight-361 panelWidth panelHeight-371];
+
+            app.SavingOptionsPanel = uipanel(app.RuntimeOptionsPanel);
+            app.SavingOptionsPanel.Title = 'Saving Options';
+            app.SavingOptionsPanel.Position = [0 panelHeight-300-330 panelWidth 271];
+
+            %%%%%%%% STAGING SUBPANEL %%%%%%%%
+
+            %%% CHANNEL INPUT %%%
+            app.ChannelHelp = uilabel(app.RuntimeOptionsPanel,'Text','Enter a comma separated list of channels to be run.',...
+                'Position',[100, panelHeight-70, panelWidth-20,20],'FontAngle','italic','FontSize',10);
+
+            % Create ChannelEditFieldLabel
+            app.ChannelEditFieldLabel = uilabel(app.RuntimeOptionsPanel);
+            app.ChannelEditFieldLabel.HorizontalAlignment = 'right';
+            app.ChannelEditFieldLabel.Position = [25 panelHeight-95 65 22];
+            app.ChannelEditFieldLabel.Text = 'Channel(s):';
+            app.ChannelEditFieldLabel.Tooltip = 'Comma separated list of all channels to be run';
+
+            % Create ChannelEditField
+            app.ChannelEditField = uieditfield(app.RuntimeOptionsPanel, 'text');
+            app.ChannelEditField.Position = [100 panelHeight-95 300 22];
+            
+            %%% STAGING FILE OPTIONS INPUT %%%
+            app.ypos = app.StagingOptionsInputPanel.Position(4)-60; spacing = 30;
+
+            % Create DelimeterLabel
+            app.DelimeterOptionFieldLabel = uilabel(app.StagingOptionsInputPanel,'HorizontalAlignment','right');
+            app.DelimeterOptionFieldLabel.Position = [(panelWidth/2 - 5) app.ypos 90 22];
+            app.DelimeterOptionFieldLabel.Text = 'File Delimeter';
+            app.DelimeterOptionFieldLabel.Tooltip = 'Character separating values in the staging file';
+
+            app.DelimeterOptionField = uidropdown(app.StagingOptionsInputPanel,'Items',{'Comma','Tab','Space','Semicolon'});
+            app.DelimeterOptionField.Position = [(panelWidth/2 + 95) app.ypos 100 22];
+
+            % Create StagesColumnEditFieldLabel
+            app.StagesColumnEditFieldLabel = uilabel(app.StagingOptionsInputPanel,'HorizontalAlignment','right');
+            app.StagesColumnEditFieldLabel.Position = [(panelWidth/2 - 5) app.ypos-spacing*2 90 22];
+            app.StagesColumnEditFieldLabel.Text = 'Stages Column';
+            app.StagesColumnEditFieldLabel.Tooltip = 'Column of the staging file containing the stage labels';
+
+            % Create StagesColumnEditField
+            app.StagesColumnEditField = uieditfield(app.StagingOptionsInputPanel, 'numeric');
+            app.StagesColumnEditField.AllowEmpty = 'on';
+            app.StagesColumnEditField.Value = [];
+            app.StagesColumnEditField.RoundFractionalValues = 'on';
+            app.StagesColumnEditField.Limits = [0 Inf];
+            app.StagesColumnEditField.Position = [(panelWidth/2 + 95) app.ypos-spacing*2 100 22];
+
+            % Create TimesColumnEditFieldLabel
+            app.TimesColumnEditFieldLabel = uilabel(app.StagingOptionsInputPanel,'HorizontalAlignment','right');
+            app.TimesColumnEditFieldLabel.Position = [(panelWidth/2 - 5) app.ypos-spacing*3 90 22];
+            app.TimesColumnEditFieldLabel.Text = 'Times Column';
+            app.TimesColumnEditFieldLabel.Tooltip = 'Column of the staging file containing the precise time of each label';
+
+            % Create TimesColumnEditField
+            app.TimesColumnEditField = uieditfield(app.StagingOptionsInputPanel, 'numeric');
+            app.TimesColumnEditField.AllowEmpty = 'on';
+            app.TimesColumnEditField.Value = [];
+            app.TimesColumnEditField.RoundFractionalValues = 'on';
+            app.TimesColumnEditField.Limits = [0 Inf];
+            app.TimesColumnEditField.Position = [(panelWidth/2 + 95) app.ypos-spacing*3 100 22];
+
+            % Create HeaderRowsEditFieldLabel
+            app.HeaderRowsEditFieldLabel = uilabel(app.StagingOptionsInputPanel,'HorizontalAlignment','right');
+            app.HeaderRowsEditFieldLabel.Position = [(panelWidth/2 - 5) app.ypos-spacing*4 90 22];
+            app.HeaderRowsEditFieldLabel.Text = 'Header Rows';
+            app.HeaderRowsEditFieldLabel.Tooltip = 'Number of rows in the staging file before the scoring values begin (includes column headers)';
+
+            % Create HeaderRowsEditField
+            app.HeaderRowsEditField = uieditfield(app.StagingOptionsInputPanel,'numeric');
+            app.HeaderRowsEditField.AllowEmpty = 'on';
+            app.HeaderRowsEditField.Value = [];
+            app.HeaderRowsEditField.RoundFractionalValues = 'on';
+            app.HeaderRowsEditField.Limits = [0 Inf];
+            app.HeaderRowsEditField.Position = [(panelWidth/2 + 95) app.ypos-spacing*4 100 22];
+
+            %%% STAGE LABELS INPUT %%%
+
             % Create ArtifactEditFieldLabel
-            app.ArtifactEditFieldLabel = uilabel(app.RightPanelMid,'HorizontalAlignment','right');
-            app.ArtifactEditFieldLabel.Position = [20,yPos,50,22];
+            app.ArtifactEditFieldLabel = uilabel(app.StagingOptionsInputPanel,'HorizontalAlignment','right');
+            app.ArtifactEditFieldLabel.Position = [20,app.ypos,50,22];
             app.ArtifactEditFieldLabel.Text = 'Artifact';
+            app.ArtifactEditFieldLabel.Tooltip = 'All valid artifact stage identifiers';
 
             % Create ArtifactEditField
-            app.ArtifactEditField = uieditfield(app.RightPanelMid, 'text');
-            app.ArtifactEditField.Position = [80 yPos 100 22];
+            app.ArtifactEditField = uieditfield(app.StagingOptionsInputPanel, 'text');
+            app.ArtifactEditField.Position = [80 app.ypos 100 22];
             app.ArtifactEditField.Value = 'art, artifact, A, 6';
 
             % Create WakeEditFieldLabel
-            app.WakeEditFieldLabel = uilabel(app.RightPanelMid,'HorizontalAlignment','right');
-            app.WakeEditFieldLabel.Position = [20,yPos-spacing,50,22];
+            app.WakeEditFieldLabel = uilabel(app.StagingOptionsInputPanel,'HorizontalAlignment','right');
+            app.WakeEditFieldLabel.Position = [20,app.ypos-spacing,50,22];
             app.WakeEditFieldLabel.Text = 'Wake';
+            app.WakeEditFieldLabel.Tooltip = 'All valid wake stage identifiers';
 
             % Create WakeEditField
-            app.WakeEditField = uieditfield(app.RightPanelMid, 'text');
-            app.WakeEditField.Position = [80 yPos-spacing 100 22];
+            app.WakeEditField = uieditfield(app.StagingOptionsInputPanel, 'text');
+            app.WakeEditField.Position = [80 app.ypos-spacing 100 22];
             app.WakeEditField.Value = 'wake, W, 5';
 
             % Create REMEditFieldLabel
-            app.REMEditFieldLabel = uilabel(app.RightPanelMid,'HorizontalAlignment','right');
-            app.REMEditFieldLabel.Position = [20 yPos-spacing*2 50 22];
+            app.REMEditFieldLabel = uilabel(app.StagingOptionsInputPanel,'HorizontalAlignment','right');
+            app.REMEditFieldLabel.Position = [20 app.ypos-spacing*2 50 22];
             app.REMEditFieldLabel.Text = 'REM';
+            app.REMEditFieldLabel.Tooltip = 'All valid REM stage identifiers';
 
             % Create REMEditField
-            app.REMEditField = uieditfield(app.RightPanelMid, 'text');
-            app.REMEditField.Position = [80 yPos-spacing*2 100 22];
+            app.REMEditField = uieditfield(app.StagingOptionsInputPanel, 'text');
+            app.REMEditField.Position = [80 app.ypos-spacing*2 100 22];
             app.REMEditField.Value = 'REM, R, 4';
 
             % Create N1EditFieldLabel
-            app.N1EditFieldLabel = uilabel(app.RightPanelMid,'HorizontalAlignment','right');
-            app.N1EditFieldLabel.Position = [20 yPos-spacing*3 50 22];
+            app.N1EditFieldLabel = uilabel(app.StagingOptionsInputPanel,'HorizontalAlignment','right');
+            app.N1EditFieldLabel.Position = [20 app.ypos-spacing*3 50 22];
             app.N1EditFieldLabel.Text = 'N1';
+            app.N1EditFieldLabel.Tooltip = 'All valid N1 stage identifiers';
 
             % Create N1EditField
-            app.N1EditField = uieditfield(app.RightPanelMid, 'text');
-            app.N1EditField.Position = [80 yPos-spacing*3 100 22];
+            app.N1EditField = uieditfield(app.StagingOptionsInputPanel, 'text');
+            app.N1EditField.Position = [80 app.ypos-spacing*3 100 22];
             app.N1EditField.Value = 'N1, Stage 1, 1';
 
             % Create N2EditFieldLabel
-            app.N2EditFieldLabel = uilabel(app.RightPanelMid,'HorizontalAlignment','right');
-            app.N2EditFieldLabel.Position = [20 yPos-spacing*4 50 22];
+            app.N2EditFieldLabel = uilabel(app.StagingOptionsInputPanel,'HorizontalAlignment','right');
+            app.N2EditFieldLabel.Position = [20 app.ypos-spacing*4 50 22];
             app.N2EditFieldLabel.Text = 'N2';
+            app.N2EditFieldLabel.Tooltip = 'All valid N2 stage identifiers';
 
             % Create N2EditField
-            app.N2EditField = uieditfield(app.RightPanelMid, 'text');
-            app.N2EditField.Position = [80 yPos-spacing*4 100 22];
+            app.N2EditField = uieditfield(app.StagingOptionsInputPanel, 'text');
+            app.N2EditField.Position = [80 app.ypos-spacing*4 100 22];
             app.N2EditField.Value = 'N2, Stage 2, 2';
 
             % Create N3EditFieldLabel
-            app.N3EditFieldLabel = uilabel(app.RightPanelMid,'HorizontalAlignment','right');
-            app.N3EditFieldLabel.Position = [20 yPos-spacing*5 50 22];
+            app.N3EditFieldLabel = uilabel(app.StagingOptionsInputPanel,'HorizontalAlignment','right');
+            app.N3EditFieldLabel.Position = [20 app.ypos-spacing*5 50 22];
             app.N3EditFieldLabel.Text = 'N3';
+            app.N3EditFieldLabel.Tooltip = 'All valid N3 stage identifiers';
 
             % Create N3EditField
-            app.N3EditField = uieditfield(app.RightPanelMid, 'text');
-            app.N3EditField.Position = [80 yPos-spacing*5 100 22];
+            app.N3EditField = uieditfield(app.StagingOptionsInputPanel, 'text');
+            app.N3EditField.Position = [80 app.ypos-spacing*5 100 22];
             app.N3EditField.Value = 'N3, Stage 3, 3';
 
             % Create UnknownEditFieldLabel
-            app.UnknownEditFieldLabel = uilabel(app.RightPanelMid,'HorizontalAlignment','right');
-            app.UnknownEditFieldLabel.Position = [10 yPos-spacing*6 60 22];
+            app.UnknownEditFieldLabel = uilabel(app.StagingOptionsInputPanel,'HorizontalAlignment','right');
+            app.UnknownEditFieldLabel.Position = [10 app.ypos-spacing*6 60 22];
             app.UnknownEditFieldLabel.Text = 'Unknown';
+            app.UnknownEditFieldLabel.Tooltip = 'All valid identifiers for unknown stage';
 
             % Create UnknownEditField
-            app.UnknownEditField = uieditfield(app.RightPanelMid, 'text');
-            app.UnknownEditField.Position = [80 yPos-spacing*6 100 22];
+            app.UnknownEditField = uieditfield(app.StagingOptionsInputPanel, 'text');
+            app.UnknownEditField.Position = [80 app.ypos-spacing*6 100 22];
             app.UnknownEditField.Value = 'Unk, U, Unknown, 0';
 
+            app.StagesHelp = uilabel(app.StagingOptionsInputPanel,'Text',{'Stages should be comma separated','lists of all valid stage identifiers in','the scoring/annotations file.'},...
+                'Position',[200,0, panelWidth/2,80],'FontAngle','italic','FontSize',10,'HorizontalAlignment','center');
+
+
+            %%%%%%%% SAVING SUBPANEL %%%%%%%%
+            app.ypos = app.SavingOptionsPanel.Position(4)-80; spacing = 30;
+            
+            % Data saving
+            app.SavePeakStatsCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','Peak Stats Tables','tooltip','Create table of all detected peaks from the spectrogram','Position',[10,app.ypos,panelWidth-20,22]);
+            app.SaveSOPHsCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','SO-Power Histogram','tooltip','Save matrix with a slow oscillation power histogram','Position',[10,app.ypos-spacing,panelWidth-20,22]);
+            app.SaveParamBasisCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','Parametric Basis','tooltip','ASK MIKE','Position',[10,app.ypos-2*spacing,panelWidth-20,22]);
+            app.SaveSplineBasisCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','Spline Basis','tooltip','ASK MIKE','Position',[10,app.ypos-3*spacing,panelWidth-20,22]);
+            
+            % Image saving
+            app.SaveDataSummaryCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','Data Summary Images','tooltip','Create summary figure with spectrogram, peaks, power and phase histograms','Position',[panelWidth/2,app.ypos,panelWidth-20,22]);
+            app.SaveParamImagesCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','Parametric Basis Images','tooltip','ASK MIKE','Position',[panelWidth/2,app.ypos-spacing,panelWidth-20,22]);
+            app.SaveSplineImagesCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','Spline Basis Images','tooltip','ASK MIKE','Position',[panelWidth/2,app.ypos-2*spacing,panelWidth-20,22]);
+
+            app.OutputOptionFieldLabel = uilabel(app.SavingOptionsPanel,'HorizontalAlignment','right');
+            app.OutputOptionFieldLabel.Position = [(panelWidth/2 + 35) app.ypos-125 90 22];
+            app.OutputOptionFieldLabel.Text = 'Output Format:';
+            app.OutputOptionFieldLabel.Tooltip = 'File format results will be saved as';
+
+            app.OutputOptionField = uidropdown(app.SavingOptionsPanel,'Items',{'.mat','.csv'});
+            app.OutputOptionField.Position = [(panelWidth/2 + 135) app.ypos-125 60 22];
+
+            
             %% BOTTOM PANEL
+
+            label_height = 220;
+
+            app.DataLabel = uilabel(app.SavingOptionsPanel);
+            app.DataLabel.Interpreter = 'latex';
+            app.DataLabel.Position = [50 label_height 32 22];
+            app.DataLabel.Text = '\underline{Data}';
+
+            app.FigureLabel = uilabel(app.SavingOptionsPanel);
+            app.FigureLabel.Interpreter = 'latex';
+            app.FigureLabel.Position = [250 label_height 45 22];
+            app.FigureLabel.Text = '\underline{Figures}';
+
             % app.OutputLabel = uilabel(app.RightPanelBottom,'Text','Output Options','FontWeight','bold',...
             %     'HorizontalAlignment','center','Position',[25 50 panelWidth-20 22]);
             % 
-            app.OutputDirLabel = uilabel(app.RightPanelBottom,'Text','Select output directory and choose what to save.',...
+            app.OutputDirLabel = uilabel(app.SavingOptionsPanel,'Text','Select output directory and choose what to save.',...
                 'Position',[20 50 panelWidth-20 22],'FontAngle','italic','FontSize',10);
             
-            app.OutputDirEditField = uieditfield(app.RightPanelBottom,'text','Position',[20 20 panelWidth-110 25],...
+            app.OutputDirEditField = uieditfield(app.SavingOptionsPanel,'text','Position',[20 20 panelWidth-110 25],...
                 'ValueChangedFcn',@(src,event) outputDirChanged(app));
-            app.OutputDirButton = uibutton(app.RightPanelBottom,'push','Text','Browse','Position',[panelWidth-80 20 60 25],...
+            app.OutputDirButton = uibutton(app.SavingOptionsPanel,'push','Text','Browse','tooltip','Search for folder to save results','Position',[panelWidth-80 20 60 25],...
                 'ButtonPushedFcn',@(src,event) browseOutputDir(app));
 
             %% OUTSIDE
-            app.RunInReverse = uicheckbox(app.UIFigure,'Text','Run in Reverse','FontSize',14,'Position',[app.WindowWidth/2+20,30,200,20]);
-            
+            app.RunInReverse = uicheckbox(app.UIFigure,'Text','Run in Reverse','FontSize',14,'tooltip','Run file list from bottom to top','Position',[app.WindowWidth/2+20,42,200,20]);
+            app.OverwriteExistingFilesCheckBox = uicheckbox(app.UIFigure,'Text','Overwrite Existing Files','FontSize',14,'tooltip','Save over existing files with the same name','Position',[app.WindowWidth/2+20,18,200,20]);     
 
-        end
+            % Create TextAreaLabel
+            app.TextAreaLabel = uilabel(app.UIFigure);
+            app.TextAreaLabel.HorizontalAlignment = 'right';
+            %app.TextAreaLabel.Position = [app.WindowWidth-280 55 60 22];
+            app.TextAreaLabel.Position = [0,55,60,22];
+            app.TextAreaLabel.Text = 'Status:';
+
+            % Create TextArea
+            app.TextArea = uitextarea(app.UIFigure,'Editable','off');
+            %app.TextArea.Position = [app.WindowWidth-270 15 250 40];
+            app.TextArea.Position = [20,15,350,40];
+            app.TextArea.Value = {'Nothing running.'};
+
+
+        end  
         
-        function createOutputOptionsTab(app)
-            % Get tab dimensions
-            tabWidth = app.WindowWidth - 2*app.PanelMargin;
-            tabHeight = app.WindowHeight - 120;
-            
-            % Single centered panel for output options
-            panelWidth = min(600, tabWidth - 2*app.PanelMarginHorizontal);
-            panelHeight = tabHeight - 2*app.PanelMarginVertical;
-            xPos = (tabWidth - panelWidth)/2;
-            
-            % app.OutputPanel = uipanel(app.OutputOptionsTab,'Title','',...
-            %     'Position',[xPos,app.PanelMarginVertical,panelWidth,panelHeight]);
-            
-            % app.OutputLabel = uilabel(app.OutputPanel,'Text','Output Options','FontWeight','bold',...
-            %     'HorizontalAlignment','center','Position',[10,panelHeight-40,panelWidth-20,20]);
+        function createDYNAMOSettingsTab(app)
+            % % Get tab dimensions
+            % tabWidth = app.WindowWidth - 2*app.PanelMargin;
+            % tabHeight = app.WindowHeight - 120;
             % 
-            % app.OutputDirLabel = uilabel(app.OutputPanel,'Text','Select output directory and choose what to save.',...
-            %     'Position',[10,panelHeight-70,panelWidth-20,20],'FontAngle','italic','FontSize',10);
-            % 
-            % app.OutputDirEditField = uieditfield(app.OutputPanel,'text','Position',[10,panelHeight-100,panelWidth-90,25],...
-            %     'ValueChangedFcn',@(src,event) outputDirChanged(app));
-            % app.OutputDirButton = uibutton(app.OutputPanel,'push','Text','Browse','Position',[panelWidth-70,panelHeight-100,60,25],...
-            %     'ButtonPushedFcn',@(src,event) browseOutputDir(app));
+            % % Single centered panel for output options
+            % panelWidth = min(600, tabWidth - 2*app.PanelMarginHorizontal);
+            % panelHeight = tabHeight - 2*app.PanelMarginVertical;
+            % xPos = (tabWidth - panelWidth)/2;
+
+            app.DYNAMOOptionsApp(false, app.UIFigure, app.DYNAMOSettingsTab,false)
             
-            % yPos = panelHeight-140; spacing = 30;
-            % app.SavePeakStatsCheckBox = uicheckbox(app.RightPannelTop,'Text','Peak Stats Tables','Position',[10,yPos,panelWidth-20,22]);
-            % app.SaveDataSummaryCheckBox = uicheckbox(app.RightPannelTop,'Text','Data Summary Images','Position',[10,yPos-spacing,panelWidth-20,22]);
-            % app.SaveParamBasisCheckBox = uicheckbox(app.RightPannelTop,'Text','Parametric Basis','Position',[10,yPos-2*spacing,panelWidth-20,22]);
-            % app.SaveParamImagesCheckBox = uicheckbox(app.RightPannelTop,'Text','Parametric Basis Images','Position',[10,yPos-3*spacing,panelWidth-20,22]);
-            % app.SaveSplineBasisCheckBox = uicheckbox(app.RightPannelTop,'Text','Spline Basis','Position',[10,yPos-4*spacing,panelWidth-20,22]);
-            % app.SaveSplineImagesCheckBox = uicheckbox(app.RightPannelTop,'Text','Spline Basis Images','Position',[10,yPos-5*spacing,panelWidth-20,22]);
         end
         
         function createMainControls(app)
             app.RunBatchButton = uibutton(app.UIFigure,'push',...
-                'Position',[app.WindowWidth/2-140,20,120,40],...
+                'Position',[app.WindowWidth/2-120,20,120,40],...
                 'Text','Run Batch','Enable','on','FontWeight','bold','FontSize',12,...
-                'tooltip','Testing123','ButtonPushedFcn',@app.RunBatchButtonPushed);
+                'tooltip','Run DYNAMO on files','ButtonPushedFcn',@app.RunBatchButtonPushed);
 
-            % app.RunReverseButton = uibutton(app.UIFigure,'push',...
-            %     'Position',[app.WindowWidth/2+20,20,120,40],...
-            %     'Text','Run Reverse','Enable','on','FontWeight','bold','FontSize',12,...
-            %     'ButtonPushedFcn',@app.RunReverseButtonPushed);
+            % Finishes current subject/channel, then stops
+            app.StopBatchButton = uibutton(app.UIFigure,'push',...
+                'Position',[app.WindowWidth/2-190,20,50,40],...
+                'Text','','Icon',strcat(app.icon_filepath,'stop.png'),...
+                'tooltip','Stop current DYNAMO batch','ButtonPushedFcn',@app.StopBatchButtonPushed);
         end
         
+        function createProgressBar(app)
+            N = length(app.ChannelList) * length(app.DataList);
+            app.pb = SmoothProgressBar(app.UIFigure,N,[app.WindowWidth-250,10,180,60]);
+            %pb = app.ProgressBar();
+            app.pb.start();
+        end
+
         %% ================== HELP ==================
         function showHelp(app)
             msg = ['Instructions:' newline ...
@@ -520,7 +640,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             if ~isempty(files)
                 app.DataList = [app.DataList, files];
                 updateDataListBox(app);
-                %updateRunBatchButton(app);
             end
         end
 
@@ -531,7 +650,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             if ~isempty(files)
                 app.DataList = [app.DataList, files];
                 updateDataListBox(app);
-                %updateRunBatchButton(app);
             end
         end
         
@@ -540,7 +658,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             if isempty(selected), return; end
             app.DataList = setdiff(app.DataList,selected,'stable');
             updateDataListBox(app);
-            %updateRunBatchButton(app);
         end
         
         function DataMoveUpButtonPushed(app,~,~)
@@ -556,11 +673,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             if ~isempty(files)
                 app.StagingList = [app.StagingList, files];
                 updateStagingListBox(app);
-                %updateRunBatchButton(app);
             end
         end
 
-        %% TO-DO: UPDATE THIS TO USE MIKE'S FILE SELECT
         function StagingAddFolderButtonPushed(app,~,~)
             folder = uigetdir(pwd,'Select Staging Folder');
             S = dir(strcat(folder,'/*.csv'));
@@ -571,7 +686,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             if ~isempty(files)
                 app.StagingList = [app.StagingList, files];
                 updateStagingListBox(app);
-                %updateRunBatchButton(app);
             end
         end
         
@@ -580,7 +694,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             if isempty(selected), return; end
             app.StagingList = setdiff(app.StagingList,selected,'stable');
             updateStagingListBox(app);
-            %updateRunBatchButton(app);
         end
         
         function StagingMoveUpButtonPushed(app,~,~)
@@ -647,45 +760,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StagingListBox.Items = app.StagingList;
             app.StagingLabel.Text = sprintf('Staging (%d Files)',length(app.StagingList));
         end
-        
-        function updateRunBatchButton(app)
-            hasData = ~isempty(app.DataList);
-            hasStaging = ~isempty(app.StagingList);
-            validOutput = ~isempty(app.OutputDirEditField.Value);
-            app.RunBatchButton.Enable = hasData && hasStaging && validOutput;
-        end
-        
-        %% ================== OUTPUT DIRECTORY ==================
-        function browseOutputDir(app)
-            folder = uigetdir;
-            if folder~=0
-                app.OutputDirEditField.Value = folder;
-                outputDirChanged(app);
-            end
-        end
-        
-        function outputDirChanged(app)
-            pathStr = app.OutputDirEditField.Value;
-            %if isempty(pathStr), updateRunBatchButton(app); return; end
-            if ~isfolder(pathStr)
-                selection = uiconfirm(app.UIFigure,...
-                    sprintf('Directory does not exist:\n%s\nCreate it?',pathStr),...
-                    'Create Directory?','Options',{'Yes','No'},'DefaultOption',2);
-                if strcmp(selection,'Yes'), mkdir(pathStr);
-                else, app.OutputDirEditField.Value=''; end
-            end
-            %updateRunBatchButton(app);
-        end
-        
-        %% ================== RUN BATCH ==================
-        % function RunReverseButtonPushed(app,~,~)
-        %     app.DataList = app.DataList(end:-1:1);
-        %     app.StagingList = app.StagingList(end:-1:1);
-        %     RunBatchButtonPushed(app);
-        % end
 
-        function RunBatchButtonPushed(app,~,~)
-            
+        function updateRunErrorList(app)
+
             if isempty(app.DataList)
                 app.run_error_list(end+1) = {'- Data list empty. Need edf files to run.'};
             end
@@ -702,7 +779,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 app.run_error_list(end+1) = {strcat('- Number of data files (',num2str(length(app.DataList)),') does not match staging files (',num2str(length(app.StagingList)),').')};
             end
 
-            if isempty(app.StagesColumnEditField_2.Value)
+            if isempty(app.StagesColumnEditField.Value)
                 app.run_error_list(end+1) = {'- No staging column given in the staging file.'};
             end
 
@@ -714,18 +791,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 app.run_error_list(end+1) = {'- No header rows given in the staging file.'};
             end
 
-            % if ~(strcmp(app.HeaderRowsEditField.Value,'Auto') || ~isnumeric(app.HeaderRowsEditField.Value))
-            %     app.run_error_list(end+1) = {'- Unrecognized header rows value. Must be either "Auto" or an integer.'};
-            % end
-
-            
-            %% TO-DO: CLEAN THIS SECTION
-            % if length(app.DataList) ~= length(app.StagingList)
-            %     uialert(app.UIFigure,sprintf('Number of data files (%d) does not match staging files (%d)',...
-            %         length(app.DataList),length(app.StagingList)),'File Count Mismatch','Icon','error');
-            %     return;
-            % end
-
             missing={};
             for f=[app.DataList,app.StagingList]
                 if ~isfile(f{1}), missing{end+1}=f{1}; end %#ok<AGROW>
@@ -735,25 +800,248 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             if ~isempty(missing)
                 app.run_error_list{end} = strcat('Missing files:\n%s',strjoin(missing,'\n'));
             end
-            % if ~isempty(missing)
-            %     uialert(app.UIFigure,sprintf('Missing files:\n%s',strjoin(missing,'\n')),'File Missing','Icon','error');
-            %     return;
-            % end
 
+        end
+
+        %% ================== OUTPUT DIRECTORY ==================
+        function browseOutputDir(app)
+            folder = uigetdir;
+            if folder~=0
+                app.OutputDirEditField.Value = folder;
+                outputDirChanged(app);
+            end
+        end
+        
+        function outputDirChanged(app)
+            pathStr = app.OutputDirEditField.Value;
+            if ~isfolder(pathStr)
+                selection = uiconfirm(app.UIFigure,...
+                    sprintf('Directory does not exist:\n%s\nCreate it?',pathStr),...
+                    'Create Directory?','Options',{'Yes','No'},'DefaultOption',2);
+                if strcmp(selection,'Yes'), mkdir(pathStr);
+                else, app.OutputDirEditField.Value=''; end
+            end
+        end
+        
+        %% ================== LOGGING ==================
+        function createRunLog(app)
+            generate_run_log(app.options_structs, app.struct_names,'run_start',app.curr_datetime,'file_path',strcat(app.OutputDirEditField.Value,'/settings/'));
+            app.runlog_fname = strcat('file_log_',app.curr_datetime,'.txt');
+            app.runlog_fpath = strcat(app.OutputDirEditField.Value,'/settings/');
+            app.runlog_fid = fopen(fullfile(app.runlog_fpath,app.runlog_fname), 'w');
+
+            fprintf(app.runlog_fid, 'Date and time of run start: %s\n\n',app.curr_datetime);
+            fprintf(app.runlog_fid, 'Files run: \n\n');
+        end
+
+        function createConsoleLog(app)
+            app.consolelog_fname = strcat('console_log_',app.curr_datetime,'.txt');
+            app.consolelog_fpath = strcat(app.OutputDirEditField.Value,'/settings/');
+            app.consolelog_fid = fopen(fullfile(app.consolelog_fpath,app.consolelog_fname), 'w');
+
+            fprintf(app.consolelog_fid, 'Date and time of run start: %s\n\n',app.curr_datetime);
+            diary(fullfile(app.consolelog_fpath,app.consolelog_fname))
+        end
+        
+        %% ================== PROCESS USER INPUTS ==================
+        function createOptionsStruct(app)
+            app.struct_names = {'SOPH_options','baseline_options','detection_options','param_basis_power_options','param_basis_phase_options','spline_basis_power_options','spline_basis_phase_options'};
+            app.options_structs{1} = app.SOPH_options;
+            app.options_structs{2} = app.baseline_options;
+            app.options_structs{3} = app.detection_options;
+            app.options_structs{4} = app.param_basis_power_options;
+            app.options_structs{5} = app.param_basis_phase_options;
+            app.options_structs{6} = app.spline_basis_power_options;
+            app.options_structs{7} = app.spline_basis_phase_options;
+        end
+        
+        function updateStagesInput(app)
+            app.ArtifactUserInput = textscan(app.ArtifactEditField.Value,'%s','Delimiter',',');
+            app.ArtifactUserInput = app.ArtifactUserInput{1,1};
+            app.WakeUserInput = textscan(app.WakeEditField.Value,'%s','Delimiter',',');
+            app.WakeUserInput = app.WakeUserInput{1,1};
+            app.REMUserInput = textscan(app.REMEditField.Value,'%s','Delimiter',',');
+            app.REMUserInput = app.REMUserInput{1,1};
+            app.N1UserInput = textscan(app.N1EditField.Value,'%s','Delimiter',',');
+            app.N1UserInput = app.N1UserInput{1,1};
+            app.N2UserInput = textscan(app.N2EditField.Value,'%s','Delimiter',',');
+            app.N2UserInput = app.N2UserInput{1,1};
+            app.N3UserInput = textscan(app.N3EditField.Value,'%s','Delimiter',',');
+            app.N3UserInput = app.N3UserInput{1,1};
+            app.UnknownUserInput = textscan(app.UnknownEditField.Value,'%s','Delimiter',',');
+            app.UnknownUserInput = app.UnknownUserInput{1,1};
+        end
+
+        function updateChannelInput(app)
+            app.ChannelList = textscan(app.ChannelEditField.Value,'%s','Delimiter',',');
+            app.ChannelList = app.ChannelList{1,1};
+        end
+        
+        function updateDelimeterInput(app)
+            switch app.DelimeterOptionField.Value
+                case 'Comma'
+                    app.delimeter = ',';
+                case 'Tab'
+                    app.delimeter = '\t';
+                case 'Space'
+                    app.delimeter = ' ';
+                case 'Semicolon'
+                    app.delimeter = ';';
+            end
+        end
+    
+        %% ================== RUN REQUESTED RESULTS ==================
+        function runStatsTable(app)
+
+            %% TO-DO: GET RID OF HARD-CODED TIME RANGE VALUE ( THIS IS JUST FOR TESTING )
+            app.time_range = [0 5000];
+
+            % Check if locations exist
+            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/TFpeaks/'),'dir')
+                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/TFpeaks/'))
+            end
+            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/'),'dir')
+                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/'))
+            end
+
+            % Create output names
+            app.output_stats_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.mat');
+            app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat');
+
+            % Check if file exists already
+            if app.OverwriteExistingFilesCheckBox.Value || (~exist(app.output_stats_name,'file') && ~exist(app.output_SOPH_name,'file'))
+                app.anything_run = 1;
+                
+                % Run subject/channel
+                app.TextArea.Value = strcat('Running DYNAMO on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
+                app.run();
+
+                stats_table = app.stats_table;
+                SOPHs = app.SOPHs;
+
+                % Save results
+                if app.SavePeakStatsCheckBox.Value
+                    app.TextArea.Value = strcat('Saving stats table on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
+                    save(app.output_stats_name,'stats_table');
+                end
+                if app.SaveSOPHsCheckBox.Value
+                    app.TextArea.Value = strcat('Saving SOPHs on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
+                    save(app.output_SOPH_name,'SOPHs');
+                end
+
+            end
+        end
+
+        function runDataSummaryFigure(app)
+            % Check if locations exist
+            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/summary/'),'dir')
+                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/summary/'))
+            end
+
+            % Create output name
+            app.output_fig_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/summary/',app.input_fbase,'_summary_figure_',app.channel,'.png');
+            
+            % Check if file exists already, it not, run
+            if app.OverwriteExistingFilesCheckBox.Value || ~exist(app.output_fig_name,'file')
+                app.TextArea.Value = strcat('Saving summary figure on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
+                app.anything_run = 1;
+                fh = app.displaySummaryPlot;
+                print(fh,'-dpng','-r300',app.output_fig_name);
+                close all;
+            end
+        end
+        
+        function runParamBasis(app)
+            % Check if locations exist
+            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/param_basis/'),'dir')
+                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/param_basis/'))
+            end
+            
+            % Check if SOPHs exist
+            if isempty(app.SOPHs)
+                app.anything_run = 1;
+                app.TextArea.Value = strcat('Running DYNAMO on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
+                app.run();
+            end
+          
+            %% TO-DO: Check if param basis already exists
+            app.TextArea.Value = strcat('Running parameter basis fit on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
+            app.fitParamBasis();
+            fh = gcf;
+            if app.SaveParamImagesCheckBox.Value
+                app.anything_run = 1;
+                app.output_param_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/param_basis/',app.input_fbase,'_param_basis_figure_',app.channel,'.png');
+                app.TextArea.Value = strcat('Saving parameter basis fit summary figure on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
+                print(fh,'-dpng','-r300',app.output_param_name);
+            end
+            close all;
+
+            % Resave SOPH with param basis
+            app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat');
+            SOPHs = app.SOPHs;
+            app.TextArea.Value = strcat('Updating saved SOPH on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
+            save(app.output_SOPH_name,'SOPHs');
+        end
+        
+        function runSplineBasis(app)
+            % Check if location exists
+            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/spline_basis/'),'dir')
+                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/spline_basis/'))
+            end
+            
+            % Check if SOPH exists
+            if isempty(app.SOPHs)
+                app.anything_run = 1;
+                app.TextArea.Value = strcat('Running DYNAMO on subject ',{' '},app.input_fbase,', channel ',app.channel,{' '},'.');   
+                app.run();
+            end
+
+            %% TO-DO: Check if spline already saved
+            app.TextArea.Value = strcat('Running spline basis fit on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
+            app.fitSplineBasis();
+            fh = gcf;
+            if app.SaveSplineImagesCheckBox.Value
+                app.anything_run = 1;
+                app.TextArea.Value = strcat('Saving spline figure for subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
+                app.output_spline_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/spline_basis/',app.input_fbase,'_spline_basis_figure_',app.channel,'.png');
+                print(fh,'-dpng','-r300',app.output_spline_name);
+            end
+            close all;
+
+            % Resave SOPH with spline
+            app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat');
+            SOPHs = app.SOPHs;
+            app.TextArea.Value = strcat('Updating saved SOPH for subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
+            save(app.output_SOPH_name,'SOPHs');
+        end
+
+        %% ================== RUN BATCH ==================
+        function RunBatchButtonPushed(app,~,~)
+
+            % Reset stop batch button if previously pushed
+            app.isStopBatchButtonPushed = false;
+            
+            % Check to make sure app is able to be run
+            updateRunErrorList(app)
+
+            % If any errors exist, output warning, otherwise, output
+            % success message and update run button
             if isempty(app.run_error_list)
                 uialert(app.UIFigure,'All files exist and counts match. Ready to process.','Success','Icon','success');
+                %app.RunBatchButton.Enable="off";
             else
                 uialert(app.UIFigure,sprintf('%s\n',app.run_error_list{:}),'Run Error','Icon','error');
                 app.run_error_list = {};
                 return;
             end
 
-            %% HERE
+            % Reverse file list if user requests
             if app.RunInReverse.Value
                 app.DataList = app.DataList(end:-1:1);
                 app.StagingList = app.StagingList(end:-1:1);
             end
             
+            % Create saving options struct
             if ~isempty(app.BatchProcessCallback)
                 opts.OutputDir = app.OutputDirEditField.Value;
                 opts.SavePeakStats = app.SavePeakStatsCheckBox.Value;
@@ -768,217 +1056,125 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             runBatch(app)
         end
 
+        function StopBatchButtonPushed(app,~,~)
+            app.isStopBatchButtonPushed = true;
+            uialert(app.UIFigure,'Stop button pushed. Completing current subject then stopping.','Stopping','Icon','Error');
+        end
+
         function runBatch(app,~)
 
-            % SAVE SETTINGS
+            app.TextArea.Value = {'Beginning run.'};
+            app.curr_datetime = char(datetime('now','Format','yyMMdd_HHmmSS'));
+
+            % Save folder
             if ~exist(strcat(app.OutputDirEditField.Value,'/settings/'),'dir')
                 mkdir(strcat(app.OutputDirEditField.Value,'/settings/'))
             end
 
-            app.struct_names = {'SOPH_options','baseline_options','detection_options','param_basis_power_options','param_basis_phase_options','spline_basis_power_options','spline_basis_phase_options'};
-            app.structs{1} = app.SOPH_options;
-            app.structs{2} = app.baseline_options;
-            app.structs{3} = app.detection_options;
-            app.structs{4} = app.param_basis_power_options;
-            app.structs{5} = app.param_basis_phase_options;
-            app.structs{6} = app.spline_basis_power_options;
-            app.structs{7} = app.spline_basis_phase_options;
-            generate_run_log(app.structs, app.struct_names,'file_path',strcat(app.OutputDirEditField.Value,'/settings/'));
+            % Create options struct
+            app.TextArea.Value = {'Updating advanced options.'};
+            createOptionsStruct(app)
             
-            %% TO-DO: CLEAN UP AND INTEGRATE INTO CLASS
-            if ~exist(strcat(app.OutputDirEditField.Value,'/settings/file_log.txt'),'file')
-                fname = strcat('file_log_',char(datetime('now','Format','yyMMdd_HHmmSS')),'.txt');
-                file_path = strcat(app.OutputDirEditField.Value,'/settings/');
-                fid = fopen(fullfile(file_path,fname), 'w');
+            % Create run log
+            app.TextArea.Value = {'Creating run log.'};
+            createRunLog(app)
 
-                fprintf(fid, 'Files run: \n\n');
-            else
-                %% TO-DO: ASK MIKE IF THERES A BETTER WAY TO DO THIS
-                all_file_logs = {dir(strcat(app.OutputDirEditField.Value,'/settings/')).name}';
-                to_remove = startsWith(all_file_logs,'.');
-                all_file_logs(to_remove) = [];
-                curr_file_log = length(all_file_logs); % One extra file for run_settings so don't have to add one each time
-                fname = strcat('file_log_',num2str(curr_file_log),'_',char(datetime('now','Format','yyMMdd_HHmmSS')),'.txt');
-                file_path = strcat(app.OutputDirEditField.Value,'/settings/');
-                fid = fopen(fullfile(file_path,fname), 'w');
-                fprintf(fid, 'Files run: \n\n');
-            end
+            % Create console log
+            app.TextArea.Value = {'Creating console log.'};
+            createConsoleLog(app)
 
-            app.ChannelList = textscan(app.ChannelEditField.Value,'%s','Delimiter',',');
-            app.ChannelList = app.ChannelList{1,1};
+            % Update channel from user inputs
+            app.TextArea.Value = {'Processing channel inputs.'};
+            updateChannelInput(app)
 
-            % Loop through objects
-            for jj = 1:length(app.ChannelList)
-                
-                channel = app.ChannelList{jj};
+            % Create progress bar
+            createProgressBar(app)
 
-                for ii = 1:length(app.DataList)
-    
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%
+            % MAIN LOOP TO RUN DYNAMO %
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+            % Loop through channels
+            app.curr_iteration = 0;
+            for ii = 1:length(app.ChannelList)
+                app.channel = app.ChannelList{ii};
+
+                % Loop through EDFs
+                for jj = 1:length(app.DataList)
+
+                    if app.isStopBatchButtonPushed==true % Quit if user pushed stop batch button
+                        return
+                    end
                     app.anything_run = 0;
+                    [~,app.input_fbase] = fileparts(app.DataList{jj});
 
-                    [~,app.input_fbase] = fileparts(app.DataList{ii});
-                    
-                    %% TO-DO: MAKE THE COLUMNS PART OF THE GUI
-                    app.ArtifactUserInput = textscan(app.ArtifactEditField.Value,'%s','Delimiter',',');
-                    app.ArtifactUserInput = app.ArtifactUserInput{1,1};
-                    app.WakeUserInput = textscan(app.WakeEditField.Value,'%s','Delimiter',',');
-                    app.WakeUserInput = app.WakeUserInput{1,1};
-                    app.REMUserInput = textscan(app.REMEditField.Value,'%s','Delimiter',',');
-                    app.REMUserInput = app.REMUserInput{1,1};
-                    app.N1UserInput = textscan(app.N1EditField.Value,'%s','Delimiter',',');
-                    app.N1UserInput = app.N1UserInput{1,1};
-                    app.N2UserInput = textscan(app.N2EditField.Value,'%s','Delimiter',',');
-                    app.N2UserInput = app.N2UserInput{1,1};
-                    app.N3UserInput = textscan(app.N3EditField.Value,'%s','Delimiter',',');
-                    app.N3UserInput = app.N3UserInput{1,1};
-                    app.UnknownUserInput = textscan(app.UnknownEditField.Value,'%s','Delimiter',',');
-                    app.UnknownUserInput = app.UnknownUserInput{1,1};
+                    % Update stages from user inputs
+                    app.TextArea.Value = {'Processing stage inputs.'};
+                    updateStagesInput(app)
 
                     try
     
-                        % if ~strcmp(app.HeaderRowsEditField.Value,'Auto') && isnumeric(app.HeaderRowsEditField.Value)
-                        %     app.header_lines = str2double(app.HeaderRowsEditField.Value);
-                        % else 
-                        %     app.header_lines = [];
-                        % end
-                        switch app.DelimeterOptionField.Value
-                            case 'Comma'
-                                app.delimeter = ',';
-                            case 'Tab'
-                                app.delimeter = '\t';
-                            case 'Space'
-                                app.delimeter = ' ';
-                            case 'Semicolon'
-                                app.delimeter = ';';
-                        end
+                        % Update delimeter from user input
+                        app.TextArea.Value = {'Processing delimeter input.'};
+                        updateDelimeterInput(app)
 
-                       [app.data, app.Fs, app.stage_times, app.stage_vals] = load_data(app.DataList{ii},app.StagingList{ii},app.StagesColumnEditField_2.Value,app.TimesColumnEditField.Value,channel,'header_lines',app.HeaderRowsEditField.Value,'delimeter',app.delimeter,'stage_vals_in',{app.ArtifactUserInput,app.WakeUserInput,app.REMUserInput,app.N1UserInput,app.N2UserInput,app.N3UserInput,app.UnknownUserInput}); %#ok<ST2NM>
-                        
-                        % if ischar(app.data)
-                        %     fprintf(fid, 'Subject %s, channel %s: not run. Error: %s',app.input_fbase,channel,app.data);
-                        %     continue
-                        % end
-                        
-                        %% TO-DO: GET RID OF HARD-CODED TIME RANGE VALUE ( THIS IS JUST FOR TESTING )
-                        app.time_range = [0 5000];
+                        %% =============== LOAD EDF AND STAGING ===============
+                        app.TextArea.Value = strcat('Loading subject',{' '},app.input_fbase,', channel',{' '},app.channel,' staging and EDF data.');
+                        [app.data, app.Fs, app.stage_times, app.stage_vals] = load_data(app.DataList{jj},app.StagingList{jj},app.StagesColumnEditField.Value,app.TimesColumnEditField.Value,app.channel,'header_lines',app.HeaderRowsEditField.Value,'delimeter',app.delimeter,'stage_vals_in',{app.ArtifactUserInput,app.WakeUserInput,app.REMUserInput,app.N1UserInput,app.N2UserInput,app.N3UserInput,app.UnknownUserInput}); 
+
+                        %% =============== RUN REQUESTED RESULTS ===============
         
                         % If Stats Table Requested
-                        if app.SavePeakStatsCheckBox.Value
-                            
-                            % Check if locations exist
-                            if ~exist(strcat(app.OutputDirEditField.Value,'/',channel,'/results/TFpeaks/'),'dir')
-                                mkdir(strcat(app.OutputDirEditField.Value,'/',channel,'/results/TFpeaks/'))
-                            end
-                            if ~exist(strcat(app.OutputDirEditField.Value,'/',channel,'/results/SOPHs/'),'dir')
-                                mkdir(strcat(app.OutputDirEditField.Value,'/',channel,'/results/SOPHs/'))
-                            end
-        
-                            app.output_stats_name = strcat(app.OutputDirEditField.Value,'/',channel,'/results/TFpeaks/',app.input_fbase,'_stats_table_',channel,'.mat');
-                            app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',channel,'.mat');
-        
-                            if app.OverwriteExistingFilesCheckBox.Value || (~exist(app.output_stats_name,'file') && ~exist(app.output_SOPH_name,'file'))
-                                app.anything_run = 1;
-                                
-                                app.run();
-    
-                                stats_table = app.stats_table;
-                                SOPHs = app.SOPHs;
-            
-                                save(app.output_stats_name,'stats_table');
-                                save(app.output_SOPH_name,'SOPHs');
-
-                            end
-                            
+                        if app.SavePeakStatsCheckBox.Value || app.SaveSOPHsCheckBox.Value
+                            runStatsTable(app)
                         end
         
                         % If Data Summary Image Requested
                         if  app.SaveDataSummaryCheckBox.Value
-        
-                            if ~exist(strcat(app.OutputDirEditField.Value,'/',channel,'/figures/summary/'),'dir')
-                                mkdir(strcat(app.OutputDirEditField.Value,'/',channel,'/figures/summary/'))
-                            end
-        
-                            app.output_fig_name = strcat(app.OutputDirEditField.Value,'/',channel,'/figures/summary/',app.input_fbase,'_summary_figure_',channel,'.png');
-                            
-                            if app.OverwriteExistingFilesCheckBox.Value || ~exist(app.output_fig_name,'file')
-                                app.anything_run = 1;
-                                fh = app.displaySummaryPlot;
-                                print(fh,'-dpng','-r300',app.output_fig_name);
-                                close all;
-                            end
-                            
+                            runDataSummaryFigure(app)
                         end
         
                         % If Param Basis Requested
                         if app.SaveParamBasisCheckBox.Value
-        
-                            if ~exist(strcat(app.OutputDirEditField.Value,'/',channel,'/figures/param_basis/'),'dir')
-                                mkdir(strcat(app.OutputDirEditField.Value,'/',channel,'/figures/param_basis/'))
-                            end
-                            
-                            if isempty(app.SOPHs)
-                                app.anything_run = 1;
-                                app.run();
-                            end
-                          
-
-                            app.fitParamBasis();
-                            fh = gcf;
-                            if app.SaveParamImagesCheckBox.Value
-                                app.anything_run = 1;
-                                app.output_param_name = strcat(app.OutputDirEditField.Value,'/',channel,'/figures/param_basis/',app.input_fbase,'_param_basis_figure_',channel,'.png');
-                                print(fh,'-dpng','-r300',app.output_param_name);
-                            end
-                            close all;
-        
-                            app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',channel,'.mat');
-                            SOPHs = app.SOPHs;
-                            save(app.output_SOPH_name,'SOPHs');
-        
+                            runParamBasis(app)
                         end
         
                         % If Spline Basis Requested
                         if app.SaveSplineBasisCheckBox.Value
-        
-                            if ~exist(strcat(app.OutputDirEditField.Value,'/',channel,'/figures/spline_basis/'),'dir')
-                                mkdir(strcat(app.OutputDirEditField.Value,'/',channel,'/figures/spline_basis/'))
-                            end
-                            
-                            if isempty(app.SOPHs)
-                                app.anything_run = 1;
-                                app.run();
-                            end
-        
-                            app.fitSplineBasis();
-                            fh = gcf;
-                            if app.SaveSplineImagesCheckBox.Value
-                                app.anything_run = 1;
-                                app.output_spline_name = strcat(app.OutputDirEditField.Value,'/',channel,'/figures/spline_basis/',app.input_fbase,'_spline_basis_figure_',channel,'.png');
-                                print(fh,'-dpng','-r300',app.output_spline_name);
-                            end
-                            close all;
-        
-                            app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',channel,'.mat');
-                            SOPHs = app.SOPHs;
-                            save(app.output_SOPH_name,'SOPHs');
-        
+                            runSplineBasis(app)
                         end
 
+                        %% =============== UPDATE RUN LOG ===============
+
+                        % Output to run log if anything was run
                         if app.anything_run
-                            fprintf(fid, 'Subject %s, channel %s: run successfully.\n',app.input_fbase,channel);
+                            app.TextArea.Value = strcat('Successfully run subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
+                            fprintf(app.runlog_fid, 'Subject %s, channel %s: run successfully.\n',app.input_fbase,app.channel);
                         else
-                            fprintf(fid, 'Subject %s, channel %s: all files already exist. Subject skipped.\n',app.input_fbase,channel);
+                            fprintf(app.runlog_fid, 'Subject %s, channel %s: all files already exist. Subject skipped.\n',app.input_fbase,app.channel);
                         end
 
                     catch e
-    
-                        fprintf(fid, 'Subject %s, channel %s: not run. Error: %s\n',app.input_fbase,channel,e.message);
+                        
+                        % Output error to run log
+                        app.TextArea.Value = strcat('Error on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'. Check log for details.');
+                        fprintf(app.runlog_fid, 'Subject %s, channel %s: not run. Error: %s\n',app.input_fbase,app.channel,e.message);
 
                     end
+
+                    % Update progress bar
+                    app.curr_iteration = app.curr_iteration+1;
+                    app.pb.updateIteration(app.curr_iteration);
 
                 end
 
             end
+
+            % Close files and graphics
+            app.pb.complete();
+            fclose(app.consolelog_fid);
+            fclose(app.runlog_fid);
+            app.RunBatchButton.Enable='on';
      
         end
 
