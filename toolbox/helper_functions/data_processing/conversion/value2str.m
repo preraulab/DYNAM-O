@@ -153,30 +153,30 @@ end
 % Numeric
 if isnumeric(v)
     if isscalar(v)
-        if simplify && length(num2str(v))>4
-            %Try for simple fractions
+        if simplify && length(sprintf('%.15g', v)) > 4
+            % Try for simple fractions
             s = double2fracstr(v);
 
-            %Try for pi values
+            % Try for pi multiples
             if isempty(s)
                 s = double2pifracstr(v);
             end
 
-            %Try for e values
+            % Try for exp form
             if isempty(s)
                 s = double2estr(v);
             end
 
-            %Return the number
+            % Return numeric string if nothing matched
             if isempty(s)
-                s = num2str(v);
+                s = sprintf('%.15g', v);  % round-trip safe, removes unnecessary zeros
             end
-
         else
-            s = num2str(v);
+            s = sprintf('%.15g', v);      % full double precision, trailing zeros removed
         end
     else
-        s = mat2str(v);  % preserves row/column structure
+        % Non-scalar numeric array
+        s = mat2str(v);  % preserves shape, full precision by default
     end
     return
 end
