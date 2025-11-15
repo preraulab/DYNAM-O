@@ -94,25 +94,30 @@ end
 if istable(value)
     varNames = value.Properties.VariableNames;
     Nvars = width(value);
-    Nrows = height(value);
 
-    % Preallocate a cell array for column outputs (parallel-safe)
+    cols = cell(1, Nvars);
+    for v = 1:Nvars
+        cols{v} = value.(varNames{v});
+    end
+
+    % Preallocate output
     outCols = cell(1, Nvars);
 
     parfor v = 1:Nvars
-        col = value.(varNames{v});
+        col = cols{v};  % Sliced variable
 
-        % Ensure each row is a cell, so numeric vectors are treated as one element
+        % Ensure cell array 
         if ~iscell(col)
-            col = num2cell(col, 2);
+            col = num2cell(col, 2); 
         end
 
-        % Encode each row/cell as a single string
-        colStr = cellfun(@(x) encodeValue(x, simplify), col, 'UniformOutput', false);
+        % Encode each row
+        colStr = cellfun(@(x) encodeValue(x, simplify), col, ...
+                         'UniformOutput', false);
         outCols{v} = colStr;
     end
 
-    % Rebuild table after parfor
+    % Rebuild table
     out = table();
     for v = 1:Nvars
         out.(varNames{v}) = outCols{v};
