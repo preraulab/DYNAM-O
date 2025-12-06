@@ -91,6 +91,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         SaveParamBasisCheckBox      matlab.ui.control.CheckBox
         SaveParamImagesCheckBox     matlab.ui.control.CheckBox
         SaveSplineBasisCheckBox     matlab.ui.control.CheckBox
+        SaveAuxDataCheckBox         matlab.ui.control.CheckBox
         SaveSplineImagesCheckBox    matlab.ui.control.CheckBox
 
         % Saving options panel components
@@ -133,6 +134,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         output_fig_name = ''
         output_stats_name = ''
         output_SOPH_name = '' 
+        output_aux_name = ''
+        output_paramfit_power_name = ''
+        output_paramfit_phase_name = ''
+        output_splinefit_power_name = ''
+        output_splinefit_phase_name = ''
         output_param_name = ''
         output_spline_name = ''
         date_time_save = ''
@@ -155,6 +161,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % Misc for saving
         options_structs
         struct_names
+        auxiliary_data
         
         % Misc for internal processing
         run_error_list = {};
@@ -530,19 +537,20 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.SaveSOPHsCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','SO-Power Histogram','tooltip','Save matrix with a slow oscillation power histogram','Position',[10,app.ypos-spacing,panelWidth-20,22]);
             app.SaveParamBasisCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','Parametric Basis','tooltip','ASK MIKE','Position',[10,app.ypos-2*spacing,panelWidth-20,22]);
             app.SaveSplineBasisCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','Spline Basis','tooltip','ASK MIKE','Position',[10,app.ypos-3*spacing,panelWidth-20,22]);
-            
+            app.SaveAuxDataCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','Aux Data','tooltip','Save artifacts, {insert list Sophie}','Position',[10,app.ypos-4*spacing,panelWidth-20,22]);
+
             % Image saving
             app.SaveDataSummaryCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','Data Summary Images','tooltip','Create summary figure with spectrogram, peaks, power and phase histograms','Position',[panelWidth/2,app.ypos,panelWidth-20,22]);
             app.SaveParamImagesCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','Parametric Basis Images','tooltip','ASK MIKE','Position',[panelWidth/2,app.ypos-spacing,panelWidth-20,22]);
             app.SaveSplineImagesCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','Spline Basis Images','tooltip','ASK MIKE','Position',[panelWidth/2,app.ypos-2*spacing,panelWidth-20,22]);
 
             app.OutputOptionFieldLabel = uilabel(app.SavingOptionsPanel,'HorizontalAlignment','right');
-            app.OutputOptionFieldLabel.Position = [(panelWidth/2 + 35) app.ypos-125 90 22];
+            app.OutputOptionFieldLabel.Position = [(panelWidth/2 + 35) app.ypos-130 90 22];
             app.OutputOptionFieldLabel.Text = 'Output Format:';
             app.OutputOptionFieldLabel.Tooltip = 'File format results will be saved as';
 
             app.OutputOptionField = uidropdown(app.SavingOptionsPanel,'Items',{'.mat','.csv'});
-            app.OutputOptionField.Position = [(panelWidth/2 + 135) app.ypos-125 60 22];
+            app.OutputOptionField.Position = [(panelWidth/2 + 135) app.ypos-130 60 22];
 
             
             %% BOTTOM PANEL
@@ -563,11 +571,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %     'HorizontalAlignment','center','Position',[25 50 panelWidth-20 22]);
             % 
             app.OutputDirLabel = uilabel(app.SavingOptionsPanel,'Text','Select output directory and choose what to save.',...
-                'Position',[20 50 panelWidth-20 22],'FontAngle','italic','FontSize',10);
+                'Position',[20 42 panelWidth-20 22],'FontAngle','italic','FontSize',10);
             
-            app.OutputDirEditField = uieditfield(app.SavingOptionsPanel,'text','Position',[20 20 panelWidth-110 25],...
+            app.OutputDirEditField = uieditfield(app.SavingOptionsPanel,'text','Position',[20 15 panelWidth-110 25],...
                 'ValueChangedFcn',@(src,event) outputDirChanged(app));
-            app.OutputDirButton = uibutton(app.SavingOptionsPanel,'push','Text','Browse','tooltip','Search for folder to save results','Position',[panelWidth-80 20 60 25],...
+            app.OutputDirButton = uibutton(app.SavingOptionsPanel,'push','Text','Browse','tooltip','Search for folder to save results','Position',[panelWidth-80 15 60 25],...
                 'ButtonPushedFcn',@(src,event) browseOutputDir(app));
 
             %% OUTSIDE
@@ -827,16 +835,17 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         function createRunLog(app)
             generate_run_log(app.options_structs, app.struct_names,'run_start',app.curr_datetime,'file_path',strcat(app.OutputDirEditField.Value,'/settings/'));
             app.runlog_fname = strcat('file_log_',app.curr_datetime,'.txt');
-            app.runlog_fpath = strcat(app.OutputDirEditField.Value,'/settings/');
+            app.runlog_fpath = strcat(app.OutputDirEditField.Value,'/logs/');
             app.runlog_fid = fopen(fullfile(app.runlog_fpath,app.runlog_fname), 'w');
 
-            fprintf(app.runlog_fid, 'Date and time of run start: %s\n\n',app.curr_datetime);
+            fprintf(app.runlog_fid, 'Date and time of run start: %s\n',app.curr_datetime);
+            fprintf(app.runlog_fid, 'Run with settings file: %s\n\n',strcat('run_settings_',app.curr_datetime,'.txt'));
             fprintf(app.runlog_fid, 'Files run: \n\n');
         end
 
         function createConsoleLog(app)
             app.consolelog_fname = strcat('console_log_',app.curr_datetime,'.txt');
-            app.consolelog_fpath = strcat(app.OutputDirEditField.Value,'/settings/');
+            app.consolelog_fpath = strcat(app.OutputDirEditField.Value,'/logs/');
             app.consolelog_fid = fopen(fullfile(app.consolelog_fpath,app.consolelog_fname), 'w');
 
             fprintf(app.consolelog_fid, 'Date and time of run start: %s\n\n',app.curr_datetime);
@@ -905,11 +914,15 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             end
 
             % Create output names
-            app.output_stats_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.mat');
+            if strcmp(app.OutputOptionField.Value,'.csv')
+                app.output_stats_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.csv');
+            else
+                app.output_stats_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.mat');
+            end
             app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat');
 
             % Check if file exists already
-            if app.OverwriteExistingFilesCheckBox.Value || (~exist(app.output_stats_name,'file') && ~exist(app.output_SOPH_name,'file'))
+            if app.OverwriteExistingFilesCheckBox.Value || (~exist(app.output_stats_name,'file') || ~exist(app.output_SOPH_name,'file'))
                 app.anything_run = 1;
                 
                 % Run subject/channel
@@ -922,8 +935,13 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 % Save results
                 if app.SavePeakStatsCheckBox.Value
                     app.TextArea.Value = strcat('Saving stats table on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
-                    save(app.output_stats_name,'stats_table');
+                    if strcmp(app.OutputOptionField.Value,'.csv')
+                        table2csv(stats_table,app.output_stats_name);
+                    else
+                        save(app.output_stats_name,'stats_table');
+                    end
                 end
+
                 if app.SaveSOPHsCheckBox.Value
                     app.TextArea.Value = strcat('Saving SOPHs on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
                     save(app.output_SOPH_name,'SOPHs');
@@ -936,6 +954,23 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % Check if locations exist
             if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/summary/'),'dir')
                 mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/summary/'))
+            end
+
+            % Check if stats and SOPH exist
+            if isempty(app.SOPHs) && ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
+                runStatsTable(app);
+            elseif isempty(app.SOPHs) && exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
+                app.SOPHs = load(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat')).SOPHs;
+            end
+            
+            if isempty(app.stats_table)
+                if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.csv'),'file') && ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.mat'),'file')
+                    runStatsTable(app);
+                elseif exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.mat'),'file')
+                    app.stats_table = load(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.mat'),'stats_table');
+                else
+                    app.stats_table = csv2table(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.csv'));
+                end
             end
 
             % Create output name
@@ -951,18 +986,31 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             end
         end
         
-        function runParamBasis(app)
+        function runParamBasis(app)     
+
             % Check if locations exist
+            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/param_basis/'),'dir')
+                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/param_basis/'))
+            end
+
             if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/param_basis/'),'dir')
                 mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/param_basis/'))
             end
             
             % Check if SOPHs exist
-            if isempty(app.SOPHs)
+            if isempty(app.SOPHs) && ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
                 app.anything_run = 1;
                 app.TextArea.Value = strcat('Running DYNAMO on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
-                app.run();
+                runStatsTable(app);
+            elseif isempty(app.SOPHs) && exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
+                app.SOPHs = load(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat')).SOPHs;
             end
+
+            % if isempty(app.SOPHs)
+            %     app.anything_run = 1;
+            %     app.TextArea.Value = strcat('Running DYNAMO on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
+            %     app.run();
+            % end
           
             %% TO-DO: Check if param basis already exists
             app.TextArea.Value = strcat('Running parameter basis fit on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
@@ -977,24 +1025,40 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             close all;
 
             % Resave SOPH with param basis
-            app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat');
-            SOPHs = app.SOPHs;
+            app.output_paramfit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/param_basis/',app.input_fbase,'_SOpower_paramfit_',app.channel,'.mat');
+            app.output_paramfit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/param_basis/',app.input_fbase,'_SOphase_paramfit_',app.channel,'.mat');
+            SOpower_paramfit = app.SOPHs.SOpower_paramfit;
+            SOphase_paramfit = app.SOPHs.SOpower_paramfit;
             app.TextArea.Value = strcat('Updating saved SOPH on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
-            save(app.output_SOPH_name,'SOPHs');
+            save(app.output_paramfit_power_name,'SOpower_paramfit');
+            save(app.output_paramfit_phase_name,'SOphase_paramfit');
         end
         
         function runSplineBasis(app)
             % Check if location exists
+            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/spline_basis/'),'dir')
+                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/spline_basis/'))
+            end
+
             if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/spline_basis/'),'dir')
                 mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/spline_basis/'))
             end
             
-            % Check if SOPH exists
-            if isempty(app.SOPHs)
+            % Check if SOPHs exist
+            if isempty(app.SOPHs) && ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
                 app.anything_run = 1;
-                app.TextArea.Value = strcat('Running DYNAMO on subject ',{' '},app.input_fbase,', channel ',app.channel,{' '},'.');   
-                app.run();
+                app.TextArea.Value = strcat('Running DYNAMO on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
+                runStatsTable(app);
+            elseif isempty(app.SOPHs) && exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
+                app.SOPHs = load(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat')).SOPHs;
             end
+
+            % % Check if SOPH exists
+            % if isempty(app.SOPHs)
+            %     app.anything_run = 1;
+            %     app.TextArea.Value = strcat('Running DYNAMO on subject ',{' '},app.input_fbase,', channel ',app.channel,{' '},'.');   
+            %     app.run();
+            % end
 
             %% TO-DO: Check if spline already saved
             app.TextArea.Value = strcat('Running spline basis fit on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
@@ -1009,10 +1073,33 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             close all;
 
             % Resave SOPH with spline
-            app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat');
-            SOPHs = app.SOPHs;
+            app.output_splinefit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/spline_basis/',app.input_fbase,'_SOpower_splinefit_',app.channel,'.mat');
+            app.output_splinefit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/spline_basis/',app.input_fbase,'_SOphase_splinefit_',app.channel,'.mat');
+            SOpower_splinefit = app.SOPHs.SOpower_splinefit;
+            SOphase_splinefit = app.SOPHs.SOphase_splinefit;
             app.TextArea.Value = strcat('Updating saved SOPH for subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
-            save(app.output_SOPH_name,'SOPHs');
+            save(app.output_splinefit_power_name,'SOpower_splinefit');
+            save(app.output_splinefit_phase_name,'SOphase_splinefit');
+        end
+
+        function saveAuxData(app)
+            % Check if location exists
+            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/auxiliary_data/'),'dir')
+                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/auxiliary_data/'))
+            end
+
+            %% TO-DO: ADD EVERYTHING
+            app.auxiliary_data.artifacts = app.artifacts;
+            app.auxiliary_data.Fs = app.Fs;
+            app.auxiliary_data.SOpower_norm_method = app.SOPH_options.SOpower_norm_method;
+
+            auxiliary_data = app.auxiliary_data; %#ok<ADPROP>
+            
+            app.TextArea.Value = strcat('Saving auxiliary data on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
+            
+            app.output_aux_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/auxiliary_data/',app.input_fbase,'_auxiliary_data_',app.channel,'.mat');
+            save(app.output_aux_name,'auxiliary_data');
+
         end
 
         %% ================== RUN BATCH ==================
@@ -1066,9 +1153,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.TextArea.Value = {'Beginning run.'};
             app.curr_datetime = char(datetime('now','Format','yyMMdd_HHmmSS'));
 
-            % Save folder
+            % Settings folder
             if ~exist(strcat(app.OutputDirEditField.Value,'/settings/'),'dir')
                 mkdir(strcat(app.OutputDirEditField.Value,'/settings/'))
+            end
+
+            % Log folder
+            if ~exist(strcat(app.OutputDirEditField.Value,'/logs/'),'dir')
+                mkdir(strcat(app.OutputDirEditField.Value,'/logs/'))
             end
 
             % Create options struct
@@ -1096,11 +1188,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % Loop through channels
             app.curr_iteration = 0;
-            for ii = 1:length(app.ChannelList)
-                app.channel = app.ChannelList{ii};
+            for jj = 1:length(app.DataList)
 
                 % Loop through EDFs
-                for jj = 1:length(app.DataList)
+                for ii = 1:length(app.ChannelList)
+                    app.channel = app.ChannelList{ii};
 
                     if app.isStopBatchButtonPushed==true % Quit if user pushed stop batch button
                         return
@@ -1120,7 +1212,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
                         %% =============== LOAD EDF AND STAGING ===============
                         app.TextArea.Value = strcat('Loading subject',{' '},app.input_fbase,', channel',{' '},app.channel,' staging and EDF data.');
-                        [app.data, app.Fs, app.stage_times, app.stage_vals] = load_data(app.DataList{jj},app.StagingList{jj},app.StagesColumnEditField.Value,app.TimesColumnEditField.Value,app.channel,'header_lines',app.HeaderRowsEditField.Value,'delimeter',app.delimeter,'stage_vals_in',{app.ArtifactUserInput,app.WakeUserInput,app.REMUserInput,app.N1UserInput,app.N2UserInput,app.N3UserInput,app.UnknownUserInput}); 
+                        [app.data, app.Fs, app.stage_times, app.stage_vals] = load_data(app.DataList{jj},app.StagingList{jj},app.StagesColumnEditField.Value,app.TimesColumnEditField.Value,app.channel,'header_lines',app.HeaderRowsEditField.Value,'delimiter',app.delimeter,'stage_vals_in',{app.ArtifactUserInput,app.WakeUserInput,app.REMUserInput,app.N1UserInput,app.N2UserInput,app.N3UserInput,app.UnknownUserInput}); 
 
                         %% =============== RUN REQUESTED RESULTS ===============
         
@@ -1142,6 +1234,10 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                         % If Spline Basis Requested
                         if app.SaveSplineBasisCheckBox.Value
                             runSplineBasis(app)
+                        end
+
+                        if app.SaveAuxDataCheckBox.Value
+                            saveAuxData(app)
                         end
 
                         %% =============== UPDATE RUN LOG ===============
@@ -1172,6 +1268,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % Close files and graphics
             app.pb.complete();
+            %set(app.pb,'Visible','off');
             fclose(app.consolelog_fid);
             fclose(app.runlog_fid);
             app.RunBatchButton.Enable='on';

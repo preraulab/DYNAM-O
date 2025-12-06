@@ -84,7 +84,15 @@ if ~isempty(structs)
     assert(iscell(structs),'Structs must be a cell');
 end
 
-fname = 'run_settings.txt';
+%% WRITE TIME
+% Log start time
+if isempty(run_start)
+    dtime = datetime;
+    dtime.Format = 'yyyyMMdd_HHmmss';
+    run_start = char(dtime);
+end
+
+fname = strcat('run_settings_',run_start,'.txt');
 
 assert(is_valid_matlab_filename(fname),...
     ['Must be valid filename: Under 63 chars, start with a letter,' ...
@@ -103,14 +111,6 @@ end
 
 if write_file
     fprintf(fid, '%%%% %s\n\n', fname);
-end
-
-%% WRITE TIME
-% Log start time
-if isempty(run_start)
-    dtime = datetime;
-    dtime.Format = 'yyyyMMdd_HHmmss';
-    run_start = char(dtime);
 end
 
 if verbose
