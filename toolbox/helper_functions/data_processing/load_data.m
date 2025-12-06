@@ -11,7 +11,7 @@ addRequired(p, 'channels',@(x)validateattributes(x,{'char','cell'},{}));
 % Optional inputs for reading stages
 addOptional(p, 'stage_vals_in', [], @(x) isempty(x) || iscell(x));
 addOptional(p, 'header_lines', []);
-addOptional(p, 'delimeter',',');
+addOptional(p, 'delimiter',',');
 addOptional(p, 'start_time', NaN, @(x) ischar(x) || isstring(x) || isnan(x));
 addOptional(p, 'epoch_dur', 30, @(x) isnumeric(x) && isscalar(x) && x>0);
 addOptional(p, 'plot_on', false, @(x) islogical(x) && isscalar(x));
@@ -24,7 +24,7 @@ input_flags = fieldnames(p.Results);
 eval(['[', sprintf('%s ', input_flags{:}), '] = deal(input_arguments{:});']);
 
 %% LOAD EDF
-[header, signalHeader, signalCell] = blockEdfLoad(edf_fpath);
+[header, signalHeader, signalCell] = read_EDF(edf_fpath);
 
 % Select specific channels
 labels = {signalHeader.signal_labels};
@@ -56,13 +56,19 @@ end
 
 data = cell2mat(signalCell(chan_inds));
 
-Fs = header.samplingfrequency(chan_inds);
+if isfield(header,'samplingfrequency')
+    Fs = header.samplingfrequency(chan_inds);
+else
+    Fs_arr = [signalHeader.sampling_frequency];
+    Fs = Fs_arr(chan_inds(1));
+end
+
 
 %% LOAD SCORING
 if isnumeric(header_lines)
-    [staging] = read_staging(scoring_fpath,time_col,stage_col,'stage_vals',stage_vals_in,'header_lines',header_lines,'delimeter',delimeter,'start_time',start_time,'epoch_dur',epoch_dur,'plot_on',plot_on);
+    [staging] = read_staging(scoring_fpath,time_col,stage_col,'stage_vals',stage_vals_in,'header_lines',header_lines,'start_time',start_time,'delimiter',delimiter,'epoch_dur',epoch_dur,'plot_on',plot_on);
 else
-    [staging] = read_staging(scoring_fpath,time_col,stage_col,'stage_vals',stage_vals_in,'start_time',start_time,'delimeter',delimeter,'epoch_dur',epoch_dur,'plot_on',plot_on);
+    [staging] = read_staging(scoring_fpath,time_col,stage_col,'stage_vals',stage_vals_in,'start_time',start_time,'delimiter',delimiter,'epoch_dur',epoch_dur,'plot_on',plot_on);
 end
     
 stage_times = staging.times;

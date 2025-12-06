@@ -12,7 +12,7 @@ function [staging, annotations] = read_staging(varargin)
 %   Name-Value Pairs:
 %       'stage_vals'  : 1x7 cell array of strings or cell arrays with stage strings (default: predefined mapping)
 %       'header_lines': integer - number of header lines to skip (default: 0)
-%       'start_time'  : string in 'HH:MM:SS' format for datestring input or seconds for epoch/time input (default: nan) - reference start time
+%       'start_time'  : string in 'HH:MM:SS' format (default: nan) - reference start time
 %       'delimiter'   : char - column delimitor (default: ',')
 %       'epoch_dur'   : scalar - epoch duration in seconds (default: 30)
 %       'plot_on'     : logical - if true, plot hypnogram with hypnoplot (default: true)
@@ -98,11 +98,6 @@ times_seconds = convert_time_to_seconds(time_data, start_time, epoch_dur);
 staging.times = times_seconds(:);
 staging.vals  = stage_values(:);
 
-if ~isnan(start_time)
-    staging.times = [0; staging.times];
-    staging.vals = [0; staging.vals];
-end
-
 if isempty(unmatched_idx)
     annotations = struct([]); % return empty
 else
@@ -120,58 +115,34 @@ end
 function times_seconds = convert_time_to_seconds(time_data, start_time, epoch_dur)
 numeric_data = str2double(time_data);
 
-% ---------- Case 1: Epoch number in integers ----------
-if all(~isnan(numeric_data)) && all(mod(numeric_data,1)==0) && issorted(numeric_data)
+% ---------- Case 1: perfect ascending integers ----------
+if all(~isnan(numeric_data)) && all(mod(numeric_data,1)==0) && all(diff(numeric_data) >= 0)
     vals = numeric_data(:);
-
-    %Get start time in seconds
-    if isempty(start_time) || isnan(start_time)
-        start_sec = 0;
-    else
-        start_sec = str2double(start_time);
-        assert(~isnan(start_time), 'Start time for stage times in units of epoch number must be in seconds');
-    end
-
+    start_sec = parse_start_time(start_time);
     times_seconds = start_sec + vals * epoch_dur;
     return;
 end
 
-% ---------- Case 2: Time in seconds ----------
+% ---------- Case 2: numeric but not pure integers (seconds) ----------
 if all(~isnan(numeric_data))
     vals = numeric_data(:);
-
-    %Get start time in seconds
-    if isempty(start_time) || isnan(start_time)
-        start_sec = 0;
-    else
-        start_sec = str2double(start_time);
-        assert(~isnan(start_time),'Start time for stage times in units of time in seconds must also be in seconds');
-    end
-
+    start_sec = parse_start_time(start_time);
     times_seconds = start_sec + vals;
     return;
 end
 
-% ---------- Case 3: Time Strings ----------
+% ---------- Case 3: time strings ----------
 dtimes = datetime(time_data);
+if ~isnan(start_time)
+    dtimes = dtimes - datetime(start_time);
+end
 
-secs = seconds(timeofday(dtimes));        % base seconds
+secs = seconds(timeofday(dtimes));  % base seconds
 wrap = [false; diff(secs) < 0];           % detect midnight crossing
 dayOffset = cumsum(wrap) * 86400;         % add 24h when needed
 
-%Compute time in seconds
 times_seconds = secs + dayOffset;
 
-%Check to see if there is a starting time and compute the offset
-if ~isnan(start_time) | isempty(start_time)
-    start_offset = times_seconds(1) - seconds(timeofday(datetime(start_time)));
-    assert(start_offset>0,'Start time is later than first time point.')
-else
-    start_offset = 0;
-end
-
-%Create time vector
-times_seconds = times_seconds - times_seconds(1) + start_offset;
 end
 
 % ============================================================
@@ -190,5 +161,5 @@ for stage_idx = 1:length(stage_vals)
 end
 
 unmatched_idx = find(isnan(stage_values));
-stage_values(unmatched_idx) = 0; % default unmatched to Artifact
+stage_values(unmatched_idx) = 6; % default unmatched to Artifact
 end
