@@ -23,52 +23,47 @@ input_arguments = struct2cell(p.Results); %#ok<NASGU>
 input_flags = fieldnames(p.Results);
 eval(['[', sprintf('%s ', input_flags{:}), '] = deal(input_arguments{:});']);
 
+if ~iscell(channels) %#ok<NODEF>
+    channels = {channels};
+end
+
 %% LOAD EDF
-[header, signalHeader, signalCell] = read_EDF(edf_fpath);
-
-% Select specific channels
-labels = {signalHeader.signal_labels};
-if iscell(channels)
-    chan_inds = zeros(1,length(channels));
-    for ii = 1:length(channels)
-        chan_inds(ii) = find(strcmpi(labels,channels{ii}));
-        if isempty(chan_inds(ii))
-            error(char(strcat(channels{ii},' is not a valid channel. Valid channels:',{' '},sprintf('%s ',labels{:}))))
-            % data = ['Channel ',channels{ii},' does not exist.'];
-            % Fs = [];
-            % stage_times = [];
-            % stage_vals = [];
-            % return
-        end
-    end
-else
-    chan_inds = find(strcmpi(labels,channels));
-    if isempty(chan_inds)
-        error(char(strcat(channels,' is not a valid channel. Valid channels:',{' '},sprintf('%s ',labels{:}))))
-        % data = ['Channel ',channels,' does not exist.'];
-        % Fs = [];
-        % stage_times = [];
-        % stage_vals = [];
-        % return
-    end
-    labels = labels(chan_inds);
+[~, signalHeader] = read_EDF(edf_fpath);
+idx = ismember(channels,{signalHeader.signal_labels});
+if ~all(idx)
+    error(char(strcat('Invalid channels:',{' '},channels(~idx),' | Valid channels: ',{' '},sprintf('%s ',signalHeader.signal_labels))))
 end
 
-data = cell2mat(signalCell(chan_inds));
+[header, signalHeader,data] = read_EDF(edf_fpath,'channels',channels);
 
-if isfield(header,'samplingfrequency')
-    Fs = header.samplingfrequency(chan_inds);
-else
-    Fs_arr = [signalHeader.sampling_frequency];
-    Fs = Fs_arr(chan_inds(1));
+Fs = [signalHeader.sampling_frequency];
+
+% Test to see whether start time is valid
+try 
+    datetime(header.recording_starttime);
+catch
+    % If start time is invalid, try converting periods to colons
+    % (Any other formatting error is the user's responsibility)
+    time_str = header.recording_starttime;
+    warning([time_str,' is not a valid datetime format. Trying to fix by swapping out periods for colons.']);
+    inds = strfind(time_str,'.');
+    % Converting only the first two periods to colons to allow for 
+    % fractional seconds
+    if length(inds)>=2
+        time_str(inds(1:2)) = ':';
+    else
+        error(['Failed to convert header recording start time string: ',time_str,' to valid format.']);
+    end
+    datetime(time_str);
+    header.recording_starttime = time_str;
 end
-
 
 %% LOAD SCORING
-if isnumeric(header_lines)
-    [staging] = read_staging(scoring_fpath,time_col,stage_col,'stage_vals',stage_vals_in,'header_lines',header_lines,'start_time',start_time,'delimiter',delimiter,'epoch_dur',epoch_dur,'plot_on',plot_on);
+if isnumeric(header_lines) & ~isempty(header_lines)
+    staging = read_staging(scoring_fpath,time_col,stage_col,'stage_vals',stage_vals_in,'header_lines',header_lines,'start_time',header.recording_starttime,'delimiter',delimiter,'epoch_dur',epoch_dur,'plot_on',plot_on);
 else
-    [staging] = read_staging(scoring_fpath,time_col,stage_col,'stage_vals',stage_vals_in,'start_time',start_time,'delimiter',delimiter,'epoch_dur',epoch_dur,'plot_on',plot_on);
+    %% TO-DO: CHECK THIS
+    staging = read_staging(scoring_fpath,time_col,stage_col,'stage_vals',stage_vals_in,'start_time',header.recording_starttime,'delimiter',delimiter,'epoch_dur',epoch_dur,'plot_on',plot_on);
 end
     
 stage_times = staging.times;
