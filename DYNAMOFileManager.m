@@ -903,7 +903,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         function runStatsTable(app)
 
             %% TO-DO: GET RID OF HARD-CODED TIME RANGE VALUE ( THIS IS JUST FOR TESTING )
-            app.time_range = [0 5000];
+            % app.time_range = [0 5000];
 
             % Check if locations exist
             if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/TFpeaks/'),'dir')
