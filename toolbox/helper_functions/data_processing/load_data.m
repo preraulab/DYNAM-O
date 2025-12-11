@@ -35,29 +35,29 @@ if ~all(idx)
 end
 
 [header, signalHeader,data] = read_EDF(edf_fpath,'channels',channels);
+data = cell2mat(data);
 
 Fs = [signalHeader.sampling_frequency];
 
 % Test to see whether start time is valid
-try 
-    datetime(header.recording_starttime);
-catch
-    % If start time is invalid, try converting periods to colons
-    % (Any other formatting error is the user's responsibility)
-    time_str = header.recording_starttime;
-    warning([time_str,' is not a valid datetime format. Trying to fix by swapping out periods for colons.']);
-    inds = strfind(time_str,'.');
-    % Converting only the first two periods to colons to allow for 
-    % fractional seconds
-    if length(inds)>=2
-        time_str(inds(1:2)) = ':';
-    else
-        error(['Failed to convert header recording start time string: ',time_str,' to valid format.']);
-    end
-    datetime(time_str);
-    header.recording_starttime = time_str;
+time_str = header.recording_starttime;
+ % If start time is invalid, try converting periods to colons
+% (Any other formatting error is the user's responsibility
+inds = strfind(time_str,'.');
+% Converting only the first two periods to colons to allow for 
+% fractional seconds
+if length(inds)>=2
+    time_str(inds(1:2)) = ':';
 end
 
+try 
+    datetime(time_str);
+catch e
+    if strcmp(e.identifier,'MATLAB:datetime:ParseErrs')
+        error([header.recording_starttime,' is not a valid datetime format. Please replace with the following format: hh:mm:ss']);
+    end
+end
+header.recording_starttime = time_str;
 %% LOAD SCORING
 if isnumeric(header_lines) & ~isempty(header_lines)
     staging = read_staging(scoring_fpath,time_col,stage_col,'stage_vals',stage_vals_in,'header_lines',header_lines,'start_time',header.recording_starttime,'delimiter',delimiter,'epoch_dur',epoch_dur,'plot_on',plot_on);

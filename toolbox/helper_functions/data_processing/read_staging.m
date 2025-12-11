@@ -98,7 +98,7 @@ times_seconds = convert_time_to_seconds(time_data, start_time, epoch_dur);
 staging.times = times_seconds(:);
 staging.vals  = stage_values(:);
 
-if ~isnan(start_time)
+if ~isnan(start_time)&staging.times~=0
     staging.times = [0; staging.times];
     staging.vals = [0; staging.vals];
 end
@@ -154,7 +154,6 @@ end
 
 % ---------- Case 3: Time Strings ----------
 dtimes = datetime(time_data);
-
 secs = seconds(timeofday(dtimes));        % base seconds
 wrap = [false; diff(secs) < 0];           % detect midnight crossing
 dayOffset = cumsum(wrap) * 86400;         % add 24h when needed
@@ -165,7 +164,7 @@ times_seconds = secs + dayOffset;
 %Check to see if there is a starting time and compute the offset
 if ~isnan(start_time) | isempty(start_time)
     start_offset = times_seconds(1) - seconds(timeofday(datetime(start_time)));
-    assert(start_offset>0,'Start time is later than first time point.')
+    assert(start_offset>=0,'Start time is later than first time point.')
 else
     start_offset = 0;
 end

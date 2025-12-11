@@ -1204,7 +1204,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                     app.TextArea.Value = {'Processing stage inputs.'};
                     updateStagesInput(app)
 
-                    try
+                    %try
     
                         % Update delimeter from user input
                         app.TextArea.Value = {'Processing delimeter input.'};
@@ -1250,13 +1250,13 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                             fprintf(app.runlog_fid, 'Subject %s, channel %s: all files already exist. Subject skipped.\n',app.input_fbase,app.channel);
                         end
 
-                    catch e
-                        
-                        % Output error to run log
-                        app.TextArea.Value = strcat('Error on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'. Check log for details.');
-                        fprintf(app.runlog_fid, 'Subject %s, channel %s: not run. Error: %s\n',app.input_fbase,app.channel,e.message);
-
-                    end
+                    % catch e
+                    % 
+                    %     % Output error to run log
+                    %     app.TextArea.Value = strcat('Error on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'. Check log for details.');
+                    %     fprintf(app.runlog_fid, 'Subject %s, channel %s: not run. Error: %s\n',app.input_fbase,app.channel,e.message);
+                    % 
+                    % end
 
                     % Update progress bar
                     app.curr_iteration = app.curr_iteration+1;

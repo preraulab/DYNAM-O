@@ -176,6 +176,8 @@ if isempty(time_range)
     time_range = [min(t_data), max(t_data)];
 end
 
+assert(min(t_data)<max(time_range) & max(t_data)>min(time_range),'Staging times does not overlap at all with data times. Please check the staging input file and/or the EDF header.');
+
 %Set default features
 if any(strcmpi(features, 'all'))
     features = {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height',...
