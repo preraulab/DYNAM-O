@@ -1,107 +1,83 @@
 classdef SmoothProgressBar < handle
-% SmoothProgressBar - Smooth animated horizontal progress bar for MATLAB apps
-%
-% This class provides a continous time progress bar for uifigure-based
-% applications. It supports continuous-time polling between discrete
-% iteration updates using a generalized sigmoid interpolation. The bar can
-% display a color gradient based on a colormap, optional percentage, time
-% remaining, and x-axis tick marks. The progress bar can be refreshed to
-% restart from zero or forced to complete instantly.
-%
-% Usage:
-%   pb = SmoothProgressBar(parent, N)
-%   pb = SmoothProgressBar(parent, N, position)
-%   pb = SmoothProgressBar(parent, N, position, colormap_name)
-%   pb = SmoothProgressBar(parent, N, position, colormap_name, show_ticks)
-%
-% Inputs:
-%   parent        - uifigure or uipanel handle where the progress bar is displayed
-%   N             - Total number of iterations or work units (positive scalar)
-%   position      - [x y width height] position of the axes (default: [50 100 400 40])
-%   colormap_name - String name of MATLAB colormap for bar gradient (default: 'turbo')
-%   show_ticks    - Logical: display x-axis ticks (default: false)
-%
-% Properties (Access = public):
-%   Parent             - Parent UI container
-%   Axes               - UIAxes object used for rendering the progress bar
-%   Bar                - Patch object representing the filled portion of the bar
-%   N                  - Total number of iterations
-%   Current            - Last completed iteration index
-%   AvgIterTime        - Exponentially averaged iteration duration (seconds)
-%   Timer              - Timer object used for smooth updates
-%   Colormap           - Name of colormap for progress coloring
-%   ShowTicks          - Toggle x-axis tick marks
-%   ShowTimeRemaining  - Toggle time remaining display in title
-%   ShowPercentage     - Toggle percentage display in title
-%   BarHeight          - Relative bar height (0–1)
-%   FontSize           - Title font size
-%   FontColor          - Title font color (RGB)
-%   Position           - Axes position [x y width height] (dependent)
-%
-% Methods:
-%   start()            - Start or restart the timer and begin smooth updates
-%   updateIteration(k) - Notify the bar that iteration k has completed
-%   complete()         - Force the progress bar to complete immediately
-%   refresh()          - Reset the progress bar to zero and clear statistics
-%
-% Continuous-time interpolation:
-%   The bar advances continuously using a timer-driven update loop. For iteration
-%   k, the displayed progress fraction p(t) is computed via:
-%
-%       p(t) = a + (b - a) / (1 + exp(-kappa * t))
-%
-%   where:
-%       a = k / N
-%       b = (k + 1) / N
-%       t = elapsed time since iteration k completed
-%       kappa = scaling factor determined to span approximately one iteration
-%
-%   This produces a smooth visual progression without discrete jumps.
-%   Remaining time is estimated as T_remaining = max(N * AvgIterTime - elapsed, 0).
-%
-% Example:
-%   fig = uifigure('Position',[100 100 600 250]);
-%   N = 50;
-%
-%   pb = SmoothProgressBar(fig, N, [100 120 400 40], 'turbo', true);
-%   pb.ShowPercentage = true;
-%   pb.ShowTimeRemaining = true;
-%
-%   pb.start();
-%
-%   for k = 1:N
-%       pause(0.04 + 0.02*rand); % Simulate work
-%       pb.updateIteration(k);
-%   end
-%
-%   pause(1);
-%   pb.refresh();
-%   pb.start();
-%
-%   for k = 1:N
-%       pause(0.03);
-%       pb.updateIteration(k);
-%   end
-
-
+    % SmoothProgressBar - Smooth animated horizontal progress bar for MATLAB apps
+    %
+    %   This class provides a continuous-time progress bar for uifigure-based
+    %   applications. The bar advances smoothly between iteration updates using a
+    %   generalized sigmoid interpolation. It supports a color gradient, optional
+    %   percentage display, time remaining, and x-axis tick marks.
+    %
+    % USAGE:
+    %   pb = SmoothProgressBar(parent, N)
+    %   pb = SmoothProgressBar(parent, N, position)
+    %   pb = SmoothProgressBar(parent, N, position, colormap_name)
+    %   pb = SmoothProgressBar(parent, N, position, colormap_name, show_ticks)
+    %
+    % INPUTS:
+    %   parent        - uifigure or uipanel handle for displaying the progress bar
+    %   N             - Total number of iterations or work units (positive scalar)
+    %   position      - [x y width height] of the axes (default: [50 100 400 40])
+    %   colormap_name - Name of MATLAB colormap for bar gradient (default: 'turbo')
+    %   show_ticks    - Logical: display x-axis ticks (default: false)
+    %
+    % PUBLIC PROPERTIES:
+    %   Parent             - Parent UI container
+    %   Axes               - UIAxes used for rendering
+    %   Bar                - Patch object representing filled portion
+    %   N                  - Total iterations
+    %   Timer              - Timer object for smooth updates
+    %   Colormap           - Name of colormap
+    %   ShowTimeRemaining  - Toggle time remaining display
+    %   ShowPercentage     - Toggle percentage display
+    %   BarHeight          - Relative bar height (0–1)
+    %   FontSize           - Title font size
+    %   FontColor          - Title font color
+    %   TimerPeriod        - Timer update period in seconds (default: 0.05)
+    %
+    % METHODS:
+    %   start()            - Start or restart the timer
+    %   updateIteration(k) - Notify the bar that iteration k has completed
+    %   complete()         - Force the bar to complete immediately
+    %   refresh()          - Reset the progress bar to zero
+    %
+    % EXAMPLE:
+    %   fig = uifigure('Position',[100 100 600 250]);
+    %   N = 10;
+    %
+    %   pb = SmoothProgressBar(fig, N, [100 120 400 60], 'turbo');
+    %   pb.ShowPercentage = true;
+    %   pb.ShowTimeRemaining = true;
+    %
+    %   pb.start();
+    %   for k = 1:N
+    %       pause(2 + rand); % Simulate work
+    %       pb.updateIteration(k);
+    %   end
+    %
+    %   pause(1);
+    %   pb.refresh();
+    %   pb.TimerPeriod = 1; % slower updates
+    %   pb.start();
+    %
+    %   for k = 1:N
+    %      pause(2 + rand); % Simulate work
+    %       pb.updateIteration(k);
+    %   end
 
     properties (Access = public)
         Parent
         Axes
         Bar
         N
-        Current
-        AvgIterTime
-        StartTime
+
         Timer
         Colormap
-        ShowTicks
         ShowTimeRemaining
         ShowPercentage
         BarHeight
-        BorderRadius
         FontSize
         FontColor
+        TimerPeriod = 0.05; % default update rate
+        ShowTicks = false;
     end
 
     properties (Access = private)
@@ -109,49 +85,45 @@ classdef SmoothProgressBar < handle
         IsFinal = false
         BackgroundRect
         BorderRect
+
+        Current
+        AvgIterTime
+        StartTime
     end
 
     properties (Dependent)
         Position
     end
 
-    methods
+    methods (Access = public)
         function obj = SmoothProgressBar(parent, N, position, colormap_name, show_ticks)
             % Constructor
-
-            %---------------- Validate iteration count ----------------%
             if nargin < 2 || isempty(N) || ~isscalar(N) || N <= 0
-                error('SmoothProgressBar:InvalidInput', ...
-                    'N must be a positive scalar.');
+                error('SmoothProgressBar:InvalidInput', 'N must be a positive scalar.');
             end
             obj.N = N;
             obj.Current = 0;
             obj.AvgIterTime = [];
             obj.Timer = [];
 
-            %---------------- Handle position argument ----------------%
             if nargin < 3 || isempty(position)
                 position = [50 100 400 40];
             end
             obj.PositionValue = position;
 
-            %---------------- Handle colormap argument ----------------%
             if nargin < 4 || isempty(colormap_name)
                 colormap_name = 'turbo';
             end
             obj.Colormap = colormap_name;
 
-            %---------------- Handle tick visibility ------------------%
             if nargin < 5 || isempty(show_ticks)
                 show_ticks = false;
             end
             obj.ShowTicks = show_ticks;
 
-            %---------------- Display defaults ------------------------%
             obj.ShowTimeRemaining = true;
             obj.ShowPercentage = true;
             obj.BarHeight = 0.6;
-            obj.BorderRadius = 0.15;
             obj.FontSize = 11;
             obj.FontColor = [0.2 0.2 0.2];
 
@@ -195,6 +167,7 @@ classdef SmoothProgressBar < handle
                 'FontWeight', 'bold', ...
                 'Color', obj.FontColor)
 
+            obj.toggleTickVisibility();
             obj.preFirst();
         end
 
@@ -220,11 +193,59 @@ classdef SmoothProgressBar < handle
 
             obj.preFirst();
 
+            if ~isempty(obj.Timer) && isvalid(obj.Timer)
+                stop(obj.Timer);
+                delete(obj.Timer);
+            end
+
             obj.Timer = timer( ...
                 'ExecutionMode', 'fixedRate', ...
-                'Period', 0.05, ...
+                'Period', obj.TimerPeriod, ...
                 'TimerFcn', @(~,~)obj.updateDisplay());
             start(obj.Timer);
+        end
+
+        %************************************************************
+        %                       FORCE COMPLETION
+        %************************************************************
+        function complete(obj)
+            if ~isempty(obj.Timer) && isvalid(obj.Timer)
+                stop(obj.Timer);
+                delete(obj.Timer);
+                obj.Timer = [];
+            end
+            obj.IsFinal = true;
+            obj.Current = obj.N;
+
+            cmap = colormap(obj.Axes, obj.Colormap);
+            obj.Bar.FaceColor = cmap(end, :);
+            obj.Bar.XData = [0 100 100 0];
+            obj.BorderRect.Position = [0 (1-obj.BarHeight)/2 100 obj.BarHeight];
+
+            title(obj.Axes, 'Process Complete!', ...
+                'FontSize', obj.FontSize, ...
+                'FontWeight', 'bold', ...
+                'Color', obj.FontColor);
+            drawnow limitrate
+        end
+
+        %************************************************************
+        %                        FULL RESET
+        %************************************************************
+        function refresh(obj)
+            if ~isempty(obj.Timer) && isvalid(obj.Timer)
+                stop(obj.Timer);
+                delete(obj.Timer);
+                obj.Timer = [];
+            end
+
+            obj.Current = 0;
+            obj.AvgIterTime = [];
+            obj.StartTime = [];
+            obj.IsFinal = false;
+
+            obj.Bar.FaceColor = [0 0.4470 0.7410];
+            obj.preFirst();
         end
 
         %************************************************************
@@ -232,8 +253,7 @@ classdef SmoothProgressBar < handle
         %************************************************************
         function updateIteration(obj, iteration)
             if iteration > obj.N
-                error('SmoothProgressBar:IterationExceeded', ...
-                    'iteration > N');
+                error('SmoothProgressBar:IterationExceeded', 'iteration > N');
             end
             obj.Current = iteration;
 
@@ -250,7 +270,9 @@ classdef SmoothProgressBar < handle
                 end
             end
         end
+    end
 
+    methods (Access = private)
         %************************************************************
         %                 SMOOTH DISPLAY UPDATE (TIMER)
         %************************************************************
@@ -275,13 +297,11 @@ classdef SmoothProgressBar < handle
                 t_iter = max(-d, min(t_iter - d, d));
                 c_offset = 0.05 / obj.N;
 
-                pct = SmoothProgressBar.generalized_sigmoid( ...
-                    t_iter, a, b, c_offset, d) * 100;
+                pct = SmoothProgressBar.generalized_sigmoid(t_iter, a, b, c_offset, d) * 100;
                 pct = min(pct, 100);
 
                 remaining = max(avg_time * obj.N - t_elapsed, 0);
-                t_remain_str = char(duration( ...
-                    0, 0, remaining, 'Format', 'mm:ss'));
+                t_remain_str = char(duration(0, 0, remaining, 'Format', 'mm:ss'));
             end
 
             obj.updateTitle(pct, t_remain_str);
@@ -292,11 +312,10 @@ classdef SmoothProgressBar < handle
 
             obj.Bar.XData = [0 pct pct 0];
             obj.Bar.YData = [(1-obj.BarHeight)/2 ...
-                             (1-obj.BarHeight)/2 ...
-                             (1+obj.BarHeight)/2 ...
-                             (1+obj.BarHeight)/2];
-            obj.BorderRect.Position = ...
-                [0 (1-obj.BarHeight)/2 pct obj.BarHeight];
+                (1-obj.BarHeight)/2 ...
+                (1+obj.BarHeight)/2 ...
+                (1+obj.BarHeight)/2];
+            obj.BorderRect.Position = [0 (1-obj.BarHeight)/2 pct obj.BarHeight];
 
             drawnow limitrate
 
@@ -316,17 +335,14 @@ classdef SmoothProgressBar < handle
         %                        TITLE UPDATE
         %************************************************************
         function updateTitle(obj, pct, varargin)
-            title_str = sprintf('Progress: %d/%d', ...
-                obj.Current, obj.N);
+            title_str = sprintf('Progress: %d/%d', obj.Current, obj.N);
 
             if obj.ShowPercentage
-                title_str = sprintf('%s  %0.1f%%', ...
-                    title_str, pct);
+                title_str = sprintf('%s  %0.1f%%', title_str, pct);
             end
 
             if obj.ShowTimeRemaining && ~isempty(varargin)
-                title_str = sprintf('%s | Time Remaining: %s', ...
-                    title_str, varargin{1});
+                title_str = sprintf('%s | Time Remaining: %s', title_str, varargin{1});
             end
 
             title(obj.Axes, title_str, ...
@@ -336,54 +352,16 @@ classdef SmoothProgressBar < handle
         end
 
         %************************************************************
-        %                       FORCE COMPLETION
+        %               TOGGLE X-AXIS TICK VISIBILITY
         %************************************************************
-        function complete(obj)
-            if ~isempty(obj.Timer) && isvalid(obj.Timer)
-                stop(obj.Timer);
-                delete(obj.Timer);
-                obj.Timer = [];
+        function toggleTickVisibility(obj)
+            if obj.ShowTicks
+                obj.Axes.XColor = [0 0 0];
+                obj.Axes.XTick = 0:10:100;
+            else
+                obj.Axes.XColor = 'none';
+                obj.Axes.XTick = [];
             end
-            obj.IsFinal = true;
-            obj.Current = obj.N;
-
-            cmap = colormap(obj.Axes, obj.Colormap);
-            obj.Bar.FaceColor = cmap(end, :);
-            obj.Bar.XData = [0 100 100 0];
-            obj.BorderRect.Position = ...
-                [0 (1-obj.BarHeight)/2 100 obj.BarHeight];
-
-            title(obj.Axes, 'Process Complete!', ...
-                'FontSize', obj.FontSize, ...
-                'FontWeight', 'bold', ...
-                'Color', obj.FontColor);
-            drawnow limitrate
-        end
-
-        %************************************************************
-        %                        FULL RESET
-        %************************************************************
-        function refresh(obj)
-            %REFRESH  Reset the progress bar to an unused initial state
-            %
-            %   Stops and deletes any running timer, clears timing
-            %   statistics, resets progress to zero, and restores the
-            %   initial visual appearance. Call START afterwards to
-            %   begin a new run.
-            %
-            if ~isempty(obj.Timer) && isvalid(obj.Timer)
-                stop(obj.Timer);
-                delete(obj.Timer);
-                obj.Timer = [];
-            end
-
-            obj.Current = 0;
-            obj.AvgIterTime = [];
-            obj.StartTime = [];
-            obj.IsFinal = false;
-
-            obj.Bar.FaceColor = [0 0.4470 0.7410];
-            obj.preFirst();
         end
     end
 
@@ -406,8 +384,18 @@ classdef SmoothProgressBar < handle
         function set.ShowTicks(obj, val)
             validateattributes(val, {'logical'}, {'scalar'});
             obj.ShowTicks = val;
-            if ~isempty(obj.Axes)
-                obj.updateTickVisibility();
+            if ~isempty(obj.Axes) %#ok<*MCSUP>
+                obj.toggleTickVisibility();
+            end
+        end
+
+        function set.TimerPeriod(obj, val)
+            validateattributes(val, {'numeric'}, {'scalar','positive'});
+            obj.TimerPeriod = val;
+            if ~isempty(obj.Timer) && isvalid(obj.Timer)
+                stop(obj.Timer);
+                obj.Timer.Period = val;
+                start(obj.Timer);
             end
         end
 
@@ -422,8 +410,7 @@ classdef SmoothProgressBar < handle
         end
 
         function set.BarHeight(obj, val)
-            validateattributes(val, {'numeric'}, ...
-                {'scalar','positive','<=',1});
+            validateattributes(val, {'numeric'}, {'scalar','positive','<=',1});
             obj.BarHeight = val;
         end
     end
