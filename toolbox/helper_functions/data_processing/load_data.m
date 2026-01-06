@@ -38,6 +38,7 @@ end
 data = cell2mat(data);
 
 Fs = [signalHeader.sampling_frequency];
+Fs = Fs(idx);
 
 % Test to see whether start time is valid
 time_str = header.recording_starttime;

@@ -268,6 +268,15 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.FileSelectionTab = uitab(app.TabGroup,'Title','File Selection');
             %app.FileSelectionTab.AutoResizeChildren = true;
             app.DYNAMOSettingsTab = uitab(app.TabGroup,'Title','DYNAM-O Options');
+
+            % Create menu
+            mSettings = uimenu(app.UIFigure, 'Text', 'Batch Settings');
+
+            uimenu(mSettings, 'Text', 'Upload EDF List...', ...
+                'MenuSelectedFcn', @(src,event) uploadFileListCallback(app));
+
+            uimenu(mSettings, 'Text', 'Upload Staging List...', ...
+                'MenuSelectedFcn', @(src,event) uploadStagingListCallback(app));
             
             createFileSelectionTab(app);
             createDYNAMOSettingsTab(app);
@@ -643,6 +652,32 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         end
         
         %% ================== BUTTON CALLBACKS ==================
+        function uploadFileListCallback(app,~)
+            uialert(app.UIFigure, 'Upload EDF File List Selected.', 'Upload');
+
+            %Have the user select the base directory
+            [filename,filepath] = uigetfile;
+
+            %Grab all files recursively from the base directory
+            temp = fileread([filepath,filename]);
+            app.DataList = regexp(temp, '\r\n|\r|\n', 'split');
+            updateDataListBox(app);
+
+        end
+
+        function uploadStagingListCallback(app,~)
+            uialert(app.UIFigure, 'Upload EDF File List Selected.', 'Upload');
+
+            %Have the user select the base directory
+            [filename,filepath] = uigetfile;
+
+            %Grab all files recursively from the base directory
+            temp = fileread([filepath,filename]);
+            app.StagingList = regexp(temp, '\r\n|\r|\n', 'split');
+            updateStagingListBox(app);
+
+        end
+        
         function DataAddFileButtonPushed(app,~,~)
             files = selectFiles(app,'Select Data Files','data');
             if ~isempty(files)
