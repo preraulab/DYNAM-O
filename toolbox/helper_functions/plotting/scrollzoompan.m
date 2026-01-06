@@ -1,365 +1,350 @@
-function [zslider, pslider, zedit, pedit, zlabel, plabel, zlstnr, plstnr]=scrollzoompan(ax, dir, zoom_fcn, pan_fcn, bounds)
-%SCROLLZOOMPAN  Adds pan and zoom scroll bars to an axis
-%               mouse wheel = pan, shift + mouse wheel = zoom
+function [zslider, pslider, zedit, pedit, zlabel, plabel, zlstnr, plstnr] = scrollzoompan(ax, dir, zoom_fcn, pan_fcn, bounds)
+%SCROLLZOOMPAN  Adds interactive scroll-wheel and keyboard pan/zoom controls to an axis
 %
 %   Usage:
-%   [zslider, pslider, zedit, pedit, zlabel, plabel, zlstnr, plstnr] = scrollzoompan(ax, dir, zoom_fcn, pan_fcn)
+%       [zslider, pslider, zedit, pedit, zlabel, plabel, zlstnr, plstnr] = ...
+%           scrollzoompan(ax, dir, zoom_fcn, pan_fcn, bounds)
 %
 %   Input:
-%   ax: Axis to zoom and pan (default: gca)
-%   dir: Zoom/pan direction {'x','y'} (default: 'x')
-%   zslider/pslider: Handles to slider object handles (default: creates at figure bottom)
-%   zoom_fcn/pan_fcn: Handles to functions to be called on zoom or pan
+%       ax: axis handle – axis to apply pan and zoom (default: gca)
+%       dir: char – pan/zoom direction: 'x' or 'y' (default: 'x')
+%       zoom_fcn: function handle – optional callback called after zooming
+%       pan_fcn:  function handle – optional callback called after panning
+%       bounds: 1x2 numeric or datetime – optional data limits [min max]
 %
 %   Output:
-%   zslider: Zoom slider handle
-%   pslider: Pan slider handle
-%   zedit: Zoom edit handle
-%   pedit: Pan edit handle
-%   zlabel: Zoom text label handle
-%   plabel: Pan text label handle
-%   zlstnr: Zoom slider listener
-%   plstnr: Pan slider listener
+%       zslider: handle – slider controlling zoom width
+%       pslider: handle – slider controlling pan center
+%       zedit:   handle – edit box showing/setting zoom value
+%       pedit:   handle – edit box showing/setting pan value
+%       zlabel:  handle – label for zoom UI
+%       plabel:  handle – label for pan UI
+%       zlstnr:  handle – listener for zoom slider continuous updates
+%       plstnr:  handle – listener for pan slider continuous updates
 %
 %   Example:
+%       % Example using numeric X-axis
+%       x = linspace(0,100,10000);
+%       y = sin(x);
+%       plot(x,y);
+%       scrollzoompan(gca,'x');
 %
-%     figure
-%     plot(randn(1,1000));
-%     scrollzoompan;
+%   Example:
+%       % Example using datetime X-axis
+%       t0 = datetime('now');
+%       t = t0 + seconds(0:0.5:5000);
+%       plot(t,randn(size(t)));
+%       scrollzoompan(gca,'x');
 %
-%     figure
-%     imagesc(peaks(1000));
-%     scrollzoompan(gca,'y');
+%   Example:
+%       % Adding callbacks
+%       zoomCB = @() disp('Zoom updated');
+%       panCB  = @() disp('Pan updated');
+%       scrollzoompan(gca,'x', zoomCB, panCB);
 %
-%  Copyright 2024 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
-%**************************************************************************
+%   Notes:
+%       • Mouse wheel pans; Shift + wheel zooms.  
+%       • Arrow keys pan/zoom unless an edit box has focus.  
+%       • For datetime axes, pan edit uses MM/DD/YY HH:mm:ss format,  
+%         and zoom edit uses HH:MM:SS duration.
+%
+%   Copyright Prerau Laboratory sleepEEG.org
+%% ********************************************************************
 
-%Set default axes to current
-if nargin==0
-    ax=gca;
-end
+%% ------------------------- DEFAULT ARGUMENT HANDLING -------------------------
+% If no axis is provided, default to current axis
+if nargin==0, ax = gca; end
 
-%Set default direction to x
-if nargin<2
-    dir=lower('x');
-end
+% Default zoom/pan direction
+if nargin<2, dir='x'; end
 
-%Set blank callbacks
-if nargin<3
-    zoom_fcn=[];
-end
+% Optional callbacks default to empty
+if nargin<3, zoom_fcn = []; end
+if nargin<4, pan_fcn = []; end
 
-if nargin<4
-    pan_fcn=[];
-end
+% Optional bounds default to NaNs (ignored)
+if nargin<5, bounds = [nan nan]; end
 
-%Get current figure
-fig_h = get(ax,'parent');
+% Get the parent figure of the axis
+fig_h = ancestor(ax,'figure');
 if ~isa(fig_h,'matlab.ui.Figure')
     fig_h = gcf;
 end
 
-%Get full data limits depending on direction
+%% ------------------------- DETERMINE AXIS LIMITS -------------------------
+% Determine if the axis is time-based (datetime)
 if strcmpi(dir,'x')
-    xl=xlim(ax(1));
-
-    amin=xl(1);
-    amax=xl(2);
+    val_min = ax.XLim(1); 
+    val_max = ax.XLim(2);
+    isdataax = isdatetime(ax.XLim(1));
 else
-    yl=ylim(ax(1));
-
-    amin=yl(1);
-    amax=yl(2);
+    val_min = ax.YLim(1); 
+    val_max = ax.YLim(2);
+    isdataax = isdatetime(ax.YLim(1));
 end
 
-%Impose bounds if defined
-if nargin<5
-    bounds=[nan nan];
+% Override limits if user supplied bounds
+if ~isnan(bounds(1)), val_min = bounds(1); end
+if ~isnan(bounds(2)), val_max = bounds(2); end
+
+% Convert datetime to seconds offset (internal numeric representation)
+if isdataax
+    dt_min = val_min;
+    dt_max = val_max;
+    val_min = 0;
+    val_max = seconds(dt_max - dt_min);
 end
 
-if ~isnan(bounds(1))
-    amin=bounds(1);
-end
-
-if ~isnan(bounds(2))
-    amax=bounds(2);
-end
-
-%Save the data in the figure
-handle=guidata(fig_h);
-handle.shift_down=false; %Checks if you are holding down shift
-guidata(fig_h,handle);
-
-fig_h.Visible = false;
-
-%Find all the axes
-ax_all = findall(fig_h,'type','axes');
-
-%Set axes to absolute units
-set(fig_h,'Units','inches');
-set(ax_all,'Units','inches');
-
-%Add 10% to the figure size
-shift = fig_h.Position(4)*.1;
-fig_h.Position(4) = fig_h.Position(4)+ shift;
-
-pause(.1) %Pause needed to wait for resizing
-
-%Shift all the axes up
-for ii = 1:length(ax_all)
-    ax_all(ii).Position(2) = ax_all(ii).Position(2)+shift;
-end
-
+%% ------------------------- CREATE SLIDERS -------------------------
+% Vertical offset between zoom and pan UI bars
 shift = 0.04;
 
-%Create zoom/pan sliders
-zslider = uicontrol('style','slider','units','normalized','position',[0.0702 0.0262 0.8273 0.0232],'min',1e-50,'max',amax,'value',amax);
-pslider = uicontrol('style','slider','units','normalized','position',[0.0702 0.0262+shift 0.8273 0.0232],'min',amin,'max',amax,'value',amax/2);
+% Zoom slider (controls zoom width)
+zslider = uicontrol(fig_h,'style','slider','units','normalized',...
+    'position',[0.07 0.026 0.83 0.023],...
+    'min',1e-5,'max',val_max-val_min,'value',val_max-val_min);
 
-%Create zoom/pan edit boxes
-zedit = uicontrol(fig_h,'style','edit','units','normalized','position',[0.9107 0.0147 0.0823 0.0422]);
-pedit = uicontrol(fig_h,'style','edit','units','normalized','position',[0.9107 0.0147+shift 0.0823 0.0422],'callback',@(src,evnt)pan_edit(ax, zslider, pslider, zedit, pedit, dir,zoom_fcn));
+% Pan slider (controls zoom center)
+pslider = uicontrol(fig_h,'style','slider','units','normalized',...
+    'position',[0.07 0.026+shift 0.83 0.023],...
+    'min',val_min,'max',val_max,'value',(val_min+val_max)/2);
 
-set(zedit,'callback',@(src,evnt)zoom_edit(ax, zslider, pslider, zedit, pedit, dir,zoom_fcn));
-set(pedit,'callback',@(src,evnt)pan_edit(ax, pslider, pedit, dir, pan_fcn));
+%% ------------------------- CREATE EDIT BOXES -------------------------
+% Zoom edit box
+zedit = uicontrol(fig_h,'style','edit','units','normalized',...
+    'position',[0.91 0.0147 0.0823 0.0422]);
 
-zedit.String = zslider.Value;
-pedit.String = pslider.Value;
+% Pan edit box
+pedit = uicontrol(fig_h,'style','edit','units','normalized',...
+    'position',[0.91 0.0147+shift 0.0823 0.0422]);
 
-%Create text labels
-zlabel = uicontrol(fig_h,'style','text','string','Zoom','units','normalized','position', [0.0086 0.0071 0.0628 0.0449],'fontsize',12,'HorizontalAlignment','left','BackgroundColor',get(fig_h,'Color'));
-plabel = uicontrol(fig_h,'style','text','string','Pan','units','normalized','position', [0.0086 0.0071+shift 0.0628 0.0449],'fontsize',12,'HorizontalAlignment','left','BackgroundColor',get(fig_h,'Color'));
+% Store last valid values to recover from invalid edits
+prev_zval = zslider.Value;
+prev_pval = pslider.Value;
 
+% Initialize edit box displays
+update_edits();
 
-%Add listeners for continuous value changes
-zlstnr=addlistener(zslider,'ContinuousValueChange',@(src,evnt)zoom_slider(ax, zslider, pslider, zedit, pedit, dir,zoom_fcn));
-plstnr=addlistener(pslider,'ContinuousValueChange',@(src,evnt)pan_slider(ax, pslider, pedit, dir, pan_fcn));
-set(fig_h,'WindowKeyPressFcn',{@handle_keys,ax, zslider, pslider, zedit, pedit, dir, zoom_fcn, pan_fcn},'WindowKeyReleaseFcn',@key_off);
+%% ------------------------- LABELS -------------------------
+zlabel = uicontrol(fig_h,'style','text','string','Zoom','units','normalized',...
+    'position',[0.0086 0.0071 0.0628 0.0449],...
+    'fontsize',12,'HorizontalAlignment','left','BackgroundColor',fig_h.Color);
 
-set(fig_h,'WindowScrollWheelFcn',{@figScroll,ax, zslider, pslider, zedit, pedit, dir, zoom_fcn, pan_fcn});
+plabel = uicontrol(fig_h,'style','text','string','Pan','units','normalized',...
+    'position',[0.0086 0.0071+shift 0.0628 0.0449],...
+    'fontsize',12,'HorizontalAlignment','left','BackgroundColor',fig_h.Color);
 
+%% ------------------------- SLIDER LISTENERS -------------------------
+% Enable continuous updates as the slider is dragged
+zlstnr = addlistener(zslider,'ContinuousValueChange',@(src,evnt) zoom_slider_cb());
+plstnr = addlistener(pslider,'ContinuousValueChange',@(src,evnt) pan_slider_cb());
 
-%Return to normalized
-set(fig_h,'Units','normalized');
-set(ax_all,'Units','normalized');
+% Edit box callbacks
+zedit.Callback = @(src,evnt) zoom_edit_cb();
+pedit.Callback = @(src,evnt) pan_edit_cb();
 
-fig_h.Visible = true;
+%% ------------------------- KEY + MOUSE EVENT HANDLERS -------------------------
+% Key press: used for arrow-key panning/zooming
+fig_h.WindowKeyPressFcn = @handle_keys;
 
-%***********************************************************
-%***********************************************************
-%                  SLIDER FUNCTIONS
-%***********************************************************
-%***********************************************************
-%-----------------------------------------------------------
-%           CALLBACK TO HANDLE TIME SCALE ZOOM
-%-----------------------------------------------------------
-function zoom_slider(ax, zslider, pslider, zedit, pedit, dir, zoom_fcn)
-%Keep the window center with window width determined by slider value
-newlims=get(pslider,'value')+get(zslider,'value')/2*[-1 1];
+% Key release: detect shift release
+fig_h.WindowKeyReleaseFcn = @key_off;
 
-amin=get(zslider,'min');
-amax=get(zslider,'max');
+% Mouse scroll: pan or zoom depending on Shift key
+fig_h.WindowScrollWheelFcn = @scroll_cb;
 
-%Sets a minimum window width
-if newlims(2)<=newlims(1)
-    newlims(2)=newlims(1)+1e-10;
-end
+%% ------------------------- CALLBACK FUNCTIONS -------------------------
 
-if length(ax)>1
-    ax = ax(1);
-end
+    % --------------------------------------------------------------
+    % Apply zoom when zoom slider moves
+    % width = zoom window width
+    % center = center of pan slider
+    % --------------------------------------------------------------
+    function zoom_slider_cb()
+        width = zslider.Value;
+        center = pslider.Value;
 
-%Set sliderbounds so that you can't go past limits
-if get(pslider,'value')-abs(diff(xlim(ax)))/2<amin
-    newpos=amin+abs(diff(xlim(ax)))/2;
-    set(pslider,'value', newpos);
-    newlims(1)=amin;
-elseif get(pslider,'value')+abs(diff(xlim(ax)))/2>amax
-    newpos=amax-abs(diff(xlim(ax)))/2;
-    set(pslider,'value', newpos);
-    newlims(2)=amax;
-end
+        % Compute tentative new limits
+        newlims = center + width/2*[-1 1];
 
-%Compute the new limits
-if strcmpi(dir,'x')
-    set(ax,'xlim',newlims);
-    set(pslider,'sliderstep',diff(xlim)/amax*[.5 1]);
-else
-    set(ax,'ylim',newlims);
-    set(pslider,'sliderstep',diff(ylim)/amax*[.5 1]);
-end
+        % Keep limits within bounds
+        newlims = constrain_limits(newlims,pslider.Min,pslider.Max,width);
 
-zedit.String = num2str(zslider.Value);
-pedit.String = num2str(pslider.Value);
-
-if ~isempty(zoom_fcn)
-    feval(zoom_fcn);
-end
-
-%-----------------------------------------------------------
-%           CALLBACK TO HANDLE TIME SCALE SCROLL
-%-----------------------------------------------------------
-function pan_slider(ax, pslider, pedit, dir, pan_fcn)
-amin=get(pslider,'min');
-amax=get(pslider,'max');
-
-if length(ax)>1
-    ax = ax(1);
-end
-
-%Set the limits to the slider value center
-if strcmpi(dir,'x')
-    %Set sliderbounds so that you can't go past limits
-    if get(pslider,'value')-abs(diff(xlim(ax)))/2<amin
-        set(pslider,'value',amin+abs(diff(xlim(ax)))/2);
-    elseif get(pslider,'value')+abs(diff(xlim(ax)))/2>amax
-        set(pslider,'value',amax-abs(diff(xlim(ax)))/2);
-    end
-
-    set(ax, 'xlim', get(pslider,'value')+[-1 1]*abs(diff(xlim(ax)))/2);
-else
-    %Set sliderbounds so that you can't go past limits
-    if get(pslider,'value')-abs(diff(ylim(ax)))/2<amin
-        set(pslider,'value',amin+abs(diff(ylim(ax)))/2);
-    elseif get(pslider,'value')+abs(diff(ylim(ax)))/2>amax
-        set(pslider,'value',amax-abs(diff(ylim(ax)))/2);
-    end
-    set(ax, 'ylim', get(pslider,'value')+[-1 1]*abs(diff(ylim(ax)))/2);
-end
-
-pedit.String = num2str(pslider.Value);
-
-if ~isempty(pan_fcn)
-    feval(pan_fcn);
-end
-
-%-----------------------------------------------------------
-%           CALLBACK TO HANDLE TIME EDIT ZOOM
-%-----------------------------------------------------------
-function zoom_edit(ax, zslider, pslider, zedit, pedit, dir, zoom_fcn)
-value = str2double(zedit.String);
-
-amin=get(zslider,'min');
-amax=get(zslider,'max');
-value = max(min(value,amax),amin);
-
-zslider.Value = value;
-zoom_slider(ax, zslider, pslider, zedit, pedit, dir,zoom_fcn);
-
-%-----------------------------------------------------------
-%           CALLBACK TO HANDLE TIME EDIT PAN
-%-----------------------------------------------------------
-function pan_edit(ax, pslider, pedit, dir, pan_fcn)
-value = str2double(pedit.String);
-
-amin=get(pslider,'min');
-amax=get(pslider,'max');
-value = max(min(value,amax),amin);
-
-pslider.Value = value;
-pan_slider(ax, pslider, pedit, dir, pan_fcn);
-
-
-%-----------------------------------------------------------
-%           CALLBACK TO HANDLE SCROLL WHEEL
-%-----------------------------------------------------------
-function figScroll(~,callbackdata,ax, zslider, pslider, zedit, pedit, dir, zoom_fcn, pan_fcn)
-if length(ax)>1
-    ax = ax(1);
-end
-
-handle=guidata(get(ax,'parent'));
-
-%Scroll if shift not pressed
-if ~(handle.shift_down)
-    amin=get(pslider,'min');
-    amax=get(pslider,'max');
-    if callbackdata.VerticalScrollCount > 0
-        set(pslider,'value',min(get(pslider,'value')*(1+.025*callbackdata.VerticalScrollAmount),amax));
-       pan_slider(ax, pslider, pedit, dir, pan_fcn);
-    elseif callbackdata.VerticalScrollCount < 0
-        set(pslider,'value',max(get(pslider,'value')*(1-.025*callbackdata.VerticalScrollAmount),amin));
-        pan_slider(ax, pslider, pedit, dir, pan_fcn);
-    end
-    %Zoom if shift is pressed
-else
-    amin=get(zslider,'min');
-    amax=get(zslider,'max');
-    if callbackdata.VerticalScrollCount > 0
-        set(zslider,'value',max(get(zslider,'value')*(1-.025*callbackdata.VerticalScrollAmount),amin));
-        zoom_slider(ax, zslider, pslider, zedit, pedit, dir,zoom_fcn);
-    elseif callbackdata.VerticalScrollCount < 0
-        set(zslider,'value',min(get(zslider,'value')*(1+.025*callbackdata.VerticalScrollAmount),amax));
-        zoom_slider(ax, zslider, pslider, zedit, pedit, dir,zoom_fcn);
-    end
-end
-
-%-----------------------------------------------------------
-%           SCROLL AND ZOOM WITH KEYS
-%-----------------------------------------------------------
-function handle_keys(~,event,ax, zslider, pslider, zedit, pedit, dir, zoom_fcn, pan_fcn)
-if length(ax)>1
-    ax = ax(1);
-end
-handle=guidata(get(ax,'parent'));
-
-%Check if shift is bing pressed
-handle.shift_down=(strcmpi(event.Key,'shift'));
-
-winsize = get(zslider,'value')*2;
-pos = get(pslider,'value');
-pmax = get(pslider,'max');
-pmin = get(pslider,'min');
-zmax = get(zslider,'max');
-zmin = get(zslider,'min');
-
-switch event.Key
-    %Scroll left
-    case 'rightarrow'
-        pnew = pos+winsize;
-        set(pslider,'value',min(pnew,pmax));
-        pan_slider(ax, pslider, pedit, dir, pan_fcn);
-    %Scroll right
-    case 'leftarrow'
-        pnew = pos-winsize; 
-        set(pslider,'value',max(pnew,pmin));
-        pan_slider(ax, pslider, pedit, dir, pan_fcn);
-    %Zoom in
-    case 'downarrow'
-        set(zslider,'value',max(get(zslider,'value')*(1-.025),zmin));
-        zoom_slider(ax, zslider, pslider, zedit, pedit, dir,zoom_fcn);
-   %Zoom out
-    case 'uparrow'
-        set(zslider,'value',min(get(zslider,'value')*(1+.025),zmax));
-        zoom_slider(ax, zslider, pslider, zedit, pedit, dir,zoom_fcn);
-    case 'z'
-        %Get the initials of the scorer to be used for saving
-        prompt={'Enter Window Size:';};
-        name='Set Window Size';
-        numlines=1;
-        defaultanswer={''};
-        answer=inputdlg(prompt,name,numlines,defaultanswer);
-
-        if isempty(answer)
-            return;
+        % Convert back to datetime if needed
+        if isdataax
+            axlims = dt_min + seconds(newlims);
+        else
+            axlims = newlims;
         end
 
-        new_width = str2double(answer{1});
-        if isnan(new_width)
-            return;
+        % Apply limits
+        if strcmpi(dir,'x')
+            ax.XLim = axlims;
+        else
+            ax.YLim = axlims;
         end
 
-        set(zslider,'value',new_width);
-        zoom_slider(ax, zslider, pslider, zedit, pedit, dir,zoom_fcn);
+        prev_zval = zslider.Value;
+        update_edits();
+
+        if ~isempty(zoom_fcn), feval(zoom_fcn); end
+    end
+
+    % --------------------------------------------------------------
+    % Apply pan when pan slider moves
+    % --------------------------------------------------------------
+    function pan_slider_cb()
+        center = pslider.Value;
+        width = zslider.Value;
+
+        % Compute tentative new limits
+        newlims = center + width/2*[-1 1];
+
+        % Constrain within axis limits
+        newlims = constrain_limits(newlims,pslider.Min,pslider.Max,width);
+
+        % Convert back to datetime if necessary
+        if isdataax
+            axlims = dt_min + seconds(newlims);
+        else
+            axlims = newlims;
+        end
+
+        % Apply
+        if strcmpi(dir,'x')
+            ax.XLim = axlims;
+        else
+            ax.YLim = axlims;
+        end
+
+        prev_pval = pslider.Value;
+        update_edits();
+
+        if ~isempty(pan_fcn), feval(pan_fcn); end
+    end
+
+%% ------------------------- ZOOM EDIT CALLBACK (WITH WARNING) -------------------------
+    function zoom_edit_cb()
+        str = zedit.String;
+        try
+            % Must be a duration string (HH:MM:SS)
+            dur = duration(str);
+            val = seconds(dur);
+        catch
+            warning(['Invalid Zoom value. ', ...
+                     'Zoom must be entered as a duration in the format HH:MM:SS.']);
+            val = prev_zval;
+        end
+
+        % Clamp and apply
+        val = min(max(val, zslider.Min), zslider.Max);
+        zslider.Value = val;
+        prev_zval = val;
+        zoom_slider_cb();
+    end
+
+%% ------------------------- PAN EDIT CALLBACK (WITH WARNING) -------------------------
+    function pan_edit_cb()
+        str = pedit.String;
+        try
+            % Must match exact datetime format
+            dt = datetime(str,'InputFormat','MM/dd/yy HH:mm:ss');
+            val = seconds(dt - dt_min);
+        catch
+            warning(['Invalid Pan value. ', ...
+                     'Pan must be entered in the format MM/DD/YY HH:mm:ss.']);
+            val = prev_pval;
+        end
+
+        % Clamp + apply
+        val = min(max(val, pslider.Min), pslider.Max);
+        pslider.Value = val;
+        prev_pval = val;
+        pan_slider_cb();
+    end
+
+%% ------------------------- UPDATE EDIT FIELD DISPLAY -------------------------
+    function update_edits()
+        if isdataax
+            % Zoom: duration, formatted as hh:mm:ss
+            zedit.String = char(duration(0,0,zslider.Value,'Format','hh:mm:ss'));
+
+            % Pan: absolute datetime
+            pedit.String = char(dt_min + seconds(pslider.Value),'MM/dd/yy HH:mm:ss');
+        else
+            zedit.String = num2str(zslider.Value);
+            pedit.String = num2str(pslider.Value);
+        end
+    end
+
+%% ------------------------- LIMIT CONSTRAINT HELPER -------------------------
+    function newlims = constrain_limits(lims,minval,maxval,width)
+        % Ensure pan/zoom region stays within required bounds
+        if lims(1) < minval
+            newlims = [minval minval+width];
+        elseif lims(2) > maxval
+            newlims = [maxval-width maxval];
+        else
+            newlims = lims;
+        end
+    end
+
+%% ------------------------- SCROLL WHEEL HANDLER -------------------------
+handle = struct('shift_down',false);
+
+    function scroll_cb(~,evt)
+        % Do nothing if user is editing a textbox
+        obj = gco;
+        if isa(obj,'matlab.ui.control.UIControl') && strcmp(obj.Style,'edit')
+            return
+        end
+
+        % Zoom when Shift is held
+        if handle.shift_down
+            val = zslider.Value*(1 - 0.025*evt.VerticalScrollCount);
+            zslider.Value = min(max(val,zslider.Min),zslider.Max);
+            zoom_slider_cb();
+        else
+            % Pan normally
+            val = pslider.Value*(1 - 0.025*evt.VerticalScrollCount);
+            pslider.Value = min(max(val,pslider.Min),pslider.Max);
+            pan_slider_cb();
+        end
+    end
+
+%% ------------------------- KEYBOARD ARROWS HANDLER -------------------------
+    function handle_keys(~,evt)
+        % Ignore keypresses while editing textboxes
+        obj = gco;
+        if isa(obj,'matlab.ui.control.UIControl') && strcmp(obj.Style,'edit')
+            return
+        end
+
+        % Detect Shift state
+        handle.shift_down = strcmpi(evt.Key,'shift');
+
+        % Step size proportional to zoom width
+        step = zslider.Value*2;
+
+        switch evt.Key
+            case 'rightarrow'
+                pslider.Value = min(pslider.Value+step, pslider.Max);
+                pan_slider_cb();
+            case 'leftarrow'
+                pslider.Value = max(pslider.Value-step, pslider.Min);
+                pan_slider_cb();
+            case 'uparrow'
+                zslider.Value = min(zslider.Value*1.025, zslider.Max);
+                zoom_slider_cb();
+            case 'downarrow'
+                zslider.Value = max(zslider.Value*0.975, zslider.Min);
+                zoom_slider_cb();
+        end
+    end
+
+%% ------------------------- SHIFT KEY RELEASE -------------------------
+    function key_off(~,~)
+        handle.shift_down = false;
+    end
 
 end
-
-guidata(gcf,handle);
-
-%-----------------------------------------------------------
-%                TURN OFF SHIFT
-%-----------------------------------------------------------
-function key_off(~,~)
-handle=guidata(gcf);
-handle.shift_down=false;
-guidata(gcf,handle);
