@@ -643,7 +643,7 @@ classdef DYNAMO < handle
             end
 
             % Create main menu
-            mSettings = uimenu(fig, 'Text', 'Batch Settings');
+            mSettings = uimenu(fig, 'Text', 'DYNAM-O Settings');
          
             % Create submenu items
             uimenu(mSettings, 'Text', 'Load DYNAM-O Settings...', ...
@@ -651,9 +651,6 @@ classdef DYNAMO < handle
          
             uimenu(mSettings, 'Text', 'Save DYNAM-O Settings...', ...
                 'MenuSelectedFcn', @saveSettingsCallback);
-
-            uimenu(mSettings, 'Text', 'Upload File List...', ...
-                'MenuSelectedFcn', @uploadFileListCallback);
          
             % --- Callback functions ---
             function loadSettingsCallback(~, ~)
@@ -665,34 +662,6 @@ classdef DYNAMO < handle
                 uialert(fig, 'Save DYNAM-O Settings selected.', 'Save');
                 % Add your code to save settings here
             end
-
-            % function uploadFileListCallback(~, ~)
-            %     uialert(fig, 'Upload File List Selected.', 'Upload');
-            % 
-            %     %Select files of a type from a given subfolder
-            % 
-            %     %Define file type (e.g. EDF, CSV)
-            %     ftype_str = '.m'; 
-            % 
-            %     %Have the user select the base directory
-            %     base_dir = uigetdir;
-            % 
-            %     %Grab all files recursively from the base directory
-            %     fname = dir([base_dir '/**']);
-            % 
-            %     %Find the files of the specified filetype
-            %     inds = cellfun(@(x)endsWith(x,ftype_str,"IgnoreCase",true),{fname.name});
-            % 
-            %     %Throw a warning if no files found
-            %     if ~any(inds)
-            %         warning('No files found')
-            %         return;
-            %     end
-            % 
-            %     %Grab all selected files
-            %     selected_files = {fname(inds).name}';
-            % 
-            % end
 
             % Basic option configurations (no changes)
             basic_configs = {
