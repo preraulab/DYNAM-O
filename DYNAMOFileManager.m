@@ -180,7 +180,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         consolelog_fid
 
         % Misc UI
-        pb % progress bar
+        progress_bar % progress bar
 
         % UI dimensions
         WindowWidth = 1400
@@ -213,14 +213,12 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             if ~iscell(filePaths), filePaths={filePaths}; end
             app.DataList = [app.DataList, filePaths];
             updateDataListBox(app);
-            %updateRunBatchButton(app);
         end
 
         function addStagingFiles(app, filePaths)
             if ~iscell(filePaths), filePaths={filePaths}; end
             app.StagingList = [app.StagingList, filePaths];
             updateStagingListBox(app);
-            %updateRunBatchButton(app);
         end
 
         function [dataFiles, stagingFiles] = getFileLists(app)
@@ -327,9 +325,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             uibutton(app.DataButtonGroup,'push','Position',[3*app.ButtonWidth+20,5,app.ButtonWidth,app.ButtonHeight],...
                 'Text','','Icon',strcat(app.icon_filepath,'garbage.png'),'tooltip','Remove File','ButtonPushedFcn',@app.DataRemoveButtonPushed);
             uibutton(app.DataButtonGroup,'push','Position',[4*app.ButtonWidth+25,5,app.ButtonWidth,app.ButtonHeight],...
-                'Text','','Icon',strcat(app.icon_filepath,'up_arrow.png'),'tooltip','Browse files up','ButtonPushedFcn',@app.DataMoveUpButtonPushed);
+                'Text','','Icon',strcat(app.icon_filepath,'up_arrow.png'),'tooltip','Move File Up','ButtonPushedFcn',@app.DataMoveUpButtonPushed);
             uibutton(app.DataButtonGroup,'push','Position',[5*app.ButtonWidth+30,5,app.ButtonWidth,app.ButtonHeight],...
-                'Text','','Icon',strcat(app.icon_filepath,'down_arrow.png'),'tooltip','Browse files down','ButtonPushedFcn',@app.DataMoveDownButtonPushed);
+                'Text','','Icon',strcat(app.icon_filepath,'down_arrow.png'),'tooltip','Move File Down','ButtonPushedFcn',@app.DataMoveDownButtonPushed);
 
             %%%%%%%%%%%%%%%%%%%%%%
             % STAGING FILE PANEL %
@@ -351,7 +349,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % Interact buttons
             app.StagingButtonGroup = uibuttongroup(app.StagingPanel,'Position',[15,10,panelWidth-30,35],'BorderType','none');
-            app.ButtonWidth = (panelWidth-60)/5;
+            app.ButtonWidth = (panelWidth-60)/6;
             uibutton(app.StagingButtonGroup,'push','Position',[5,5,app.ButtonWidth,app.ButtonHeight], ...
                 'Text','','Icon',strcat(app.icon_filepath,'add_file.png'),'tooltip','Add File','ButtonPushedFcn',@app.StagingAddFileButtonPushed);
             uibutton(app.StagingButtonGroup,'push','Position',[app.ButtonWidth+10,5,app.ButtonWidth,app.ButtonHeight], ...
@@ -361,9 +359,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             uibutton(app.StagingButtonGroup,'push','Position',[3*app.ButtonWidth+20,5,app.ButtonWidth,app.ButtonHeight], ...
                 'Text','','Icon',strcat(app.icon_filepath,'garbage.png'),'tooltip','Remove File','ButtonPushedFcn',@app.StagingRemoveButtonPushed);
             uibutton(app.StagingButtonGroup,'push','Position',[4*app.ButtonWidth+25,5,app.ButtonWidth,app.ButtonHeight], ...
-                'Text','','Icon',strcat(app.icon_filepath,'up_arrow.png'),'tooltip','Browse files up','ButtonPushedFcn',@app.StagingMoveUpButtonPushed);
+                'Text','','Icon',strcat(app.icon_filepath,'up_arrow.png'),'tooltip','Move File Up','ButtonPushedFcn',@app.StagingMoveUpButtonPushed);
             uibutton(app.StagingButtonGroup,'push','Position',[5*app.ButtonWidth+30,5,app.ButtonWidth,app.ButtonHeight], ...
-                'Text','','Icon',strcat(app.icon_filepath,'down_arrow.png'),'tooltip','Browse files down','ButtonPushedFcn',@app.StagingMoveDownButtonPushed);
+                'Text','','Icon',strcat(app.icon_filepath,'down_arrow.png'),'tooltip','Move File Down','ButtonPushedFcn',@app.StagingMoveDownButtonPushed);
 
             %%%%%%%%%%%%%%%%%%%%%%%%%
             % RUNTIME OPTIONS PANEL %
@@ -397,7 +395,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             %%% CHANNEL INPUT %%%
             app.ChannelHelp = uilabel(app.RuntimeOptionsPanel,'Text','Enter a comma separated list of channels to be run.',...
-                'Position',[100, panelHeight-70, panelWidth-20,20],'FontAngle','italic','FontSize',10);
+                'Position',[100, panelHeight-70, panelWidth-20,20],'FontAngle','italic','FontSize',13);
 
             % Create ChannelEditFieldLabel
             app.ChannelEditFieldLabel = uilabel(app.RuntimeOptionsPanel);
@@ -544,23 +542,25 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.UnknownEditField.Value = 'Unk, U, Unknown, 0';
 
             app.StagesHelp = uilabel(app.StagingOptionsInputPanel,'Text',{'Stages should be comma separated','lists of all valid stage identifiers in','the scoring/annotations file.'},...
-                'Position',[200,0, panelWidth/2,80],'FontAngle','italic','FontSize',10,'HorizontalAlignment','center');
+                'Position',[200,0, panelWidth/2,80],'FontAngle','italic','FontSize',13,'HorizontalAlignment','center');
 
 
             %%%%%%%% SAVING SUBPANEL %%%%%%%%
             app.ypos = app.SavingOptionsPanel.Position(4)-80; spacing = 30;
 
+            lwidth = 150;
+
             % Data saving
-            app.SavePeakStatsCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','Peak Stats Tables','tooltip','Create table of all detected peaks from the spectrogram','Position',[10,app.ypos,panelWidth-20,22]);
-            app.SaveSOPHsCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','SO-Power Histogram','tooltip','Save matrix with a slow oscillation power histogram','Position',[10,app.ypos-spacing,panelWidth-20,22]);
-            app.SaveParamBasisCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','Parametric Basis','tooltip','ASK MIKE','Position',[10,app.ypos-2*spacing,panelWidth-20,22]);
-            app.SaveSplineBasisCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','Spline Basis','tooltip','ASK MIKE','Position',[10,app.ypos-3*spacing,panelWidth-20,22]);
-            app.SaveAuxDataCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','Aux Data','tooltip','Save artifacts, {insert list Sophie}','Position',[10,app.ypos-4*spacing,panelWidth-20,22]);
+            app.SavePeakStatsCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','Peak Stats Tables','tooltip','Create table of all detected peaks from the spectrogram','Position',[10,app.ypos,lwidth,22]);
+            app.SaveSOPHsCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','SO-Power Histogram','tooltip','Save matrix with a slow oscillation power histogram','Position',[10,app.ypos-spacing,lwidth,22]);
+            app.SaveParamBasisCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','Parametric Basis','tooltip','Save table with mode parameters','Position',[10,app.ypos-2*spacing,lwidth,22]);
+            app.SaveSplineBasisCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','Spline Basis','tooltip','Save table spline parameters','Position',[10,app.ypos-3*spacing,90,22]);
+            app.SaveAuxDataCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','Aux Data','tooltip','Save artifacts, {insert list Sophie}','Position',[10,app.ypos-4*spacing,90,22]);
 
             % Image saving
-            app.SaveDataSummaryCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','Data Summary Images','tooltip','Create summary figure with spectrogram, peaks, power and phase histograms','Position',[panelWidth/2,app.ypos,panelWidth-20,22]);
-            app.SaveParamImagesCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','Parametric Basis Images','tooltip','ASK MIKE','Position',[panelWidth/2,app.ypos-spacing,panelWidth-20,22]);
-            app.SaveSplineImagesCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','Spline Basis Images','tooltip','ASK MIKE','Position',[panelWidth/2,app.ypos-2*spacing,panelWidth-20,22]);
+            app.SaveDataSummaryCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','Data Summary Figures','tooltip','Create summary figure with spectrogram, peaks, power and phase histograms','Position',[panelWidth/2,app.ypos,lwidth,22]);
+            app.SaveParamImagesCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','Parametric Basis Figures','tooltip','ASK MIKE','Position',[panelWidth/2,app.ypos-spacing,lwidth+20,22]);
+            app.SaveSplineImagesCheckBox = uicheckbox(app.SavingOptionsPanel,'Text','Spline Basis Figures','tooltip','ASK MIKE','Position',[panelWidth/2,app.ypos-2*spacing,lwidth,22]);
 
             app.OutputOptionFieldLabel = uilabel(app.SavingOptionsPanel,'HorizontalAlignment','right');
             app.OutputOptionFieldLabel.Position = [(panelWidth/2 + 35) app.ypos-130 90 22];
@@ -576,20 +576,27 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             label_height = 220;
 
             app.DataLabel = uilabel(app.SavingOptionsPanel);
-            app.DataLabel.Interpreter = 'latex';
-            app.DataLabel.Position = [50 label_height 32 22];
-            app.DataLabel.Text = '\underline{Data}';
+            app.DataLabel.FontSize = 12;
+            app.DataLabel.Position = [10 label_height 75 22];
+            app.DataLabel.Text = 'Data to Save';
+
+            uipanel(app.SavingOptionsPanel, ...
+                'Position', [ app.DataLabel.Position(1),  app.DataLabel.Position(2)-.25,  app.DataLabel.Position(3), 1], ...
+                'BackgroundColor',  app.DataLabel.FontColor, ...
+                'BorderType', 'none');
 
             app.FigureLabel = uilabel(app.SavingOptionsPanel);
-            app.FigureLabel.Interpreter = 'latex';
-            app.FigureLabel.Position = [250 label_height 45 22];
-            app.FigureLabel.Text = '\underline{Figures}';
+            app.FigureLabel.FontSize = 12;
+            app.FigureLabel.Position = [215 label_height 90 22];
+            app.FigureLabel.Text = 'Figures to Save';
 
-            % app.OutputLabel = uilabel(app.RightPanelBottom,'Text','Output Options','FontWeight','bold',...
-            %     'HorizontalAlignment','center','Position',[25 50 panelWidth-20 22]);
-            %
+            uipanel(app.SavingOptionsPanel, ...
+                'Position', [ app.FigureLabel.Position(1),  app.FigureLabel.Position(2)-.25,  app.FigureLabel.Position(3)-.5, 1], ...
+                'BackgroundColor',  app.FigureLabel.FontColor, ...
+                'BorderType', 'none');
+
             app.OutputDirLabel = uilabel(app.SavingOptionsPanel,'Text','Select output directory and choose what to save.',...
-                'Position',[20 42 panelWidth-20 22],'FontAngle','italic','FontSize',10);
+                'Position',[20 42 panelWidth-20 22],'FontAngle','italic','FontSize',12);
 
             app.OutputDirEditField = uieditfield(app.SavingOptionsPanel,'text','Position',[20 15 panelWidth-110 25],...
                 'ValueChangedFcn',@(src,event) outputDirChanged(app));
@@ -603,15 +610,13 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % Create TextAreaLabel
             app.TextAreaLabel = uilabel(app.UIFigure);
             app.TextAreaLabel.HorizontalAlignment = 'right';
-            %app.TextAreaLabel.Position = [app.WindowWidth-280 55 60 22];
             app.TextAreaLabel.Position = [0,55,60,22];
             app.TextAreaLabel.Text = 'Status:';
 
             % Create TextArea
             app.TextArea = uitextarea(app.UIFigure,'Editable','off');
-            %app.TextArea.Position = [app.WindowWidth-270 15 250 40];
             app.TextArea.Position = [20,15,350,40];
-            app.TextArea.Value = {'Nothing running.'};
+            app.TextArea.Value = {'Add files, select settings, and press ''Run Batch'' to run'};
 
 
         end
@@ -635,9 +640,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
         function createProgressBar(app)
             N = length(app.ChannelList) * length(app.DataList);
-            app.pb = SmoothProgressBar(app.UIFigure,N,[app.WindowWidth-250,10,180,60]);
-            %pb = app.ProgressBar();
-            app.pb.start();
+            app.progress_bar = SmoothProgressBar(app.UIFigure,N,[app.WindowWidth-250,10,180,60]);
+            app.progress_bar.start();
         end
 
         %% ================== HELP ==================
@@ -652,10 +656,17 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
         %% ================== BUTTON CALLBACKS ==================
         function loadFileListCallback(app,varargin)
-            uialert(app.UIFigure, 'Load EDF File List Selected.', 'Load');
+            % uialert(app.UIFigure, 'Load EDF File List Selected.', 'Load');
 
             %Have the user select the base directory
-            [filename,filepath] = uigetfile;
+            [filename, filepath] = uigetfile( ...
+                {'*.txt;*.csv;*.tsv;*.dat;*.lst', 'Text Files (*.txt, *.csv, *.tsv, *.dat, *.lst)'; ...
+                '*.*', 'All Files (*.*)'}, ...
+                'Select EDF File Path/Name List');
+
+            if filename==0
+                return;
+            end
 
             %Grab all files recursively from the base directory
             temp = fileread([filepath,filename]);
@@ -665,10 +676,17 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         end
 
         function loadStagingListCallback(app,varargin)
-            uialert(app.UIFigure, 'Load EDF File List Selected.', 'Load');
+            % uialert(app.UIFigure, 'Load EDF File List Selected.', 'Load');
 
             %Have the user select the base directory
-            [filename,filepath] = uigetfile;
+            [filename, filepath] = uigetfile( ...
+                {'*.txt;*.csv;*.tsv;*.dat;*.lst', 'Text Files (*.txt, *.csv, *.tsv, *.dat, *.lst)'; ...
+                '*.*', 'All Files (*.*)'}, ...
+                'Select Stage File Path/Name List');
+
+            if filename==0
+                return;
+            end
 
             %Grab all files recursively from the base directory
             temp = fileread([filepath,filename]);
@@ -687,6 +705,10 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
         function DataAddFolderButtonPushed(app,~,~)
             folder = uigetdir(pwd,'Select Data Folder');
+            if folder == 0
+                return;
+            end
+
             S = dir(strcat(folder,'/*.edf'));
             files = strcat({S.folder},'/',{S.name});
             if ~isempty(files)
@@ -720,6 +742,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
         function StagingAddFolderButtonPushed(app,~,~)
             folder = uigetdir(pwd,'Select Staging Folder');
+
+            if folder == 0
+                return;
+            end
+
             S = dir(strcat(folder,'/*.csv'));
             if size(S,1)==0
                 S = dir(strcat(folder,'/*.txt'));
@@ -1040,12 +1067,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 app.SOPHs = load(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat')).SOPHs;
             end
 
-            % if isempty(app.SOPHs)
-            %     app.anything_run = 1;
-            %     app.TextArea.Value = strcat('Running DYNAMO on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
-            %     app.run();
-            % end
-
             %% TO-DO: Check if param basis already exists
             app.TextArea.Value = strcat('Running parameter basis fit on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
             app.fitParamBasis();
@@ -1214,7 +1235,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             updateChannelInput(app)
 
             % Create progress bar
-            createProgressBar(app)
+            if isempty(app.progress_bar)
+                createProgressBar(app)
+            else
+                app.progress_bar.refresh;
+            end
 
             %%%%%%%%%%%%%%%%%%%%%%%%%%%
             % MAIN LOOP TO RUN DYNAMO %
@@ -1294,14 +1319,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
                     % Update progress bar
                     app.curr_iteration = app.curr_iteration+1;
-                    app.pb.updateIteration(app.curr_iteration);
+                    app.progress_bar.updateIteration(app.curr_iteration);
 
                 end
 
             end
 
             % Close files and graphics
-            app.pb.complete();
+            app.progress_bar.complete();
             %set(app.pb,'Visible','off');
             fclose(app.consolelog_fid);
             fclose(app.runlog_fid);
