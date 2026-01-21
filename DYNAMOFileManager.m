@@ -306,8 +306,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'FontWeight','bold','HorizontalAlignment','center',...
                 'Position',[10,panelHeight-40,panelWidth-20,20]);
 
-            app.DataDirectionLabel = uilabel(app.DataPanel,'Text','Add your primary data files (EDF format). Use buttons to remove/reorder.',...
-                'Position',[10,panelHeight-70,panelWidth-20,20],'FontAngle','italic','FontSize',10);
+            app.DataDirectionLabel = uilabel(app.DataPanel,'Text','Add your PSG data files (EDF format). Use buttons to remove/reorder.',...
+                'Position',[10,panelHeight-70,panelWidth-20,20],'FontAngle','italic','FontSize',13);
 
             app.DataListBox = uilistbox(app.DataPanel,'Position',[10,50,panelWidth-20,panelHeight-120],...
                 'Multiselect','on','Items',{},'Value',{});
@@ -342,7 +342,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Position',[10,panelHeight-40,panelWidth-20,20]);
 
             app.StagingDirectionLabel = uilabel(app.StagingPanel,'Text','Add staging files (CSV/TXT). Ensure order matches data files.',...
-                'Position',[10,panelHeight-70,panelWidth-20,20],'FontAngle','italic','FontSize',10);
+                'Position',[10,panelHeight-70,panelWidth-20,20],'FontAngle','italic','FontSize',13);
 
             app.StagingListBox = uilistbox(app.StagingPanel,'Position',[10,50,panelWidth-20,panelHeight-120],...
                 'Multiselect','on','Items',{},'Value',{});
