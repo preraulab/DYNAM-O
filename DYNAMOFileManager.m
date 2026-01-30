@@ -1,4 +1,5 @@
 classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
+% Add documentation on how to open this GUI
 
     properties (Access = public)
 
@@ -142,7 +143,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         output_param_name = ''
         output_spline_name = ''
         date_time_save = ''
-        icon_filepath = 'icons/'
+        icon_filepath = strrep(which('DYNAMOFileManager'), 'DYNAMOFileManager.m', 'icons/')
 
         % User inputs
         channel
@@ -622,7 +623,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         end
 
         function createDYNAMOSettingsTab(app)
-            app.DYNAMOOptionsApp(false, app.UIFigure, app.DYNAMOSettingsTab,false)
+            app.DYNAMOOptionsApp(false, app.UIFigure, app.DYNAMOSettingsTab,false);
         end
 
         function createMainControls(app)
