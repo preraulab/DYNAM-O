@@ -35,7 +35,7 @@ classdef DYNAMO < handle
     %       param_basis_*_options, spline_basis_*_options
     %
     %   Methods:
-    %       runDYNAMO(...)         - run DYNAM-O pipeline. Compute TF-peaks and SOPHs
+    %       runDYNAMO(...)        - run DYNAM-O pipeline. Compute TF-peaks and SOPHs
     %       updateOptions(...)    - update baseline/detection/SOPH options
     %       displaySummaryPlot()  - plot SOPH and TF peak summary figure
     %       displayTFPeaks()      - plot raw spectrogram and overlaid peaks
