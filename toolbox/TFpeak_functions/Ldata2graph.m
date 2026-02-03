@@ -157,8 +157,9 @@ for ii = 1:num_rgns
     j_full = j_sub+j_min-1;
 
     % Convert to linear indicies
-    Lborders{ii} = sub2ind([num_rows num_cols],i_full,j_full);
-
+    %Lborders{ii} = sub2ind([num_rows num_cols],i_full,j_full);
+    Lborders{ii} = i_full + (j_full-1)*num_rows;
+    
     %******************************
     % Determine current neighbors *
     %******************************
