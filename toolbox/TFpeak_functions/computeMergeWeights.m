@@ -125,7 +125,11 @@ function e = edgeWeightEqual(rgn_ii,bnds_ii,rgn_jj,bnds_jj,data)
 % Take max of weight(ii,jj) and weight(jj,ii)
 
 % fastest version to get intersection of "to region" boundary with "from region"
-adj_bnds = bnds_ii(ismember(bnds_ii,bnds_jj));
+% adj_bnds = bnds_ii(ismember(bnds_ii,bnds_jj));
+
+sorted_jj = sort(bnds_jj);
+adj_mask  = ismembc(bnds_ii, sorted_jj);
+adj_bnds  = bnds_ii(adj_mask);
 
 %Max data value of the adjacent boundary pixels
 max_adj = max(data(adj_bnds));
