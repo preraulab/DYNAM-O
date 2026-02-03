@@ -156,8 +156,11 @@ ttotal = datetime('now');
 
 if isempty(stats_table)
     % If no stats table provided
+    tic;
     [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts]= computeTFPeaks(data, Fs, stage_times, stage_vals,...
         'time_range', time_range, 'verbose', verbose, detection_options, baseline_options);
+    disp('HERE!!!!!!!')
+    toc
 else
     % If stats table provided, check to be sure SOPH is requested by output
     assert(nargout > 5, 'Nothing to compute. Must request SOPH output if stats table is inputted.');

@@ -156,8 +156,9 @@ if f_valid_inputs
             j_sub = j_full-(j_min-1);
 
             % Get linear pixel indices in subimage
-            sub_pixels = sub2ind([num_sub_rows num_sub_cols],i_sub,j_sub);
-
+            % sub_pixels = sub2ind([num_sub_rows num_sub_cols],i_sub,j_sub);
+            sub_pixels = i_sub + (j_sub-1)*num_sub_rows;
+            
             %***********************
             % Find cutoff and trim *
             %***********************
