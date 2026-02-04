@@ -63,8 +63,8 @@
 function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runDYNAMO(varargin)
 %%%% Example script showing how to compute time-frequency peaks and SO-power/phase histograms
 %
-% Users are encouraged to edit this script and the data loading boilerplate in runExampleData() 
-% for their specific analysis. This script is provided only as a template for illustrative 
+% Users are encouraged to edit this script and the data loading boilerplate in runExampleData()
+% for their specific analysis. This script is provided only as a template for illustrative
 % purposes on how to use various functions in DYNAM-O in tandem.
 
 %% SYSTEM SETTINGS
