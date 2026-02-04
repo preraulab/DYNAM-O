@@ -158,7 +158,7 @@ if f_valid_inputs
             % Get linear pixel indices in subimage
             % sub_pixels = sub2ind([num_sub_rows num_sub_cols],i_sub,j_sub);
             sub_pixels = i_sub + (j_sub-1)*num_sub_rows;
-            
+
             %***********************
             % Find cutoff and trim *
             %***********************
@@ -280,4 +280,3 @@ if f_valid_inputs
     %     trimmed_regions = regions;
     %     trimmed_borders = cell(1, length(regions));
 end
-

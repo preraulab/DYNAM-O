@@ -55,17 +55,18 @@ for ii = 1:length(b)
     b_lbl_idx = lbls==b(ii);
 
     %Update a to include all the b pixels
+    % regions{a_lbl_idx} = unique([regions{a_lbl_idx}; regions{b_lbl_idx}]);
     regions{a_lbl_idx} = matlab.internal.math.uniquehelper([regions{a_lbl_idx}; regions{b_lbl_idx}], true, true, false);
     regions{b_lbl_idx} = [];
 
     %Update the borders
     if ~isempty(borders)
         % border_a = setxor(border_a, borders{b_lbl_idx});
-        %Stripping down setxor to the key commands
+        % Stripping down setxor to the key commands
         B = borders{b_lbl_idx};
         tfa = ~ismember(border_a,B,'R2012a');
         tfb = ~ismember(B,border_a,'R2012a');
-        border_a = matlab.internal.math.uniquehelper([border_a(tfa);B(tfb)], true,true,false);
+        border_a = matlab.internal.math.uniquehelper([border_a(tfa);B(tfb)], true, true, false);
 
         borders{a_lbl_idx} = border_a;
         borders{b_lbl_idx} = [];
@@ -81,6 +82,7 @@ for ii = 1:length(b)
 
         %Look for regions encircled by the merge
         nbrs = [adj_mat(cnx_b1,2); adj_mat(cnx_b2,1)];
+        % nbrs = setdiff(unique(nbrs),a); % neighbors of b that are not a
         nbrs = setdiff(matlab.internal.math.uniquehelper(nbrs, true, true, false),a); % neighbors of b that are not a
         for jj = 1:length(nbrs)
             cnx1 = adj_mat(:,1)==nbrs(jj);
@@ -107,9 +109,9 @@ cnx_a = adj_mat(:,1)==a | adj_mat(:,2)==a; % a is involved in the pair
 sub_adj_mat = adj_mat(cnx_a,:);
 sub_adj_mat(:,3) = NaN;
 sub_adj_mat = sub_adj_mat(sub_adj_mat(:,1)~=sub_adj_mat(:,2), :); % remove the a-a pairs
-[~,u_idx] = matlab.internal.math.uniquehelper(sort(sub_adj_mat(:,1:2), 2), true, true, true);
 % [~,u_idx] = unique(sort(sub_adj_mat(:,1:2), 2),'rows'); % remove duplicated pairs e.g., a-b, b-a
-%[~,u_idx] = unique(sub_adj_mat(:,1:2),'rows'); % this old line keeps duplicated pairs and is undesirable
+[~,u_idx] = matlab.internal.math.uniquehelper(sort(sub_adj_mat(:,1:2), 2), true, true, true); % remove duplicated pairs e.g., a-b, b-a
+% [~,u_idx] = unique(sub_adj_mat(:,1:2),'rows'); % this old line keeps duplicated pairs and is undesirable
 
 %Update the adjacency matrix with unique pairs involving a
 adj_mat = [adj_mat(~cnx_a,:); sub_adj_mat(u_idx,:)];

@@ -126,7 +126,6 @@ function e = edgeWeightEqual(rgn_ii,bnds_ii,rgn_jj,bnds_jj,data)
 
 % fastest version to get intersection of "to region" boundary with "from region"
 % adj_bnds = bnds_ii(ismember(bnds_ii,bnds_jj));
-
 sorted_jj = sort(bnds_jj);
 adj_mask  = ismembc(bnds_ii, sorted_jj);
 adj_bnds  = bnds_ii(adj_mask);

@@ -153,7 +153,7 @@ addOptional(p, 'trim_vol', detection_options.trim_vol, @(x) validateattributes(x
 addOptional(p, 'dur_max', detection_options.dur_max, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 addOptional(p, 'bw_max', detection_options.bw_max, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 addOptional(p, 'refinement', detection_options.refinement, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
-addOptional(p, 'debug_mode', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+addOptional(p, 'debug_mode', detection_options.debug_mode, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -175,9 +175,6 @@ end
 if isempty(time_range)
     time_range = [min(t_data), max(t_data)];
 end
-
-debug_mode = false;
-
 assert(min(t_data)<max(time_range) & max(t_data)>min(time_range),'Staging times does not overlap at all with data times. Please check the staging input file and/or the EDF header.');
 
 %Set default features

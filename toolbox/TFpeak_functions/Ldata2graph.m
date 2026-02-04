@@ -113,12 +113,12 @@ for ii = 1:num_rgns
     rgn{ii} = region_props(ii).PixelIdxList;
 
     % Convert to row and column coordinates of region pixels
-    %[i_full,j_full] = ind2sub([num_rows,num_cols],rgn{ii});
-    %Optimized ind2sub
+    % [i_full,j_full] = ind2sub([num_rows,num_cols],rgn{ii});
+    % Optimized ind2sub
     ndx = rgn{ii};
     vi = rem(ndx-1, num_rows) + 1;
     j_full = ((ndx - vi)/num_rows + 1);
-    i_full = (vi);
+    i_full = vi;
 
     %**********************************************
     % Convert to subimage for faster computations *
@@ -150,16 +150,16 @@ for ii = 1:num_rgns
     ndx = sub_border;
     vi = rem(ndx-1, siz(1)) + 1;
     j_sub = ((ndx - vi)/siz(1) + 1);
-    i_sub = (vi);
+    i_sub = vi;
 
     % Convert from sub_image coords to back to the original coords
     i_full = i_sub+i_min-1;
     j_full = j_sub+j_min-1;
 
     % Convert to linear indicies
-    %Lborders{ii} = sub2ind([num_rows num_cols],i_full,j_full);
+    % Lborders{ii} = sub2ind([num_rows num_cols],i_full,j_full);
     Lborders{ii} = i_full + (j_full-1)*num_rows;
-    
+
     %******************************
     % Determine current neighbors *
     %******************************
@@ -173,17 +173,15 @@ for ii = 1:num_rgns
     % Retrieve the list of neighbors
     nbr_rgns = matlab.internal.math.uniquehelper(sub_Ldata(msk3), true, true, false);
 
-    %This costly operation can be skipped if no exclusion_val
-    %nbr_rgns = setdiff(nbr_rgns, [0, exclusion_val]);
-    %Optimized setdiff
+    % This costly operation can be skipped if no exclusion_val
+    % nbr_rgns = setdiff(nbr_rgns, [0, exclusion_val]);
+    % Optimized setdiff
     if ~isempty(exclusion_val) || ~any(nbr_rgns)
         b = [0, exclusion_val];
         logUA = ~(ismember(nbr_rgns,b));
         c = nbr_rgns(logUA);
         nbr_rgns = matlab.internal.math.uniquehelper(c,true,true,false);
-        disp('RUNNING!')
     end
-
 
     % Form submatrix of current neighbors list
     nbr_matrs{ii} = [curr_rgn_lbl*ones(length(nbr_rgns),1), nbr_rgns];
@@ -199,17 +197,17 @@ if num_rgns>1
     adj_list = cat(1,nbr_matrs{:});
 
     %Reduce to a undirected graph - only keep unique pairs of neighbors
+    % adj_list = unique(sort(adj_list,2),'rows');
     adj_list = matlab.internal.math.uniquehelper(sort(adj_list,2), true, true, true);
-    %adj_list = unique(sort(adj_list,2),'rows');
-    %adj_list = unique(adj_list,'rows'); %keep as a directed graph
+    % adj_list = unique(adj_list,'rows'); %keep as a directed graph
 end
 
 %****************************************
 % Include border pixels in region lists *
 %****************************************
 for ii = 1:num_rgns
-    rgn{ii} = matlab.internal.math.uniquehelper([rgn{ii}; Lborders{ii}], true, true, false);
     % rgn{ii} = unique([rgn{ii}; Lborders{ii}]);
+    rgn{ii} = matlab.internal.math.uniquehelper([rgn{ii}; Lborders{ii}], true, true, false);
 end
 
 %*******************************************
