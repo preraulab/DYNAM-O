@@ -270,19 +270,19 @@ if ~isempty(downsample_spect)
 end
 
 %%
-    function [i_sub, j_sub] = fastind2sub(siz,ndx)
-        vi = rem(ndx-1, siz(1)) + 1;
-        j_sub = ((ndx - vi)/siz(1) + 1);
-        i_sub = (vi);
-    end
-
-
 %**********************************************************
 % Do not trim regions already below the removal criteria  *
 %**********************************************************
+    function [i_sub, j_sub] = fastind2sub(siz,ndx)
+        vi = rem(ndx-1, siz(1)) + 1;
+        j_sub = ((ndx - vi)/siz(1) + 1);
+        i_sub = vi;
+    end
+
 if dur_min>0 || bw_min>0
     df = y(2)-y(1);
     dt = x(2)-x(1);
+    % [f_inds,t_inds] = cellfun(@(x)ind2sub(size(img),x),regions,'UniformOutput',false);
     [f_inds,t_inds] = cellfun(@(x)fastind2sub(size(img),x),regions,'UniformOutput',false);
     good_inds = cellfun(@(x)(max(x)-min(x))*dt>dur_min,t_inds) & cellfun(@(x)(max(x)-min(x))*df>bw_min,f_inds);
     regions = regions(good_inds);
