@@ -13,7 +13,7 @@ SOPH_options = SOpowerphasehist_opts();
 
 %% DATA SETTINGS
 %Location of example data
-data_fname = 'example_data/example_data.mat';
+data_fname = fullfile(fileparts(which('runDYNAMO')), 'example_data', 'example_data.mat');
 
 if nargin == 0
     data_range = 'segment';

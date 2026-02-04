@@ -73,6 +73,7 @@ function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, art
 %       dur_max (opt):             scalar - maximum duration allowed for a peak. Default = 5 (seconds)
 %       bw_max (opt):              scalar - maximum bandwidth allowed for a peak. Default = 15 (Hz)
 %       refinement (opt):          logical - perform 1Hz refinement on the PeakFrequency feature in stats_table. Default = true
+%       debug_mode (opt):          logical - whether to run runSegmentedData() in serial for-loop instead of parfor. Default = false
 %
 %   Outputs:
 %       stats_table:        table - features of each TFpeak
@@ -175,6 +176,7 @@ end
 if isempty(time_range)
     time_range = [min(t_data), max(t_data)];
 end
+assert(min(t_data)<max(time_range) & max(t_data)>min(time_range),'Staging times does not overlap at all with data times. Please check the staging input file and/or the EDF header.');
 
 %Set default features
 if any(strcmpi(features, 'all'))
@@ -333,7 +335,7 @@ if double_watershed
     end
 
     stats_table = runSegmentedData(spect_masked, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
-        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1, debug_mode);
+        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), debug_mode);
 
     if verbose
         disp(['[2nd] TF peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
