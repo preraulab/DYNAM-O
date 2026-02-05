@@ -161,7 +161,7 @@ if isempty(stats_table)
         'time_range', time_range, 'verbose', verbose, detection_options, baseline_options);
 else
     % If stats table provided, check to be sure SOPH is requested by output
-    assert(nargout > 5, 'Nothing to compute. Must request SOPH output if stats table is inputted.');
+    assert(nargout > 7, 'Nothing to compute. Must request SOPH output if stats table is inputted.');
 
     if verbose
         disp('TF peaks stats table provided. Computing SOPH only.');
@@ -189,7 +189,7 @@ stats_table = computePeakStage(stats_table, stage_times, stage_vals, t_time_rang
 % See SOpowerphaseHistogram() for a full list of optional arguments for
 % finer control of histogram generation
 
-if nargout > 5
+if nargout > 7
     [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, num_peaks_at_freq,...
         SOpower_TIB, SOphase_TIB, ~, ~, hist_peakidx] = SOpowerphaseHistogram(data_time_range, Fs, stats_table.PeakFrequency, stats_table.PeakTime,...
         'stage_times', stage_times, 'stage_vals', stage_vals, 'verbose', verbose, SOPH_options,...
@@ -217,7 +217,7 @@ end
 
 %% PLOT OUTPUT SUMMARY FIGURE
 if plot_on
-    if nargout > 5
+    if nargout > 7
         fh = displaySummaryPlot('stage_times',stage_times, 'stage_vals',stage_vals, 'artifacts',artifacts, 't_time_range',t_time_range,...
             'data',data, 'Fs',Fs, 'time_range',time_range,...
             'SOpower_norm',SOpower_norm, 'SOpower_times',SOpower_times, 'SOpower_norm_method',SOPH_options.SOpower_norm_method,...
@@ -234,12 +234,10 @@ if plot_on
     if save_output_image
         print(fh,'-dpng','-r200',output_fname);
     end
-else
-    fh = [];
 end
 
 %% DIMENSIONALITY REDUCTION OF SO-POWER/PHASE HISTOGRAMS
-if nargout > 5 && (fit_param_basis || fit_spline_basis)
+if nargout > 7 && (fit_param_basis || fit_spline_basis)
     if verbose && (valid_powerhist || valid_phasehist)
         disp('Fitting SOPHs...');
     end
