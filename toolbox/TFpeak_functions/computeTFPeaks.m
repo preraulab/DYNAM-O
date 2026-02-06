@@ -73,6 +73,7 @@ function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, art
 %       dur_max (opt):             scalar - maximum duration allowed for a peak. Default = 5 (seconds)
 %       bw_max (opt):              scalar - maximum bandwidth allowed for a peak. Default = 15 (Hz)
 %       refinement (opt):          logical - perform 1Hz refinement on the PeakFrequency feature in stats_table. Default = true
+%       show_pbar (opt):           logical - whether to display progress bar during runSegmentedData(). Default = true
 %       debug_mode (opt):          logical - whether to run runSegmentedData() in serial for-loop instead of parfor. Default = false
 %
 %   Outputs:
@@ -154,6 +155,7 @@ addOptional(p, 'trim_vol', detection_options.trim_vol, @(x) validateattributes(x
 addOptional(p, 'dur_max', detection_options.dur_max, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 addOptional(p, 'bw_max', detection_options.bw_max, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 addOptional(p, 'refinement', detection_options.refinement, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+addOptional(p, 'show_pbar', detection_options.show_pbar, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'debug_mode', detection_options.debug_mode, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 
 parse(p,varargin{:});
@@ -272,10 +274,10 @@ end
 
 if double_watershed
     [stats_table, regions, borders] = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
-        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), debug_mode);
+        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), show_pbar, debug_mode);
 else
     stats_table = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
-        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), debug_mode);
+        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), show_pbar, debug_mode);
 end
 
 if verbose
@@ -335,7 +337,7 @@ if double_watershed
     end
 
     stats_table = runSegmentedData(spect_masked, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
-        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), debug_mode);
+        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), show_pbar, debug_mode);
 
     if verbose
         disp(['[2nd] TF peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);

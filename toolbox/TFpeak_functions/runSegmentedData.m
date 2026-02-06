@@ -22,6 +22,7 @@ function [stats_table, regions, borders] = runSegmentedData(spect, stimes, sfreq
 %       max_merges: scalar - Maximum number of merges (default: inf)
 %       trim_vol: scalar - Fraction of max volume to keep during trimming (default: 0.8)
 %       f_verb: scalar - Verbosity level, from 0 (silent) to 5 (debug) (default: 1)
+%       show_pbar: logical - Whether to display the progress bar (default: true)
 %       debug_mode: logical - Set to true for single-threaded debug mode (default: false)
 %
 %   Outputs:
@@ -68,6 +69,7 @@ addOptional(p, 'merge_thresh', 8, @(x) isnumeric(x) && isscalar(x));
 addOptional(p, 'max_merges', inf, @(x) isnumeric(x) && isscalar(x));
 addOptional(p, 'trim_vol', 0.8, @(x) isnumeric(x) && isscalar(x) && x >= 0 && x <= 1);
 addOptional(p, 'f_verb', 1, @(x) isnumeric(x) && isscalar(x));
+addOptional(p, 'show_pbar', true, @islogical);
 addOptional(p, 'debug_mode', false, @islogical);
 
 parse(p, spect, stimes, sfreqs, varargin{:});
@@ -123,14 +125,16 @@ borders = cell(n_segs,1);
 computetime = tic;
 
 % Check for parallel processing toolbox and set up loading bar
-v = ver;
-haspar = any(strcmp({v.Name}, 'Parallel Computing Toolbox'));
-if haspar
-    D = parallel.pool.DataQueue;
-    h = waitbar(0, 'Processing Segments...');
-    afterEach(D, @nUpdateWaitbar);
-else
-    h = waitbar(0, 'Processing Segments...');
+if show_pbar
+    v = ver;
+    haspar = any(strcmp({v.Name}, 'Parallel Computing Toolbox'));
+    if haspar
+        D = parallel.pool.DataQueue;
+        h = waitbar(0, 'Processing Segments...');
+        afterEach(D, @nUpdateWaitbar);
+    else
+        h = waitbar(0, 'Processing Segments...');
+    end
 end
 segments_processed = 1;
 
@@ -172,13 +176,17 @@ if ~debug_mode
         end
 
         % Update loading bar
-        if haspar
-            send(D, ii);
-        else
-            h = waitbar(ii/n_segs, [num2str(ii) ' out of ' num2str(n_segs) ' (' num2str((ii/n_segs*100),'%.2f') '%) segments processed...']);
+        if show_pbar
+            if haspar
+                send(D, ii);
+            else
+                h = waitbar(ii/n_segs, [num2str(ii) ' out of ' num2str(n_segs) ' (' num2str((ii/n_segs*100),'%.2f') '%) segments processed...']);
+            end
         end
     end
-    delete(h); % delete loading bar
+    if show_pbar
+        delete(h); % delete loading bar
+    end
 else
     for ii = 1:n_segs
         % Check for valid segments
@@ -198,9 +206,14 @@ else
             borders{ii} = cellfun(@(x)x+pixel_shift(ii),bord,'UniformOutput',false);
         end
 
-        h = waitbar(ii/n_segs, [num2str(ii) ' out of ' num2str(n_segs) ' (' num2str((ii/n_segs*100),'%.2f') '%) segments processed...']);
+        % Update loading bar
+        if show_pbar
+            h = waitbar(ii/n_segs, [num2str(ii) ' out of ' num2str(n_segs) ' (' num2str((ii/n_segs*100),'%.2f') '%) segments processed...']);
+        end
     end
-    delete(h); % delete loading bar
+    if show_pbar
+        delete(h); % delete loading bar
+    end
 end
 
 %Add a parallel friendly waitbar
