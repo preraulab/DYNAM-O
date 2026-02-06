@@ -86,6 +86,7 @@ merge_thresh     = S.merge_thresh;
 max_merges       = S.max_merges;
 trim_vol         = S.trim_vol;
 f_verb           = S.f_verb;
+show_pbar        = S.show_pbar;
 debug_mode       = S.debug_mode;
 
 if debug_mode
@@ -135,6 +136,10 @@ if show_pbar
     else
         h = waitbar(0, 'Processing Segments...');
     end
+else
+    haspar = [];
+    D = [];
+    h = [];
 end
 segments_processed = 1;
 
