@@ -1,7 +1,24 @@
-function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runExampleData(data_range, verbose, run_app)
-if ~exist('verbose', 'var')
-    verbose = false;
+function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runExampleData(data_range, default_verbose, run_app, varargin)
+%% PARSE INPUTS
+p = inputParser;
+
+addOptional(p, 'skip_SOPH', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+addOptional(p, 'plot_on', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+addOptional(p, 'verbose', default_verbose, @(x) validateattributes(x, {'logical', 'numeric'}, {'scalar'}));
+addOptional(p, 'speed_test', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+
+parse(p,varargin{:});
+parser_results = struct2cell(p.Results); %#ok<NASGU>
+field_names = fieldnames(p.Results);
+
+%Automatically add parser results to the workspace
+eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
+
+if speed_test
+    skip_SOPH = true;
+    plot_on = false;
 end
+
 if verbose
     disp('Running Example Data...');
 end
@@ -53,7 +70,18 @@ if run_app
     [spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = deal([]);
 else
     %Call main function runDYNAMO()
-    [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options);
+    if speed_test
+        detection_options.show_pbar = false;
+    end
+
+    if skip_SOPH
+        [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options,...
+            'verbose', verbose, 'plot_on', plot_on);
+        SOPHs = [];
+    else
+        [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options,...
+            'verbose', verbose, 'plot_on', plot_on);
+    end
 end
 
 end
