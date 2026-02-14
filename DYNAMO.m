@@ -986,6 +986,10 @@ classdef DYNAMO < handle
                 str = strtrim(str);
                 if isempty(str)
                     value = [];
+                elseif ismember(str, {'true'})
+                    value = true;
+                elseif ismember(str, {'false'})
+                    value = false;
                 elseif strcmp(str, 'all')
                     value = str;
                 elseif startsWith(str, '{') && endsWith(str, '}')
@@ -1063,7 +1067,8 @@ classdef DYNAMO < handle
                 end
 
                 if islogical(value) && isscalar(value)
-                    str = value; % Keep as logical for checkbox display
+                    % str = value; % Keep as logical for checkbox display
+                    str = categorical(string(value), {'true', 'false'});
                     return;
                 end
 
