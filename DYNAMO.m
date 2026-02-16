@@ -1280,7 +1280,7 @@ classdef DYNAMO < handle
         end
     end
 
-    methods (Static, Access = private)
+    methods (Static, Access = protected)
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % createSOPHsStruct
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1358,5 +1358,41 @@ classdef DYNAMO < handle
                 pi_str = num2str(val);
             end
         end
+    
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % writeTiff
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        function writeTiff(filename,data)
+
+            t = Tiff(filename, 'w');
+            
+            % Setup the tag structure
+            tagstruct.ImageLength = size(data, 1);
+            tagstruct.ImageWidth = size(data, 2);
+            tagstruct.Photometric = Tiff.Photometric.MinIsBlack;
+            tagstruct.BitsPerSample = 64;              % Use 64 for double precision
+            tagstruct.SamplesPerPixel = 1;
+            tagstruct.SampleFormat = Tiff.SampleFormat.IEEEFP; % Key for negative/floats
+            tagstruct.PlanarConfiguration = Tiff.PlanarConfiguration.Chunky;
+            
+            % Write data
+            t.setTag(tagstruct);
+            t.write(data);
+            t.close();
+
+        end
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % readTiff
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        function [tiff_data] = readTiff(filename)
+            
+            assert(exist(filename,'file'),'Tiff file %s not found.',filename);
+            t = Tiff(filename,'r');
+            tiff_data = t.read();
+            t.close();
+
+        end
+
     end
 end
