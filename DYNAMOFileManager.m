@@ -1,4 +1,5 @@
 classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
+% Add documentation on how to open this GUI
 
     properties (Access = public)
 
@@ -1266,7 +1267,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         end
         
         function createDYNAMOSettingsTab(app)
-            app.DYNAMOOptionsApp(false, app.UIFigure, app.DYNAMOSettingsTab,false)
+            app.DYNAMOOptionsApp(false, app.UIFigure, app.DYNAMOSettingsTab,false);
         end
         
         %% ================== BUTTON CALLBACKS ==================
