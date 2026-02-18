@@ -1,4 +1,4 @@
-function varargout = runExampleData(data_range, default_verbose, run_app, varargin)
+function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runExampleData(data_range, default_verbose, run_app, varargin)
 %% PARSE INPUTS
 p = inputParser;
 
@@ -72,7 +72,8 @@ if run_app
         close(h);
     end
     d = DYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options, 'app', true);
-    varargout = {d};
+    stats_table = d;  % abuse the stats_table variable to return the DYNAMO object
+    [spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = deal([]);
 else
     %Call main function runDYNAMO()
     if speed_test
@@ -82,11 +83,10 @@ else
     if skip_SOPH
         [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options,...
             'verbose', verbose, 'plot_on', plot_on);
-        varargout = {stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts};
+        SOPHs = [];
     else
         [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options,...
             'verbose', verbose, 'plot_on', plot_on);
-        varargout = {stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs};
     end
 end
 
