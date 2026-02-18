@@ -143,8 +143,6 @@ classdef DYNAMO < handle
             %
             addpath(genpath(fileparts(which('DYNAMO.m'))))
 
-            default_verbose = true;
-
             if nargin <= 1 && strcmp(class(obj),"DYNAMO")
                 if nargin == 0
                     data_range = 'segment';
@@ -154,7 +152,7 @@ classdef DYNAMO < handle
                     data_range = varargin{1};
                     assert(ismember(lower(data_range), {'segment','night'}), 'Select ''segment'' or ''night'' as input for example data.');
                 end
-                obj = runExampleData(data_range, default_verbose, true);
+                obj = runExampleData(data_range, true, true);
             else
                 % Set up parser
                 p = inputParser;
@@ -243,24 +241,14 @@ classdef DYNAMO < handle
             % APP  Open the DYNAMO options GUI
             if nargin<2
                 obj.DYNAMOOptionsApp(false);
-            end
-
-            if nargin==2
+            elseif nargin==2
                 obj.DYNAMOOptionsApp(verbose);
-            end
-
-            if nargin==3
+            elseif nargin==3
                 obj.DYNAMOOptionsApp(verbose, fig);
-            end
-
-             if nargin==4
+            elseif nargin==4
                 obj.DYNAMOOptionsApp(verbose, fig, tab);
             end
-           
-            DYNAMOOptionsApp(obj, verbose, fig, tab);
         end
-
-
 
         function open(obj)
             % OPEN  Alias to APP so users can call open(d)
@@ -644,20 +632,20 @@ classdef DYNAMO < handle
 
             % Create main menu
             mSettings = uimenu(fig, 'Text', 'DYNAM-O Settings');
-         
+
             % Create submenu items
             uimenu(mSettings, 'Text', 'Load DYNAM-O Settings...', ...
                 'MenuSelectedFcn', @loadSettingsCallback);
-         
+
             uimenu(mSettings, 'Text', 'Save DYNAM-O Settings...', ...
                 'MenuSelectedFcn', @saveSettingsCallback);
-         
+
             % --- Callback functions ---
             function loadSettingsCallback(~, ~)
                 uialert(fig, 'Load DYNAM-O Settings selected.', 'Load');
                 % Add your code to load settings here
             end
-         
+
             function saveSettingsCallback(~, ~)
                 uialert(fig, 'Save DYNAM-O Settings selected.', 'Save');
                 % Add your code to save settings here
@@ -727,22 +715,22 @@ classdef DYNAMO < handle
             if showButtons
                 buttonLabels = {'Reset All','Run DYNAMO','Plot Summary','Param Fit','Spline Fit','Close'};
                 buttonCallbacks = {@resetAll, @rerunDynamo, @plotSummary, @runParamFit, @runSplineFit, @(~,~) delete(fig)};
-    
+
                 nButtons = numel(buttonLabels);
                 buttonWidth = 120;
                 buttonHeight = 40;
                 spacing = 20;
                 totalWidth = nButtons*buttonWidth + (nButtons-1)*spacing;
                 startX = (fig.Position(3) - totalWidth)/2; % center align
-    
+
                 for jj = 1:nButtons
                     xpos = startX + (jj-1)*(buttonWidth+spacing);
                     uibutton(fig, 'Text', buttonLabels{jj}, ...
                         'Position', [xpos 10 buttonWidth buttonHeight], ...
                         'ButtonPushedFcn', buttonCallbacks{jj});
                 end
-    
-                uiwait(fig);
+
+                % uiwait(fig); % this wait is not necessary
             end
 
             % --- Button callbacks ---
@@ -750,8 +738,7 @@ classdef DYNAMO < handle
                 if verbose, disp('Resetting all options...'); end
                 for k = 1:length(all_configs)
                     obj.(all_configs{k}.field) = all_configs{k}.constructor();
-                    % refresh the table
-                    all_tables{k}.Data = struct2table(obj.(all_configs{k}.field),'AsArray',true);
+                    all_tables{k}.Data = createTableData(obj.(all_configs{k}.field), all_configs{k});
                 end
             end
 
@@ -770,13 +757,16 @@ classdef DYNAMO < handle
             end
 
             %------------------------------------------------------------------
-            function tbl = createTable(parent, opts, config)
-                %CREATETABLE  Build an editable uitable for a given options struct
+            function tableData = createTableData(opts, config)
+                %CREATETABLEDATA  Build the table Data for an options struct
                 %
-                %   tbl = createTable(parent, opts, config)
+                %   tableData = createTableData(opts, config)
                 %
-                %   This function constructs the Data and callbacks for an uitable
-                %   representing fields in the options struct.
+                %   This helper converts an options struct into a 3-column MATLAB
+                %   table suitable for use as the 'Data' property of a uitable.
+                %   It formats each option value for display (e.g., dropdowns,
+                %   logicals, vectors) and pulls human-readable descriptions using
+                %   the constructor specified in config.
                 %
 
                 fields = fieldnames(opts);
@@ -795,6 +785,18 @@ classdef DYNAMO < handle
 
                 tableData = table(paramNames, descriptions, values, ...
                     'VariableNames', {'Parameter', 'Description', 'Value'});
+            end
+
+            function tbl = createTable(parent, opts, config)
+                %CREATETABLE  Build an editable uitable for a given options struct
+                %
+                %   tbl = createTable(parent, opts, config)
+                %
+                %   This function constructs the Data and callbacks for an uitable
+                %   representing fields in the options struct.
+                %
+
+                tableData = createTableData(opts, config);
 
                 table_gap = 30;
                 table_pos = parent.Position;
@@ -816,25 +818,11 @@ classdef DYNAMO < handle
                 %   tbl = createSubTable(parent, opts, config)
                 %
                 %   Similar to createTable but with adjusted positioning for subtabs.
+                %   'ColumnWidth', {180, 480, 'auto'} instead of {180, 500, 'auto'}.
                 %
 
-                fields = fieldnames(opts);
-                numFields = length(fields);
+                tableData = createTableData(opts, config);
 
-                paramNames = cell(numFields, 1);
-                descriptions = cell(numFields, 1);
-                values = cell(numFields, 1);
-
-                for j = 1:numFields
-                    paramNames{j} = fields{j};
-                    descriptions{j} = getDescription(paramNames{j}, config.constructor);
-                    formattedValue = formatValue(fields{j}, opts.(fields{j}), config.constructor);
-                    values{j} = formattedValue;
-                end
-
-                tableData = table(paramNames, descriptions, values, ...
-                    'VariableNames', {'Parameter', 'Description', 'Value'});
-                
                 sub_table_gap = 30;
                 sub_table_pos = parent.Position;
                 sub_table_pos(4) = sub_table_pos(4) - sub_table_gap;
@@ -1363,14 +1351,14 @@ classdef DYNAMO < handle
                 pi_str = num2str(val);
             end
         end
-    
+
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % writeTiff
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function writeTiff(filename,data)
 
             t = Tiff(filename, 'w');
-            
+
             % Setup the tag structure
             tagstruct.ImageLength = size(data, 1);
             tagstruct.ImageWidth = size(data, 2);
@@ -1379,7 +1367,7 @@ classdef DYNAMO < handle
             tagstruct.SamplesPerPixel = 1;
             tagstruct.SampleFormat = Tiff.SampleFormat.IEEEFP; % Key for negative/floats
             tagstruct.PlanarConfiguration = Tiff.PlanarConfiguration.Chunky;
-            
+
             % Write data
             t.setTag(tagstruct);
             t.write(data);
@@ -1391,7 +1379,7 @@ classdef DYNAMO < handle
         % readTiff
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function [tiff_data] = readTiff(filename)
-            
+
             assert(exist(filename,'file'),'Tiff file %s not found.',filename);
             t = Tiff(filename,'r');
             tiff_data = t.read();
