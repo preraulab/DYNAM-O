@@ -66,11 +66,11 @@ end
 
 if run_app
     %Open up app with DYNAMO class
-    h = msgbox('Example data loaded. Launching app...');
-    pause(1);
-    if ishandle(h)
-        close(h);
-    end
+    % h = msgbox('Example data loaded. Launching app...');
+    % pause(1);
+    % if ishandle(h)
+    %     close(h);
+    % end
     d = DYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options, 'app', true);
     stats_table = d;  % abuse the stats_table variable to return the DYNAMO object
     [spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = deal([]);
