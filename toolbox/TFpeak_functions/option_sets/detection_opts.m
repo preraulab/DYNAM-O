@@ -58,7 +58,10 @@ all_features = {'all', 'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Durati
     'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume', 'PeakStage'};
 addOptional(p, 'features', 'all', @(x) all(ismember(x, all_features)))
 
-%% Add debug mode to run in series
+%% Display progress bar during runSegmentedData()
+addOptional(p, 'show_pbar', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+
+%% Add debug mode to execute runSegmentedData() in serial instead of parfor
 addOptional(p, 'debug_mode', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 
 %%

@@ -3,6 +3,13 @@ function plot_SOPH_paramfits( ...
     phase_bins, phase_wshed_img, SOPhH_phase, model_SOPhH_phase, params_phase, SOPH_clim_prctiles_phase, ylimits_phase, ...
     freq_bins, power_fitobj, phase_fitobj)
 
+%PLOT_SOPH_PARAMFITS  Plot SOPH histograms and parametric Gaussian peak reconstructions in one figure.
+%
+%   Plots SO-Power (top row) and SO-Phase (bottom row) histograms,
+%   watershed segmentations, and their parametric reconstructions in a 2x3 layout.
+%
+%   See also: PARAM_BASIS_POWER and PARAM_BSIS_PHASE
+
 % Hover distance threshold (fraction of axis diagonal). Tweak this value as desired.
 hover_dist_threshold = 0.05;  % 0.05 = 5% of axis diagonal
 
@@ -10,8 +17,9 @@ f = figure;
 ax = figdesign(f, 2, 3, ...
     'type', 'usletter', ...
     'orient', 'landscape', ...
-    'margins', [0.05 0.05 0.08 0.1 0.1 0.1], ...
-    'position',[0.0404 0.1764 0.4840 0.6576]);
+    'margins', [0.05 0.08 0.1 0.1 0.11 0.12]);
+set(f, 'units', 'inches')
+set(f, 'position', [0 0 10 6])
 
 % Store all necessary data in the figure's application data
 setappdata(f, 'power_fitobj', power_fitobj);
