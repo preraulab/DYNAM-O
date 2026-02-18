@@ -2,6 +2,7 @@ function plot_SOPH_splinefits( ...
     SOpower_mat, SOpower_bins, fit_pow, coefs_pow, knots_x_pow, knots_y_pow, opts_pow, ...
     SOphase_mat, SOphase_bins, fit_phase, coefs_phase, knots_x_phase, knots_y_phase, opts_phase, ...
     freq_bins)
+
 %PLOT_SOPH_SPLINEFITS  Plot SOPH histograms and spline reconstructions in one figure.
 %
 %   Plots SO-Power (top row) and SO-Phase (bottom row) histograms,
@@ -13,8 +14,9 @@ f = figure;
 ax = figdesign(f, 2, 3, ...
     'type', 'usletter', ...
     'orient', 'landscape', ...
-    'margins', [0.05 0.05 0.08 0.1 0.1 0.1], ...
-    'position',[0.0404 0.1764 0.4840 0.6576]);
+    'margins', [0.05 0.08 0.1 0.1 0.11 0.12]);
+set(f, 'units', 'inches')
+set(f, 'position', [0 0 10 6])
 
 % Helper: plot one set into 3 adjacent axes
     function plot_splinefit(ax_handles, hist_mat, x_bins, fit_mat, coefs, knots_x, knots_y, opts, freq_bins, cmap_hist, cmap_fit, labels)
@@ -26,17 +28,21 @@ ax = figdesign(f, 2, 3, ...
         colormap(gca, cmap_hist)
         xlabel(labels.x)
         title(sprintf('%s Histogram: %d Parameters', labels.name, numel(hist_mat)))
-        colorbar_noresize;
+        c = colorbar_noresize;
+        c.Label.String = labels.fitLabel;
+        c.Label.Rotation = -90;
+        c.Label.VerticalAlignment = "bottom";
 
         % Spline reconstruction
         axes(ax_handles(2))
         imagesc(knots_x, knots_y, fit_mat');
         axis xy
-        ylabel('Frequency (Hz)')
-        c = colorbar_noresize;
-        c.Label.String = labels.fitLabel;
-        c.Label.Rotation = -90;
-        c.Label.VerticalAlignment = "bottom";
+        % ylabel('Frequency (Hz)')
+        colorbar_noresize;
+        % c = colorbar_noresize;
+        % c.Label.String = labels.fitLabel;
+        % c.Label.Rotation = -90;
+        % c.Label.VerticalAlignment = "bottom";
         colormap(gca, cmap_fit)
         xlabel(labels.x)
         title(sprintf('Spline Reconstruction: %d Parameters', numel(coefs)))
@@ -74,5 +80,5 @@ plot_splinefit(ax(4:6), SOphase_mat, SOphase_bins, fit_phase, coefs_phase, knots
     opts_phase, freq_bins, magma, magma, ...
     struct('x','SO-Phase (rad)', 'name','SO-Phase', 'fitLabel',{{'Proportion'}}));
 
-set(ax,'fontsize',10);
+set(ax, 'fontsize', 10);
 end

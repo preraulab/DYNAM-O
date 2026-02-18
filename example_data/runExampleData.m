@@ -1,7 +1,24 @@
-function varargout = runExampleData(data_range, verbose, run_app)
-if ~exist('verbose', 'var')
-    verbose = false;
+function varargout = runExampleData(data_range, default_verbose, run_app, varargin)
+%% PARSE INPUTS
+p = inputParser;
+
+addOptional(p, 'skip_SOPH', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+addOptional(p, 'plot_on', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+addOptional(p, 'verbose', default_verbose, @(x) validateattributes(x, {'logical', 'numeric'}, {'scalar'}));
+addOptional(p, 'speed_test', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+
+parse(p,varargin{:});
+parser_results = struct2cell(p.Results); %#ok<NASGU>
+field_names = fieldnames(p.Results);
+
+%Automatically add parser results to the workspace
+eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
+
+if speed_test
+    skip_SOPH = true;
+    plot_on = false;
 end
+
 if verbose
     disp('Running Example Data...');
 end
@@ -13,7 +30,7 @@ SOPH_options = SOpowerphasehist_opts();
 
 %% DATA SETTINGS
 %Location of example data
-data_fname = 'example_data/example_data.mat';
+data_fname = fullfile(fileparts(which('runDYNAMO')), 'example_data', 'example_data.mat');
 
 if nargin == 0
     data_range = 'segment';
@@ -58,8 +75,19 @@ if run_app
     varargout = {d};
 else
     %Call main function runDYNAMO()
-    [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options);
-    varargout = {stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs};
+    if speed_test
+        detection_options.show_pbar = false;
+    end
+
+    if skip_SOPH
+        [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options,...
+            'verbose', verbose, 'plot_on', plot_on);
+        varargout = {stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts};
+    else
+        [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options,...
+            'verbose', verbose, 'plot_on', plot_on);
+        varargout = {stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs};
+    end
 end
 
 end

@@ -141,7 +141,8 @@ if ~isempty(SOpower_mat) || ~isempty(SOphase_mat)
 end
 
 %% Create figure
-fh = figure('Color',[1 1 1],'units','inches','position',[0 0 8.5 11]);
+fh = figure('Color',[1 1 1],'units','inches');
+set(fh, 'position', [0 0 8.5 11])
 orient portrait;
 
 hypn_spect_ax = gobjects(1, 3);
