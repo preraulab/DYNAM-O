@@ -49,7 +49,7 @@
 %         parametric and spline fit results for both SO-power and SO-phase histograms.
 %
 %   Example:
-%       load('my_sleep_data.mat');  % should include data, Fs, stage_times, stage_vals
+%       load('example_data/example_data.mat');  % should include data, Fs, stage_times, stage_vals
 %       [stats_table, spect, stimes, sfreqs, artifacts, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals);
 %
 %   Citation:
