@@ -141,6 +141,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         DataAddFolderButton             matlab.ui.control.Button
         DataAddFileButton               matlab.ui.control.Button
         DYNAMOSettingsTab               matlab.ui.container.Tab
+        DYNAMOSettingsGrid              matlab.ui.container.GridLayout
         AnalysisTab                     matlab.ui.container.Tab
 
         % Callback handles
@@ -1145,6 +1146,12 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DYNAMOSettingsTab = uitab(app.BatchRunTabGroup);
             app.DYNAMOSettingsTab.Title = 'DYNAM-O Settings';
 
+            % Create DYNAMOSettingsGrid
+            app.DYNAMOSettingsGrid = uigridlayout(app.DYNAMOSettingsTab);
+            app.DYNAMOSettingsGrid.ColumnWidth = {'1x'};
+            app.DYNAMOSettingsGrid.RowHeight = {'1x'};
+            app.DYNAMOSettingsGrid.Padding = [1 1 1 1];
+
             % Create BottomGrid
             app.BottomGrid = uigridlayout(app.FullDYNAMOSetupGrid);
             app.BottomGrid.ColumnWidth = {'2x', '3x', '2x'};
@@ -1267,7 +1274,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         end
         
         function createDYNAMOSettingsTab(app)
-            app.DYNAMOOptionsApp(false, app.UIFigure, app.DYNAMOSettingsTab, false);
+            app.DYNAMOOptionsApp(false, app.UIFigure, app.DYNAMOSettingsGrid, false);
         end
         
         %% ================== BUTTON CALLBACKS ==================
@@ -1936,11 +1943,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             updateChannelInput(app)
 
             % Create progress bar
-            % if isempty(app.progress_bar)
-            %     createProgressBar(app)
-            % else
-            %     app.progress_bar.refresh;
-            % end
+            if isempty(app.progress_bar)
+                app.progress_bar = SmoothProgressBar(app.TimeEstimateGrid,length(app.DataList),app.TimeEstimateGrid.Position);
+            else
+                app.progress_bar.refresh;
+            end
 
             %%%%%%%%%%%%%%%%%%%%%%%%%%%
             % MAIN LOOP TO RUN DYNAMO %
