@@ -623,7 +623,8 @@ classdef DYNAMO < handle
                 tabPos = tab.Position;
                 main_gap = 30;
                 main_pos = [tabPos(1), tabPos(2), tabPos(3), tabPos(4) - main_gap];
-                tabGroup = uitabgroup(tab, 'Position', main_pos);
+                %tabGroup = uitabgroup(tab, 'Position', main_pos);
+                tabGroup = uitabgroup(tab);
             end
 
             if nargin<5
