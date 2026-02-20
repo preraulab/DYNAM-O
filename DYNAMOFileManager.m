@@ -8,9 +8,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         FileMenu                        matlab.ui.container.Menu
         LoadEDFFileListMenu             matlab.ui.container.Menu
         LoadStagingFileListMenu         matlab.ui.container.Menu
-        DYNAMOSettingsMenu              matlab.ui.container.Menu
-        LoadDYNAMOSettingsMenu          matlab.ui.container.Menu
-        SaveDYNAMOSettingsMenu          matlab.ui.container.Menu
         ProjectTabGroup                 matlab.ui.container.TabGroup
         DYNAMOSetupTab                  matlab.ui.container.Tab
         FullDYNAMOSetupGrid             matlab.ui.container.GridLayout
@@ -279,7 +276,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % Create UIFigure and hide until all components are created
             app.UIFigure = uifigure('Visible', 'off');
             app.UIFigure.Position = [260 115 1400 850];
-            app.UIFigure.Name = 'MATLAB App';
+            app.UIFigure.Name = 'DYNAM-O File Manager';
 
             % Create FileMenu
             app.FileMenu = uimenu(app.UIFigure);
@@ -292,18 +289,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % Create LoadStagingFileListMenu
             app.LoadStagingFileListMenu = uimenu(app.FileMenu);
             app.LoadStagingFileListMenu.Text = 'Load Staging File List...';
-
-            % Create DYNAMOSettingsMenu
-            app.DYNAMOSettingsMenu = uimenu(app.UIFigure);
-            app.DYNAMOSettingsMenu.Text = 'DYNAM-O Settings';
-
-            % Create LoadDYNAMOSettingsMenu
-            app.LoadDYNAMOSettingsMenu = uimenu(app.DYNAMOSettingsMenu);
-            app.LoadDYNAMOSettingsMenu.Text = 'Load DYNAM-O Settings...';
-
-            % Create SaveDYNAMOSettingsMenu
-            app.SaveDYNAMOSettingsMenu = uimenu(app.DYNAMOSettingsMenu);
-            app.SaveDYNAMOSettingsMenu.Text = 'Save DYNAM-O Settings...';
 
             % Create ProjectTabGroup
             app.ProjectTabGroup = uitabgroup(app.UIFigure);
@@ -337,7 +322,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.FileInputGrid = uigridlayout(app.FileSelectionGrid);
             app.FileInputGrid.RowHeight = {'3x', '20x', '2x'};
             app.FileInputGrid.RowSpacing = 0;
-            app.FileInputGrid.Padding = [10 10 10 0];
+            app.FileInputGrid.Padding = [10 0 10 0];
             app.FileInputGrid.Layout.Row = 1;
             app.FileInputGrid.Layout.Column = 1;
 
@@ -346,7 +331,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DataFileButtonGrid.ColumnWidth = {'1x', '1x', '1x', '1x', '1x'};
             app.DataFileButtonGrid.RowHeight = {'1x'};
             app.DataFileButtonGrid.ColumnSpacing = 5;
-            app.DataFileButtonGrid.Padding = [60 3 60 3];
+            app.DataFileButtonGrid.Padding = [60 0 60 6];
             app.DataFileButtonGrid.Layout.Row = 3;
             app.DataFileButtonGrid.Layout.Column = 1;
 
@@ -400,7 +385,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StagingFileButtonGrid.ColumnWidth = {'1x', '1x', '1x', '1x', '1x'};
             app.StagingFileButtonGrid.RowHeight = {'1x'};
             app.StagingFileButtonGrid.ColumnSpacing = 5;
-            app.StagingFileButtonGrid.Padding = [60 3 60 3];
+            app.StagingFileButtonGrid.Padding = [60 0 60 6];
             app.StagingFileButtonGrid.Layout.Row = 3;
             app.StagingFileButtonGrid.Layout.Column = 2;
 
@@ -492,19 +477,13 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DataFileTitleGrid.Layout.Row = 1;
             app.DataFileTitleGrid.Layout.Column = 1;
 
-            % Create ViewChannelsButton
-            app.ViewChannelsButton = uibutton(app.DataFileTitleGrid, 'push');
-            app.ViewChannelsButton.ButtonPushedFcn = createCallbackFcn(app, @viewChannelsButtonPushed, true);
-            app.ViewChannelsButton.Layout.Row = 1;
-            app.ViewChannelsButton.Layout.Column = 1;
-            app.ViewChannelsButton.Text = 'View Channels';
-
             % Create DataLabel
             app.DataLabel = uilabel(app.DataFileTitleGrid);
             app.DataLabel.HorizontalAlignment = 'center';
             app.DataLabel.FontWeight = 'bold';
             app.DataLabel.Layout.Row = 1;
             app.DataLabel.Layout.Column = 2;
+            app.DataLabel.FontSize = 15;
             app.DataLabel.Text = 'Data (0 Files)';
 
             % Create StagingFileTopGrid
@@ -539,6 +518,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StagingLabel.FontWeight = 'bold';
             app.StagingLabel.Layout.Row = 1;
             app.StagingLabel.Layout.Column = 2;
+            app.StagingLabel.FontSize = 15;
             app.StagingLabel.Text = 'Staging (0 Files)';
 
             % Create RuntimeOptionsGrid
@@ -563,7 +543,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % Create ChannelInputGrid
             app.ChannelInputGrid = uigridlayout(app.RuntimeOptionsTopGrid);
-            app.ChannelInputGrid.ColumnWidth = {'1x', '4x'};
+            app.ChannelInputGrid.ColumnWidth = {'1x', '3x', '12x', '2x', '1x'};
             app.ChannelInputGrid.RowHeight = {'1x'};
             app.ChannelInputGrid.Padding = [0 0 0 0];
             app.ChannelInputGrid.Layout.Row = 3;
@@ -573,13 +553,22 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.ChannelEditFieldLabel = uilabel(app.ChannelInputGrid);
             app.ChannelEditFieldLabel.HorizontalAlignment = 'right';
             app.ChannelEditFieldLabel.Layout.Row = 1;
-            app.ChannelEditFieldLabel.Layout.Column = 1;
+            app.ChannelEditFieldLabel.Layout.Column = 2;
             app.ChannelEditFieldLabel.Text = 'Channel(s):';
 
             % Create ChannelEditField
             app.ChannelEditField = uieditfield(app.ChannelInputGrid, 'text');
             app.ChannelEditField.Layout.Row = 1;
-            app.ChannelEditField.Layout.Column = 2;
+            app.ChannelEditField.Layout.Column = 3;
+
+            % Create ViewChannelsButton
+            app.ViewChannelsButton = uibutton(app.ChannelInputGrid, 'push');
+            app.ViewChannelsButton.ButtonPushedFcn = createCallbackFcn(app, @viewChannelsButtonPushed, true);
+            app.ViewChannelsButton.Icon = 'info';
+            app.ViewChannelsButton.IconAlignment = 'center';
+            app.ViewChannelsButton.Layout.Row = 1;
+            app.ViewChannelsButton.Layout.Column = 4;
+            app.ViewChannelsButton.Text = '';
 
             % Create RuntimeOptionsLabel
             app.RuntimeOptionsLabel = uilabel(app.RuntimeOptionsTopGrid);
@@ -587,6 +576,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.RuntimeOptionsLabel.FontWeight = 'bold';
             app.RuntimeOptionsLabel.Layout.Row = 1;
             app.RuntimeOptionsLabel.Layout.Column = 1;
+            app.RuntimeOptionsLabel.FontSize = 15;
             app.RuntimeOptionsLabel.Text = 'Runtime Options';
 
             % Create ChannelOptionsGrid
@@ -833,8 +823,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.SavingOptionsTabGrid = uigridlayout(app.SavingOptionsTab);
             app.SavingOptionsTabGrid.ColumnWidth = {'1x'};
             app.SavingOptionsTabGrid.RowHeight = {'4x', '1x'};
-            app.SavingOptionsTabGrid.RowSpacing = 2;
-            app.SavingOptionsTabGrid.Padding = [10 10 10 2];
+            app.SavingOptionsTabGrid.RowSpacing = 0;
+            app.SavingOptionsTabGrid.Padding = [10 0 10 2];
 
             % Create SavingOptionsCheckBoxGrid
             app.SavingOptionsCheckBoxGrid = uigridlayout(app.SavingOptionsTabGrid);
@@ -847,12 +837,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DatatoSaveLabel = uilabel(app.SavingOptionsCheckBoxGrid);
             app.DatatoSaveLabel.Layout.Row = 1;
             app.DatatoSaveLabel.Layout.Column = 1;
+            app.DatatoSaveLabel.FontWeight = 'bold';
             app.DatatoSaveLabel.Text = 'Data to Save';
 
             % Create FigurestoSaveLabel
             app.FigurestoSaveLabel = uilabel(app.SavingOptionsCheckBoxGrid);
             app.FigurestoSaveLabel.Layout.Row = 1;
             app.FigurestoSaveLabel.Layout.Column = 2;
+            app.FigurestoSaveLabel.FontWeight = 'bold';
             app.FigurestoSaveLabel.Text = 'Figures to Save';
 
             % Create SavePeakStatsCheckBox
@@ -906,9 +898,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % Create SavingDirectoryGrid
             app.SavingDirectoryGrid = uigridlayout(app.SavingOptionsTabGrid);
             app.SavingDirectoryGrid.ColumnWidth = {'5x', '1x'};
-            app.SavingDirectoryGrid.RowHeight = {14, 24};
-            app.SavingDirectoryGrid.RowSpacing = 3;
-            app.SavingDirectoryGrid.Padding = [5 10 10 0];
+            app.SavingDirectoryGrid.RowHeight = {'2x', '3x'};
+            app.SavingDirectoryGrid.RowSpacing = 0;
+            app.SavingDirectoryGrid.Padding = [5 5 10 1];
             app.SavingDirectoryGrid.Layout.Row = 2;
             app.SavingDirectoryGrid.Layout.Column = 1;
 
@@ -1256,7 +1248,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.InstructionText.Text = 'Add data and staging files, select output directory, choose options, then run batch.';
 
             % Create HelpButton
-            app.HelpButton = uibutton(app.TopTextGrid, 'push');
+            app.HelpButton = uibutton(app.TopTextGrid, 'push','ButtonPushedFcn',@(src,event) showHelpButtonPushed(app));
+            %app.HelpButton.ButtonPushedFcn = createCallbackFcn(app, @showHelpButtonPushed, true);
             app.HelpButton.Layout.Row = 1;
             app.HelpButton.Layout.Column = 3;
             app.HelpButton.Text = 'Help';
@@ -1278,6 +1271,12 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         end
         
         %% ================== BUTTON CALLBACKS ==================
+        function showHelpButtonPushed(app)
+
+            uialert(app.UIFigure,sprintf('Instructions:\n1. In File Selection tab: Add Data files (EDF) and Staging files (CSV/TXT).\n2. Make sure the file counts match and order corresponds.\n3. In Output Options tab: Choose an output directory and select save options.\n4. Click Run Batch to process files.'),'Help','Icon','info');
+
+        end
+        
         function loadFileListCallback(app,varargin)
             % uialert(app.UIFigure, 'Load EDF File List Selected.', 'Load');
 
@@ -1400,13 +1399,12 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %app.viewChannelText = {};
             %app.run_error_list(end+1) = {'- Data list empty. Need edf files to run.'}
             %app.channel_counts = cell(2,1);
-            tic
             for ii = 1:length(app.DataList)
                 [~,signalHeader] = read_EDF(app.DataList{ii});
                 signal_labels{ii} = {signalHeader.signal_labels};
             end
-            toc
-            uialert(app.UIFigure,'View Channel Button Pushed','Button Pushed','Icon','info');
+            signal_labels = unique(horzcat(signal_labels{:}));
+            uialert(app.UIFigure,sprintf('%s\n',signal_labels{:}),'List of all available channels in dataset','Icon','info');
         end
 
         function app = ShowHeader(app,varargin)
@@ -1477,12 +1475,12 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         %% ================== UPDATE METHODS ==================
         function updateDataListBox(app)
             app.DataListBox.Items = app.DataList;
-            app.DataLabel.Text = sprintf('Data (%d Files)',length(app.DataList));
+            app.DataLabel.Text = sprintf('Data (%d Files)',length(app.DataList),'FontSize',15);
         end
 
         function updateStagingListBox(app)
             app.StagingListBox.Items = app.StagingList;
-            app.StagingLabel.Text = sprintf('Staging (%d Files)',length(app.StagingList));
+            app.StagingLabel.Text = sprintf('Staging (%d Files)',length(app.StagingList),'FontSize',15);
         end
 
         function updateRunErrorList(app)
