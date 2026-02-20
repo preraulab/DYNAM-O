@@ -1667,19 +1667,19 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 if app.SaveSOPHsCheckBox.Value
                     app.TextArea.Value = strcat('Saving SOPHs on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
 
-                    if ~strcmp(app.SOPowerHistogramsDropDown,'--')
+                    if ~strcmp(app.SOPowerHistogramsDropDown.Value,'--')
 
-                        switch app.SOPowerHistogramsDropDown
+                        switch app.SOPowerHistogramsDropDown.Value
                             case '.tiff'
                                 app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.tiff');
                                 app.writeTiff(app.output_SOPH_name,SOPHs.SOpower_mat);
                             case '.mat'
-                                app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.tiff');
+                                app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat');
                                 save(app.output_SOPH_name,'SOPHs');
                             case 'All'
                                 app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.tiff');
                                 app.writeTiff(app.output_SOPH_name,SOPHs.SOpower_mat);
-                                app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.tiff');
+                                app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat');
                                 save(app.output_SOPH_name,'SOPHs');
                         end
                     end
@@ -1969,59 +1969,59 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                     app.TextArea.Value = {'Processing stage inputs.'};
                     updateStagesInput(app)
 
-                    %try
+                    try
 
-                    % Update delimeter from user input
-                    app.TextArea.Value = {'Processing delimeter input.'};
-                    updateDelimeterInput(app)
+                        % Update delimeter from user input
+                        app.TextArea.Value = {'Processing delimeter input.'};
+                        updateDelimeterInput(app)
+    
+                        %% =============== LOAD EDF AND STAGING ===============
+                        app.TextArea.Value = strcat('Loading subject',{' '},app.input_fbase,', channel',{' '},app.channel,' staging and EDF data.');
+                        [app.data, app.Fs, app.stage_times, app.stage_vals] = load_data(app.DataList{jj},app.StagingList{jj},app.StagesColumnEditField.Value,app.TimesColumnEditField.Value,app.channel,'header_lines',app.HeaderRowsEditField.Value,'delimiter',app.delimeter,'stage_vals_in',{app.ArtifactUserInput,app.WakeUserInput,app.REMUserInput,app.N1UserInput,app.N2UserInput,app.N3UserInput,app.UnknownUserInput});
+    
+                        %% =============== RUN REQUESTED RESULTS ===============
+    
+                        % If Stats Table Requested
+                        if app.SavePeakStatsCheckBox.Value || app.SaveSOPHsCheckBox.Value
+                            runStatsTable(app)
+                        end
+    
+                        % If Data Summary Image Requested
+                        if  app.SaveDataSummaryCheckBox.Value
+                            runDataSummaryFigure(app)
+                        end
+    
+                        % If Param Basis Requested
+                        if app.SaveParamBasisCheckBox.Value
+                            runParamBasis(app)
+                        end
+    
+                        % If Spline Basis Requested
+                        if app.SaveSplineBasisCheckBox.Value
+                            runSplineBasis(app)
+                        end
+    
+                        if app.SaveAuxDataCheckBox.Value
+                            saveAuxData(app)
+                        end
+    
+                        %% =============== UPDATE RUN LOG ===============
+    
+                        % Output to run log if anything was run
+                        if app.anything_run
+                            app.TextArea.Value = strcat('Successfully run subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
+                            fprintf(app.runlog_fid, 'Subject %s, channel %s: run successfully.\n',app.input_fbase,app.channel);
+                        else
+                            fprintf(app.runlog_fid, 'Subject %s, channel %s: all files already exist. Subject skipped.\n',app.input_fbase,app.channel);
+                        end
 
-                    %% =============== LOAD EDF AND STAGING ===============
-                    app.TextArea.Value = strcat('Loading subject',{' '},app.input_fbase,', channel',{' '},app.channel,' staging and EDF data.');
-                    [app.data, app.Fs, app.stage_times, app.stage_vals] = load_data(app.DataList{jj},app.StagingList{jj},app.StagesColumnEditField.Value,app.TimesColumnEditField.Value,app.channel,'header_lines',app.HeaderRowsEditField.Value,'delimiter',app.delimeter,'stage_vals_in',{app.ArtifactUserInput,app.WakeUserInput,app.REMUserInput,app.N1UserInput,app.N2UserInput,app.N3UserInput,app.UnknownUserInput});
+                    catch e
 
-                    %% =============== RUN REQUESTED RESULTS ===============
+                        % Output error to run log
+                        app.TextArea.Value = strcat('Error on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'. Check log for details.');
+                        fprintf(app.runlog_fid, 'Subject %s, channel %s: not run. Error: %s\n',app.input_fbase,app.channel,e.message);
 
-                    % If Stats Table Requested
-                    if app.SavePeakStatsCheckBox.Value || app.SaveSOPHsCheckBox.Value
-                        runStatsTable(app)
                     end
-
-                    % If Data Summary Image Requested
-                    if  app.SaveDataSummaryCheckBox.Value
-                        runDataSummaryFigure(app)
-                    end
-
-                    % If Param Basis Requested
-                    if app.SaveParamBasisCheckBox.Value
-                        runParamBasis(app)
-                    end
-
-                    % If Spline Basis Requested
-                    if app.SaveSplineBasisCheckBox.Value
-                        runSplineBasis(app)
-                    end
-
-                    if app.SaveAuxDataCheckBox.Value
-                        saveAuxData(app)
-                    end
-
-                    %% =============== UPDATE RUN LOG ===============
-
-                    % Output to run log if anything was run
-                    if app.anything_run
-                        app.TextArea.Value = strcat('Successfully run subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
-                        fprintf(app.runlog_fid, 'Subject %s, channel %s: run successfully.\n',app.input_fbase,app.channel);
-                    else
-                        fprintf(app.runlog_fid, 'Subject %s, channel %s: all files already exist. Subject skipped.\n',app.input_fbase,app.channel);
-                    end
-
-                    % catch e
-                    %
-                    %     % Output error to run log
-                    %     app.TextArea.Value = strcat('Error on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'. Check log for details.');
-                    %     fprintf(app.runlog_fid, 'Subject %s, channel %s: not run. Error: %s\n',app.input_fbase,app.channel,e.message);
-                    %
-                    % end
 
                     % Update progress bar
                     app.curr_iteration = app.curr_iteration+1;
