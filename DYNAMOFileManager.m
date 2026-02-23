@@ -1628,6 +1628,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             end
 
             % Check if file exists already
+            app.output_stats_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.mat');
+            app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat');
             if app.OverwriteExistingFilesCheckBox.Value || (~exist(app.output_stats_name,'file') || ~exist(app.output_SOPH_name,'file'))
                 app.anything_run = 1;
 
@@ -2023,9 +2025,13 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
                     end
 
-                    % Update progress bar
-                    app.curr_iteration = app.curr_iteration+1;
-                    app.progress_bar.updateIteration(app.curr_iteration);
+                    try
+                        % Update progress bar
+                        app.curr_iteration = app.curr_iteration+1;
+                        app.progress_bar.updateIteration(app.curr_iteration);
+                    catch e
+                        disp(e);
+                    end
 
                 end
 
