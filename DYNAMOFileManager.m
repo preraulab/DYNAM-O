@@ -282,12 +282,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.FileMenu = uimenu(app.UIFigure);
             app.FileMenu.Text = 'File';
 
-            % Create LoadEDFFileListMenu
+            % Create LoadEDFFileListMenul
             app.LoadEDFFileListMenu = uimenu(app.FileMenu);
+            app.LoadEDFFileListMenu.MenuSelectedFcn = createCallbackFcn(app, @loadDataFileListCallback, true);
             app.LoadEDFFileListMenu.Text = 'Load EDF File List...';
 
             % Create LoadStagingFileListMenu
             app.LoadStagingFileListMenu = uimenu(app.FileMenu);
+            app.LoadStagingFileListMenu.MenuSelectedFcn = createCallbackFcn(app, @loadStagingListCallback, true);
             app.LoadStagingFileListMenu.Text = 'Load Staging File List...';
 
             % Create ProjectTabGroup
@@ -343,6 +345,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DataAddFileButton.Layout.Row = 1;
             app.DataAddFileButton.Layout.Column = 1;
             app.DataAddFileButton.Text = '';
+            app.DataAddFileButton.Tooltip = 'Add single EDF file';
 
             % Create DataAddFolderButton
             app.DataAddFolderButton = uibutton(app.DataFileButtonGrid, 'push');
@@ -352,6 +355,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DataAddFolderButton.Layout.Row = 1;
             app.DataAddFolderButton.Layout.Column = 2;
             app.DataAddFolderButton.Text = '';
+            app.DataAddFolderButton.Tooltip = 'Add all EDF files in folder';
 
             % Create DataRemoveButton
             app.DataRemoveButton = uibutton(app.DataFileButtonGrid, 'push');
@@ -361,6 +365,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DataRemoveButton.Layout.Row = 1;
             app.DataRemoveButton.Layout.Column = 3;
             app.DataRemoveButton.Text = '';
+            app.DataRemoveButton.Tooltip = 'Remove selected EDF file';
 
             % Create DataMoveUpButton
             app.DataMoveUpButton = uibutton(app.DataFileButtonGrid, 'push');
@@ -370,6 +375,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DataMoveUpButton.Layout.Row = 1;
             app.DataMoveUpButton.Layout.Column = 4;
             app.DataMoveUpButton.Text = '';
+            app.DataMoveUpButton.Tooltip = 'Move current EDF file up';
 
             % Create DataMoveDownButton
             app.DataMoveDownButton = uibutton(app.DataFileButtonGrid, 'push');
@@ -379,6 +385,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DataMoveDownButton.Layout.Row = 1;
             app.DataMoveDownButton.Layout.Column = 5;
             app.DataMoveDownButton.Text = '';
+            app.DataMoveDownButton.Tooltip = 'Move current EDF file down';
 
             % Create StagingFileButtonGrid
             app.StagingFileButtonGrid = uigridlayout(app.FileInputGrid);
@@ -388,6 +395,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StagingFileButtonGrid.Padding = [60 0 60 6];
             app.StagingFileButtonGrid.Layout.Row = 3;
             app.StagingFileButtonGrid.Layout.Column = 2;
+            
 
             % Create StagingAddFileButton
             app.StagingAddFileButton = uibutton(app.StagingFileButtonGrid, 'push');
@@ -397,6 +405,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StagingAddFileButton.Layout.Row = 1;
             app.StagingAddFileButton.Layout.Column = 1;
             app.StagingAddFileButton.Text = '';
+            app.StagingAddFileButton.Tooltip = 'Add single staging file';
 
             % Create StagingAddFolderButton
             app.StagingAddFolderButton = uibutton(app.StagingFileButtonGrid, 'push');
@@ -406,6 +415,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StagingAddFolderButton.Layout.Row = 1;
             app.StagingAddFolderButton.Layout.Column = 2;
             app.StagingAddFolderButton.Text = '';
+            app.StagingAddFolderButton.Tooltip = 'Add all staging files in folder';
 
             % Create StagingRemoveButton
             app.StagingRemoveButton = uibutton(app.StagingFileButtonGrid, 'push');
@@ -415,6 +425,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StagingRemoveButton.Layout.Row = 1;
             app.StagingRemoveButton.Layout.Column = 3;
             app.StagingRemoveButton.Text = '';
+            app.StagingRemoveButton.Tooltip = 'Remove selected staging file';
 
             % Create StagingMoveUpBotton
             app.StagingMoveUpBotton = uibutton(app.StagingFileButtonGrid, 'push');
@@ -424,6 +435,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StagingMoveUpBotton.Layout.Row = 1;
             app.StagingMoveUpBotton.Layout.Column = 4;
             app.StagingMoveUpBotton.Text = '';
+            app.StagingMoveUpBotton.Tooltip = 'Move current staging file up';
 
             % Create StagingMoveDownButton
             app.StagingMoveDownButton = uibutton(app.StagingFileButtonGrid, 'push');
@@ -433,6 +445,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StagingMoveDownButton.Layout.Row = 1;
             app.StagingMoveDownButton.Layout.Column = 5;
             app.StagingMoveDownButton.Text = '';
+            app.StagingMoveDownButton.Tooltip = 'Move current staging file down';
 
             % Create DataListBox
             app.DataListBox = uilistbox(app.FileInputGrid);
@@ -442,7 +455,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DataListBox.Layout.Column = 1;
             app.DataListBox.DoubleClickedFcn = createCallbackFcn(app, @ShowHeader, true);
             app.DataListBox.Value = {''};
-
+            app.DataListBox.Tooltip = 'Double-click a file to view the header';
+            
             % Create StagingListBox
             app.StagingListBox = uilistbox(app.FileInputGrid);
             app.StagingListBox.Items = {''};
@@ -569,6 +583,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.ViewChannelsButton.Layout.Row = 1;
             app.ViewChannelsButton.Layout.Column = 4;
             app.ViewChannelsButton.Text = '';
+            app.ViewChannelsButton.Tooltip = 'View existing channel options';
 
             % Create RuntimeOptionsLabel
             app.RuntimeOptionsLabel = uilabel(app.RuntimeOptionsTopGrid);
@@ -951,12 +966,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DataFileFormatLabel.Layout.Row = 1;
             app.DataFileFormatLabel.Layout.Column = 1;
             app.DataFileFormatLabel.Text = 'Data File Format';
+            app.DataFileFormatLabel.FontWeight = 'bold';
 
             % Create FigureFileFormatLabel
             app.FigureFileFormatLabel = uilabel(app.AdvancedCheckBoxGrid);
             app.FigureFileFormatLabel.Layout.Row = 1;
             app.FigureFileFormatLabel.Layout.Column = 2;
             app.FigureFileFormatLabel.Text = 'Figure File Format';
+            app.FigureFileFormatLabel.FontWeight = 'bold';
 
             % Create PeakStatsTableGrid
             app.PeakStatsTableGrid = uigridlayout(app.AdvancedCheckBoxGrid);
@@ -1187,11 +1204,15 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % Create StopBatchButton
             app.StopBatchButton = uibutton(app.RunBatchGrid, 'push');
             app.StopBatchButton.ButtonPushedFcn = createCallbackFcn(app, @StopBatchButtonPushed, true);
-            app.StopBatchButton.Icon = strcat(app.icon_filepath, 'stop.png');
+            %app.StopBatchButton.Icon = strcat(app.icon_filepath, 'stop.png');
             app.StopBatchButton.IconAlignment = 'center';
+            app.StopBatchButton.FontWeight = 'bold';
+            app.StopBatchButton.FontColor = 'red';
             app.StopBatchButton.Layout.Row = 1;
             app.StopBatchButton.Layout.Column = 1;
             app.StopBatchButton.Text = '';
+            app.StopBatchButton.Text = 'Stop';
+            app.StopBatchButton.FontSize = 15;
 
             % Create RunBatchButton
             app.RunBatchButton = uibutton(app.RunBatchGrid, 'push');
@@ -1277,7 +1298,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
         end
         
-        function loadFileListCallback(app,varargin)
+        function loadDataFileListCallback(app,~)
             % uialert(app.UIFigure, 'Load EDF File List Selected.', 'Load');
 
             %Have the user select the base directory
@@ -1396,6 +1417,12 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         end
         
         function viewChannelsButtonPushed(app,~,~)
+
+            if isempty(app.DataList)
+                uialert(app.UIFigure,'No EDF files loaded. Load at least one file to view existing channel options.','Error','Icon','error');
+                return
+            end
+
             %app.viewChannelText = {};
             %app.run_error_list(end+1) = {'- Data list empty. Need edf files to run.'}
             %app.channel_counts = cell(2,1);
@@ -1475,12 +1502,20 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         %% ================== UPDATE METHODS ==================
         function updateDataListBox(app)
             app.DataListBox.Items = app.DataList;
-            app.DataLabel.Text = sprintf('Data (%d Files)',length(app.DataList),'FontSize',15);
+            if length(app.DataList)==1
+                app.DataLabel.Text = sprintf('Data (1 File)');
+            else
+                app.DataLabel.Text = sprintf('Data (%d Files)',length(app.DataList));
+            end
         end
 
         function updateStagingListBox(app)
             app.StagingListBox.Items = app.StagingList;
-            app.StagingLabel.Text = sprintf('Staging (%d Files)',length(app.StagingList),'FontSize',15);
+            if length(app.StagingList)==1
+                app.StagingLabel.Text = sprintf('Staging (1 File)');
+            else
+                app.StagingLabel.Text = sprintf('Staging (%d Files)',length(app.StagingList));
+            end
         end
 
         function updateRunErrorList(app)
@@ -1649,8 +1684,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                             case '.csv'
                                 app.output_stats_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.csv');
                                 table2csv(stats_table,app.output_stats_name);
-                                %% TO-DO: DEBUG THIS
-                                save(app.output_stats_name,'stats_table');
                             case '.mat'
                                 app.output_stats_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.mat');
                                 save(app.output_stats_name,'stats_table');
@@ -1661,7 +1694,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                                 % .csv
                                 app.output_stats_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.csv');
                                 table2csv(stats_table,app.output_stats_name);
-                                save(app.output_stats_name,'stats_table');
                         end 
                     end
                 end
@@ -1673,14 +1705,19 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
                         switch app.SOPowerHistogramsDropDown.Value
                             case '.tiff'
-                                app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.tiff');
+                                app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_power_',app.channel,'.tiff');
                                 app.writeTiff(app.output_SOPH_name,SOPHs.SOpower_mat);
+                                app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_phase_',app.channel,'.tiff');
+                                app.writeTiff(app.output_SOPH_name,SOPHs.SOphase_mat);
                             case '.mat'
                                 app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat');
                                 save(app.output_SOPH_name,'SOPHs');
                             case 'All'
-                                app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.tiff');
+                                app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_power',app.channel,'.tiff');
                                 app.writeTiff(app.output_SOPH_name,SOPHs.SOpower_mat);
+                                app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_phase_',app.channel,'.tiff');
+                                app.writeTiff(app.output_SOPH_name,SOPHs.SOphase_mat);
+
                                 app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat');
                                 save(app.output_SOPH_name,'SOPHs');
                         end
@@ -1762,15 +1799,41 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             end
             close all;
 
-            % Resave SOPH with param basis
-            %% TO-DO: ADD CSV OPTION
-            app.output_paramfit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/param_basis/',app.input_fbase,'_SOpower_paramfit_',app.channel,'.mat');
-            app.output_paramfit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/param_basis/',app.input_fbase,'_SOphase_paramfit_',app.channel,'.mat');
-            SOpower_paramfit = app.SOPHs.SOpower_paramfit;
-            SOphase_paramfit = app.SOPHs.SOpower_paramfit;
-            app.TextArea.Value = strcat('Updating saved SOPH on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
-            save(app.output_paramfit_power_name,'SOpower_paramfit');
-            save(app.output_paramfit_phase_name,'SOphase_paramfit');
+            if ~strcmp(app.ParametricBasisDropDown.Value,'--')
+                switch app.ParametricBasisDropDown.Value
+                    case '.csv'
+                        SOpower_params = app.SOPHs.SOpower_paramfit.params;
+                        SOphase_params = app.SOPHs.SOpower_paramfit.params;
+                        app.output_paramfit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/param_basis/',app.input_fbase,'_SOpower_paramfit_',app.channel,'.csv');
+                        app.output_paramfit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/param_basis/',app.input_fbase,'_SOphase_paramfit_',app.channel,'.csv');
+                        app.TextArea.Value = strcat('Updating saved SOPH on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
+                        writematrix(SOpower_params,app.output_paramfit_power_name);
+                        writematrix(SOphase_params,app.output_paramfit_phase_name);
+                    case '.mat'
+                        SOpower_paramfit = app.SOPHs.SOpower_paramfit;
+                        SOphase_paramfit = app.SOPHs.SOpower_paramfit;
+                        app.output_paramfit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/param_basis/',app.input_fbase,'_SOpower_paramfit_',app.channel,'.mat');
+                        app.output_paramfit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/param_basis/',app.input_fbase,'_SOphase_paramfit_',app.channel,'.mat');
+                        save(app.output_paramfit_power_name,'SOpower_paramfit');
+                        save(app.output_paramfit_phase_name,'SOphase_paramfit');
+                    case 'All'
+                        SOpower_params = app.SOPHs.SOpower_paramfit.params;
+                        SOphase_params = app.SOPHs.SOpower_paramfit.params;
+                        app.output_paramfit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/param_basis/',app.input_fbase,'_SOpower_paramfit_',app.channel,'.csv');
+                        app.output_paramfit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/param_basis/',app.input_fbase,'_SOphase_paramfit_',app.channel,'.csv');
+                        app.TextArea.Value = strcat('Updating saved SOPH on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
+                        writematrix(SOpower_params,app.output_paramfit_power_name);
+                        writematrix(SOphase_params,app.output_paramfit_phase_name);
+
+                        SOpower_paramfit = app.SOPHs.SOpower_paramfit;
+                        SOphase_paramfit = app.SOPHs.SOpower_paramfit;
+                        app.output_paramfit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/param_basis/',app.input_fbase,'_SOpower_paramfit_',app.channel,'.mat');
+                        app.output_paramfit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/param_basis/',app.input_fbase,'_SOphase_paramfit_',app.channel,'.mat');
+                        save(app.output_paramfit_power_name,'SOpower_paramfit');
+                        save(app.output_paramfit_phase_name,'SOphase_paramfit');
+                end
+            end
+
         end
 
         function runSplineBasis(app)

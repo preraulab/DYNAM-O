@@ -492,6 +492,12 @@ classdef DYNAMO < handle
             opts_phase = obj.param_basis_phase_options;
             opts_phase.plot_on = false;
 
+            
+            % temp_fbins = obj.SOPHs.freq_bins>=2 & obj.SOPHs.freq_bins<=15.8;
+            % obj.SOPHs.SOpower_mat = obj.SOPHs.SOpower_mat(:,temp_fbins);
+            % obj.SOPHs.freq_bins = obj.SOPHs.freq_bins(temp_fbins);
+            % obj.SOPHs.SOphase_mat = obj.SOPHs.SOphase_mat(:,temp_fbins);
+
             [params_pow, fitobj_pow, gof_pow, model_SOPH_pow, power_wshed_img] = ...
                 param_basis_power(obj.SOPHs.SOpower_mat, obj.SOPHs.SOpower_bins, obj.SOPHs.freq_bins, ...
                 opts_pow); % plot_off for merged plot
@@ -643,13 +649,56 @@ classdef DYNAMO < handle
 
             % --- Callback functions ---
             function loadSettingsCallback(~, ~)
-                uialert(fig, 'Load DYNAM-O Settings selected.', 'Load');
-                % Add your code to load settings here
+                
+                [filename, filepath] = uigetfile({'*.txt'},'Select DYNAM-O settings file.');
+                
+                new_filename = filename;
+                new_filename(end-2:end) = 'm  ';
+                
+                movefile(strcat(filepath,filename),strcat(filepath,new_filename));
+                
+                run_start = [];
+                SOPH_options = [];
+                baseline_options = [];
+                detection_options = [];
+                param_basis_power_options = [];
+                param_basis_phase_options = [];
+                spline_basis_power_options = [];
+                spline_basis_phase_options = [];
+                
+                run(strcat(filepath,new_filename));
+                
+                obj.updateOptions('SOPH_options',SOPH_options);
+                obj.updateOptions('baseline_options',baseline_options);
+                obj.updateOptions('detection_options',detection_options);
+                obj.updateOptions('param_basis_power_options',param_basis_power_options);
+                obj.updateOptions('param_basis_phase_options',param_basis_phase_options);
+                obj.updateOptions('spline_basis_power_options',spline_basis_power_options);
+                obj.updateOptions('spline_basis_phase_options',spline_basis_phase_options);
+                clear run_start SOPH_options baseline_options detection_options param_basis_power_options param_basis_phase_options spline_basis_power_options spline_basis_phase_options
+
+                movefile(strcat(filepath,new_filename),strcat(filepath,filename));
+
+                updateAll();
+
             end
 
             function saveSettingsCallback(~, ~)
-                uialert(fig, 'Save DYNAM-O Settings selected.', 'Save');
-                % Add your code to save settings here
+                
+                dir_name = uigetdir();
+                options_structs = {};
+                struct_names = {};
+                curr_datetime = char(datetime('now','Format','yyMMdd_HHmmSS'));
+                
+                for k = 1:length(all_configs)
+                    options_structs{k} = obj.(all_configs{k}.field);
+                    struct_names{k} = all_configs{k}.field();
+                end
+
+                generate_run_log(options_structs, struct_names,'run_start',curr_datetime,'file_path',dir_name);
+            
+                clear dir_name options_structs struct_names curr_datetime
+
             end
 
             % Basic option configurations (no changes)
@@ -739,6 +788,13 @@ classdef DYNAMO < handle
                 if verbose, disp('Resetting all options...'); end
                 for k = 1:length(all_configs)
                     obj.(all_configs{k}.field) = all_configs{k}.constructor();
+                    all_tables{k}.Data = createTableData(obj.(all_configs{k}.field), all_configs{k});
+                end
+            end
+
+            function updateAll(~,~)
+                if verbose, disp('Updating all options...'); end
+                for k = 1:length(all_configs)
                     all_tables{k}.Data = createTableData(obj.(all_configs{k}.field), all_configs{k});
                 end
             end
