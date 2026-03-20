@@ -34,7 +34,7 @@ if ~all(idx)
     error(char(strcat('Invalid channels:',{' '},channels(~idx),' | Valid channels: ',{' '},sprintf('%s ',signalHeader.signal_labels))))
 end
 
-[header, signalHeader,data] = read_EDF(edf_fpath,'channels',channels);
+[header, signalHeader,data] = read_EDF(edf_fpath,'channels',channels,'forceMATLAB',true);
 data = cell2mat(data);
 
 Fs = [signalHeader.sampling_frequency];
