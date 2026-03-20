@@ -288,7 +288,9 @@ if isgraphics(ax(2))
 
     %Set colorscale
     if ~all(isnan(SOpower_mat),'all')
-        c_ptiles = prctile(SOpower_mat(:), SOPH_clim_prctiles);
+        tmp_freq_idx = freq_bins >= ylimits(1) & freq_bins <= ylimits(2);
+        tmp_mat = SOpower_mat(:, tmp_freq_idx);
+        c_ptiles = prctile(tmp_mat(:), SOPH_clim_prctiles);
         clim(gca,[c_ptiles(1) c_ptiles(2)]);
 
         c = colorbar_noresize;
@@ -322,7 +324,9 @@ if isgraphics(ax(3))
 
     %Scale color limits
     if ~all(isnan(SOphase_mat),'all')
-        c_ptiles = prctile(SOphase_mat(SOphase_mat(:)~=0), SOPH_clim_prctiles);
+        tmp_freq_idx = freq_bins >= ylimits(1) & freq_bins <= ylimits(2);
+        tmp_mat = SOphase_mat(:, tmp_freq_idx);
+        c_ptiles = prctile(tmp_mat(tmp_mat(:)~=0), SOPH_clim_prctiles);
         clim([c_ptiles(1) c_ptiles(2)]);
 
         c = colorbar_noresize;
