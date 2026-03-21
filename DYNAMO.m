@@ -649,10 +649,9 @@ classdef DYNAMO < handle
 
             % --- Callback functions ---
             function loadSettingsCallback(~, ~)
-
                 [filename, filepath] = uigetfile({'*.txt'},'Select DYNAM-O settings file.');
 
-                if ~isempty(filename)
+                if filename ~= 0
                     new_filename = filename;
                     new_filename(end-2:end) = 'm  ';
 
@@ -681,25 +680,25 @@ classdef DYNAMO < handle
 
                     updateAll();
                 end
-
             end
 
             function saveSettingsCallback(~, ~)
-
                 dir_name = uigetdir();
-                options_structs = cell(1, length(all_configs));
-                struct_names = cell(1, length(all_configs));
-                curr_datetime = char(datetime('now','Format','yyMMdd_HHmmSS'));
 
-                for k = 1:length(all_configs)
-                    options_structs{k} = obj.(all_configs{k}.field);
-                    struct_names{k} = all_configs{k}.field();
+                if dir_name ~= 0
+                    options_structs = cell(1, length(all_configs));
+                    struct_names = cell(1, length(all_configs));
+                    curr_datetime = char(datetime('now','Format','yyMMdd_HHmmSS'));
+
+                    for k = 1:length(all_configs)
+                        options_structs{k} = obj.(all_configs{k}.field);
+                        struct_names{k} = all_configs{k}.field();
+                    end
+
+                    generate_run_log(options_structs, struct_names,'run_start',curr_datetime,'file_path',dir_name);
+
+                    clear dir_name options_structs struct_names curr_datetime
                 end
-
-                generate_run_log(options_structs, struct_names,'run_start',curr_datetime,'file_path',dir_name);
-
-                clear dir_name options_structs struct_names curr_datetime
-
             end
 
             % Basic option configurations (no changes)
