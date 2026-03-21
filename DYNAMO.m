@@ -657,8 +657,7 @@ classdef DYNAMO < handle
                 
                 movefile(strcat(filepath,filename),strcat(filepath,new_filename));
                 
-                run_start = [];
-                SOPH_options = [];
+                SOPH_options = []; %#ok<*PROPLC>
                 baseline_options = [];
                 detection_options = [];
                 param_basis_power_options = [];
