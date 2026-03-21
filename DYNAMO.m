@@ -652,33 +652,35 @@ classdef DYNAMO < handle
 
                 [filename, filepath] = uigetfile({'*.txt'},'Select DYNAM-O settings file.');
 
-                new_filename = filename;
-                new_filename(end-2:end) = 'm  ';
+                if ~isempty(filename)
+                    new_filename = filename;
+                    new_filename(end-2:end) = 'm  ';
 
-                movefile(strcat(filepath,filename),strcat(filepath,new_filename));
+                    movefile(strcat(filepath,filename),strcat(filepath,new_filename));
 
-                SOPH_options = []; %#ok<*PROPLC>
-                baseline_options = [];
-                detection_options = [];
-                param_basis_power_options = [];
-                param_basis_phase_options = [];
-                spline_basis_power_options = [];
-                spline_basis_phase_options = [];
+                    SOPH_options = []; %#ok<*PROPLC>
+                    baseline_options = [];
+                    detection_options = [];
+                    param_basis_power_options = [];
+                    param_basis_phase_options = [];
+                    spline_basis_power_options = [];
+                    spline_basis_phase_options = [];
 
-                run(strcat(filepath,new_filename));
+                    run(strcat(filepath,new_filename));
 
-                obj.updateOptions('SOPH_options',SOPH_options);
-                obj.updateOptions('baseline_options',baseline_options);
-                obj.updateOptions('detection_options',detection_options);
-                obj.updateOptions('param_basis_power_options',param_basis_power_options);
-                obj.updateOptions('param_basis_phase_options',param_basis_phase_options);
-                obj.updateOptions('spline_basis_power_options',spline_basis_power_options);
-                obj.updateOptions('spline_basis_phase_options',spline_basis_phase_options);
-                clear run_start SOPH_options baseline_options detection_options param_basis_power_options param_basis_phase_options spline_basis_power_options spline_basis_phase_options
+                    obj.updateOptions('SOPH_options',SOPH_options);
+                    obj.updateOptions('baseline_options',baseline_options);
+                    obj.updateOptions('detection_options',detection_options);
+                    obj.updateOptions('param_basis_power_options',param_basis_power_options);
+                    obj.updateOptions('param_basis_phase_options',param_basis_phase_options);
+                    obj.updateOptions('spline_basis_power_options',spline_basis_power_options);
+                    obj.updateOptions('spline_basis_phase_options',spline_basis_phase_options);
+                    clear SOPH_options baseline_options detection_options param_basis_power_options param_basis_phase_options spline_basis_power_options spline_basis_phase_options
 
-                movefile(strcat(filepath,new_filename),strcat(filepath,filename));
+                    movefile(strcat(filepath,new_filename),strcat(filepath,filename));
 
-                updateAll();
+                    updateAll();
+                end
 
             end
 
