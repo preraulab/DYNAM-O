@@ -492,7 +492,7 @@ classdef DYNAMO < handle
             opts_phase = obj.param_basis_phase_options;
             opts_phase.plot_on = false;
 
-            
+
             % temp_fbins = obj.SOPHs.freq_bins>=2 & obj.SOPHs.freq_bins<=15.8;
             % obj.SOPHs.SOpower_mat = obj.SOPHs.SOpower_mat(:,temp_fbins);
             % obj.SOPHs.freq_bins = obj.SOPHs.freq_bins(temp_fbins);
@@ -649,14 +649,14 @@ classdef DYNAMO < handle
 
             % --- Callback functions ---
             function loadSettingsCallback(~, ~)
-                
+
                 [filename, filepath] = uigetfile({'*.txt'},'Select DYNAM-O settings file.');
-                
+
                 new_filename = filename;
                 new_filename(end-2:end) = 'm  ';
-                
+
                 movefile(strcat(filepath,filename),strcat(filepath,new_filename));
-                
+
                 SOPH_options = []; %#ok<*PROPLC>
                 baseline_options = [];
                 detection_options = [];
@@ -664,9 +664,9 @@ classdef DYNAMO < handle
                 param_basis_phase_options = [];
                 spline_basis_power_options = [];
                 spline_basis_phase_options = [];
-                
+
                 run(strcat(filepath,new_filename));
-                
+
                 obj.updateOptions('SOPH_options',SOPH_options);
                 obj.updateOptions('baseline_options',baseline_options);
                 obj.updateOptions('detection_options',detection_options);
@@ -683,19 +683,19 @@ classdef DYNAMO < handle
             end
 
             function saveSettingsCallback(~, ~)
-                
+
                 dir_name = uigetdir();
-                options_structs = {};
-                struct_names = {};
+                options_structs = cell(1, length(all_configs));
+                struct_names = cell(1, length(all_configs));
                 curr_datetime = char(datetime('now','Format','yyMMdd_HHmmSS'));
-                
+
                 for k = 1:length(all_configs)
                     options_structs{k} = obj.(all_configs{k}.field);
                     struct_names{k} = all_configs{k}.field();
                 end
 
                 generate_run_log(options_structs, struct_names,'run_start',curr_datetime,'file_path',dir_name);
-            
+
                 clear dir_name options_structs struct_names curr_datetime
 
             end
