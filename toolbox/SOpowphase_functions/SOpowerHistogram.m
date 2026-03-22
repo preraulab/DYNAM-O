@@ -221,6 +221,9 @@ SOpower_valid_allstages = SOpower_excluded_valid & SOpower_times_valid;
 
 clear SOpower_stages_valid SOpower_excluded_valid SOpower_times_valid
 
+%Check for proper SO-power alignment
+assert(any(SOpower_valid),'No valid SO-power overlapping data. Check staging and alignment.')
+
 %% Compute the SO power histogram
 % Set default range to max and min of SOpower being used in SOPH
 if isempty(SO_range)
