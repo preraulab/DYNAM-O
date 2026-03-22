@@ -449,21 +449,21 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % Create DataListBox
             app.DataListBox = uilistbox(app.FileInputGrid);
-            app.DataListBox.Items = {''};
+            app.DataListBox.Items = {};
             app.DataListBox.Multiselect = 'on';
             app.DataListBox.Layout.Row = 2;
             app.DataListBox.Layout.Column = 1;
             app.DataListBox.DoubleClickedFcn = createCallbackFcn(app, @ShowHeader, true);
-            app.DataListBox.Value = {''};
+            app.DataListBox.Value = {};
             app.DataListBox.Tooltip = 'Double-click a file to view the header';
 
             % Create StagingListBox
             app.StagingListBox = uilistbox(app.FileInputGrid);
-            app.StagingListBox.Items = {''};
+            app.StagingListBox.Items = {};
             app.StagingListBox.Multiselect = 'on';
             app.StagingListBox.Layout.Row = 2;
             app.StagingListBox.Layout.Column = 2;
-            app.StagingListBox.Value = {''};
+            app.StagingListBox.Value = {};
 
             % Create DataFileTopGrid
             app.DataFileTopGrid = uigridlayout(app.FileInputGrid);
