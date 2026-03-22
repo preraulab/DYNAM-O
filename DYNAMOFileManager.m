@@ -1,5 +1,5 @@
 classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
-% Add documentation on how to open this GUI
+    % Add documentation on how to open this GUI
 
     properties (Access = public)
 
@@ -395,7 +395,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StagingFileButtonGrid.Padding = [60 0 60 6];
             app.StagingFileButtonGrid.Layout.Row = 3;
             app.StagingFileButtonGrid.Layout.Column = 2;
-            
+
 
             % Create StagingAddFileButton
             app.StagingAddFileButton = uibutton(app.StagingFileButtonGrid, 'push');
@@ -456,7 +456,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DataListBox.DoubleClickedFcn = createCallbackFcn(app, @ShowHeader, true);
             app.DataListBox.Value = {''};
             app.DataListBox.Tooltip = 'Double-click a file to view the header';
-            
+
             % Create StagingListBox
             app.StagingListBox = uilistbox(app.FileInputGrid);
             app.StagingListBox.Items = {''};
@@ -1286,18 +1286,18 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.UIFigure.Visible = 'on';
 
         end
-        
+
         function createDYNAMOSettingsTab(app)
             app.DYNAMOOptionsApp(false, app.UIFigure, app.DYNAMOSettingsGrid, false);
         end
-        
+
         %% ================== BUTTON CALLBACKS ==================
         function showHelpButtonPushed(app)
 
             uialert(app.UIFigure,sprintf('Instructions:\n1. In File Selection tab: Add Data files (EDF) and Staging files (CSV/TXT).\n2. Make sure the file counts match and order corresponds.\n3. In Output Options tab: Choose an output directory and select save options.\n4. Click Run Batch to process files.'),'Help','Icon','info');
 
         end
-        
+
         function loadDataFileListCallback(app,~)
             % uialert(app.UIFigure, 'Load EDF File List Selected.', 'Load');
 
@@ -1415,7 +1415,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         function StagingMoveDownButtonPushed(app,~,~)
             moveListItems(app,'staging','down');
         end
-        
+
         function viewChannelsButtonPushed(app,~,~)
 
             if isempty(app.DataList)
@@ -1426,6 +1426,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %app.viewChannelText = {};
             %app.run_error_list(end+1) = {'- Data list empty. Need edf files to run.'}
             %app.channel_counts = cell(2,1);
+            signal_labels = cell(1, length(app.DataList));
             for ii = 1:length(app.DataList)
                 [~,signalHeader] = read_EDF(app.DataList{ii});
                 signal_labels{ii} = {signalHeader.signal_labels};
@@ -1502,7 +1503,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         %% ================== UPDATE METHODS ==================
         function updateDataListBox(app)
             app.DataListBox.Items = app.DataList;
-            if length(app.DataList)==1
+            if length(app.DataList) == 1 %#ok<*ISCL>
                 app.DataLabel.Text = sprintf('Data (1 File)');
             else
                 app.DataLabel.Text = sprintf('Data (%d Files)',length(app.DataList));
@@ -1511,7 +1512,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
         function updateStagingListBox(app)
             app.StagingListBox.Items = app.StagingList;
-            if length(app.StagingList)==1
+            if length(app.StagingList) == 1
                 app.StagingLabel.Text = sprintf('Staging (1 File)');
             else
                 app.StagingLabel.Text = sprintf('Staging (%d Files)',length(app.StagingList));
@@ -1678,7 +1679,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 % Save stats results
                 if app.SavePeakStatsCheckBox.Value
                     app.TextArea.Value = strcat('Saving stats table on subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
-                    
+
                     if ~strcmp(app.PeakStatsTableDropDown.Value,'--')
                         switch app.PeakStatsTableDropDown.Value
                             case '.csv'
@@ -1694,7 +1695,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                                 % .csv
                                 app.output_stats_name = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.csv');
                                 table2csv(stats_table,app.output_stats_name);
-                        end 
+                        end
                     end
                 end
 
@@ -1723,7 +1724,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                         end
                     end
 
-                    
+
                 end
 
             end
@@ -1875,7 +1876,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             close all;
 
             app.TextArea.Value = strcat('Updating saved SOPH for subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
-            
+
             % Resave SOPH with spline
             if ~strcmp(app.SplineBasisDropDown.Value,'--')
 
@@ -2039,39 +2040,39 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                         % Update delimeter from user input
                         app.TextArea.Value = {'Processing delimeter input.'};
                         updateDelimeterInput(app)
-    
+
                         %% =============== LOAD EDF AND STAGING ===============
                         app.TextArea.Value = strcat('Loading subject',{' '},app.input_fbase,', channel',{' '},app.channel,' staging and EDF data.');
                         [app.data, app.Fs, app.stage_times, app.stage_vals] = load_data(app.DataList{jj},app.StagingList{jj},app.StagesColumnEditField.Value,app.TimesColumnEditField.Value,app.channel,'header_lines',app.HeaderRowsEditField.Value,'delimiter',app.delimeter,'stage_vals_in',{app.ArtifactUserInput,app.WakeUserInput,app.REMUserInput,app.N1UserInput,app.N2UserInput,app.N3UserInput,app.UnknownUserInput});
-    
+
                         %% =============== RUN REQUESTED RESULTS ===============
-    
+
                         % If Stats Table Requested
                         if app.SavePeakStatsCheckBox.Value || app.SaveSOPHsCheckBox.Value
                             runStatsTable(app)
                         end
-    
+
                         % If Data Summary Image Requested
                         if  app.SaveDataSummaryCheckBox.Value
                             runDataSummaryFigure(app)
                         end
-    
+
                         % If Param Basis Requested
                         if app.SaveParamBasisCheckBox.Value
                             runParamBasis(app)
                         end
-    
+
                         % If Spline Basis Requested
                         if app.SaveSplineBasisCheckBox.Value
                             runSplineBasis(app)
                         end
-    
+
                         if app.SaveAuxDataCheckBox.Value
                             saveAuxData(app)
                         end
-    
+
                         %% =============== UPDATE RUN LOG ===============
-    
+
                         % Output to run log if anything was run
                         if app.anything_run
                             app.TextArea.Value = strcat('Successfully run subject ',{' '},app.input_fbase,', channel ',{' '},app.channel,'.');
