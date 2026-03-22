@@ -13,7 +13,7 @@ function [params, fitobj, gof, model_SOPhH, phase_wshed_img, f] = param_basis_ph
 %       see param_basis_opts() for optional parameters
 %
 %   Output:
-%       params: Matrix of fitted parameters
+%       params: Matrix of fitted parameters. Columns are: [amp0, fmean0, fstd0, pmean0, pstd0, theta0]
 %       fitobj: Fitted object containing detailed fit information
 %       gof: Goodness of fit structure
 %       model_SOPhH: Fitted model SOPhH

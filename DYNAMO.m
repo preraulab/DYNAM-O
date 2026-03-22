@@ -35,7 +35,7 @@ classdef DYNAMO < handle
     %       param_basis_*_options, spline_basis_*_options
     %
     %   Methods:
-    %       runDYNAMO(...)         - run DYNAM-O pipeline. Compute TF-peaks and SOPHs
+    %       runDYNAMO(...)        - run DYNAM-O pipeline. Compute TF-peaks and SOPHs
     %       updateOptions(...)    - update baseline/detection/SOPH options
     %       displaySummaryPlot()  - plot SOPH and TF peak summary figure
     %       displayTFPeaks()      - plot raw spectrogram and overlaid peaks
@@ -143,9 +143,7 @@ classdef DYNAMO < handle
             %
             addpath(genpath(fileparts(which('DYNAMO.m'))))
 
-            default_verbose = true;
-
-            if nargin <= 1
+            if nargin <= 1 && strcmp(class(obj),"DYNAMO")
                 if nargin == 0
                     data_range = 'segment';
                 elseif any(strcmpi(varargin{1}, {'app', 'demo'}))
@@ -154,16 +152,19 @@ classdef DYNAMO < handle
                     data_range = varargin{1};
                     assert(ismember(lower(data_range), {'segment','night'}), 'Select ''segment'' or ''night'' as input for example data.');
                 end
-                obj = runExampleData(data_range, default_verbose, true);
+                obj = runExampleData(data_range, true, true);
             else
                 % Set up parser
                 p = inputParser;
                 p.KeepUnmatched = true;
 
-                addRequired(p, 'data', @(x) isnumeric(x));
-                addRequired(p, 'Fs', @(x) isnumeric(x) && isscalar(x) && x > 0);
-                addRequired(p, 'stage_times', @(x) isnumeric(x));
-                addRequired(p, 'stage_vals', @(x) isnumeric(x));
+                % Removes requirements as a subclass
+                if strcmp(class(obj),"DYNAMO")
+                    addRequired(p, 'data', @(x) isnumeric(x));
+                    addRequired(p, 'Fs', @(x) isnumeric(x) && isscalar(x) && x > 0);
+                    addRequired(p, 'stage_times', @(x) isnumeric(x));
+                    addRequired(p, 'stage_vals', @(x) isnumeric(x));
+                end
 
                 addOptional(p, 'time_range', [], @(x) isempty(x) || (isnumeric(x) && numel(x)==2));
                 addOptional(p, 'baseline_options', baseline_opts(), @(x) isstruct(x));
@@ -174,11 +175,12 @@ classdef DYNAMO < handle
                 addOptional(p, 'spline_basis_power_options', spline_basis_opts('power'), @(x) isstruct(x));
                 addOptional(p, 'spline_basis_phase_options', spline_basis_opts('phase'), @(x) isstruct(x));
                 addOptional(p, 'stats_table', [], @(x) istable(x) || isempty(x));
-                addOptional(p, 'verbose', default_verbose, @(x) islogical(x) || isnumeric(x));
-                addOptional(p, 'plot_on', true, @(x) islogical(x) || isnumeric(x));
-                addOptional(p, 'save_output_image', false, @(x) islogical(x) || isnumeric(x));
-                addOptional(p, 'output_fname', 'DYNAM-O_output', @(x) ischar(x) || isstring(x));
-                addOptional(p, 'fit_SOPH', true, @(x) islogical(x) || isnumeric(x));
+                %% COME BACK TO THIS- RUN DYNAMO INPUTS
+                % addOptional(p, 'verbose', default_verbose, @(x) islogical(x) || isnumeric(x));
+                % addOptional(p, 'plot_on', true, @(x) islogical(x) || isnumeric(x));
+                % addOptional(p, 'save_output_image', false, @(x) islogical(x) || isnumeric(x));
+                % addOptional(p, 'output_fname', 'DYNAM-O_output', @(x) ischar(x) || isstring(x));
+                % addOptional(p, 'fit_SOPH', true, @(x) islogical(x) || isnumeric(x));
                 addOptional(p, 'app', false, @(x) islogical(x) || isnumeric(x));
 
                 % Parse inputs
@@ -186,15 +188,18 @@ classdef DYNAMO < handle
                 R = p.Results;
 
                 % Avoid unnecessary data copying
-                if iscolumn(R.data)
-                    obj.data = R.data;  % No copy needed
-                else
-                    obj.data = R.data(:);  % Only reshape if necessary
+                if strcmp(class(obj),"DYNAMO")
+                    if iscolumn(R.data)
+                        obj.data = R.data;  % No copy needed
+                    else
+                        obj.data = R.data(:);  % Only reshape if necessary
+                    end
+
+                    obj.Fs = R.Fs;
+                    obj.stage_times = R.stage_times;
+                    obj.stage_vals = single(R.stage_vals);
                 end
 
-                obj.Fs = R.Fs;
-                obj.stage_times = R.stage_times;
-                obj.stage_vals = single(R.stage_vals);
                 obj.baseline_options = R.baseline_options;
                 obj.detection_options = R.detection_options;
                 obj.param_basis_power_options = R.param_basis_power_options;
@@ -232,9 +237,17 @@ classdef DYNAMO < handle
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % App GUI
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function app(obj)
+        function app(obj, verbose, fig, tab)
             % APP  Open the DYNAMO options GUI
-            obj.DYNAMOOptionsApp(false);
+            if nargin<2
+                obj.DYNAMOOptionsApp(false);
+            elseif nargin==2
+                obj.DYNAMOOptionsApp(verbose);
+            elseif nargin==3
+                obj.DYNAMOOptionsApp(verbose, fig);
+            elseif nargin==4
+                obj.DYNAMOOptionsApp(verbose, fig, tab);
+            end
         end
 
         function open(obj)
@@ -243,10 +256,10 @@ classdef DYNAMO < handle
         end
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        % runDYNAMO
+        % run
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function obj = runDYNAMO(obj)
-            %runDYNAMO  Re-execute the DYNAM-O pipeline and compute TF
+        function obj = run(obj)
+            %run  Re-execute the DYNAM-O pipeline and compute TF
             %peaks and SOPH
             %
             %   Usage:
@@ -479,6 +492,12 @@ classdef DYNAMO < handle
             opts_phase = obj.param_basis_phase_options;
             opts_phase.plot_on = false;
 
+
+            % temp_fbins = obj.SOPHs.freq_bins>=2 & obj.SOPHs.freq_bins<=15.8;
+            % obj.SOPHs.SOpower_mat = obj.SOPHs.SOpower_mat(:,temp_fbins);
+            % obj.SOPHs.freq_bins = obj.SOPHs.freq_bins(temp_fbins);
+            % obj.SOPHs.SOphase_mat = obj.SOPHs.SOphase_mat(:,temp_fbins);
+
             [params_pow, fitobj_pow, gof_pow, model_SOPH_pow, power_wshed_img] = ...
                 param_basis_power(obj.SOPHs.SOpower_mat, obj.SOPHs.SOpower_bins, obj.SOPHs.freq_bins, ...
                 opts_pow); % plot_off for merged plot
@@ -570,12 +589,12 @@ classdef DYNAMO < handle
         end
     end
 
-    methods (Access = private)
+    methods (Access = protected)
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % DYNAMOOptionsApp
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        function obj = DYNAMOOptionsApp(obj, verbose)
+        function obj = DYNAMOOptionsApp(obj, verbose, fig, tab, showButtons)
             %DYNAMOOPTIONSAPP  Simplified GUI for editing DYNAMO pipeline options
             %
             %   Usage:
@@ -589,6 +608,9 @@ classdef DYNAMO < handle
             %   Inputs:
             %       obj: DYNAMO object
             %       verbose: logical - display console messages (default: false)
+            %       fig: figure handle - parent figure
+            %       tab: tab handle - parent tab
+            %       showButtons: logical - display buttons to run analyses (default: true)
             %
             %   Outputs:
             %       obj: DYNAMO object possibly modified via GUI interaction
@@ -599,8 +621,85 @@ classdef DYNAMO < handle
             end
 
             % Create main figure
-            fig = uifigure('Name', 'DYNAMO Options', 'Position', [100 100 900 650]);
-            tabGroup = uitabgroup(fig, 'Position', [10 60 880 580]);
+            if nargin<3 || isempty(fig)
+                fig = uifigure('Name', 'DYNAMO Options', 'Position', [100 100 900 650]);
+                tabGroup = uitabgroup(fig, 'Position', [10 60 880 580]);
+                fig.AutoResizeChildren = true;
+            else
+                % tabPos = tab.Position;
+                % main_gap = 30;
+                % main_pos = [tabPos(1), tabPos(2), tabPos(3), tabPos(4) - main_gap];
+                % tabGroup = uitabgroup(tab, 'Position', main_pos);
+                tabGroup = uitabgroup(tab);
+            end
+
+            if nargin<5
+                showButtons = true;
+            end
+
+            % Create main menu
+            mSettings = uimenu(fig, 'Text', 'DYNAM-O Settings');
+
+            % Create submenu items
+            uimenu(mSettings, 'Text', 'Load DYNAM-O Settings...', ...
+                'MenuSelectedFcn', @loadSettingsCallback);
+
+            uimenu(mSettings, 'Text', 'Save DYNAM-O Settings...', ...
+                'MenuSelectedFcn', @saveSettingsCallback);
+
+            % --- Callback functions ---
+            function loadSettingsCallback(~, ~)
+                [filename, filepath] = uigetfile({'*.txt'},'Select DYNAM-O settings file.');
+
+                if filename ~= 0
+                    new_filename = filename;
+                    new_filename(end-2:end) = 'm  ';
+
+                    movefile(strcat(filepath,filename),strcat(filepath,new_filename));
+
+                    SOPH_options = []; %#ok<*PROPLC>
+                    baseline_options = [];
+                    detection_options = [];
+                    param_basis_power_options = [];
+                    param_basis_phase_options = [];
+                    spline_basis_power_options = [];
+                    spline_basis_phase_options = [];
+
+                    run(strcat(filepath,new_filename));
+
+                    obj.updateOptions('SOPH_options',SOPH_options);
+                    obj.updateOptions('baseline_options',baseline_options);
+                    obj.updateOptions('detection_options',detection_options);
+                    obj.updateOptions('param_basis_power_options',param_basis_power_options);
+                    obj.updateOptions('param_basis_phase_options',param_basis_phase_options);
+                    obj.updateOptions('spline_basis_power_options',spline_basis_power_options);
+                    obj.updateOptions('spline_basis_phase_options',spline_basis_phase_options);
+                    clear SOPH_options baseline_options detection_options param_basis_power_options param_basis_phase_options spline_basis_power_options spline_basis_phase_options
+
+                    movefile(strcat(filepath,new_filename),strcat(filepath,filename));
+
+                    updateAll();
+                end
+            end
+
+            function saveSettingsCallback(~, ~)
+                dir_name = uigetdir();
+
+                if dir_name ~= 0
+                    options_structs = cell(1, length(all_configs));
+                    struct_names = cell(1, length(all_configs));
+                    curr_datetime = char(datetime('now','Format','yyMMdd_HHmmSS'));
+
+                    for k = 1:length(all_configs)
+                        options_structs{k} = obj.(all_configs{k}.field);
+                        struct_names{k} = all_configs{k}.field();
+                    end
+
+                    generate_run_log(options_structs, struct_names,'run_start',curr_datetime,'file_path',dir_name);
+
+                    clear dir_name options_structs struct_names curr_datetime
+                end
+            end
 
             % Basic option configurations (no changes)
             basic_configs = {
@@ -616,9 +715,19 @@ classdef DYNAMO < handle
                 basic_tables{jj} = createTable(tab, obj.(basic_configs{jj}.field), basic_configs{jj});
             end
 
+            %% TO-DO: COME BACK TO THIS LATER
+            if showButtons
+                param_tab_gap = 90;
+            else
+                param_tab_gap = 30;
+            end
+            param_tab_pos = tabGroup.Position;
+            param_tab_pos(4) = param_tab_pos(4) - param_tab_gap;
+
             % Create Parametric Fit main tab with subtabs
             param_tab = uitab(tabGroup, 'Title', 'Parametric Fit');
-            param_subtab_group = uitabgroup(param_tab, 'Position', [10 10 860 540]);
+            param_subtab_group = uitabgroup(param_tab, 'Position', param_tab_pos);
+            %param_subtab_group = uitabgroup(param_tab);
 
             % Parametric subtab configurations
             param_configs = {
@@ -634,7 +743,7 @@ classdef DYNAMO < handle
 
             % Create Spline Fit main tab with subtabs
             spline_tab = uitab(tabGroup, 'Title', 'Spline Fit');
-            spline_subtab_group = uitabgroup(spline_tab, 'Position', [10 10 860 540]);
+            spline_subtab_group = uitabgroup(spline_tab, 'Position', param_tab_pos);
 
             % Spline subtab configurations
             spline_configs = {
@@ -653,32 +762,40 @@ classdef DYNAMO < handle
             all_tables = [basic_tables; param_tables; spline_tables];
 
             % ---- Buttons ----
-            buttonLabels = {'Reset All','Run DYNAMO','Plot Summary','Param Fit','Spline Fit','Close'};
-            buttonCallbacks = {@resetAll, @rerunDynamo, @plotSummary, @runParamFit, @runSplineFit, @(~,~) delete(fig)};
+            if showButtons
+                buttonLabels = {'Reset All','Run DYNAMO','Plot Summary','Param Fit','Spline Fit','Close'};
+                buttonCallbacks = {@resetAll, @rerunDynamo, @plotSummary, @runParamFit, @runSplineFit, @(~,~) delete(fig)};
 
-            nButtons = numel(buttonLabels);
-            buttonWidth = 120;
-            buttonHeight = 40;
-            spacing = 20;
-            totalWidth = nButtons*buttonWidth + (nButtons-1)*spacing;
-            startX = (fig.Position(3) - totalWidth)/2; % center align
+                nButtons = numel(buttonLabels);
+                buttonWidth = 120;
+                buttonHeight = 40;
+                spacing = 20;
+                totalWidth = nButtons*buttonWidth + (nButtons-1)*spacing;
+                startX = (fig.Position(3) - totalWidth)/2; % center align
 
-            for jj = 1:nButtons
-                xpos = startX + (jj-1)*(buttonWidth+spacing);
-                uibutton(fig, 'Text', buttonLabels{jj}, ...
-                    'Position', [xpos 10 buttonWidth buttonHeight], ...
-                    'ButtonPushedFcn', buttonCallbacks{jj});
+                for jj = 1:nButtons
+                    xpos = startX + (jj-1)*(buttonWidth+spacing);
+                    uibutton(fig, 'Text', buttonLabels{jj}, ...
+                        'Position', [xpos 10 buttonWidth buttonHeight], ...
+                        'ButtonPushedFcn', buttonCallbacks{jj});
+                end
+
+                % uiwait(fig); % this wait is not necessary
             end
-
-            uiwait(fig);
 
             % --- Button callbacks ---
             function resetAll(~,~)
                 if verbose, disp('Resetting all options...'); end
                 for k = 1:length(all_configs)
                     obj.(all_configs{k}.field) = all_configs{k}.constructor();
-                    % refresh the table
-                    all_tables{k}.Data = struct2table(obj.(all_configs{k}.field),'AsArray',true);
+                    all_tables{k}.Data = createTableData(obj.(all_configs{k}.field), all_configs{k});
+                end
+            end
+
+            function updateAll(~,~)
+                if verbose, disp('Updating all options...'); end
+                for k = 1:length(all_configs)
+                    all_tables{k}.Data = createTableData(obj.(all_configs{k}.field), all_configs{k});
                 end
             end
 
@@ -697,13 +814,16 @@ classdef DYNAMO < handle
             end
 
             %------------------------------------------------------------------
-            function tbl = createTable(parent, opts, config)
-                %CREATETABLE  Build an editable uitable for a given options struct
+            function tableData = createTableData(opts, config)
+                %CREATETABLEDATA  Build the table Data for an options struct
                 %
-                %   tbl = createTable(parent, opts, config)
+                %   tableData = createTableData(opts, config)
                 %
-                %   This function constructs the Data and callbacks for an uitable
-                %   representing fields in the options struct.
+                %   This helper converts an options struct into a 3-column MATLAB
+                %   table suitable for use as the 'Data' property of a uitable.
+                %   It formats each option value for display (e.g., dropdowns,
+                %   logicals, vectors) and pulls human-readable descriptions using
+                %   the constructor specified in config.
                 %
 
                 fields = fieldnames(opts);
@@ -722,12 +842,28 @@ classdef DYNAMO < handle
 
                 tableData = table(paramNames, descriptions, values, ...
                     'VariableNames', {'Parameter', 'Description', 'Value'});
+            end
+
+            function tbl = createTable(parent, opts, config)
+                %CREATETABLE  Build an editable uitable for a given options struct
+                %
+                %   tbl = createTable(parent, opts, config)
+                %
+                %   This function constructs the Data and callbacks for an uitable
+                %   representing fields in the options struct.
+                %
+
+                tableData = createTableData(opts, config);
+
+                table_gap = 30;
+                table_pos = parent.Position;
+                table_pos(4) = table_pos(4) - table_gap;
 
                 tbl = uitable(parent, 'Data', tableData, ...
                     'ColumnName', {'Parameter', 'Description', 'Value'}, ...
                     'ColumnWidth', {180, 500, 'auto'}, ...
                     'ColumnEditable', [false false true], ...
-                    'Position', [10 10 860 540], ...
+                    'Position', table_pos, ...
                     'CellEditCallback', @(src,ev) editCell(src, ev, config), ...
                     'CellSelectionCallback', @(src,ev) selectCell(src, ev, config));
             end
@@ -739,30 +875,20 @@ classdef DYNAMO < handle
                 %   tbl = createSubTable(parent, opts, config)
                 %
                 %   Similar to createTable but with adjusted positioning for subtabs.
+                %   'ColumnWidth', {180, 480, 'auto'} instead of {180, 500, 'auto'}.
                 %
 
-                fields = fieldnames(opts);
-                numFields = length(fields);
+                tableData = createTableData(opts, config);
 
-                paramNames = cell(numFields, 1);
-                descriptions = cell(numFields, 1);
-                values = cell(numFields, 1);
-
-                for j = 1:numFields
-                    paramNames{j} = fields{j};
-                    descriptions{j} = getDescription(paramNames{j}, config.constructor);
-                    formattedValue = formatValue(fields{j}, opts.(fields{j}), config.constructor);
-                    values{j} = formattedValue;
-                end
-
-                tableData = table(paramNames, descriptions, values, ...
-                    'VariableNames', {'Parameter', 'Description', 'Value'});
+                sub_table_gap = 30;
+                sub_table_pos = parent.Position;
+                sub_table_pos(4) = sub_table_pos(4) - sub_table_gap;
 
                 tbl = uitable(parent, 'Data', tableData, ...
                     'ColumnName', {'Parameter', 'Description', 'Value'}, ...
                     'ColumnWidth', {180, 480, 'auto'}, ...
                     'ColumnEditable', [false false true], ...
-                    'Position', [5 5 850 510], ...
+                    'Position', sub_table_pos, ...
                     'CellEditCallback', @(src,ev) editCell(src, ev, config), ...
                     'CellSelectionCallback', @(src,ev) selectCell(src, ev, config));
             end
@@ -833,7 +959,7 @@ classdef DYNAMO < handle
                         'Indeterminate', 'on');
 
                     % Rerun DYNAMO with current options (uses runDYNAMO wrapper)
-                    obj.runDYNAMO();
+                    obj.run();
 
                     % Close progress dialog if open
                     if isvalid(progressDlg)
@@ -905,6 +1031,10 @@ classdef DYNAMO < handle
                 str = strtrim(str);
                 if isempty(str)
                     value = [];
+                elseif ismember(str, {'true'})
+                    value = true;
+                elseif ismember(str, {'false'})
+                    value = false;
                 elseif strcmp(str, 'all')
                     value = str;
                 elseif startsWith(str, '{') && endsWith(str, '}')
@@ -982,7 +1112,8 @@ classdef DYNAMO < handle
                 end
 
                 if islogical(value) && isscalar(value)
-                    str = value; % Keep as logical for checkbox display
+                    % str = value; % Keep as logical for checkbox display
+                    str = categorical(string(value), {'true', 'false'});
                     return;
                 end
 
@@ -1199,7 +1330,7 @@ classdef DYNAMO < handle
         end
     end
 
-    methods (Static, Access = private)
+    methods (Static, Access = protected)
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % createSOPHsStruct
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1277,5 +1408,41 @@ classdef DYNAMO < handle
                 pi_str = num2str(val);
             end
         end
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % writeTiff
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        function writeTiff(filename,data)
+
+            t = Tiff(filename, 'w');
+
+            % Setup the tag structure
+            tagstruct.ImageLength = size(data, 1);
+            tagstruct.ImageWidth = size(data, 2);
+            tagstruct.Photometric = Tiff.Photometric.MinIsBlack;
+            tagstruct.BitsPerSample = 64;              % Use 64 for double precision
+            tagstruct.SamplesPerPixel = 1;
+            tagstruct.SampleFormat = Tiff.SampleFormat.IEEEFP; % Key for negative/floats
+            tagstruct.PlanarConfiguration = Tiff.PlanarConfiguration.Chunky;
+
+            % Write data
+            t.setTag(tagstruct);
+            t.write(data);
+            t.close();
+
+        end
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % readTiff
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        function [tiff_data] = readTiff(filename)
+
+            assert(exist(filename,'file'),'Tiff file %s not found.',filename);
+            t = Tiff(filename,'r');
+            tiff_data = t.read();
+            t.close();
+
+        end
+
     end
 end

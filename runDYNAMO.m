@@ -49,7 +49,7 @@
 %         parametric and spline fit results for both SO-power and SO-phase histograms.
 %
 %   Example:
-%       load('my_sleep_data.mat');  % should include data, Fs, stage_times, stage_vals
+%       load('example_data/example_data.mat');  % should include data, Fs, stage_times, stage_vals
 %       [stats_table, spect, stimes, sfreqs, artifacts, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals);
 %
 %   Citation:
@@ -284,7 +284,7 @@ end
 
 function [SOPH_paramfit] = createSOPHparamfitStruct(params, fitobj, gof, model_SOPH, wshed_img)
 SOPH_paramfit = struct;
-SOPH_paramfit.params = params;
+SOPH_paramfit.params = params; % Columns are: [amp0, fmean0, fstd0, pmean0, pstd0, theta0]
 SOPH_paramfit.fitobj = fitobj;
 SOPH_paramfit.gof = gof;
 SOPH_paramfit.model_SOPH = model_SOPH;
