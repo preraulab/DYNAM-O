@@ -8,7 +8,9 @@ function default_params = spline_basis_opts(type, varargin)
 %       type: String - 'power' or 'phase' to select the appropriate parameter set -- required
 %
 %   Optional inputs:
-%       'ylimits' - 1x2 vector of frequency limits over which histograms are fitted with splines (default: [2, 25])
+%       'power_limits' - 1x2 vector of SO power limits over which histograms are fitted with splines (default: [-2, 20]; only used for power histogram)
+%       'phase_limits' - 1x2 vector of SO phase limits over which histograms are fitted with splines (default: [-pi, pi]; only used for phase histogram)
+%       'freq_limits' - 1x2 vector of frequency limits over which histograms are fitted with splines (default: [2, 16])
 %       'num_knots_x' - Integer number of internal knots in the x-direction (default for 'power': 5, default for 'phase': 5)
 %       'num_knots_y' - Integer number of internal knots in the frequency y-direction (default for 'power': 18, default for 'phase': 9)
 %       'plot_on' - Flag to control whether to plot results (default: true)
@@ -19,7 +21,7 @@ function default_params = spline_basis_opts(type, varargin)
 %
 %   Example:
 %       default_params = spline_basis_opts('power', 'num_knots_x', 7, 'num_knots_y', 20);
-%       default_params = spline_basis_opts('phase', 'ylimits', [1, 30], 'plot_on', false);
+%       default_params = spline_basis_opts('phase', 'freq_limits', [1, 30], 'plot_on', false);
 %
 %
 %   Please provide the following citation for all use:
@@ -35,14 +37,16 @@ assert(nargin > 0, 'Type must be specified as ''power'' or ''phase''.');
 assert(ismember(type, {'power', 'phase'}), 'Invalid type. Valid types are ''power'' or ''phase''.');
 
 % Default parameter values for 'power'
-default_params_power.ylimits = [2, 25];
+default_params_power.power_limits = [-2, 20];
+default_params_power.freq_limits = [2, 16];
 default_params_power.num_knots_x = 5;
 default_params_power.num_knots_y = 18;
 default_params_power.plot_on = true;
 default_params_power.SOPH_clim_prctiles = [5, 98];
 
 % Default parameter values for 'phase'
-default_params_phase.ylimits = [2, 25];
+default_params_phase.phase_limits = [-pi, pi];
+default_params_phase.freq_limits = [2, 16];
 default_params_phase.num_knots_x = 5;
 default_params_phase.num_knots_y = 9;
 default_params_phase.plot_on = true;
@@ -60,7 +64,13 @@ end
 p = inputParser;
 
 % Add each field in default_params to the parser with validation
-addParameter(p, 'ylimits', default_params.ylimits, @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
+switch type
+    case 'power'
+        addParameter(p, 'power_limits', default_params.power_limits, @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
+    case 'phase'
+        addParameter(p, 'phase_limits', default_params.phase_limits, @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
+end
+addParameter(p, 'freq_limits', default_params.freq_limits, @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
 addParameter(p, 'num_knots_x', default_params.num_knots_x, @(x) validateattributes(x, {'numeric'}, {'positive', 'integer', 'scalar'}));
 addParameter(p, 'num_knots_y', default_params.num_knots_y, @(x) validateattributes(x, {'numeric'}, {'positive', 'integer', 'scalar'}));
 addParameter(p, 'plot_on', default_params.plot_on, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));

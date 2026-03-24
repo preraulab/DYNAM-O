@@ -17,7 +17,7 @@ function [fh] = displaySummaryPlot(varargin)
 %       time_range:         [1x2] double - section of EEG to display (seconds).
 %       mtm_freq_range:     [1x2] double - multitaper method frequency range to compute spectrogram over (Hz). [lower, higher].
 %                           Default = [2, 25]
-%       ylimits:            [1x2] double - frequency limits to display spectrograms and SO feature histograms (Hz). [lower, higher].
+%       freq_limits:        [1x2] double - frequency limits to display spectrograms and SO feature histograms (Hz). [lower, higher].
 %                           Default = mtm_freq_range
 %
 %    >> SO-POWER TRACE
@@ -73,7 +73,7 @@ addParameter(p, 'data', [], @(x) validateattributes(x, {'numeric'}, {'real','2d'
 addParameter(p, 'Fs', [], @(x) isa(x,'numeric') && (isempty(x) || isscalar(x)));
 addParameter(p, 'time_range', [-inf inf], @(x) isa(x,'numeric') && length(x) <= 2);
 addParameter(p, 'mtm_freq_range', [2, 25], @(x) validateattributes(x,{'numeric'},{'real','finite','vector','numel',2}));
-addParameter(p, 'ylimits', [], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
+addParameter(p, 'freq_limits', [], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
 
 % SO-power trace needs these variables
 addParameter(p, 'SOpower_norm', [], @(x) validateattributes(x, {'numeric'}, {'real','2d'}));
@@ -128,8 +128,8 @@ if all(~isfinite(time_range))
     end
 end
 
-if isempty(ylimits) %#ok<*NODEF>
-    ylimits = mtm_freq_range;
+if isempty(freq_limits) %#ok<*NODEF>
+    freq_limits = mtm_freq_range;
 end
 
 if isempty(hist_peakidx)
@@ -288,7 +288,7 @@ if isgraphics(ax(2))
 
     %Set colorscale
     if ~all(isnan(SOpower_mat),'all')
-        tmp_freq_idx = freq_bins >= ylimits(1) & freq_bins <= ylimits(2);
+        tmp_freq_idx = freq_bins >= freq_limits(1) & freq_bins <= freq_limits(2);
         tmp_mat = SOpower_mat(:, tmp_freq_idx);
         c_ptiles = prctile(tmp_mat(:), SOPH_clim_prctiles);
         clim(gca,[c_ptiles(1) c_ptiles(2)]);
@@ -299,7 +299,7 @@ if isgraphics(ax(2))
         c.Label.VerticalAlignment = "bottom";
     end
 
-    ylim(ylimits);
+    ylim(freq_limits);
     ylabel('Frequency (Hz)');
 
     switch SOpower_norm_method
@@ -324,7 +324,7 @@ if isgraphics(ax(3))
 
     %Scale color limits
     if ~all(isnan(SOphase_mat),'all')
-        tmp_freq_idx = freq_bins >= ylimits(1) & freq_bins <= ylimits(2);
+        tmp_freq_idx = freq_bins >= freq_limits(1) & freq_bins <= freq_limits(2);
         tmp_mat = SOphase_mat(:, tmp_freq_idx);
         c_ptiles = prctile(tmp_mat(tmp_mat(:)~=0), SOPH_clim_prctiles);
         clim([c_ptiles(1) c_ptiles(2)]);
@@ -335,7 +335,7 @@ if isgraphics(ax(3))
         c.Label.VerticalAlignment = "bottom";
     end
 
-    ylim(ylimits);
+    ylim(freq_limits);
 
     if ~isgraphics(ax(2))
         ylabel('Frequency (Hz)');
@@ -353,7 +353,7 @@ end
 if isgraphics(hypn_spect_ax(2)) && isgraphics(ax(1))
     hy = linkprop([hypn_spect_ax(2), ax(1)], 'YLim');
     setappdata(hypn_spect_ax(2), 'YLink', hy);
-    ylim(hypn_spect_ax(2), ylimits)
+    ylim(hypn_spect_ax(2), freq_limits)
 end
 
 % Link x-axes of appropriate plots

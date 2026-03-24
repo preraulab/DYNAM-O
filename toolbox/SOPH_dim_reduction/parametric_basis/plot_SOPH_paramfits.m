@@ -1,6 +1,6 @@
 function plot_SOPH_paramfits( ...
-    power_bins, power_wshed_img, SOPH_pow, model_SOPH_pow, params_pow, SOPH_clim_prctiles_pow, ylimits_pow, ...
-    phase_bins, phase_wshed_img, SOPhH_phase, model_SOPhH_phase, params_phase, SOPH_clim_prctiles_phase, ylimits_phase, ...
+    power_bins, power_wshed_img, SOPH_pow, model_SOPH_pow, params_pow, SOPH_clim_prctiles_pow, power_limits, freq_limits_pow, ...
+    phase_bins, phase_wshed_img, SOPhH_phase, model_SOPhH_phase, params_phase, SOPH_clim_prctiles_phase, phase_limits, freq_limits_phase, ...
     freq_bins, power_fitobj, phase_fitobj)
 
 %PLOT_SOPH_PARAMFITS  Plot SOPH histograms and parametric Gaussian peak reconstructions in one figure.
@@ -31,7 +31,7 @@ setappdata(f, 'power_ax', ax(3));
 setappdata(f, 'phase_ax', ax(6));
 
 % Helper function for one row
-    function plot_paramfit(ax_handles, x_bins, freq_bins, wshed_img, hist_mat, model_mat, params, cmap, type_str, xlabel_str, fitLabel, clim_prctiles, ylimits, plot_type)
+    function plot_paramfit(ax_handles, x_bins, freq_bins, wshed_img, hist_mat, model_mat, params, cmap, type_str, xlabel_str, fitLabel, clim_prctiles, x_limits, freq_limits, plot_type)
         % --- Watershed segmentation
         axes(ax_handles(1))
         hImg1 = imagesc(x_bins, freq_bins, wshed_img);
@@ -149,18 +149,19 @@ setappdata(f, 'phase_ax', ax(6));
             clim([c_ptiles(1) c_ptiles(2)]);
             linkaxes(ax_handles)
             axis tight
-            ylim(ylimits)
+            xlim(x_limits)
+            ylim(freq_limits)
             set(ax_handles, 'fontsize', 10)
         end
     end
 
 % --- SO-Power row ---
 plot_paramfit(ax(1:3), power_bins, freq_bins, power_wshed_img, SOPH_pow, model_SOPH_pow, params_pow, ...
-    gouldian, 'Power', 'SO-Power (dB)', {'Density','(peaks/min in bin)'}, SOPH_clim_prctiles_pow, ylimits_pow, 'power');
+    gouldian, 'Power', 'SO-Power (dB)', {'Density','(peaks/min in bin)'}, SOPH_clim_prctiles_pow, power_limits, freq_limits_pow, 'power');
 
 % --- SO-Phase row ---
 plot_paramfit(ax(4:6), phase_bins, freq_bins, phase_wshed_img(:,length(phase_bins)+1:end-length(phase_bins),:), SOPhH_phase, model_SOPhH_phase, params_phase, ...
-    magma, 'Phase', 'SO-Phase (rad)', {'Proportion'}, SOPH_clim_prctiles_phase, ylimits_phase, 'phase');
+    magma, 'Phase', 'SO-Phase (rad)', {'Proportion'}, SOPH_clim_prctiles_phase, phase_limits, freq_limits_phase, 'phase');
 
 % --- Enable datacursor mode (so clicking markers produces the enhanced datatip) ---
 dcm = datacursormode(f);
