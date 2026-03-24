@@ -8,7 +8,12 @@ function default_params = param_basis_opts(type, varargin)
 %       type: String - 'power' or 'phase' to select the appropriate parameter set -- required
 %
 %   Optional inputs:
-%       'ylimits' - 1x2 vector of frequency limits over which watershed is ran on spectrogram and histograms are parameterized (default: [2, 25])
+%       'power_limits' - 1x2 vector of SO power limits over which watershed is ran on spectrogram and 
+%                        histograms are parameterized (default: [-2, 20]; only used for power histogram)
+%       'phase_limits' - 1x2 vector of SO phase limits over which watershed is ran on spectrogram and 
+%                        histograms are parameterized (default: [-pi, pi]; only used for phase histogram)
+%       'freq_limits' - 1x2 vector of frequency limits over which watershed is ran on spectrogram and 
+%                        histograms are parameterized (default: [2, 16])
 %       'watershed_params' - Vector [merge_thresh, dur_min, bw_min, height_min, trim_vol]
 %           (default for 'power':   [nan,          4,       0.25,   0,          0.7],
 %            default for 'phase':   [nan,          pi/6,    2,      1e-4,       0.4])
@@ -64,7 +69,8 @@ assert(nargin > 0, 'Type must be specified as ''power'' or ''phase''.');
 assert(ismember(type, {'power', 'phase'}), 'Invalid type. Valid types are ''power'' or ''phase''.');
 
 % Default parameter values for 'power'
-default_params_power.ylimits = [2, 25];
+default_params_power.power_limits = [-2, 20];
+default_params_power.freq_limits = [2, 16];
 % watershed parameters follow this order: [merge_thresh, dur_min, bw_min, height_min, trim_vol]
 default_params_power.watershed_params =   [nan,          4,       0.25,   0,          0.7];
 default_params_power.wshed_exp = false;
@@ -86,7 +92,8 @@ default_params_power.SOPH_clim_prctiles = [5, 98];
 default_params_power.verbose = true;
 
 % Default parameter values for 'phase'
-default_params_phase.ylimits = [2, 25];
+default_params_phase.phase_limits = [-pi, pi];
+default_params_phase.freq_limits = [2, 16];
 % watershed parameters follow this order: [merge_thresh, dur_min, bw_min, height_min, trim_vol]
 default_params_phase.watershed_params =   [nan,          pi/6,    2,      1e-4,       0.4];
 default_params_phase.gauss_filt_std = [10, 5];
@@ -119,7 +126,13 @@ end
 p = inputParser;
 
 % Add each field in default_params to the parser with validation
-addParameter(p, 'ylimits', default_params.ylimits, @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
+switch type
+    case 'power'
+        addParameter(p, 'power_limits', default_params.power_limits, @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
+    case 'phase'
+        addParameter(p, 'phase_limits', default_params.phase_limits, @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
+end
+addParameter(p, 'freq_limits', default_params.freq_limits, @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
 addParameter(p, 'watershed_params', default_params.watershed_params, @(x) isnumeric(x) && numel(x) == 5);
 addParameter(p, 'max_overlap', default_params.max_overlap, @(x) isnumeric(x) && isscalar(x) && x >= 0);
 addParameter(p, 'min_amp', default_params.min_amp, @(x) isnumeric(x) && isscalar(x) && x >= 0);

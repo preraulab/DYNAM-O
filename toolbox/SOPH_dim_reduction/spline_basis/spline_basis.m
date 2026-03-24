@@ -74,7 +74,13 @@ addRequired(p, 'SOfeature_bins', @(x) validateattributes(x, {'numeric'}, {'real'
 addRequired(p, 'freq_bins', @(x) validateattributes(x, {'numeric'}, {'real','finite','increasing','vector'}));
 
 default_params = spline_basis_opts(type); % get the default parameters
-addParameter(p, 'ylimits', default_params.ylimits, @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
+switch type
+    case 'power'
+        addParameter(p, 'power_limits', default_params.power_limits, @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
+    case 'phase'
+        addParameter(p, 'phase_limits', default_params.phase_limits, @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
+end
+addParameter(p, 'freq_limits', default_params.freq_limits, @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
 addParameter(p, 'num_knots_x', default_params.num_knots_x, @(x) validateattributes(x, {'numeric'}, {'positive', 'integer', 'scalar'}));
 addParameter(p, 'num_knots_y', default_params.num_knots_y, @(x) validateattributes(x, {'numeric'}, {'positive', 'integer', 'scalar'}));
 addParameter(p, 'plot_on', default_params.plot_on, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
@@ -82,16 +88,11 @@ addParameter(p, 'SOPH_clim_prctiles', default_params.SOPH_clim_prctiles, @(x) va
 
 % Parse inputs
 parse(p, SOPH, SOfeature_bins, freq_bins, varargin{:});
+parser_results = struct2cell(p.Results); %#ok<NASGU>
+field_names = fieldnames(p.Results);
 
-% Extract parsed values
-SOPH = p.Results.SOPH;
-SOfeature_bins = p.Results.SOfeature_bins;
-freq_bins = p.Results.freq_bins;
-ylimits = p.Results.ylimits;
-num_knots_x = p.Results.num_knots_x;
-num_knots_y = p.Results.num_knots_y;
-plot_on = p.Results.plot_on;
-SOPH_clim_prctiles = p.Results.SOPH_clim_prctiles;
+%Automatically add parser results to the workspace
+eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 
 % Verify the dimensions of SOPH inputs
 if size(SOPH, 1) == length(SOfeature_bins) && size(SOPH, 2) == length(freq_bins)
@@ -101,12 +102,18 @@ else
     assert(size(SOPH, 2) == length(SOfeature_bins) && size(SOPH, 1) == length(freq_bins), 'Incompatible dimensions of SOPH inputs.')
 end
 
-% Locate the valid submatrix of SOPH (non-Nan and non-infinite SO feature bins and frequency bins within ylimits)
+% Locate the valid submatrix of SOPH (non-Nan and non-infinite bins within limits)
 valid_mat = isfinite(SOPH);
 invalid_freq = all(~valid_mat, 2);
 valid_mat(invalid_freq, :) = true;
-valid_SOfeature_bins = all(valid_mat, 1);
-valid_freq_bins = freq_bins >= ylimits(1) & freq_bins <= ylimits(2) & ~invalid_freq';
+switch type
+    case 'power'
+        SOfeature_limits = power_limits;
+    case 'phase'
+        SOfeature_limits = phase_limits;
+end
+valid_SOfeature_bins = SOfeature_bins >= SOfeature_limits(1) & SOfeature_bins <= SOfeature_limits(2) & all(valid_mat, 1);
+valid_freq_bins = freq_bins >= freq_limits(1) & freq_bins <= freq_limits(2) & ~invalid_freq';
 
 SOPH_original = SOPH;
 SOfeature_bins_original = SOfeature_bins;
@@ -198,7 +205,8 @@ if plot_on
     equalize_axes(ax(1:2),'dimension','xyc');
     axes(ax(1))
     axis tight
-    ylim(ylimits)
+    xlim(SOfeature_limits)
+    ylim(freq_limits)
 
     c_ptiles = prctile(SOPH_original(SOPH_original(:)~=0), SOPH_clim_prctiles);
     clim(ax(1), [c_ptiles(1) c_ptiles(2)]);

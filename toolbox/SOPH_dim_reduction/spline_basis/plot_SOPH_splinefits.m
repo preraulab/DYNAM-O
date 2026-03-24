@@ -65,7 +65,12 @@ set(f, 'position', [0 0 10 6])
         equalize_axes(ax_handles(1:2),'dimension','xyc');
         axes(ax_handles(1))
         axis tight
-        ylim(opts.ylimits)
+        if contains(labels.x, 'power', 'IgnoreCase', true)
+            xlim(opts.power_limits)
+        elseif contains(labels.x, 'phase', 'IgnoreCase', true)
+            xlim(opts.phase_limits)
+        end
+        ylim(opts.freq_limits)
         c_ptiles = prctile(hist_mat(hist_mat(:)~=0), opts.SOPH_clim_prctiles);
         clim(ax_handles(1), [c_ptiles(1) c_ptiles(2)]);
     end
@@ -73,12 +78,12 @@ set(f, 'position', [0 0 10 6])
 % Top row: SO-Power
 plot_splinefit(ax(1:3), SOpower_mat, SOpower_bins, fit_pow, coefs_pow, knots_x_pow, knots_y_pow, ...
     opts_pow, freq_bins, gouldian, gouldian, ...
-    struct('x','SO-Power (dB)', 'name','SO-Power', 'fitLabel',{{'Density','(peaks/min in bin)'}}));
+    struct('x', 'SO-Power (dB)', 'name','SO-Power', 'fitLabel', {{'Density','(peaks/min in bin)'}}));
 
 % Bottom row: SO-Phase
 plot_splinefit(ax(4:6), SOphase_mat, SOphase_bins, fit_phase, coefs_phase, knots_x_phase, knots_y_phase, ...
     opts_phase, freq_bins, magma, magma, ...
-    struct('x','SO-Phase (rad)', 'name','SO-Phase', 'fitLabel',{{'Proportion'}}));
+    struct('x', 'SO-Phase (rad)', 'name','SO-Phase', 'fitLabel', {{'Proportion'}}));
 
 set(ax, 'fontsize', 10);
 end

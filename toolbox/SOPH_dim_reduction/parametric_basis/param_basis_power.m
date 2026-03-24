@@ -62,7 +62,8 @@ addRequired(p, 'freq_bins', @(x) validateattributes(x, {'numeric'}, {'real','fin
 
 % Optional parameters with default values
 default_params = param_basis_opts('power'); % get the default parameters
-addParameter(p, 'ylimits', default_params.ylimits, @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
+addParameter(p, 'power_limits', default_params.power_limits, @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
+addParameter(p, 'freq_limits', default_params.freq_limits, @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
 addParameter(p, 'watershed_params', default_params.watershed_params, @(x) isnumeric(x) && numel(x) == 5);
 addParameter(p, 'wshed_exp', default_params.wshed_exp, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addParameter(p, 'max_peaks', default_params.max_peaks, @(x) isnumeric(x) && isscalar(x) && x >= 0);
@@ -116,12 +117,12 @@ gof=[];
 model_SOPH=[];
 f = [];
 
-% Locate the valid submatrix of SOPH (non-Nan and non-infinite power bins and frequency bins within ylimits)
+% Locate the valid submatrix of SOPH (non-Nan and non-infinite bins within limits)
 valid_mat = isfinite(SOPH);
 invalid_freq = all(~valid_mat, 2);
 valid_mat(invalid_freq, :) = true;
-valid_power_bins = all(valid_mat, 1);
-valid_freq_bins = freq_bins >= ylimits(1) & freq_bins <= ylimits(2) & ~invalid_freq';
+valid_power_bins = power_bins >= power_limits(1) & power_bins <= power_limits(2) & all(valid_mat, 1);
+valid_freq_bins = freq_bins >= freq_limits(1) & freq_bins <= freq_limits(2) & ~invalid_freq';
 
 % Define basis function for fitting
 fitfunc = @fit_rotGauss;
@@ -150,7 +151,7 @@ if isempty(stats_table)
     amp0 = tmp_mat(:);
 else
     % Exclude peaks with center outside peak frequency limits
-    valid_fmean_idx = stats_table.PeakFrequency >= ylimits(1) & stats_table.PeakFrequency <= ylimits(2);
+    valid_fmean_idx = stats_table.PeakFrequency >= freq_limits(1) & stats_table.PeakFrequency <= freq_limits(2);
     stats_table = stats_table(valid_fmean_idx, :);
 
     if isempty(stats_table)
@@ -578,6 +579,7 @@ if plot_on == 1 || plot_on == 3
     clim([c_ptiles(1) c_ptiles(2)]);
     linkaxes(ax)
     axis tight
-    ylim(ylimits)
+    xlim(power_limits)
+    ylim(freq_limits)
     set(ax, 'fontsize', 10)
 end

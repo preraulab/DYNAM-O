@@ -104,7 +104,7 @@ SOPhH_gof = cell(1,N);
 
 power_params_opts = param_basis_opts('power','plot_on',0,'verbose',false); % get the default parameters
 phase_params_opts = param_basis_opts('phase','plot_on',0,'verbose',false); % get the default parameters
-power_params_opts.ylimits = [2,16];
+power_params_opts.freq_limits = [2,16];
 phase_params_opts.prefix_modes = [];
 % phase_params_opts.prefix_modes =  [1e-2, 14,     4,     0,      pi/3,  0;
 %                                       1e-2, 5,      10,    pi,     pi/3,  0];
