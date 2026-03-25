@@ -1,11 +1,11 @@
 function [staging, annotations] = read_staging(varargin)
-%READ_STAGING  Read sleep staging data from a CSV file
+%READ_STAGING  Read sleep staging data from a delimited text file (e.g., CVS, TSV, etc.)
 %
 %   Usage:
 %       [staging, annotations] = read_staging(file_name, time_col, stage_col, 'Name', Value, ...)
 %
 %   Inputs:
-%       file_name   : string - path to CSV file -- required
+%       file_name   : string - path to file -- required
 %       time_col    : integer - column number for time data (1-based) -- required
 %       stage_col   : integer - column number for stage data (1-based) -- required
 %
@@ -24,6 +24,18 @@ function [staging, annotations] = read_staging(varargin)
 %       annotations : struct with fields (only for unmatched entries):
 %                       - times      : vector of times in seconds
 %                       - annotation : cell array of annotation strings
+% 
+%   NOTE: time_col should refer to a column in the file in one of three
+%         formats:
+%
+%           1. Epoch number: If sorted consecutive integers are detected, time
+%           data will be parsed as values * epoch_dur. Epoch_dur defaults to
+%           30 seconds unless otherwise specified.
+%           2. Time in seconds: If sorted non-consecutive integers or floats are
+%           detected, data are parsed as raw values.
+%           3. Time in strings: If a valid time string (hour:minute:second) 
+%           or full datetime string is detected, data are parsed as
+%           datetime values - start_time.
 
 % ---------------- Default stage mappings ----------------
 default_stage_vals = {{'art', 'artifact', 'A', '6'}, ...
@@ -120,35 +132,17 @@ end
 function times_seconds = convert_time_to_seconds(time_data, start_time, epoch_dur)
 numeric_data = str2double(time_data);
 
-% ---------- Case 1: Epoch number in integers ----------
-if all(~isnan(numeric_data)) && all(mod(numeric_data,1)==0) && issorted(numeric_data)
+% ---------- Case 1: Epoch number in consecutive integers ----------
+if all(~isnan(numeric_data)) && all(mod(numeric_data,1)==0) && issorted(numeric_data) && median(diff(numeric_data))==1
+    assert(epoch_dur>0,'Epoch duration must be greater than zero.');
     vals = numeric_data(:);
-
-    %Get start time in seconds
-    if isempty(start_time) || isnan(start_time)
-        start_sec = 0;
-    else
-        start_sec = str2double(start_time);
-        assert(~isnan(start_time), 'Start time for stage times in units of epoch number must be in seconds');
-    end
-
     times_seconds = start_sec + vals * epoch_dur;
     return;
 end
 
 % ---------- Case 2: Time in seconds ----------
 if all(~isnan(numeric_data))
-    vals = numeric_data(:);
-
-    %Get start time in seconds
-    if isempty(start_time) || isnan(start_time)
-        start_sec = 0;
-    else
-        start_sec = str2double(start_time);
-        assert(~isnan(start_time),'Start time for stage times in units of time in seconds must also be in seconds');
-    end
-
-    times_seconds = start_sec + vals;
+    times_seconds = numeric_data(:);
     return;
 end
 
