@@ -288,6 +288,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         PanelMarginHorizontal   = 20     % Horizontal panel margin in pixels
         ButtonHeight            = 30     % Standard button height in pixels
         ButtonWidth                      % Button width (computed at runtime)
+
+        %default_color = ;
+        bgcolor = [0.9400 0.9400 0.9400];
     end
 
     % ======================================================================
@@ -444,17 +447,20 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % ---- DYNAM-O Setup Tab ----
             app.DYNAMOSetupTab       = uitab(app.ProjectTabGroup);
             app.DYNAMOSetupTab.Title = 'DYNAM-O Batch Setup';
+            app.DYNAMOSetupTab.BackgroundColor = app.bgcolor;
 
             % Root grid: 1 column × 3 rows (instructions | main content | bottom bar)
             app.FullDYNAMOSetupGrid             = uigridlayout(app.DYNAMOSetupTab);
             app.FullDYNAMOSetupGrid.ColumnWidth = {'2.97x'};
             app.FullDYNAMOSetupGrid.RowHeight   = {'1x', '20x', '3x'};
             app.FullDYNAMOSetupGrid.RowSpacing  = 0;
+            app.FullDYNAMOSetupGrid.BackgroundColor = app.bgcolor;
 
             % ---- Inner Tab Group (File Selection | DYNAM-O Settings) ----
             app.BatchRunTabGroup              = uitabgroup(app.FullDYNAMOSetupGrid);
             app.BatchRunTabGroup.Layout.Row   = 2;
             app.BatchRunTabGroup.Layout.Column = 1;
+
 
             % ============================================================
             %   FILE SELECTION TAB
@@ -1469,42 +1475,196 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function loadDataFileListCallback(app, ~)
-            % loadDataFileListCallback  Load EDF file paths from a plain-text list file.
-            %
-            %   Prompts the user to select a text file (*.txt, *.csv, etc.) where
-            %   each line contains the full path to one EDF file. Replaces the
-            %   current DataList with the parsed contents.
-
+            % Prompt user for list file
             [filename, filepath] = uigetfile( ...
-                {'*.txt;*.csv;*.tsv;*.dat;*.lst', 'Text Files (*.txt, *.csv, *.tsv, *.dat, *.lst)'; ...
+                {'*.txt;*.csv;*.tsv;*.dat;*.lst', ...
+                'Text Files (*.txt, *.csv, *.tsv, *.dat, *.lst)'; ...
                 '*.*', 'All Files (*.*)'}, ...
                 'Select EDF File Path/Name List');
 
-            if filename == 0, return; end  % User cancelled
+            if isequal(filename,0)
+                return; % User cancelled
+            end
 
-            temp = fileread([filepath, filename]);
-            app.DataList = regexp(temp, '\r\n|\r|\n', 'split');
+            % Full path
+            fullFile = fullfile(filepath, filename);
+
+            % Read + clean
+            lines = splitlines(fileread(fullFile));
+            lines = strtrim(lines);
+            lines = lines(lines ~= ""); % remove blank lines
+
+            % Validate files
+            validMask = isfile(lines);
+            validLines = lines(validMask);
+            invalidLines = lines(~validMask);
+
+            % Remove duplicates from valid lines
+            [uniqueValidLines, ia] = unique(validLines, 'stable');
+            duplicateLines = validLines(setdiff(1:numel(validLines), ia));
+
+            % Store only valid, unique files
+            app.DataList = cellstr(uniqueValidLines);
             app.updateDataListBox;
+
+            % Only show dedicated window if there are skipped or duplicate files
+            if isempty(invalidLines) && isempty(duplicateLines)
+                return
+            end
+
+            % --- Create the dedicated window ---
+            win = uifigure('Name','File List Issues','Position',[200 200 800 400]);
+
+            % Skipped files listbox
+            lblSkipped = uilabel(win,'Text','Skipped (missing) files:','Position',[20 360 200 20]);
+            listSkipped = uilistbox(win,'Items',cellstr(invalidLines),'Position',[20 180 360 180],'Multiselect','off');
+
+            % Duplicate files listbox
+            lblDup = uilabel(win,'Text','Duplicate files removed:','Position',[400 360 200 20]);
+            listDup = uilistbox(win,'Items',cellstr(duplicateLines),'Position',[400 180 360 180],'Multiselect','off');
+
+            % Button to save logfile
+            btnSave = uibutton(win,'Text','Save Logfile','Position',[350 50 100 30],...
+                'ButtonPushedFcn', @(btn,event) saveFileLog(invalidLines,duplicateLines));
+
+            % Nested function to save logfile
+            function saveFileLog(skipped, duplicates)
+                % Default folder: ./logs if exists, else current folder
+                defaultFolder = './logs';
+                if ~isfolder(defaultFolder)
+                    defaultFolder = pwd;
+                end
+                defaultFileName = fullfile(defaultFolder,'data_list_error.log');
+
+                [file,path] = uiputfile('*.log','Save File Log As',defaultFileName);
+                if isequal(file,0)
+                    return % user cancelled
+                end
+
+                logFullPath = fullfile(path,file);
+
+                fid = fopen(logFullPath,'w');
+                if fid == -1
+                    uialert(win,sprintf('Cannot write to file: %s',logFullPath),'File Error','Icon','error');
+                    return
+                end
+
+                fprintf(fid,'Skipped (missing) files:\n');
+                if isempty(skipped)
+                    fprintf(fid,'None\n');
+                else
+                    fprintf(fid,'%s\n',skipped{:});
+                end
+
+                fprintf(fid,'\nDuplicate files removed:\n');
+                if isempty(duplicates)
+                    fprintf(fid,'None\n');
+                else
+                    fprintf(fid,'%s\n',duplicates{:});
+                end
+
+                fclose(fid);
+
+                uialert(win,sprintf('Logfile saved to:\n%s',logFullPath),'Log Saved','Icon','info');
+            end
         end
 
         % ------------------------------------------------------------------
 
         function loadStagingListCallback(app, varargin)
-            % loadStagingListCallback  Load staging file paths from a plain-text list file.
-            %
-            %   Prompts the user to select a text file where each line is the full
-            %   path to one staging file. Replaces the current StagingList.
 
             [filename, filepath] = uigetfile( ...
-                {'*.txt;*.csv;*.tsv;*.dat;*.lst', 'Text Files (*.txt, *.csv, *.tsv, *.dat, *.lst)'; ...
+                {'*.txt;*.csv;*.tsv;*.dat;*.lst', ...
+                'Text Files (*.txt, *.csv, *.tsv, *.dat, *.lst)'; ...
                 '*.*', 'All Files (*.*)'}, ...
-                'Select Stage File Path/Name List');
+                'Select EDF File Path/Name List');
 
-            if filename == 0, return; end  % User cancelled
+            if isequal(filename,0)
+                return; % User cancelled
+            end
 
-            temp = fileread([filepath, filename]);
-            app.StagingList = regexp(temp, '\r\n|\r|\n', 'split');
+            % Full path
+            fullFile = fullfile(filepath, filename);
+
+            % Read + clean
+            lines = splitlines(fileread(fullFile));
+            lines = strtrim(lines);
+            lines = lines(lines ~= ""); % remove blank lines
+
+            % Validate files
+            validMask = isfile(lines);
+            validLines = lines(validMask);
+            invalidLines = lines(~validMask);
+
+            % Remove duplicates from valid lines
+            [uniqueValidLines, ia] = unique(validLines, 'stable');
+            duplicateLines = validLines(setdiff(1:numel(validLines), ia));
+
+            % Store only valid, unique files
+            app.StagingList = cellstr(uniqueValidLines);
             app.updateStagingListBox;
+
+            % Only show dedicated window if there are skipped or duplicate files
+            if isempty(invalidLines) && isempty(duplicateLines)
+                return
+            end
+
+            % --- Create the dedicated window ---
+            win = uifigure('Name','File List Issues','Position',[200 200 800 400]);
+
+            % Skipped files listbox
+            lblSkipped = uilabel(win,'Text','Skipped (missing) files:','Position',[20 360 200 20]);
+            listSkipped = uilistbox(win,'Items',cellstr(invalidLines),'Position',[20 180 360 180],'Multiselect','off');
+
+            % Duplicate files listbox
+            lblDup = uilabel(win,'Text','Duplicate files removed:','Position',[400 360 200 20]);
+            listDup = uilistbox(win,'Items',cellstr(duplicateLines),'Position',[400 180 360 180],'Multiselect','off');
+
+            % Button to save logfile
+            btnSave = uibutton(win,'Text','Save Logfile','Position',[350 50 100 30],...
+                'ButtonPushedFcn', @(btn,event) saveFileLog(invalidLines,duplicateLines));
+
+            % Nested function to save logfile
+            function saveFileLog(skipped, duplicates)
+                % Default folder: ./logs if exists, else current folder
+                defaultFolder = './logs';
+                if ~isfolder(defaultFolder)
+                    defaultFolder = pwd;
+                end
+                defaultFileName = fullfile(defaultFolder,'staging_list_error.log');
+
+                [file,path] = uiputfile('*.log','Save File Log As',defaultFileName);
+                if isequal(file,0)
+                    return % user cancelled
+                end
+
+                logFullPath = fullfile(path,file);
+
+                fid = fopen(logFullPath,'w');
+                if fid == -1
+                    uialert(win,sprintf('Cannot write to file: %s',logFullPath),'File Error','Icon','error');
+                    return
+                end
+
+                fprintf(fid,'Skipped (missing) files:\n');
+                if isempty(skipped)
+                    fprintf(fid,'None\n');
+                else
+                    fprintf(fid,'%s\n',skipped{:});
+                end
+
+                fprintf(fid,'\nDuplicate files removed:\n');
+                if isempty(duplicates)
+                    fprintf(fid,'None\n');
+                else
+                    fprintf(fid,'%s\n',duplicates{:});
+                end
+
+                fclose(fid);
+
+                uialert(win,sprintf('Logfile saved to:\n%s',logFullPath),'Log Saved','Icon','info');
+            end
+
         end
 
         % ------------------------------------------------------------------
@@ -2493,6 +2653,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.auxiliary_data.artifacts             = app.artifacts;
             app.auxiliary_data.Fs                    = app.Fs;
             app.auxiliary_data.SOpower_norm_method   = app.SOPH_options.SOpower_norm_method;
+            app.auxiliary_data.SOpower_norm          = app.SOPHs.SOpower_norm;
+            app.auxiliary_data.stage_times           = app.stage_times;
+            app.auxiliary_data.stage_vals            = app.stage_vals;
 
             auxiliary_data = app.auxiliary_data; %#ok<ADPROP>
 
