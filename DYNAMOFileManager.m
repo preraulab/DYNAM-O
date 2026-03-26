@@ -1,19 +1,19 @@
 classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
-% DYNAMOFILEMANAGER  GUI application for managing batch file processing in the DYNAM-O toolbox.
-%
-%   This class provides a MATLAB App Designer-based graphical user interface
-%   for loading EDF (polysomnography data) files and paired sleep staging files,
-%   configuring runtime and saving options, and executing batch processing runs
-%   using the DYNAMO analysis pipeline.
-%
-%   Inherits from:
-%       matlab.apps.AppBase  - base class for MATLAB App Designer apps
-%       DYNAMO               - base class providing core DYNAM-O analysis methods
-%
-%   Usage:
-%       app = DYNAMOFileManager()
-%
-%   See also: DYNAMO, matlab.apps.AppBase
+    % DYNAMOFILEMANAGER  GUI application for managing batch file processing in the DYNAM-O toolbox.
+    %
+    %   This class provides a MATLAB App Designer-based graphical user interface
+    %   for loading EDF (polysomnography data) files and paired sleep staging files,
+    %   configuring runtime and saving options, and executing batch processing runs
+    %   using the DYNAMO analysis pipeline.
+    %
+    %   Inherits from:
+    %       matlab.apps.AppBase  - base class for MATLAB App Designer apps
+    %       DYNAMO               - base class providing core DYNAM-O analysis methods
+    %
+    %   Usage:
+    %       app = DYNAMOFileManager()
+    %
+    %   See also: DYNAMO, matlab.apps.AppBase
 
     % ======================================================================
     %   PROPERTIES
@@ -297,13 +297,13 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
     methods (Access = public)
 
         function app = DYNAMOFileManager(varargin)
-        % DYNAMOFileManager  Constructor – parses arguments and builds the GUI.
-        %
-        %   Supported Name-Value pairs:
-        %     'BatchCallback'      – function_handle invoked at batch start
-        %     'ValidationCallback' – function_handle(filepath) -> logical
-        %     'Title'              – char window title (default: 'DYNAM-O Toolbox')
-        %     'Position'           – [x y w h] figure position vector
+            % DYNAMOFileManager  Constructor – parses arguments and builds the GUI.
+            %
+            %   Supported Name-Value pairs:
+            %     'BatchCallback'      – function_handle invoked at batch start
+            %     'ValidationCallback' – function_handle(filepath) -> logical
+            %     'Title'              – char window title (default: 'DYNAM-O Toolbox')
+            %     'Position'           – [x y w h] figure position vector
 
             p = inputParser;
             addParameter(p,'BatchCallback',[],@(x) isempty(x)||isa(x,'function_handle'));
@@ -327,12 +327,12 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function addDataFiles(app, filePaths)
-        % addDataFiles  Programmatically append EDF files to the data list.
-        %
-        %   addDataFiles(app, filePaths)
-        %
-        %   Input:
-        %     filePaths – char or cell array of char, full file path(s) to add
+            % addDataFiles  Programmatically append EDF files to the data list.
+            %
+            %   addDataFiles(app, filePaths)
+            %
+            %   Input:
+            %     filePaths – char or cell array of char, full file path(s) to add
 
             if ~iscell(filePaths), filePaths = {filePaths}; end
             app.DataList = [app.DataList, filePaths];
@@ -342,12 +342,12 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function addStagingFiles(app, filePaths)
-        % addStagingFiles  Programmatically append staging files to the staging list.
-        %
-        %   addStagingFiles(app, filePaths)
-        %
-        %   Input:
-        %     filePaths – char or cell array of char, full file path(s) to add
+            % addStagingFiles  Programmatically append staging files to the staging list.
+            %
+            %   addStagingFiles(app, filePaths)
+            %
+            %   Input:
+            %     filePaths – char or cell array of char, full file path(s) to add
 
             if ~iscell(filePaths), filePaths = {filePaths}; end
             app.StagingList = [app.StagingList, filePaths];
@@ -357,13 +357,13 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function [dataFiles, stagingFiles] = getFileLists(app)
-        % getFileLists  Return current data and staging file lists.
-        %
-        %   [dataFiles, stagingFiles] = getFileLists(app)
-        %
-        %   Outputs:
-        %     dataFiles    – cell array of EDF file paths
-        %     stagingFiles – cell array of staging file paths
+            % getFileLists  Return current data and staging file lists.
+            %
+            %   [dataFiles, stagingFiles] = getFileLists(app)
+            %
+            %   Outputs:
+            %     dataFiles    – cell array of EDF file paths
+            %     stagingFiles – cell array of staging file paths
 
             dataFiles    = app.DataList;
             stagingFiles = app.StagingList;
@@ -372,9 +372,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function clearAllLists(app)
-        % clearAllLists  Remove all entries from both the data and staging lists.
-        %
-        %   clearAllLists(app)
+            % clearAllLists  Remove all entries from both the data and staging lists.
+            %
+            %   clearAllLists(app)
 
             app.DataList    = {};
             app.StagingList = {};
@@ -385,12 +385,12 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function setEnabled(app, enabled)
-        % setEnabled  Show or hide the application window.
-        %
-        %   setEnabled(app, enabled)
-        %
-        %   Input:
-        %     enabled – logical scalar; true = visible, false = hidden
+            % setEnabled  Show or hide the application window.
+            %
+            %   setEnabled(app, enabled)
+            %
+            %   Input:
+            %     enabled – logical scalar; true = visible, false = hidden
 
             app.UIFigure.Visible = matlab.lang.OnOffSwitchState(enabled);
         end
@@ -408,14 +408,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ==================================================================
 
         function createComponents(app, ~, ~)
-        % createComponents  Build and lay out all UI components.
-        %
-        %   This function is called once from the constructor. It creates
-        %   every UI element (figure, menus, grids, controls) and configures
-        %   their properties and callback functions.
-        %
-        %   NOTE: Components are organised top-down following the visual
-        %   hierarchy: figure → menus → outer tabs → inner tabs → controls.
+            % createComponents  Build and lay out all UI components.
+            %
+            %   This function is called once from the constructor. It creates
+            %   every UI element (figure, menus, grids, controls) and configures
+            %   their properties and callback functions.
+            %
+            %   NOTE: Components are organised top-down following the visual
+            %   hierarchy: figure → menus → outer tabs → inner tabs → controls.
 
             % ---- Figure ----
             % Create UIFigure and hide until all components are created
@@ -705,7 +705,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % Channel input: label | edit field | info button
             app.ChannelInputGrid             = uigridlayout(app.RuntimeOptionsTopGrid);
-            app.ChannelInputGrid.ColumnWidth = {'1x', '3x', '12x', '2x', '1x'};
+            app.ChannelInputGrid.ColumnWidth = {'3x', '10x', '4x'};
             app.ChannelInputGrid.RowHeight   = {'1x'};
             app.ChannelInputGrid.Padding     = [0 0 0 0];
             app.ChannelInputGrid.Layout.Row  = 3;
@@ -714,22 +714,21 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.ChannelEditFieldLabel                     = uilabel(app.ChannelInputGrid);
             app.ChannelEditFieldLabel.HorizontalAlignment = 'right';
             app.ChannelEditFieldLabel.Layout.Row          = 1;
-            app.ChannelEditFieldLabel.Layout.Column       = 2;
+            app.ChannelEditFieldLabel.Layout.Column       = 1;
             app.ChannelEditFieldLabel.Text                = 'Channel(s):';
 
             app.ChannelEditField               = uieditfield(app.ChannelInputGrid, 'text');
             app.ChannelEditField.Layout.Row    = 1;
-            app.ChannelEditField.Layout.Column = 3;
+            app.ChannelEditField.Layout.Column = 2;
 
             % Info button: opens dialog listing all channels present in loaded EDFs
             app.ViewChannelsButton = uibutton(app.ChannelInputGrid, 'push');
             app.ViewChannelsButton.ButtonPushedFcn = createCallbackFcn(app, @viewChannelsButtonPushed, true);
-            app.ViewChannelsButton.Icon            = 'info';
             app.ViewChannelsButton.IconAlignment   = 'center';
             app.ViewChannelsButton.Layout.Row      = 1;
-            app.ViewChannelsButton.Layout.Column   = 4;
-            app.ViewChannelsButton.Text            = '';
-            app.ViewChannelsButton.Tooltip         = 'List all available channels in the added EDF files';
+            app.ViewChannelsButton.Layout.Column   = 3;
+            app.ViewChannelsButton.Text            = 'Select Channels';
+            app.ViewChannelsButton.Tooltip         = 'List all available channels in the added EDF files and select';
 
             % Section header
             app.RuntimeOptionsLabel                      = uilabel(app.RuntimeOptionsTopGrid);
@@ -742,7 +741,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % Instruction text for channel input
             app.ChannelOptionsGrid             = uigridlayout(app.RuntimeOptionsTopGrid);
-            app.ChannelOptionsGrid.ColumnWidth = {'1x', '4x'};
+            app.ChannelOptionsGrid.ColumnWidth = {'4x'};
             app.ChannelOptionsGrid.RowHeight   = {'1x'};
             app.ChannelOptionsGrid.Padding     = [0 0 0 0];
             app.ChannelOptionsGrid.Layout.Row  = 2;
@@ -750,11 +749,12 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             app.ChannelOptionsInstructionsLabel                    = uilabel(app.ChannelOptionsGrid);
             app.ChannelOptionsInstructionsLabel.VerticalAlignment  = 'bottom';
+            app.ChannelOptionsInstructionsLabel.HorizontalAlignment = 'center';
             app.ChannelOptionsInstructionsLabel.FontSize           = 13;
             app.ChannelOptionsInstructionsLabel.FontAngle          = 'italic';
             app.ChannelOptionsInstructionsLabel.Layout.Row         = 1;
-            app.ChannelOptionsInstructionsLabel.Layout.Column      = 2;
-            app.ChannelOptionsInstructionsLabel.Text               = 'Enter a comma-separated list of channels to be run.';
+            app.ChannelOptionsInstructionsLabel.Layout.Column      = 1;
+            app.ChannelOptionsInstructionsLabel.Text               = 'Enter comma-separated list of channels or select from files.';
 
             % ---- Staging Options (Row 2) ----
             % Two-sub-column panel: left = stage label identifiers, right = file format inputs
@@ -991,30 +991,35 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % Data save checkboxes (left column)
             app.SavePeakStatsCheckBox               = uicheckbox(app.SavingOptionsCheckBoxGrid);
             app.SavePeakStatsCheckBox.Text          = 'Peak Stats Tables';
+            app.SavePeakStatsCheckBox.Value         = 1;
             app.SavePeakStatsCheckBox.Layout.Row    = 2;
             app.SavePeakStatsCheckBox.Layout.Column = 1;
             app.SavePeakStatsCheckBox.Tooltip       = 'Save TFpeak stats tables, which store individual peak features for all detected TFpeaks';
 
             app.SaveSOPHsCheckBox               = uicheckbox(app.SavingOptionsCheckBoxGrid);
             app.SaveSOPHsCheckBox.Text          = 'SO-Power Histogram';
+            app.SaveSOPHsCheckBox.Value         = 1;
             app.SaveSOPHsCheckBox.Layout.Row    = 3;
             app.SaveSOPHsCheckBox.Layout.Column = 1;
             app.SaveSOPHsCheckBox.Tooltip = 'Save SO-power and SO-phase histograms';
 
             app.SaveParamBasisCheckBox               = uicheckbox(app.SavingOptionsCheckBoxGrid);
             app.SaveParamBasisCheckBox.Text          = 'Parametric Basis';
+            app.SaveParamBasisCheckBox.Value         = 1;
             app.SaveParamBasisCheckBox.Layout.Row    = 4;
             app.SaveParamBasisCheckBox.Layout.Column = 1;
             app.SaveParamBasisCheckBox.Tooltip       = 'Save tables of estimated mode feature parameters for SO-power and SO-phase histograms';
 
             app.SaveSplineBasisCheckBox               = uicheckbox(app.SavingOptionsCheckBoxGrid);
             app.SaveSplineBasisCheckBox.Text          = 'Spline Basis';
+            app.SaveSplineBasisCheckBox.Value         = 1;
             app.SaveSplineBasisCheckBox.Layout.Row    = 5;
             app.SaveSplineBasisCheckBox.Layout.Column = 1;
             app.SaveSplineBasisCheckBox.Tooltip       = 'Save matrix of spline knot parameters';
 
             app.SaveAuxDataCheckBox               = uicheckbox(app.SavingOptionsCheckBoxGrid);
             app.SaveAuxDataCheckBox.Text          = 'Auxiliary Data';
+            app.SaveAuxDataCheckBox.Value         = 1;
             app.SaveAuxDataCheckBox.Layout.Row    = 6;
             app.SaveAuxDataCheckBox.Layout.Column = 1;
             app.SaveAuxDataCheckBox.Tooltip       = 'Save auxiliary data helpful for rapid recomputation and figure generation without accessing the raw data (e.g., SO-power, Fs, etc.)';
@@ -1022,18 +1027,21 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % Figure save checkboxes (right column)
             app.SaveDataSummaryCheckBox               = uicheckbox(app.SavingOptionsCheckBoxGrid);
             app.SaveDataSummaryCheckBox.Text          = 'Data Summary Figures';
+            app.SaveDataSummaryCheckBox.Value         = 1;
             app.SaveDataSummaryCheckBox.Layout.Row    = 2;
             app.SaveDataSummaryCheckBox.Layout.Column = 2;
             app.SaveDataSummaryCheckBox.Tooltip       = 'Save DYNAM-O summary figures, showing spectrgram, SO-power, detected peaks, and SO-power/phase histograms';
 
             app.SaveParamImagesCheckBox               = uicheckbox(app.SavingOptionsCheckBoxGrid);
             app.SaveParamImagesCheckBox.Text          = 'Parametric Basis Figures';
+            app.SaveParamImagesCheckBox.Value         = 1;
             app.SaveParamImagesCheckBox.Layout.Row    = 3;
             app.SaveParamImagesCheckBox.Layout.Column = 2;
             app.SaveParamImagesCheckBox.Tooltip       = 'Save the output figures for parametric fits';
 
             app.SaveSplineImagesCheckBox               = uicheckbox(app.SavingOptionsCheckBoxGrid);
             app.SaveSplineImagesCheckBox.Text          = 'Spline Basis Figures';
+            app.SaveSplineImagesCheckBox.Value         = 1;
             app.SaveSplineImagesCheckBox.Layout.Row    = 4;
             app.SaveSplineImagesCheckBox.Layout.Column = 2;
             app.SaveSplineImagesCheckBox.Tooltip       = 'Save the output figures for spline fits';
@@ -1407,8 +1415,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %   TOOLTIPS
             % ============================================================
 
-            app.ChannelEditField.Tooltip      = 'Comma separated list of channels to run. Click the info button next to this box to run a check on available channels';
-            app.ChannelEditFieldLabel.Tooltip = 'Comma separated list of channels to run. Click the info button next to this box to run a check on available channels';
+            app.ChannelEditField.Tooltip      = 'Comma-separated list of channels to run. Click ''Select Channels'' button to scan files and select.';
+            app.ChannelEditFieldLabel.Tooltip = 'Comma-separated list of channels to run. Click ''Select Channels'' button to scan files and select.';
 
             app.FileDelimiterDropDownLabel.Tooltip = 'Select delimiter used in the staging file';
             app.DelimeterOptionField.Tooltip       = 'Select delimiter used in the staging file';
@@ -1433,11 +1441,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function createDYNAMOSettingsTab(app)
-        % createDYNAMOSettingsTab  Embed the DYNAMOOptions sub-app into the settings tab.
-        %
-        %   Calls DYNAMOOptionsApp to populate DYNAMOSettingsGrid with the
-        %   DYNAM-O parameter controls. The 'false' arguments suppress
-        %   standalone figure creation.
+            % createDYNAMOSettingsTab  Embed the DYNAMOOptions sub-app into the settings tab.
+            %
+            %   Calls DYNAMOOptionsApp to populate DYNAMOSettingsGrid with the
+            %   DYNAM-O parameter controls. The 'false' arguments suppress
+            %   standalone figure creation.
 
             app.DYNAMOOptionsApp(false, app.UIFigure, app.DYNAMOSettingsGrid, false);
         end
@@ -1447,29 +1455,29 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ==================================================================
 
         function showHelpButtonPushed(app)
-        % showHelpButtonPushed  Display a modal help dialog with usage instructions.
+            % showHelpButtonPushed  Display a modal help dialog with usage instructions.
 
             uialert(app.UIFigure, ...
                 sprintf(['Instructions:\n' ...
-                         '1. In File Selection tab: Add Data files (EDF) and Staging files (CSV/TXT).\n' ...
-                         '2. Make sure the file counts match and order corresponds.\n' ...
-                         '3. In Output Options tab: Choose an output directory and select save options.\n' ...
-                         '4. Click Run Batch to process files.']), ...
+                '1. In File Selection tab: Add Data files (EDF) and Staging files (CSV/TXT).\n' ...
+                '2. Make sure the file counts match and order corresponds.\n' ...
+                '3. In Output Options tab: Choose an output directory and select save options.\n' ...
+                '4. Click Run Batch to process files.']), ...
                 'Help', 'Icon', 'info');
         end
 
         % ------------------------------------------------------------------
 
         function loadDataFileListCallback(app, ~)
-        % loadDataFileListCallback  Load EDF file paths from a plain-text list file.
-        %
-        %   Prompts the user to select a text file (*.txt, *.csv, etc.) where
-        %   each line contains the full path to one EDF file. Replaces the
-        %   current DataList with the parsed contents.
+            % loadDataFileListCallback  Load EDF file paths from a plain-text list file.
+            %
+            %   Prompts the user to select a text file (*.txt, *.csv, etc.) where
+            %   each line contains the full path to one EDF file. Replaces the
+            %   current DataList with the parsed contents.
 
             [filename, filepath] = uigetfile( ...
                 {'*.txt;*.csv;*.tsv;*.dat;*.lst', 'Text Files (*.txt, *.csv, *.tsv, *.dat, *.lst)'; ...
-                 '*.*', 'All Files (*.*)'}, ...
+                '*.*', 'All Files (*.*)'}, ...
                 'Select EDF File Path/Name List');
 
             if filename == 0, return; end  % User cancelled
@@ -1482,14 +1490,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function loadStagingListCallback(app, varargin)
-        % loadStagingListCallback  Load staging file paths from a plain-text list file.
-        %
-        %   Prompts the user to select a text file where each line is the full
-        %   path to one staging file. Replaces the current StagingList.
+            % loadStagingListCallback  Load staging file paths from a plain-text list file.
+            %
+            %   Prompts the user to select a text file where each line is the full
+            %   path to one staging file. Replaces the current StagingList.
 
             [filename, filepath] = uigetfile( ...
                 {'*.txt;*.csv;*.tsv;*.dat;*.lst', 'Text Files (*.txt, *.csv, *.tsv, *.dat, *.lst)'; ...
-                 '*.*', 'All Files (*.*)'}, ...
+                '*.*', 'All Files (*.*)'}, ...
                 'Select Stage File Path/Name List');
 
             if filename == 0, return; end  % User cancelled
@@ -1502,7 +1510,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function DataAddFileButtonPushed(app, ~, ~)
-        % DataAddFileButtonPushed  Open file picker to add one or more EDF files.
+            % DataAddFileButtonPushed  Open file picker to add one or more EDF files.
 
             files = selectFiles(app, 'Select Data Files', 'data');
             if ~isempty(files)
@@ -1514,7 +1522,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function DataAddFolderButtonPushed(app, ~, ~)
-        % DataAddFolderButtonPushed  Add all *.edf files found in a chosen folder.
+            % DataAddFolderButtonPushed  Add all *.edf files found in a chosen folder.
 
             folder = uigetdir(pwd, 'Select Data Folder');
             if folder == 0, return; end  % User cancelled
@@ -1530,7 +1538,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function DataRemoveButtonPushed(app, ~, ~)
-        % DataRemoveButtonPushed  Remove currently selected EDF files from the list.
+            % DataRemoveButtonPushed  Remove currently selected EDF files from the list.
 
             selected = app.DataListBox.Value;
             if isempty(selected), return; end
@@ -1541,7 +1549,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function DataMoveUpButtonPushed(app, ~, ~)
-        % DataMoveUpButtonPushed  Move selected EDF file(s) one position up in the list.
+            % DataMoveUpButtonPushed  Move selected EDF file(s) one position up in the list.
 
             moveListItems(app, 'data', 'up');
         end
@@ -1549,7 +1557,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function DataMoveDownButtonPushed(app, ~, ~)
-        % DataMoveDownButtonPushed  Move selected EDF file(s) one position down in the list.
+            % DataMoveDownButtonPushed  Move selected EDF file(s) one position down in the list.
 
             moveListItems(app, 'data', 'down');
         end
@@ -1557,7 +1565,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function StagingAddFileButtonPushed(app, ~, ~)
-        % StagingAddFileButtonPushed  Open file picker to add one or more staging files.
+            % StagingAddFileButtonPushed  Open file picker to add one or more staging files.
 
             files = selectFiles(app, 'Select Staging Files', 'staging');
             if ~isempty(files)
@@ -1569,9 +1577,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function StagingAddFolderButtonPushed(app, ~, ~)
-        % StagingAddFolderButtonPushed  Add all *.csv (or *.txt) files from a chosen folder.
-        %
-        %   Prefers *.csv; falls back to *.txt if no CSV files are found.
+            % StagingAddFolderButtonPushed  Add all *.csv (or *.txt) files from a chosen folder.
+            %
+            %   Prefers *.csv; falls back to *.txt if no CSV files are found.
 
             folder = uigetdir(pwd, 'Select Staging Folder');
             if folder == 0, return; end  % User cancelled
@@ -1590,7 +1598,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function StagingRemoveButtonPushed(app, ~, ~)
-        % StagingRemoveButtonPushed  Remove currently selected staging files from the list.
+            % StagingRemoveButtonPushed  Remove currently selected staging files from the list.
 
             selected = app.StagingListBox.Value;
             if isempty(selected), return; end
@@ -1601,7 +1609,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function StagingMoveUpButtonPushed(app, ~, ~)
-        % StagingMoveUpButtonPushed  Move selected staging file(s) one position up.
+            % StagingMoveUpButtonPushed  Move selected staging file(s) one position up.
 
             moveListItems(app, 'staging', 'up');
         end
@@ -1609,7 +1617,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function StagingMoveDownButtonPushed(app, ~, ~)
-        % StagingMoveDownButtonPushed  Move selected staging file(s) one position down.
+            % StagingMoveDownButtonPushed  Move selected staging file(s) one position down.
 
             moveListItems(app, 'staging', 'down');
         end
@@ -1617,37 +1625,139 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function viewChannelsButtonPushed(app, ~, ~)
-        % viewChannelsButtonPushed  Read all loaded EDFs and show their channel names.
-        %
-        %   Iterates over every EDF in DataList, reads the signal header, and
-        %   presents the unique union of channel names in an alert dialog.
+            % viewChannelsButtonPushed
+            % Reads EDF files, extracts channel names, and allows user to select
+            % multiple channels via a modal UI list. Outputs comma-separated string.
 
+            % Progress bar
+            h = waitbar(0,'Processing EDF channels...');
+
+            % Check data
             if isempty(app.DataList)
+                delete(h);
                 uialert(app.UIFigure, ...
-                    'No EDF files loaded. Load at least one file to view existing channel options.', ...
+                    'No EDF files loaded. Load at least one file first.', ...
                     'Error', 'Icon', 'error');
                 return
             end
 
-            % Collect all channel labels across all files, then deduplicate
+            % Collect labels
             signal_labels = cell(1, length(app.DataList));
+
             for ii = 1:length(app.DataList)
-                [~, signalHeader]  = read_EDF(app.DataList{ii});
-                signal_labels{ii}  = {signalHeader.signal_labels};
+                try
+                    [~, signalHeader] = read_EDF(app.DataList{ii});
+                    signal_labels{ii} = {signalHeader.signal_labels};
+                catch ME
+                    warning('Failed to read file: %s\n%s', ...
+                        app.DataList{ii}, ME.message);
+                    signal_labels{ii} = {};
+                end
+
+                waitbar(ii/length(app.DataList), h);
             end
-            signal_labels = unique(horzcat(signal_labels{:}));
-            uialert(app.UIFigure, sprintf('%s\n', signal_labels{:}), ...
-                'List of all available channels in dataset', 'Icon', 'info');
+
+            delete(h);
+
+            % Combine + clean
+            all_labels = horzcat(signal_labels{:});
+            if isempty(all_labels)
+                uialert(app.UIFigure, ...
+                    'No channel labels found in loaded EDF files.', ...
+                    'Warning', 'Icon', 'warning');
+                return
+            end
+
+            signal_labels = sort(unique(all_labels));
+
+            % ===============================
+            % UI SELECTION DIALOG
+            % ===============================
+
+            d = uifigure('Name', 'Select Channels', ...
+                'Position', [100 100 320 420], ...
+                'WindowStyle', 'modal');
+
+            % Instruction
+            uilabel(d, ...
+                'Text', 'Select one or more channels:', ...
+                'Position', [20 385 280 20]);
+
+            % Listbox
+            lb = uilistbox(d, ...
+                'Items', signal_labels, ...
+                'Multiselect', 'on', ...
+                'Position', [20 80 280 300]);
+
+            % Output variable
+            selectedChannels = [];
+
+            % Accept button
+            uibutton(d, 'Text', 'Accept', ...
+                'Position', [40 20 100 35], ...
+                'ButtonPushedFcn', @(btn,event) acceptCallback());
+
+            % Cancel button
+            uibutton(d, 'Text', 'Cancel', ...
+                'Position', [180 20 100 35], ...
+                'ButtonPushedFcn', @(btn,event) cancelCallback());
+
+            % Wait for user action
+            uiwait(d);
+
+            % If user cancelled or closed window
+            if isempty(selectedChannels)
+                return;
+            end
+
+            % Convert to comma-separated string
+            channelString = strjoin(selectedChannels, ', ');
+
+            % Store in app (optional)
+            app.ChannelEditField.Value = channelString;
+
+            % Optional display
+            disp(['Selected Channels: ' channelString]);
+
+            % ===============================
+            % Nested Callbacks
+            % ===============================
+
+            function acceptCallback()
+                selectedChannels = lb.Value;
+
+                if isempty(selectedChannels)
+                    uialert(d, ...
+                        'Please select at least one channel or press Cancel.', ...
+                        'No Selection', 'Icon', 'warning');
+                    return;
+                end
+
+                if isvalid(d)
+                    uiresume(d);
+                    delete(d);
+                end
+            end
+
+            function cancelCallback()
+                selectedChannels = [];
+
+                if isvalid(d)
+                    uiresume(d);
+                    delete(d);
+                end
+            end
+
         end
 
         % ------------------------------------------------------------------
 
         function app = ShowHeader(app, varargin)
-        % ShowHeader  Open (or update) a floating window showing the EDF file header.
-        %
-        %   Triggered by double-clicking an item in DataListBox. If the header
-        %   viewer figure already exists, its tables are refreshed in place;
-        %   otherwise a new figure is created via header_gui.
+            % ShowHeader  Open (or update) a floating window showing the EDF file header.
+            %
+            %   Triggered by double-clicking an item in DataListBox. If the header
+            %   viewer figure already exists, its tables are refreshed in place;
+            %   otherwise a new figure is created via header_gui.
 
             if isempty(app.DataList) || isempty(app.DataListBox.Value)
                 return
@@ -1676,15 +1786,15 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function moveListItems(app, listType, direction)
-        % moveListItems  Shift selected items up or down in a file list.
-        %
-        %   moveListItems(app, listType, direction)
-        %
-        %   Inputs:
-        %     listType  – 'data' or 'staging'
-        %     direction – 'up' or 'down'
-        %
-        %   The function is order-preserving: contiguous blocks move as a unit.
+            % moveListItems  Shift selected items up or down in a file list.
+            %
+            %   moveListItems(app, listType, direction)
+            %
+            %   Inputs:
+            %     listType  – 'data' or 'staging'
+            %     direction – 'up' or 'down'
+            %
+            %   The function is order-preserving: contiguous blocks move as a unit.
 
             % Resolve the target list and list-box based on type
             switch listType
@@ -1733,17 +1843,17 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ==================================================================
 
         function files = selectFiles(app, title, type)
-        % selectFiles  Open a multi-select file dialog and optionally validate results.
-        %
-        %   files = selectFiles(app, title, type)
-        %
-        %   Inputs:
-        %     title – dialog window title (char)
-        %     type  – 'data' | 'staging' | anything else (controls filter list)
-        %
-        %   Output:
-        %     files – cell array of fully-qualified file paths, empty if cancelled.
-        %             Passes each path through FileValidationCallback if one is set.
+            % selectFiles  Open a multi-select file dialog and optionally validate results.
+            %
+            %   files = selectFiles(app, title, type)
+            %
+            %   Inputs:
+            %     title – dialog window title (char)
+            %     type  – 'data' | 'staging' | anything else (controls filter list)
+            %
+            %   Output:
+            %     files – cell array of fully-qualified file paths, empty if cancelled.
+            %             Passes each path through FileValidationCallback if one is set.
 
             switch type
                 case 'data',    filter = {'*.edf','EDF Files (*.edf)'; '*.*','All Files'};
@@ -1774,7 +1884,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ==================================================================
 
         function updateDataListBox(app)
-        % updateDataListBox  Refresh the DataListBox items and update the file-count label.
+            % updateDataListBox  Refresh the DataListBox items and update the file-count label.
 
             app.DataListBox.Items = app.DataList;
             if length(app.DataList) == 1 %#ok<*ISCL>
@@ -1787,7 +1897,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function updateStagingListBox(app)
-        % updateStagingListBox  Refresh the StagingListBox items and update the file-count label.
+            % updateStagingListBox  Refresh the StagingListBox items and update the file-count label.
 
             app.StagingListBox.Items = app.StagingList;
             if length(app.StagingList) == 1
@@ -1800,18 +1910,18 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function updateRunErrorList(app)
-        % updateRunErrorList  Populate run_error_list with any blocking validation issues.
-        %
-        %   Checks the following conditions and appends a descriptive message
-        %   to app.run_error_list for each failure:
-        %     - DataList is empty
-        %     - StagingList is empty
-        %     - No output directory specified
-        %     - Data and staging file counts do not match
-        %     - Stages column not specified
-        %     - Times column not specified
-        %     - Header rows not specified
-        %     - Any listed file does not exist on disk
+            % updateRunErrorList  Populate run_error_list with any blocking validation issues.
+            %
+            %   Checks the following conditions and appends a descriptive message
+            %   to app.run_error_list for each failure:
+            %     - DataList is empty
+            %     - StagingList is empty
+            %     - No output directory specified
+            %     - Data and staging file counts do not match
+            %     - Stages column not specified
+            %     - Times column not specified
+            %     - Header rows not specified
+            %     - Any listed file does not exist on disk
 
             if isempty(app.DataList)
                 app.run_error_list(end+1) = {'- Data list empty. Need edf files to run.'};
@@ -1861,10 +1971,10 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ==================================================================
 
         function browseOutputDir(app)
-        % browseOutputDir  Open a folder picker and set the output directory field.
-        %
-        %   After selection, delegates to outputDirChanged to validate/create
-        %   the directory if it does not yet exist.
+            % browseOutputDir  Open a folder picker and set the output directory field.
+            %
+            %   After selection, delegates to outputDirChanged to validate/create
+            %   the directory if it does not yet exist.
 
             folder = uigetdir;
             if folder ~= 0
@@ -1876,11 +1986,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function outputDirChanged(app)
-        % outputDirChanged  Validate the output directory; offer to create it if absent.
-        %
-        %   Called whenever the output directory path is modified (either via
-        %   the Browse button or direct text entry). Prompts the user before
-        %   creating a new directory. Clears the field if the user declines.
+            % outputDirChanged  Validate the output directory; offer to create it if absent.
+            %
+            %   Called whenever the output directory path is modified (either via
+            %   the Browse button or direct text entry). Prompts the user before
+            %   creating a new directory. Clears the field if the user declines.
 
             pathStr = app.OutputDirEditField.Value;
             if ~isfolder(pathStr)
@@ -1900,11 +2010,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ==================================================================
 
         function createRunLog(app)
-        % createRunLog  Initialise the per-run file log and write the header.
-        %
-        %   Creates <OutputDir>/logs/file_log_<timestamp>.txt and
-        %   <OutputDir>/settings/run_settings_<timestamp>.txt via
-        %   generate_run_log. Stores the file handle for subsequent writes.
+            % createRunLog  Initialise the per-run file log and write the header.
+            %
+            %   Creates <OutputDir>/logs/file_log_<timestamp>.txt and
+            %   <OutputDir>/settings/run_settings_<timestamp>.txt via
+            %   generate_run_log. Stores the file handle for subsequent writes.
 
             generate_run_log(app.options_structs, app.struct_names, ...
                 'run_start', app.curr_datetime, ...
@@ -1923,10 +2033,10 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function createConsoleLog(app)
-        % createConsoleLog  Redirect MATLAB diary output to a timestamped console log.
-        %
-        %   Creates <OutputDir>/logs/console_log_<timestamp>.txt and activates
-        %   MATLAB's diary function to capture all subsequent console output.
+            % createConsoleLog  Redirect MATLAB diary output to a timestamped console log.
+            %
+            %   Creates <OutputDir>/logs/console_log_<timestamp>.txt and activates
+            %   MATLAB's diary function to capture all subsequent console output.
 
             app.consolelog_fname = strcat('console_log_', app.curr_datetime, '.txt');
             app.consolelog_fpath = strcat(app.OutputDirEditField.Value, '/logs/');
@@ -1941,32 +2051,32 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ==================================================================
 
         function createOptionsStruct(app)
-        % createOptionsStruct  Package DYNAMO option structs into indexed cell arrays.
-        %
-        %   Reads the option structs from the DYNAMO base class properties and
-        %   stores them in app.options_structs alongside their names in
-        %   app.struct_names for use in logging and processing.
+            % createOptionsStruct  Package DYNAMO option structs into indexed cell arrays.
+            %
+            %   Reads the option structs from the DYNAMO base class properties and
+            %   stores them in app.options_structs alongside their names in
+            %   app.struct_names for use in logging and processing.
 
             app.struct_names    = {'SOPH_options','baseline_options','detection_options', ...
-                                   'param_basis_power_options','param_basis_phase_options', ...
-                                   'spline_basis_power_options','spline_basis_phase_options'};
+                'param_basis_power_options','param_basis_phase_options', ...
+                'spline_basis_power_options','spline_basis_phase_options'};
             app.options_structs = { app.SOPH_options, ...
-                                    app.baseline_options, ...
-                                    app.detection_options, ...
-                                    app.param_basis_power_options, ...
-                                    app.param_basis_phase_options, ...
-                                    app.spline_basis_power_options, ...
-                                    app.spline_basis_phase_options };
+                app.baseline_options, ...
+                app.detection_options, ...
+                app.param_basis_power_options, ...
+                app.param_basis_phase_options, ...
+                app.spline_basis_power_options, ...
+                app.spline_basis_phase_options };
         end
 
         % ------------------------------------------------------------------
 
         function updateStagesInput(app)
-        % updateStagesInput  Parse stage identifier edit fields into cell arrays.
-        %
-        %   Reads each stage label field (Artifact, Wake, REM, N1, N2, N3, Unknown),
-        %   splits the comma-separated string, and stores the resulting cell arrays
-        %   as app.*UserInput properties for use by load_data.
+            % updateStagesInput  Parse stage identifier edit fields into cell arrays.
+            %
+            %   Reads each stage label field (Artifact, Wake, REM, N1, N2, N3, Unknown),
+            %   splits the comma-separated string, and stores the resulting cell arrays
+            %   as app.*UserInput properties for use by load_data.
 
             app.ArtifactUserInput = textscan(app.ArtifactEditField.Value, '%s', 'Delimiter', ',');
             app.ArtifactUserInput = app.ArtifactUserInput{1,1};
@@ -1993,10 +2103,10 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function updateChannelInput(app)
-        % updateChannelInput  Parse the channel edit field into a cell array of names.
-        %
-        %   Splits the comma-separated string in ChannelEditField and stores
-        %   the result in app.ChannelList.
+            % updateChannelInput  Parse the channel edit field into a cell array of names.
+            %
+            %   Splits the comma-separated string in ChannelEditField and stores
+            %   the result in app.ChannelList.
 
             app.ChannelList = textscan(app.ChannelEditField.Value, '%s', 'Delimiter', ',');
             app.ChannelList = app.ChannelList{1,1};
@@ -2005,10 +2115,10 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function updateDelimeterInput(app)
-        % updateDelimeterInput  Convert the delimiter dropdown selection to a format character.
-        %
-        %   Maps the human-readable dropdown value (Comma/Tab/Space/Semicolon)
-        %   to the actual delimiter character stored in app.delimeter.
+            % updateDelimeterInput  Convert the delimiter dropdown selection to a format character.
+            %
+            %   Maps the human-readable dropdown value (Comma/Tab/Space/Semicolon)
+            %   to the actual delimiter character stored in app.delimeter.
 
             switch app.DelimeterOptionField.Value
                 case 'Comma',     app.delimeter = ',';
@@ -2025,32 +2135,32 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ==================================================================
 
         function runStatsTable(app)
-        % runStatsTable  Run DYNAMO and save TF-peak stats and SO-Power Histograms.
-        %
-        %   Calls app.run() to execute the DYNAMO pipeline, then saves:
-        %     - stats_table: TF-peak statistics table (.csv, .mat, or both)
-        %     - SOPHs: SO-Power Histograms (.tiff, .mat, or both)
-        %
-        %   Skips execution if all output files already exist and
-        %   OverwriteExistingFilesCheckBox is unchecked.
+            % runStatsTable  Run DYNAMO and save TF-peak stats and SO-Power Histograms.
+            %
+            %   Calls app.run() to execute the DYNAMO pipeline, then saves:
+            %     - stats_table: TF-peak statistics table (.csv, .mat, or both)
+            %     - SOPHs: SO-Power Histograms (.tiff, .mat, or both)
+            %
+            %   Skips execution if all output files already exist and
+            %   OverwriteExistingFilesCheckBox is unchecked.
 
             % Ensure output directories exist
-            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/TFpeaks/'),'dir')
-                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/TFpeaks/'))
+            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/TFpeaks/'),'dir')
+                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/TFpeaks/'))
             end
-            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/'),'dir')
-                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/SOPHs/'))
+            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/SOPHs/'),'dir')
+                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/SOPHs/'))
             end
 
             % Build output file paths for existence checks
             app.output_stats_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                '/results/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.mat');
+                '/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.mat');
             app.output_SOPH_name  = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                '/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat');
+                '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat');
 
             % Run DYNAMO only if outputs are missing or overwrite is requested
             if app.OverwriteExistingFilesCheckBox.Value || ...
-               (~exist(app.output_stats_name,'file') || ~exist(app.output_SOPH_name,'file'))
+                    (~exist(app.output_stats_name,'file') || ~exist(app.output_SOPH_name,'file'))
 
                 app.anything_run = 1;
                 app.TextArea.Value = strcat('Running DYNAMO on subject ',{' '}, ...
@@ -2067,19 +2177,19 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                     switch app.PeakStatsTableDropDown.Value
                         case '.csv'
                             app.output_stats_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/results/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.csv');
+                                '/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.csv');
                             table2csv(stats_table, app.output_stats_name);
                         case '.mat'
                             app.output_stats_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/results/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.mat');
+                                '/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.mat');
                             save(app.output_stats_name,'stats_table');
                         case 'All'
                             % Save both formats
                             app.output_stats_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/results/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.mat');
+                                '/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.mat');
                             save(app.output_stats_name,'stats_table');
                             app.output_stats_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/results/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.csv');
+                                '/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.csv');
                             table2csv(stats_table, app.output_stats_name);
                     end
                 end
@@ -2091,25 +2201,25 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                     switch app.SOPowerHistogramsDropDown.Value
                         case '.tiff'
                             app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/results/SOPHs/',app.input_fbase,'_SOPHs_power_',app.channel,'.tiff');
+                                '/SOPHs/',app.input_fbase,'_SOPHs_power_',app.channel,'.tiff');
                             app.writeTiff(app.output_SOPH_name, SOPHs.SOpower_mat);
                             app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/results/SOPHs/',app.input_fbase,'_SOPHs_phase_',app.channel,'.tiff');
+                                '/SOPHs/',app.input_fbase,'_SOPHs_phase_',app.channel,'.tiff');
                             app.writeTiff(app.output_SOPH_name, SOPHs.SOphase_mat);
                         case '.mat'
                             app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat');
+                                '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat');
                             save(app.output_SOPH_name,'SOPHs');
                         case 'All'
                             % Save both tiff and mat
                             app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/results/SOPHs/',app.input_fbase,'_SOPHs_power',app.channel,'.tiff');
+                                '/SOPHs/',app.input_fbase,'_SOPHs_power',app.channel,'.tiff');
                             app.writeTiff(app.output_SOPH_name, SOPHs.SOpower_mat);
                             app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/results/SOPHs/',app.input_fbase,'_SOPHs_phase_',app.channel,'.tiff');
+                                '/SOPHs/',app.input_fbase,'_SOPHs_phase_',app.channel,'.tiff');
                             app.writeTiff(app.output_SOPH_name, SOPHs.SOphase_mat);
                             app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat');
+                                '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat');
                             save(app.output_SOPH_name,'SOPHs');
                     end
                 end
@@ -2119,11 +2229,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function runDataSummaryFigure(app)
-        % runDataSummaryFigure  Generate and save the data summary figure.
-        %
-        %   Loads SOPHs and stats_table from memory or disk as needed, then
-        %   calls displaySummaryPlot and saves the result using the format
-        %   specified by DataSummaryDropDown.
+            % runDataSummaryFigure  Generate and save the data summary figure.
+            %
+            %   Loads SOPHs and stats_table from memory or disk as needed, then
+            %   calls displaySummaryPlot and saves the result using the format
+            %   specified by DataSummaryDropDown.
 
             % Ensure output directory exists
             if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/summary/'),'dir')
@@ -2132,19 +2242,19 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % ---- Ensure SOPHs are available ----
             if isempty(app.SOPHs) && ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
+                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
                 runStatsTable(app);   % Compute from scratch
             elseif isempty(app.SOPHs) && exist(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
+                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
                 app.SOPHs = load(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat')).SOPHs;
+                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat')).SOPHs;
             end
 
             % ---- Ensure stats_table is available ----
             if isempty(app.stats_table)
-                csvPath = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/TFpeaks/', ...
+                csvPath = strcat(app.OutputDirEditField.Value,'/',app.channel,'/TFpeaks/', ...
                     app.input_fbase,'_stats_table_',app.channel,'.csv');
-                matPath = strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/TFpeaks/', ...
+                matPath = strcat(app.OutputDirEditField.Value,'/',app.channel,'/TFpeaks/', ...
                     app.input_fbase,'_stats_table_',app.channel,'.mat');
 
                 if ~exist(csvPath,'file') && ~exist(matPath,'file')
@@ -2177,16 +2287,16 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function runParamBasis(app)
-        % runParamBasis  Fit the parametric basis model and save results/figures.
-        %
-        %   Loads SOPHs if needed, calls fitParamBasis, and saves:
-        %     - Parametric fit figure (if SaveParamImagesCheckBox is checked)
-        %     - SOpower/SOphase parametric fit data (.csv, .mat, or both)
-        %       according to ParametricBasisDropDown selection.
+            % runParamBasis  Fit the parametric basis model and save results/figures.
+            %
+            %   Loads SOPHs if needed, calls fitParamBasis, and saves:
+            %     - Parametric fit figure (if SaveParamImagesCheckBox is checked)
+            %     - SOpower/SOphase parametric fit data (.csv, .mat, or both)
+            %       according to ParametricBasisDropDown selection.
 
             % Ensure output directories exist
-            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/param_basis/'),'dir')
-                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/param_basis/'))
+            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/param_basis/'),'dir')
+                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/param_basis/'))
             end
             if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/param_basis/'),'dir')
                 mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/param_basis/'))
@@ -2194,15 +2304,15 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % ---- Ensure SOPHs are available ----
             if isempty(app.SOPHs) && ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
+                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
                 app.anything_run = 1;
                 app.TextArea.Value = strcat('Running DYNAMO on subject ',{' '}, ...
                     app.input_fbase,', channel ',{' '},app.channel,'.');
                 runStatsTable(app);
             elseif isempty(app.SOPHs) && exist(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
+                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
                 app.SOPHs = load(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat')).SOPHs;
+                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat')).SOPHs;
             end
 
             % Fit parametric basis model
@@ -2231,9 +2341,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                         SOpower_params = app.SOPHs.SOpower_paramfit.params;
                         SOphase_params = app.SOPHs.SOpower_paramfit.params;  % Note: currently uses SOpower source
                         app.output_paramfit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/results/param_basis/',app.input_fbase,'_SOpower_paramfit_',app.channel,'.csv');
+                            '/param_basis/',app.input_fbase,'_SOpower_paramfit_',app.channel,'.csv');
                         app.output_paramfit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/results/param_basis/',app.input_fbase,'_SOphase_paramfit_',app.channel,'.csv');
+                            '/param_basis/',app.input_fbase,'_SOphase_paramfit_',app.channel,'.csv');
                         app.TextArea.Value = strcat('Updating saved SOPH on subject ',{' '}, ...
                             app.input_fbase,', channel ',{' '},app.channel,'.');
                         writematrix(SOpower_params, app.output_paramfit_power_name);
@@ -2242,9 +2352,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                         SOpower_paramfit = app.SOPHs.SOpower_paramfit;
                         SOphase_paramfit = app.SOPHs.SOpower_paramfit;  % Note: currently uses SOpower source
                         app.output_paramfit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/results/param_basis/',app.input_fbase,'_SOpower_paramfit_',app.channel,'.mat');
+                            '/param_basis/',app.input_fbase,'_SOpower_paramfit_',app.channel,'.mat');
                         app.output_paramfit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/results/param_basis/',app.input_fbase,'_SOphase_paramfit_',app.channel,'.mat');
+                            '/param_basis/',app.input_fbase,'_SOphase_paramfit_',app.channel,'.mat');
                         save(app.output_paramfit_power_name,'SOpower_paramfit');
                         save(app.output_paramfit_phase_name,'SOphase_paramfit');
                     case 'All'
@@ -2252,9 +2362,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                         SOpower_params = app.SOPHs.SOpower_paramfit.params;
                         SOphase_params = app.SOPHs.SOpower_paramfit.params;
                         app.output_paramfit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/results/param_basis/',app.input_fbase,'_SOpower_paramfit_',app.channel,'.csv');
+                            '/param_basis/',app.input_fbase,'_SOpower_paramfit_',app.channel,'.csv');
                         app.output_paramfit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/results/param_basis/',app.input_fbase,'_SOphase_paramfit_',app.channel,'.csv');
+                            '/param_basis/',app.input_fbase,'_SOphase_paramfit_',app.channel,'.csv');
                         app.TextArea.Value = strcat('Updating saved SOPH on subject ',{' '}, ...
                             app.input_fbase,', channel ',{' '},app.channel,'.');
                         writematrix(SOpower_params, app.output_paramfit_power_name);
@@ -2263,9 +2373,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                         SOpower_paramfit = app.SOPHs.SOpower_paramfit;
                         SOphase_paramfit = app.SOPHs.SOpower_paramfit;
                         app.output_paramfit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/results/param_basis/',app.input_fbase,'_SOpower_paramfit_',app.channel,'.mat');
+                            '/param_basis/',app.input_fbase,'_SOpower_paramfit_',app.channel,'.mat');
                         app.output_paramfit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/results/param_basis/',app.input_fbase,'_SOphase_paramfit_',app.channel,'.mat');
+                            '/param_basis/',app.input_fbase,'_SOphase_paramfit_',app.channel,'.mat');
                         save(app.output_paramfit_power_name,'SOpower_paramfit');
                         save(app.output_paramfit_phase_name,'SOphase_paramfit');
                 end
@@ -2275,16 +2385,16 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function runSplineBasis(app)
-        % runSplineBasis  Fit the spline basis model and save results/figures.
-        %
-        %   Loads SOPHs if needed, calls fitSplineBasis, and saves:
-        %     - Spline basis figure (if SaveSplineImagesCheckBox is checked)
-        %     - SOpower/SOphase spline fit data (.tiff, .mat, or both)
-        %       according to SplineBasisDropDown selection.
+            % runSplineBasis  Fit the spline basis model and save results/figures.
+            %
+            %   Loads SOPHs if needed, calls fitSplineBasis, and saves:
+            %     - Spline basis figure (if SaveSplineImagesCheckBox is checked)
+            %     - SOpower/SOphase spline fit data (.tiff, .mat, or both)
+            %       according to SplineBasisDropDown selection.
 
             % Ensure output directories exist
-            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/spline_basis/'),'dir')
-                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/spline_basis/'))
+            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/spline_basis/'),'dir')
+                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/spline_basis/'))
             end
             if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/spline_basis/'),'dir')
                 mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/spline_basis/'))
@@ -2292,15 +2402,15 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % ---- Ensure SOPHs are available ----
             if isempty(app.SOPHs) && ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
+                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
                 app.anything_run = 1;
                 app.TextArea.Value = strcat('Running DYNAMO on subject ',{' '}, ...
                     app.input_fbase,', channel ',{' '},app.channel,'.');
                 runStatsTable(app);
             elseif isempty(app.SOPHs) && exist(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
+                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
                 app.SOPHs = load(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/results/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat')).SOPHs;
+                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat')).SOPHs;
             end
 
             % Fit spline basis model
@@ -2332,30 +2442,30 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 switch app.SplineBasisDropDown.Value
                     case '.tiff'
                         app.output_splinefit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/results/spline_basis/',app.input_fbase,'_SOpower_splinefit_',app.channel,'.tiff');
+                            '/spline_basis/',app.input_fbase,'_SOpower_splinefit_',app.channel,'.tiff');
                         app.output_splinefit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/results/spline_basis/',app.input_fbase,'_SOphase_splinefit_',app.channel,'.tiff');
+                            '/spline_basis/',app.input_fbase,'_SOphase_splinefit_',app.channel,'.tiff');
                         app.writeTiff(app.output_splinefit_power_name, SOpower_splinefit.splinefit);
                         app.writeTiff(app.output_splinefit_phase_name, SOphase_splinefit.splinefit);
                     case '.mat'
                         app.output_splinefit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/results/spline_basis/',app.input_fbase,'_SOpower_splinefit_',app.channel,'.mat');
+                            '/spline_basis/',app.input_fbase,'_SOpower_splinefit_',app.channel,'.mat');
                         app.output_splinefit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/results/spline_basis/',app.input_fbase,'_SOphase_splinefit_',app.channel,'.mat');
+                            '/spline_basis/',app.input_fbase,'_SOphase_splinefit_',app.channel,'.mat');
                         save(app.output_splinefit_power_name,'SOpower_splinefit');
                         save(app.output_splinefit_phase_name,'SOphase_splinefit');
                     case 'All'
                         % Save both tiff and mat formats
                         app.output_splinefit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/results/spline_basis/',app.input_fbase,'_SOpower_splinefit_',app.channel,'.tiff');
+                            '/spline_basis/',app.input_fbase,'_SOpower_splinefit_',app.channel,'.tiff');
                         app.output_splinefit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/results/spline_basis/',app.input_fbase,'_SOphase_splinefit_',app.channel,'.tiff');
+                            '/spline_basis/',app.input_fbase,'_SOphase_splinefit_',app.channel,'.tiff');
                         app.writeTiff(app.output_splinefit_power_name, SOpower_splinefit.splinefit);
                         app.writeTiff(app.output_splinefit_phase_name, SOphase_splinefit.splinefit);
                         app.output_splinefit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/results/spline_basis/',app.input_fbase,'_SOpower_splinefit_',app.channel,'.mat');
+                            '/spline_basis/',app.input_fbase,'_SOpower_splinefit_',app.channel,'.mat');
                         app.output_splinefit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/results/spline_basis/',app.input_fbase,'_SOphase_splinefit_',app.channel,'.mat');
+                            '/spline_basis/',app.input_fbase,'_SOphase_splinefit_',app.channel,'.mat');
                         save(app.output_splinefit_power_name,'SOpower_splinefit');
                         save(app.output_splinefit_phase_name,'SOphase_splinefit');
                 end
@@ -2365,17 +2475,17 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function saveAuxData(app)
-        % saveAuxData  Collect and save auxiliary analysis data for the current subject/channel.
-        %
-        %   Packages artifacts, sampling rate, and SO-power normalisation method
-        %   into a struct and saves it to:
-        %     <OutputDir>/<channel>/results/auxiliary_data/<fbase>_auxiliary_data_<channel>.mat
-        %
-        %   TO-DO: Expand to include additional auxiliary fields.
+            % saveAuxData  Collect and save auxiliary analysis data for the current subject/channel.
+            %
+            %   Packages artifacts, sampling rate, and SO-power normalisation method
+            %   into a struct and saves it to:
+            %     <OutputDir>/<channel>/auxiliary_data/<fbase>_auxiliary_data_<channel>.mat
+            %
+            %   TO-DO: Expand to include additional auxiliary fields.
 
             % Ensure output directory exists
-            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/auxiliary_data/'),'dir')
-                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/results/auxiliary_data/'))
+            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/auxiliary_data/'),'dir')
+                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/auxiliary_data/'))
             end
 
             % Package auxiliary data fields
@@ -2390,7 +2500,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 app.input_fbase,', channel ',{' '},app.channel,'.');
 
             app.output_aux_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                '/results/auxiliary_data/',app.input_fbase,'_auxiliary_data_',app.channel,'.mat');
+                '/auxiliary_data/',app.input_fbase,'_auxiliary_data_',app.channel,'.mat');
             save(app.output_aux_name,'auxiliary_data');
         end
 
@@ -2399,14 +2509,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ==================================================================
 
         function RunBatchButtonPushed(app, ~, ~)
-        % RunBatchButtonPushed  Validate inputs and launch the batch processing loop.
-        %
-        %   Performs the following sequence:
-        %     1. Resets the stop-flag from any previous run.
-        %     2. Runs updateRunErrorList; shows success or error alert.
-        %     3. Optionally reverses the file lists (RunInReverse checkbox).
-        %     4. Invokes BatchProcessCallback if one is registered.
-        %     5. Delegates to runBatch for the main processing loop.
+            % RunBatchButtonPushed  Validate inputs and launch the batch processing loop.
+            %
+            %   Performs the following sequence:
+            %     1. Resets the stop-flag from any previous run.
+            %     2. Runs updateRunErrorList; shows success or error alert.
+            %     3. Optionally reverses the file lists (RunInReverse checkbox).
+            %     4. Invokes BatchProcessCallback if one is registered.
+            %     5. Delegates to runBatch for the main processing loop.
 
             % Reset stop flag in case a previous run was halted
             app.isStopBatchButtonPushed = false;
@@ -2451,10 +2561,10 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function StopBatchButtonPushed(app, ~, ~)
-        % StopBatchButtonPushed  Request a graceful stop after the current subject finishes.
-        %
-        %   Sets the isStopBatchButtonPushed flag, which is checked at the top
-        %   of each channel-subject iteration in runBatch.
+            % StopBatchButtonPushed  Request a graceful stop after the current subject finishes.
+            %
+            %   Sets the isStopBatchButtonPushed flag, which is checked at the top
+            %   of each channel-subject iteration in runBatch.
 
             app.isStopBatchButtonPushed = true;
             uialert(app.UIFigure, ...
@@ -2465,19 +2575,19 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function runBatch(app, ~)
-        % runBatch  Main batch processing loop: iterates over all files and channels.
-        %
-        %   Execution order per iteration:
-        %     1. Load EDF and staging data via load_data.
-        %     2. Run selected analysis steps (stats, summary, param basis, spline, aux).
-        %     3. Log the outcome (success or error) to the run log file.
-        %     4. Update the progress bar.
-        %
-        %   The loop checks isStopBatchButtonPushed at the start of each
-        %   file iteration and exits early if the Stop button was pressed.
-        %
-        %   On completion, all open log file handles are closed and diary is
-        %   stopped automatically when consolelog_fid is closed.
+            % runBatch  Main batch processing loop: iterates over all files and channels.
+            %
+            %   Execution order per iteration:
+            %     1. Load EDF and staging data via load_data.
+            %     2. Run selected analysis steps (stats, summary, param basis, spline, aux).
+            %     3. Log the outcome (success or error) to the run log file.
+            %     4. Update the progress bar.
+            %
+            %   The loop checks isStopBatchButtonPushed at the start of each
+            %   file iteration and exits early if the Stop button was pressed.
+            %
+            %   On completion, all open log file handles are closed and diary is
+            %   stopped automatically when consolelog_fid is closed.
 
             app.TextArea.Value  = {'Beginning run.'};
             app.curr_datetime   = char(datetime('now','Format','yyMMdd_HHmmSS'));
@@ -2552,9 +2662,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                             'header_lines', app.HeaderRowsEditField.Value, ...
                             'delimiter',    app.delimeter, ...
                             'stage_vals_in', { app.ArtifactUserInput, app.WakeUserInput, ...
-                                               app.REMUserInput,      app.N1UserInput, ...
-                                               app.N2UserInput,       app.N3UserInput, ...
-                                               app.UnknownUserInput });
+                            app.REMUserInput,      app.N1UserInput, ...
+                            app.N2UserInput,       app.N3UserInput, ...
+                            app.UnknownUserInput });
 
                         % ---- Run selected analysis steps ----
 
