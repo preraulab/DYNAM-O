@@ -34,7 +34,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % --- Top-Level Layout Grids ---
         FullDYNAMOSetupGrid             matlab.ui.container.GridLayout  % Root grid inside DYNAMOSetupTab
         TopTextGrid                     matlab.ui.container.GridLayout  % Grid for instruction label + help button
-        HelpButton                      matlab.ui.control.Button        % Opens help dialog
+        HelpButton                                                       % Opens help dialog
         InstructionText                 matlab.ui.control.Label         % Top instruction label
         BottomGrid                      matlab.ui.container.GridLayout  % Grid containing status, run buttons, time estimate
 
@@ -44,9 +44,10 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         RunBatchOptionsGrid             matlab.ui.container.GridLayout  % Sub-grid for run checkbox options
         OverwriteExistingFilesCheckBox  matlab.ui.control.CheckBox      % If checked, overwrite existing output files
         RunInReverse                    matlab.ui.control.CheckBox      % If checked, process files in reverse order
-        RunBatchButton                  matlab.ui.control.Button        % Initiates batch processing
-        StopBatchButton                 matlab.ui.control.Button        % Requests graceful stop after current subject
-
+        RunBatchButton                      % Initiates batch processing
+        StopBatchButton                     % Requests graceful stop after current subject
+        RightColumnGrid   matlab.ui.container.GridLayout
+        
         % --- Status / Log Area ---
         StatusTextGrid                  matlab.ui.container.GridLayout  % Grid for status label and text area
         StatusLabel                     matlab.ui.control.Label         % 'Status:' label
@@ -67,7 +68,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         SavingDirectoryGrid             matlab.ui.container.GridLayout  % Grid for output directory row
         OutputDirEditField              matlab.ui.control.EditField     % Displays/edits output directory path
         EditFieldLabel                  matlab.ui.control.Label         % Label for output directory edit field
-        OutputDirButton                 matlab.ui.control.Button        % Browse button for output directory
+        OutputDirButton                                                 % Browse button for output directory
         OutputDirLabel                  matlab.ui.control.Label         % Instruction label above directory row
 
         % --- Save Option Checkboxes ---
@@ -157,7 +158,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         ChannelInputGrid                matlab.ui.container.GridLayout  % Grid for channel label + field + info button
         ChannelEditField                matlab.ui.control.EditField     % Comma-separated channel names to process
         ChannelEditFieldLabel           matlab.ui.control.Label
-        ViewChannelsButton              matlab.ui.control.Button        % Opens dialog listing all EDF channels
+        ViewChannelsButton                                              % Opens dialog listing all EDF channels
 
         % --- File List Panels ---
         FileInputGrid                   matlab.ui.container.GridLayout  % Grid for both file list columns
@@ -174,22 +175,21 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
         % --- File List Action Buttons ---
         StagingFileButtonGrid           matlab.ui.container.GridLayout  % Grid for staging list action buttons
-        StagingMoveDownButton           matlab.ui.control.Button        % Move selected staging item down
-        StagingMoveUpBotton             matlab.ui.control.Button        % Move selected staging item up
-        StagingRemoveButton             matlab.ui.control.Button        % Remove selected staging file
-        StagingAddFolderButton          matlab.ui.control.Button        % Add all staging files from a folder
-        StagingAddFileButton            matlab.ui.control.Button        % Add individual staging file(s)
+        StagingMoveDownButton                  % Move selected staging item down
+        StagingMoveUpBotton                    % Move selected staging item up
+        StagingRemoveButton                    % Remove selected staging file
+        StagingAddFolderButton                 % Add all staging files from a folder
+        StagingAddFileButton                   % Add individual staging file(s)
         DataFileButtonGrid              matlab.ui.container.GridLayout  % Grid for data list action buttons
-        DataMoveDownButton              matlab.ui.control.Button        % Move selected data item down
-        DataMoveUpButton                matlab.ui.control.Button        % Move selected data item up
-        DataRemoveButton                matlab.ui.control.Button        % Remove selected data file
-        DataAddFolderButton             matlab.ui.control.Button        % Add all EDF files from a folder
-        DataAddFileButton               matlab.ui.control.Button        % Add individual EDF file(s)
+        DataMoveDownButton                     % Move selected data item down
+        DataMoveUpButton                       % Move selected data item up
+        DataRemoveButton                       % Remove selected data file
+        DataAddFolderButton                    % Add all EDF files from a folder
+        DataAddFileButton                      % Add individual EDF file(s)
 
         % --- DYNAM-O Settings & Analysis Tabs ---
         DYNAMOSettingsTab               matlab.ui.container.Tab         % Tab hosting DYNAMOOptions sub-app
         DYNAMOSettingsGrid              matlab.ui.container.GridLayout  % Grid inside DYNAMOSettings tab
-        AnalysisTab                     matlab.ui.container.Tab         % (Reserved) Analysis tab
 
         % -------------------------
         %   Callback Handles
@@ -218,9 +218,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         output_param_name       = ''   % Full path for parametric basis figure output
         output_spline_name      = ''   % Full path for spline basis figure output
         date_time_save          = ''   % Timestamp string appended to log/settings filenames
-
-        % Path to the icons/ folder, resolved relative to this file
-        icon_filepath = strrep(which('DYNAMOFileManager'),'DYNAMOFileManager.m','icons/')
 
         % -------------------------
         %   EDF Header Viewer
@@ -278,19 +275,21 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % -------------------------
         progress_bar   % SmoothProgressBar handle displayed in TimeEstimateGrid
 
-        % -------------------------
+         % -------------------------
         %   UI Dimension Constants
         % -------------------------
-        WindowWidth             = 1400   % Default figure width in pixels
-        WindowHeight            = 850    % Default figure height in pixels
-        PanelMargin             = 20     % General panel margin in pixels
-        PanelMarginVertical     = 50     % Vertical panel margin in pixels
-        PanelMarginHorizontal   = 20     % Horizontal panel margin in pixels
-        ButtonHeight            = 30     % Standard button height in pixels
-        ButtonWidth                      % Button width (computed at runtime)
-
-        %default_color = ;
-        bgcolor = [0.9400 0.9400 0.9400];
+        WindowWidth             = 1600   % Default figure width in pixels
+        WindowHeight            = 1000   % Default figure height in pixels
+        ButtonHeight            = 25     % Standard button height in pixels
+        ButtonWidth             = 120    % Button width in pixels (used for fixed-width controls)
+ 
+        % -------------------------
+        %   Global Typography
+        % -------------------------
+        FontName       = 'Helvetica Nue'  % Font applied to every labelled UI control.
+        FontSizeBase   = 13   % Body / instruction text font size (px)
+        FontSizeTitle  = 15   % Section-header and list-title font size (px)
+        FontSizeSmall  = 11   % Supplementary / caption font size (px)
     end
 
     % ======================================================================
@@ -423,7 +422,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % ---- Figure ----
             % Create UIFigure and hide until all components are created
             app.UIFigure = uifigure('Visible', 'off');
-            app.UIFigure.Position = [260 115 1400 850];
+            app.UIFigure.Position = [260, 115, app.WindowWidth, app.WindowHeight];
             app.UIFigure.Name = 'DYNAM-O File Manager';
 
             % ---- File Menu ----
@@ -442,25 +441,22 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % ---- Outer Tab Group ----
             app.ProjectTabGroup          = uitabgroup(app.UIFigure);
-            app.ProjectTabGroup.Position = [1 1 1400 850];
+            app.ProjectTabGroup.Position = [1, 1, app.WindowWidth, app.WindowHeight];
 
             % ---- DYNAM-O Setup Tab ----
             app.DYNAMOSetupTab       = uitab(app.ProjectTabGroup);
             app.DYNAMOSetupTab.Title = 'DYNAM-O Batch Setup';
-            app.DYNAMOSetupTab.BackgroundColor = app.bgcolor;
 
             % Root grid: 1 column × 3 rows (instructions | main content | bottom bar)
             app.FullDYNAMOSetupGrid             = uigridlayout(app.DYNAMOSetupTab);
             app.FullDYNAMOSetupGrid.ColumnWidth = {'2.97x'};
             app.FullDYNAMOSetupGrid.RowHeight   = {'1x', '20x', '3x'};
             app.FullDYNAMOSetupGrid.RowSpacing  = 0;
-            app.FullDYNAMOSetupGrid.BackgroundColor = app.bgcolor;
 
             % ---- Inner Tab Group (File Selection | DYNAM-O Settings) ----
             app.BatchRunTabGroup              = uitabgroup(app.FullDYNAMOSetupGrid);
             app.BatchRunTabGroup.Layout.Row   = 2;
             app.BatchRunTabGroup.Layout.Column = 1;
-
 
             % ============================================================
             %   FILE SELECTION TAB
@@ -477,129 +473,205 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % ---- File Input Grid (left column) ----
             % 3-row grid: title + instruction | list boxes | action buttons
             app.FileInputGrid             = uigridlayout(app.FileSelectionGrid);
-            app.FileInputGrid.RowHeight   = {'3x', '20x', '2x'};
+            app.FileInputGrid.RowHeight   = {'3x', '20x', '2.3x'};
             app.FileInputGrid.RowSpacing  = 0;
-            app.FileInputGrid.Padding     = [10 0 10 0];
+            app.FileInputGrid.Padding     = [0 0 0 0];
             app.FileInputGrid.Layout.Row  = 1;
             app.FileInputGrid.Layout.Column = 1;
 
-            % ---- Data File Action Buttons ----
+             % ---- Data File Action Buttons ----
             app.DataFileButtonGrid             = uigridlayout(app.FileInputGrid);
             app.DataFileButtonGrid.ColumnWidth = {'1x','1x','1x','1x','1x'};
             app.DataFileButtonGrid.RowHeight   = {'1x'};
-            app.DataFileButtonGrid.ColumnSpacing = 5;
-            app.DataFileButtonGrid.Padding     = [60 0 60 6];
+            app.DataFileButtonGrid.ColumnSpacing = 0;
+            app.DataFileButtonGrid.Padding     = [10 0 10 0];
             app.DataFileButtonGrid.Layout.Row  = 3;
             app.DataFileButtonGrid.Layout.Column = 1;
-
-            % Add single EDF file
-            app.DataAddFileButton = uibutton(app.DataFileButtonGrid, 'push');
-            app.DataAddFileButton.ButtonPushedFcn = createCallbackFcn(app, @DataAddFileButtonPushed, true);
-            app.DataAddFileButton.Icon            = strcat(app.icon_filepath, 'add_file.png');
-            app.DataAddFileButton.IconAlignment   = 'center';
-            app.DataAddFileButton.Layout.Row      = 1;
-            app.DataAddFileButton.Layout.Column   = 1;
-            app.DataAddFileButton.Text            = '';
-            app.DataAddFileButton.Tooltip         = 'Add single EDF file';
-
-            % Add all EDF files from a folder
-            app.DataAddFolderButton = uibutton(app.DataFileButtonGrid, 'push');
-            app.DataAddFolderButton.ButtonPushedFcn = createCallbackFcn(app, @DataAddFolderButtonPushed, true);
-            app.DataAddFolderButton.Icon            = strcat(app.icon_filepath, 'add_folder.png');
-            app.DataAddFolderButton.IconAlignment   = 'center';
-            app.DataAddFolderButton.Layout.Row      = 1;
-            app.DataAddFolderButton.Layout.Column   = 2;
-            app.DataAddFolderButton.Text            = '';
-            app.DataAddFolderButton.Tooltip         = 'Add all EDF files in folder';
-
-            % Remove selected EDF file(s)
-            app.DataRemoveButton = uibutton(app.DataFileButtonGrid, 'push');
-            app.DataRemoveButton.ButtonPushedFcn = createCallbackFcn(app, @DataRemoveButtonPushed, true);
-            app.DataRemoveButton.Icon            = strcat(app.icon_filepath, 'garbage.png');
-            app.DataRemoveButton.IconAlignment   = 'center';
-            app.DataRemoveButton.Layout.Row      = 1;
-            app.DataRemoveButton.Layout.Column   = 3;
-            app.DataRemoveButton.Text            = '';
-            app.DataRemoveButton.Tooltip         = 'Remove selected EDF file';
-
-            % Move selected EDF file up in processing order
-            app.DataMoveUpButton = uibutton(app.DataFileButtonGrid, 'push');
-            app.DataMoveUpButton.ButtonPushedFcn = createCallbackFcn(app, @DataMoveUpButtonPushed, true);
-            app.DataMoveUpButton.Icon            = strcat(app.icon_filepath, 'up_arrow.png');
-            app.DataMoveUpButton.IconAlignment   = 'center';
-            app.DataMoveUpButton.Layout.Row      = 1;
-            app.DataMoveUpButton.Layout.Column   = 4;
-            app.DataMoveUpButton.Text            = '';
-            app.DataMoveUpButton.Tooltip         = 'Move current EDF file up';
-
-            % Move selected EDF file down in processing order
-            app.DataMoveDownButton = uibutton(app.DataFileButtonGrid, 'push');
-            app.DataMoveDownButton.ButtonPushedFcn = createCallbackFcn(app, @DataMoveDownButtonPushed, true);
-            app.DataMoveDownButton.Icon            = strcat(app.icon_filepath, 'down_arrow.png');
-            app.DataMoveDownButton.IconAlignment   = 'center';
-            app.DataMoveDownButton.Layout.Row      = 1;
-            app.DataMoveDownButton.Layout.Column   = 5;
-            app.DataMoveDownButton.Text            = '';
-            app.DataMoveDownButton.Tooltip         = 'Move current EDF file down';
-
+ 
+            % Common shadowbutton style params for all file-list buttons
+            sbColor     = '#f0f2f5';                    % subtle grey face
+            sbHighlight = 'rgba(255,255,255,0.95)';
+            sbShadow    = 'rgba(0,0,0,0.15)';
+            sbAccent    = '#4a5568';
+            sbRounding  = 6;
+            sbGap  = 3;
+            sbPadding = [5 20 15 5];
+ 
+            % -- Add single EDF file --
+            app.DataAddFileButton = shadowbutton(app.DataFileButtonGrid, ...
+                'Shape',    'rectangle', ...
+                'Color',    sbColor, ...
+                'Highlight',sbHighlight, ...
+                'Shadow',   sbShadow, ...
+                'Accent',   sbAccent, ...
+                'Rounding', sbRounding, ...
+                'Padding', sbPadding,...
+                'Gap',      sbGap, ...
+                'Text',     'Add File', ...
+                'Icon',     '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 7V3.5L18.5 9H13z M11 10h2v2h2v2h-2v2h-2v-2h-2v-2h2v-2z"/>', ...
+                'ButtonPushedFcn', createCallbackFcn(app, @DataAddFileButtonPushed, true));
+            app.DataAddFileButton.HTMLComponent.Layout.Row    = 1;
+            app.DataAddFileButton.HTMLComponent.Layout.Column = 1;
+            app.DataAddFileButton.HTMLComponent.Tooltip       = 'Add single EDF file';
+ 
+            % -- Add EDF folder --
+            app.DataAddFolderButton = shadowbutton(app.DataFileButtonGrid, ...
+                'Shape',    'rectangle', ...
+                'Color',    sbColor, ...
+                'Highlight',sbHighlight, ...
+                'Shadow',   sbShadow, ...
+                'Accent',   sbAccent, ...
+                'Rounding', sbRounding, ...
+                'Padding', sbPadding,...
+                'Text',     'Add Folder', ...
+                'Icon',     '<path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/><path d="M13 14h-2v-2h-2v2H7v2h2v2h2v-2h2v-2z" fill="white" opacity="0.9"/>', ...
+                'ButtonPushedFcn', createCallbackFcn(app, @DataAddFolderButtonPushed, true));
+            app.DataAddFolderButton.HTMLComponent.Layout.Row    = 1;
+            app.DataAddFolderButton.HTMLComponent.Layout.Column = 2;
+            app.DataAddFolderButton.HTMLComponent.Tooltip       = 'Add all EDF files in folder';
+ 
+            % -- Remove selected EDF file --
+            app.DataRemoveButton = shadowbutton(app.DataFileButtonGrid, ...
+                'Shape',    'rectangle', ...
+                'Color',    sbColor, ...
+                'Highlight',sbHighlight, ...
+                'Shadow',   sbShadow, ...
+                'Accent',   sbAccent, ...
+                'Rounding', sbRounding, ...
+                'Padding', sbPadding,...
+                'Text',     'Delete File', ...
+                'Icon',     '<path d="M3 6h18v2H3V6zm2 2h14l-1.5 14h-11L5 8zm5 2v8h2v-8h-2zm4 0v8h2v-8h-2zM8 4h8v2H8V4z"/>', ...
+                'ButtonPushedFcn', createCallbackFcn(app, @DataRemoveButtonPushed, true));
+            app.DataRemoveButton.HTMLComponent.Layout.Row    = 1;
+            app.DataRemoveButton.HTMLComponent.Layout.Column = 3;
+            app.DataRemoveButton.HTMLComponent.Tooltip       = 'Remove selected EDF file';
+ 
+            % -- Move EDF file up --
+            app.DataMoveUpButton = shadowbutton(app.DataFileButtonGrid, ...
+                'Shape',    'rectangle', ...
+                'Color',    sbColor, ...
+                'Highlight',sbHighlight, ...
+                'Shadow',   sbShadow, ...
+                'Accent',   sbAccent, ...
+                'Rounding', sbRounding, ...
+                'Padding', sbPadding,...
+                'Text',     'Up', ...
+                'Icon',     '<path d="M12 5l-7 9h5v8h4v-8h5z"/>', ...
+                'ButtonPushedFcn', createCallbackFcn(app, @DataMoveUpButtonPushed, true));
+            app.DataMoveUpButton.HTMLComponent.Layout.Row    = 1;
+            app.DataMoveUpButton.HTMLComponent.Layout.Column = 4;
+            app.DataMoveUpButton.HTMLComponent.Tooltip       = 'Move current EDF file up';
+ 
+            % -- Move EDF file down --
+            app.DataMoveDownButton = shadowbutton(app.DataFileButtonGrid, ...
+                'Shape',    'rectangle', ...
+                'Color',    sbColor, ...
+                'Highlight',sbHighlight, ...
+                'Shadow',   sbShadow, ...
+                'Accent',   sbAccent, ...
+                'Rounding', sbRounding, ...
+                'Padding', sbPadding,...
+                'Text',     'Down', ...
+                'Icon',     '<path d="M12 19l-7-9h5v-8h4v8h5z"/>', ...
+                'ButtonPushedFcn', createCallbackFcn(app, @DataMoveDownButtonPushed, true));
+            app.DataMoveDownButton.HTMLComponent.Layout.Row    = 1;
+            app.DataMoveDownButton.HTMLComponent.Layout.Column = 5;
+            app.DataMoveDownButton.HTMLComponent.Tooltip       = 'Move current EDF file down';
+ 
+ 
+% =========================================================================
+%  BLOCK 2 — STAGING FILE ACTION BUTTONS
+% =========================================================================
+ 
             % ---- Staging File Action Buttons ----
             app.StagingFileButtonGrid             = uigridlayout(app.FileInputGrid);
             app.StagingFileButtonGrid.ColumnWidth = {'1x','1x','1x','1x','1x'};
             app.StagingFileButtonGrid.RowHeight   = {'1x'};
-            app.StagingFileButtonGrid.ColumnSpacing = 5;
-            app.StagingFileButtonGrid.Padding     = [60 0 60 6];
+            app.StagingFileButtonGrid.ColumnSpacing = 3;
+            app.StagingFileButtonGrid.Padding     = [10 0 10 0];
             app.StagingFileButtonGrid.Layout.Row  = 3;
             app.StagingFileButtonGrid.Layout.Column = 2;
 
-            % Add single staging file
-            app.StagingAddFileButton = uibutton(app.StagingFileButtonGrid, 'push');
-            app.StagingAddFileButton.ButtonPushedFcn = createCallbackFcn(app, @StagingAddFileButtonPushed, true);
-            app.StagingAddFileButton.Icon            = strcat(app.icon_filepath, 'add_file.png');
-            app.StagingAddFileButton.IconAlignment   = 'center';
-            app.StagingAddFileButton.Layout.Row      = 1;
-            app.StagingAddFileButton.Layout.Column   = 1;
-            app.StagingAddFileButton.Text            = '';
-            app.StagingAddFileButton.Tooltip         = 'Add single staging file';
-
-            % Add all staging files from a folder
-            app.StagingAddFolderButton = uibutton(app.StagingFileButtonGrid, 'push');
-            app.StagingAddFolderButton.ButtonPushedFcn = createCallbackFcn(app, @StagingAddFolderButtonPushed, true);
-            app.StagingAddFolderButton.Icon            = strcat(app.icon_filepath, 'add_folder.png');
-            app.StagingAddFolderButton.IconAlignment   = 'center';
-            app.StagingAddFolderButton.Layout.Row      = 1;
-            app.StagingAddFolderButton.Layout.Column   = 2;
-            app.StagingAddFolderButton.Text            = '';
-            app.StagingAddFolderButton.Tooltip         = 'Add all staging files in folder';
-
-            % Remove selected staging file(s)
-            app.StagingRemoveButton = uibutton(app.StagingFileButtonGrid, 'push');
-            app.StagingRemoveButton.ButtonPushedFcn = createCallbackFcn(app, @StagingRemoveButtonPushed, true);
-            app.StagingRemoveButton.Icon            = strcat(app.icon_filepath, 'garbage.png');
-            app.StagingRemoveButton.IconAlignment   = 'center';
-            app.StagingRemoveButton.Layout.Row      = 1;
-            app.StagingRemoveButton.Layout.Column   = 3;
-            app.StagingRemoveButton.Text            = '';
-            app.StagingRemoveButton.Tooltip         = 'Remove selected staging file';
-
-            % Move selected staging file up in processing order
-            app.StagingMoveUpBotton = uibutton(app.StagingFileButtonGrid, 'push');
-            app.StagingMoveUpBotton.ButtonPushedFcn = createCallbackFcn(app, @StagingMoveUpButtonPushed, true);
-            app.StagingMoveUpBotton.Icon            = strcat(app.icon_filepath, 'up_arrow.png');
-            app.StagingMoveUpBotton.IconAlignment   = 'center';
-            app.StagingMoveUpBotton.Layout.Row      = 1;
-            app.StagingMoveUpBotton.Layout.Column   = 4;
-            app.StagingMoveUpBotton.Text            = '';
-            app.StagingMoveUpBotton.Tooltip         = 'Move current staging file up';
-
-            % Move selected staging file down in processing order
-            app.StagingMoveDownButton = uibutton(app.StagingFileButtonGrid, 'push');
-            app.StagingMoveDownButton.ButtonPushedFcn = createCallbackFcn(app, @StagingMoveDownButtonPushed, true);
-            app.StagingMoveDownButton.Icon            = strcat(app.icon_filepath, 'down_arrow.png');
-            app.StagingMoveDownButton.IconAlignment   = 'center';
-            app.StagingMoveDownButton.Layout.Row      = 1;
-            app.StagingMoveDownButton.Layout.Column   = 5;
-            app.StagingMoveDownButton.Text            = '';
-            app.StagingMoveDownButton.Tooltip         = 'Move current staging file down';
+ 
+            % -- Add single staging file --
+            app.StagingAddFileButton = shadowbutton(app.StagingFileButtonGrid, ...
+                'Shape',    'rectangle', ...
+                'Color',    sbColor, ...
+                'Highlight',sbHighlight, ...
+                'Shadow',   sbShadow, ...
+                'Accent',   sbAccent, ...
+                'Rounding', sbRounding, ...
+                'Padding', sbPadding,...
+                'Text',     'Add File', ...
+                'Icon',     '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 7V3.5L18.5 9H13z M11 10h2v2h2v2h-2v2h-2v-2h-2v-2h2v-2z"/>', ...
+                'ButtonPushedFcn', createCallbackFcn(app, @StagingAddFileButtonPushed, true));
+            app.StagingAddFileButton.HTMLComponent.Layout.Row    = 1;
+            app.StagingAddFileButton.HTMLComponent.Layout.Column = 1;
+            app.StagingAddFileButton.HTMLComponent.Tooltip       = 'Add single staging file';
+ 
+            % -- Add staging folder --
+            app.StagingAddFolderButton = shadowbutton(app.StagingFileButtonGrid, ...
+                'Shape',    'rectangle', ...
+                'Color',    sbColor, ...
+                'Highlight',sbHighlight, ...
+                'Shadow',   sbShadow, ...
+                'Accent',   sbAccent, ...
+                'Rounding', sbRounding, ...
+                'Text',     'Add Folder', ...
+                'Icon',     '<path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/><path d="M13 14h-2v-2h-2v2H7v2h2v2h2v-2h2v-2z" fill="white" opacity="0.9"/>', ...
+                'ButtonPushedFcn', createCallbackFcn(app, @StagingAddFolderButtonPushed, true));
+            app.StagingAddFolderButton.HTMLComponent.Layout.Row    = 1;
+            app.StagingAddFolderButton.HTMLComponent.Layout.Column = 2;
+            app.StagingAddFolderButton.HTMLComponent.Tooltip       = 'Add all staging files in folder';
+ 
+            % -- Remove selected staging file --
+            app.StagingRemoveButton = shadowbutton(app.StagingFileButtonGrid, ...
+                'Shape',    'rectangle', ...
+                'Color',     sbColor, ...
+                'Highlight',sbHighlight, ...
+                'Shadow',   sbShadow, ...
+                'Accent',   sbAccent, ...
+                'Rounding', sbRounding, ...
+                'Padding', sbPadding,...
+                'Text',     'Delete File', ...
+                'Icon',     '<path d="M3 6h18v2H3V6zm2 2h14l-1.5 14h-11L5 8zm5 2v8h2v-8h-2zm4 0v8h2v-8h-2zM8 4h8v2H8V4z"/>', ...
+                'ButtonPushedFcn', createCallbackFcn(app, @StagingRemoveButtonPushed, true));
+            app.StagingRemoveButton.HTMLComponent.Layout.Row    = 1;
+            app.StagingRemoveButton.HTMLComponent.Layout.Column = 3;
+            app.StagingRemoveButton.HTMLComponent.Tooltip       = 'Remove selected staging file';
+ 
+            % -- Move staging file up --
+            app.StagingMoveUpBotton = shadowbutton(app.StagingFileButtonGrid, ...
+                'Shape',    'rectangle', ...
+                'Color',    sbColor, ...
+                'Highlight',sbHighlight, ...
+                'Shadow',   sbShadow, ...
+                'Accent',   sbAccent, ...
+                'Rounding', sbRounding, ...
+                'Padding', sbPadding,...
+                'Text',     'Up', ...
+                'Icon',     '<path d="M12 5l-7 9h5v8h4v-8h5z"/>', ...
+                'ButtonPushedFcn', createCallbackFcn(app, @StagingMoveUpButtonPushed, true));
+            app.StagingMoveUpBotton.HTMLComponent.Layout.Row    = 1;
+            app.StagingMoveUpBotton.HTMLComponent.Layout.Column = 4;
+            app.StagingMoveUpBotton.HTMLComponent.Tooltip       = 'Move current staging file up';
+ 
+            % -- Move staging file down --
+            app.StagingMoveDownButton = shadowbutton(app.StagingFileButtonGrid, ...
+                'Shape',    'rectangle', ...
+                'Color',    sbColor, ...
+                'Highlight',sbHighlight, ...
+                'Shadow',   sbShadow, ...
+                'Accent',   sbAccent, ...
+                'Rounding', sbRounding, ...
+                'Padding', sbPadding,...
+                'Text',     'Down', ...
+                'Icon',     '<path d="M12 19l-7-9h5v-8h4v8h5z"/>', ...
+                'ButtonPushedFcn', createCallbackFcn(app, @StagingMoveDownButtonPushed, true));
+            app.StagingMoveDownButton.HTMLComponent.Layout.Row    = 1;
+            app.StagingMoveDownButton.HTMLComponent.Layout.Column = 5;
+            app.StagingMoveDownButton.HTMLComponent.Tooltip       = 'Move current staging file down';
+ 
 
             % ---- Data List Box ----
             % Double-click opens the EDF header viewer
@@ -631,11 +703,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DataFileTopGrid.Layout.Column = 1;
 
             app.DataFileInstructionText            = uilabel(app.DataFileTopGrid);
-            app.DataFileInstructionText.FontSize   = 13;
+            app.DataFileInstructionText.FontSize   = app.FontSizeBase;
             app.DataFileInstructionText.FontAngle  = 'italic';
             app.DataFileInstructionText.Layout.Row = 2;
             app.DataFileInstructionText.Layout.Column = 1;
-            app.DataFileInstructionText.Text       = 'Add your PSG data files (EDF format). Use buttons to remove/reorder.';
+            app.DataFileInstructionText.Text       = 'Add your PSG data files (EDF format). Double-click a file for header info.';
 
             % Centred title grid with file count label
             app.DataFileTitleGrid             = uigridlayout(app.DataFileTopGrid);
@@ -650,7 +722,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DataLabel.FontWeight           = 'bold';
             app.DataLabel.Layout.Row           = 1;
             app.DataLabel.Layout.Column        = 2;
-            app.DataLabel.FontSize             = 15;
+            app.DataLabel.FontSize             =  app.FontSizeTitle;
             app.DataLabel.Text                 = 'Data (0 Files)';
 
             % ---- Staging File Title + Instruction ----
@@ -664,7 +736,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StagingFileTopGrid.Layout.Column = 2;
 
             app.StagingFileInstructionText            = uilabel(app.StagingFileTopGrid);
-            app.StagingFileInstructionText.FontSize   = 13;
+            app.StagingFileInstructionText.FontSize   = app.FontSizeBase;
             app.StagingFileInstructionText.FontAngle  = 'italic';
             app.StagingFileInstructionText.Layout.Row = 2;
             app.StagingFileInstructionText.Layout.Column = 1;
@@ -682,7 +754,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StagingLabel.FontWeight           = 'bold';
             app.StagingLabel.Layout.Row           = 1;
             app.StagingLabel.Layout.Column        = 2;
-            app.StagingLabel.FontSize             = 15;
+            app.StagingLabel.FontSize             = app.FontSizeTitle;
             app.StagingLabel.Text                 = 'Staging (0 Files)';
 
             % ============================================================
@@ -711,7 +783,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % Channel input: label | edit field | info button
             app.ChannelInputGrid             = uigridlayout(app.RuntimeOptionsTopGrid);
-            app.ChannelInputGrid.ColumnWidth = {'3x', '10x', '4x'};
+            app.ChannelInputGrid.ColumnWidth = {'2.25x', '10x', '4x'};
             app.ChannelInputGrid.RowHeight   = {'1x'};
             app.ChannelInputGrid.Padding     = [0 0 0 0];
             app.ChannelInputGrid.Layout.Row  = 3;
@@ -728,13 +800,19 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.ChannelEditField.Layout.Column = 2;
 
             % Info button: opens dialog listing all channels present in loaded EDFs
-            app.ViewChannelsButton = uibutton(app.ChannelInputGrid, 'push');
+            app.ViewChannelsButton = shadowbutton(app.ChannelInputGrid, ...
+                'Shape',    'rectangle', ...
+                'Color',    '#eee', ...
+                'Highlight',sbHighlight, ...
+                'Shadow',   sbShadow, ...
+                'Accent',   sbAccent, ...
+                'Rounding', sbRounding, ...
+                'Gap',      sbGap, ...
+                'Padding',   [0 8 15 0], ...
+                'Text',    'Select Channels');
+            app.ViewChannelsButton.HTMLComponent.Layout.Row    = 1;
+            app.ViewChannelsButton.HTMLComponent.Layout.Column = 3;
             app.ViewChannelsButton.ButtonPushedFcn = createCallbackFcn(app, @viewChannelsButtonPushed, true);
-            app.ViewChannelsButton.IconAlignment   = 'center';
-            app.ViewChannelsButton.Layout.Row      = 1;
-            app.ViewChannelsButton.Layout.Column   = 3;
-            app.ViewChannelsButton.Text            = 'Select Channels';
-            app.ViewChannelsButton.Tooltip         = 'List all available channels in the added EDF files and select';
 
             % Section header
             app.RuntimeOptionsLabel                      = uilabel(app.RuntimeOptionsTopGrid);
@@ -742,7 +820,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.RuntimeOptionsLabel.FontWeight           = 'bold';
             app.RuntimeOptionsLabel.Layout.Row           = 1;
             app.RuntimeOptionsLabel.Layout.Column        = 1;
-            app.RuntimeOptionsLabel.FontSize             = 15;
+            app.RuntimeOptionsLabel.FontSize             = app.FontSizeTitle;
             app.RuntimeOptionsLabel.Text                 = 'Runtime Options';
 
             % Instruction text for channel input
@@ -756,7 +834,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.ChannelOptionsInstructionsLabel                    = uilabel(app.ChannelOptionsGrid);
             app.ChannelOptionsInstructionsLabel.VerticalAlignment  = 'bottom';
             app.ChannelOptionsInstructionsLabel.HorizontalAlignment = 'center';
-            app.ChannelOptionsInstructionsLabel.FontSize           = 13;
+            app.ChannelOptionsInstructionsLabel.FontSize           = app.FontSizeBase;
             app.ChannelOptionsInstructionsLabel.FontAngle          = 'italic';
             app.ChannelOptionsInstructionsLabel.Layout.Row         = 1;
             app.ChannelOptionsInstructionsLabel.Layout.Column      = 1;
@@ -970,7 +1048,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             app.SavingOptionsTabGrid             = uigridlayout(app.SavingOptionsTab);
             app.SavingOptionsTabGrid.ColumnWidth = {'1x'};
-            app.SavingOptionsTabGrid.RowHeight   = {'4x', '1x'};
+            app.SavingOptionsTabGrid.RowHeight   = {'3x', '1x'};
             app.SavingOptionsTabGrid.RowSpacing  = 0;
             app.SavingOptionsTabGrid.Padding     = [10 0 10 2];
 
@@ -1062,17 +1140,33 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.SavingDirectoryGrid.Layout.Column = 1;
 
             app.OutputDirLabel            = uilabel(app.SavingDirectoryGrid);
-            app.OutputDirLabel.FontSize   = 13;
+            app.OutputDirLabel.FontSize   = app.FontSizeBase;
             app.OutputDirLabel.FontAngle  = 'italic';
             app.OutputDirLabel.Layout.Row = 1;
             app.OutputDirLabel.Layout.Column = 1;
             app.OutputDirLabel.Text       = ' Select output directory and choose what to save.';
 
-            app.OutputDirButton = uibutton(app.SavingDirectoryGrid, 'push', ...
-                'ButtonPushedFcn', @(src,event) browseOutputDir(app));
-            app.OutputDirButton.Layout.Row    = 2;
-            app.OutputDirButton.Layout.Column = 2;
-            app.OutputDirButton.Text          = 'Browse';
+
+            %Help button
+            app.OutputDirButton = shadowbutton(app.SavingDirectoryGrid, ...
+                'Shape',    'rectangle', ...
+                'Color',    '#eee', ...
+                'Highlight',sbHighlight, ...
+                'Shadow',   sbShadow, ...
+                'Accent',   sbAccent, ...
+                'Rounding', sbRounding, ...
+                'Gap',      sbGap, ...
+                'Padding',   [0 10 15 0], ...
+                'Text',    'Browse');
+            app.OutputDirButton.HTMLComponent.Layout.Row    = 2;
+            app.OutputDirButton.HTMLComponent.Layout.Column = 2;
+            app.OutputDirButton.ButtonPushedFcn =  @(src,event) browseOutputDir(app);
+
+            % app.OutputDirButton = uibutton(app.SavingDirectoryGrid, 'push', ...
+            %     'ButtonPushedFcn', @(src,event) browseOutputDir(app));
+            % app.OutputDirButton.Layout.Row    = 2;
+            % app.OutputDirButton.Layout.Column = 2;
+            % app.OutputDirButton.Text          = 'Browse';
 
             % Label is overlaid by edit field (edit field takes precedence visually)
             app.EditFieldLabel                     = uilabel(app.SavingDirectoryGrid);
@@ -1290,124 +1384,155 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DYNAMOSettingsGrid.Padding     = [1 1 1 1];
 
             % ============================================================
-            %   BOTTOM BAR (Run controls | Status text | Time estimate)
+            %   BOTTOM BAR (Status | Run buttons | Options + Progress)
             % ============================================================
 
-            % Three-column bottom bar
+            % Three columns
             app.BottomGrid             = uigridlayout(app.FullDYNAMOSetupGrid);
-            app.BottomGrid.ColumnWidth = {'2x', '3x', '2x'};
-            app.BottomGrid.RowHeight   = {'1x'};
+            app.BottomGrid.ColumnWidth = {'3x', '2x', '3x'};
+             app.BottomGrid.RowHeight = {app.ButtonHeight * 4};   % ~4 stacked buttons tall
+            app.BottomGrid.Padding     = [5 5 5 5];
+            app.BottomGrid.ColumnSpacing = 0;
+            app.BottomGrid.RowSpacing  = 0;
             app.BottomGrid.Layout.Row  = 3;
             app.BottomGrid.Layout.Column = 1;
 
-            % ---- Status Text (left column) ----
+            % ---- Column 1: Status text ----
             app.StatusTextGrid             = uigridlayout(app.BottomGrid);
             app.StatusTextGrid.ColumnWidth = {'1x'};
-            app.StatusTextGrid.RowHeight   = {'1x', '3x'};
+            app.StatusTextGrid.RowHeight = {app.ButtonHeight, '1x'};
             app.StatusTextGrid.ColumnSpacing = 0;
             app.StatusTextGrid.RowSpacing  = 0;
-            app.StatusTextGrid.Padding     = [0 0 80 0];
+            app.StatusTextGrid.Padding     = [5 5 5 5];
             app.StatusTextGrid.Layout.Row  = 1;
             app.StatusTextGrid.Layout.Column = 1;
 
-            % Read-only text area showing the most recent status message
+            app.StatusLabel          = uilabel(app.StatusTextGrid);
+            app.StatusLabel.FontSize = app.FontSizeBase;
+            app.StatusLabel.Layout.Row    = 1;
+            app.StatusLabel.Layout.Column = 1;
+            app.StatusLabel.Text     = 'Status:';
+
             app.TextArea          = uitextarea(app.StatusTextGrid);
             app.TextArea.Editable = 'off';
             app.TextArea.Layout.Row    = 2;
             app.TextArea.Layout.Column = 1;
             app.TextArea.Value    = {'Add files, select settings, and press ''Run Batch'' to run'};
 
-            app.StatusLabel          = uilabel(app.StatusTextGrid);
-            app.StatusLabel.FontSize = 13;
-            app.StatusLabel.Layout.Row    = 1;
-            app.StatusLabel.Layout.Column = 1;
-            app.StatusLabel.Text     = 'Status:';
-
-            % ---- Run / Stop Buttons (centre column) ----
+            % ---- Column 2: Run / Stop buttons ----
             app.RunBatchGrid             = uigridlayout(app.BottomGrid);
-            app.RunBatchGrid.ColumnWidth = {'1x', '1x', '3x'};
+            app.RunBatchGrid.ColumnWidth = {'1x', '1x'};
             app.RunBatchGrid.RowHeight   = {'1x'};
-            app.RunBatchGrid.ColumnSpacing = 30;
-            app.RunBatchGrid.Padding     = [80 15 60 15];
+            app.RunBatchGrid.ColumnSpacing = 10;
+            app.RunBatchGrid.Padding     = [app.ButtonWidth * 0.5, 0, ...
+                                        app.ButtonWidth * 0.5, 0];
             app.RunBatchGrid.Layout.Row  = 1;
             app.RunBatchGrid.Layout.Column = 2;
 
-            % Stop: sets isStopBatchButtonPushed flag; current subject finishes before halting
-            app.StopBatchButton = uibutton(app.RunBatchGrid, 'push');
+            app.StopBatchButton = shadowbutton(app.RunBatchGrid, ...
+                'Shape',   'circle', ...
+                'Color',   '#fdecea', ...
+                'Accent',  '#b71c1c', ...
+                'Text',    'STOP', ...
+                'Icon', '<rect x="5" y="5" width="14" height="14"/>');
+            app.StopBatchButton.HTMLComponent.Layout.Row    = 1;
+            app.StopBatchButton.HTMLComponent.Layout.Column = 1;
             app.StopBatchButton.ButtonPushedFcn = createCallbackFcn(app, @StopBatchButtonPushed, true);
-            app.StopBatchButton.IconAlignment   = 'center';
-            app.StopBatchButton.FontWeight      = 'bold';
-            app.StopBatchButton.Layout.Row      = 1;
-            app.StopBatchButton.Layout.Column   = 1;
-            app.StopBatchButton.Text            = '';
-            app.StopBatchButton.Icon            = fullfile(app.icon_filepath,'stop_button.png');
-            app.StopBatchButton.FontSize        = 15;
-            app.StopBatchButton.Enable          = 'off';  % Enabled only during a run
-            app.StopBatchButton.Tooltip         = 'Press this button to terminate the batch run after completion of the current run. Hard stop within a run is not available.';
+            app.StopBatchButton.Enabled = false;
+            app.StopBatchButton.HTMLComponent.Tooltip = 'Stop batch run after completion of current file';
 
-            % Run: validates inputs then starts the batch loop
-            app.RunBatchButton = uibutton(app.RunBatchGrid, 'push');
+            app.RunBatchButton = shadowbutton(app.RunBatchGrid, ...
+                'Shape',   'circle', ...
+                'Color',   '#e8f5e9', ...
+                'Accent',  '#2e7d32', ...
+                'Text',    'RUN', ...
+                'Icon', '<path d="M8 5v14l11-7z"/>');
+            app.RunBatchButton.HTMLComponent.Layout.Row    = 1;
+            app.RunBatchButton.HTMLComponent.Layout.Column = 2;
             app.RunBatchButton.ButtonPushedFcn = createCallbackFcn(app, @RunBatchButtonPushed, true);
-            app.RunBatchButton.FontSize        = 15;
-            app.RunBatchButton.FontWeight      = 'bold';
-            app.RunBatchButton.Layout.Row      = 1;
-            app.RunBatchButton.Layout.Column   = 2;
-            app.RunBatchButton.Text            = '';
-            app.RunBatchButton.Icon            = fullfile(app.icon_filepath,'play_button.png');
-            app.RunBatchButton.Tooltip         = 'Press this button to check proper setup and run the batch';
+            app.RunBatchButton.HTMLComponent.Tooltip = 'Batch run DYNAM-O';
 
-            % Options grid for run-related checkboxes (reverse order, overwrite)
-            app.RunBatchOptionsGrid             = uigridlayout(app.RunBatchGrid);
+            % ---- Column 3: Checkboxes (left) + Progress bar (right) ----
+            % Two sub-columns side by side, both spanning the full bar height.
+            % Checkboxes use the '1x / fit / fit / 1x' spacer pattern to
+            % centre vertically within the full bar height.
+            app.RightColumnGrid             = uigridlayout(app.BottomGrid);
+            app.RightColumnGrid.ColumnWidth = {'1x', '1x'};
+            app.RightColumnGrid.RowHeight   = {'1x'};
+            app.RightColumnGrid.RowSpacing  = 0;
+            app.RightColumnGrid.ColumnSpacing = 0;
+            app.RightColumnGrid.Padding     = [0 0 0 0];
+            app.RightColumnGrid.Layout.Row  = 1;
+            app.RightColumnGrid.Layout.Column = 3;
+
+            % Checkboxes: 4-row inner grid, spacers on rows 1 & 4 push
+            % the two fit-height checkboxes to the vertical centre.
+            app.RunBatchOptionsGrid             = uigridlayout(app.RightColumnGrid);
             app.RunBatchOptionsGrid.ColumnWidth = {'1x'};
-            app.RunBatchOptionsGrid.Padding     = [0 0 0 0];
+            app.RunBatchOptionsGrid.RowHeight   = {'1x', 'fit', 'fit', '1x'};
+            app.RunBatchOptionsGrid.RowSpacing  = 4;
+            app.RunBatchOptionsGrid.Padding     = [10 0 10 0];
             app.RunBatchOptionsGrid.Layout.Row  = 1;
-            app.RunBatchOptionsGrid.Layout.Column = 3;
+            app.RunBatchOptionsGrid.Layout.Column = 1;
 
             app.RunInReverse          = uicheckbox(app.RunBatchOptionsGrid);
             app.RunInReverse.Text     = 'Run in Reverse';
-            app.RunInReverse.FontSize = 14;
-            app.RunInReverse.Layout.Row    = 1;
+            app.RunInReverse.FontSize = app.FontSizeBase;
+            app.RunInReverse.Layout.Row    = 2;
             app.RunInReverse.Layout.Column = 1;
-            app.RunInReverse.Tooltip       = 'Check to run through batch files from bottom to top. This is useful when running two instances of the manager in parallel on the same dataset';
+            app.RunInReverse.Tooltip  = 'Check to run through batch files from bottom to top. This is useful when running two instances of the manager in parallel on the same dataset';
 
             app.OverwriteExistingFilesCheckBox          = uicheckbox(app.RunBatchOptionsGrid);
             app.OverwriteExistingFilesCheckBox.Text     = 'Overwrite Existing Files';
-            app.OverwriteExistingFilesCheckBox.FontSize = 14;
-            app.OverwriteExistingFilesCheckBox.Layout.Row    = 2;
+            app.OverwriteExistingFilesCheckBox.FontSize = app.FontSizeBase;
+            app.OverwriteExistingFilesCheckBox.Layout.Row    = 3;
             app.OverwriteExistingFilesCheckBox.Layout.Column = 1;
-            app.OverwriteExistingFilesCheckBox.Tooltip       = 'By default, output files will automatically be skipped if already generated. Check to overwrite all files.';
+            app.OverwriteExistingFilesCheckBox.Tooltip  = 'By default, output files will automatically be skipped if already generated. Check to overwrite all files.';
 
-            % ---- Time Estimate / Progress Bar (right column) ----
-            app.TimeEstimateGrid             = uigridlayout(app.BottomGrid);
+            % Progress bar occupies the right sub-column, full height
+            app.TimeEstimateGrid             = uigridlayout(app.RightColumnGrid);
+            app.TimeEstimateGrid.ColumnWidth = {'1x'};
             app.TimeEstimateGrid.RowHeight   = {'1x'};
+            app.TimeEstimateGrid.Padding     = [5 5 5 5];
             app.TimeEstimateGrid.Layout.Row  = 1;
-            app.TimeEstimateGrid.Layout.Column = 3;
+            app.TimeEstimateGrid.Layout.Column = 2;
 
             % ============================================================
             %   TOP INSTRUCTION BAR
             % ============================================================
 
             app.TopTextGrid             = uigridlayout(app.FullDYNAMOSetupGrid);
-            app.TopTextGrid.ColumnWidth = {'1x', '9x', '1x'};
+            app.TopTextGrid.ColumnWidth = {'1x', '15x', '2x'};
             app.TopTextGrid.RowHeight   = {'1x'};
             app.TopTextGrid.ColumnSpacing = 50;
-            app.TopTextGrid.Padding     = [20 5 20 5];
+            app.TopTextGrid.Padding     = [0 0 0 0];
             app.TopTextGrid.Layout.Row  = 1;
             app.TopTextGrid.Layout.Column = 1;
 
             app.InstructionText                      = uilabel(app.TopTextGrid);
             app.InstructionText.HorizontalAlignment  = 'center';
-            app.InstructionText.FontSize             = 13;
+            app.InstructionText.FontSize             = app.FontSizeBase;
             app.InstructionText.FontWeight           = 'bold';
             app.InstructionText.Layout.Row           = 1;
             app.InstructionText.Layout.Column        = 2;
             app.InstructionText.Text = 'Add data and staging files, select output directory, choose options, then run batch.';
+         
 
-            app.HelpButton = uibutton(app.TopTextGrid, 'push', ...
-                'ButtonPushedFcn', @(src,event) showHelpButtonPushed(app));
-            app.HelpButton.Layout.Row    = 1;
-            app.HelpButton.Layout.Column = 3;
-            app.HelpButton.Text          = 'Help';
+            %Help button
+            app.HelpButton = shadowbutton(app.TopTextGrid, ...
+                'Shape',    'rectangle', ...
+                'Color',    '#eee', ...
+                'Highlight',sbHighlight, ...
+                'Shadow',   sbShadow, ...
+                'Accent',   sbAccent, ...
+                'Rounding', sbRounding, ...
+                'Gap',      sbGap, ...
+                'Padding',   [0 25 20 0], ...
+                'Text',    'Help');
+            app.HelpButton.HTMLComponent.Layout.Row    = 1;
+            app.HelpButton.HTMLComponent.Layout.Column = 3;
+            app.HelpButton.ButtonPushedFcn = @(src,event) showHelpButtonPushed(app);
+
 
             % ============================================================
             %   DYNAM-O SETTINGS (sub-app embedded in its tab)
@@ -1416,13 +1541,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % Make figure visible now that all components exist
             app.UIFigure.Visible = 'on';
+            app.applyFont;   % propagate FontName to all controls
 
             % ============================================================
             %   TOOLTIPS
             % ============================================================
 
-            app.ChannelEditField.Tooltip      = 'Comma-separated list of channels to run. Click ''Select Channels'' button to scan files and select.';
-            app.ChannelEditFieldLabel.Tooltip = 'Comma-separated list of channels to run. Click ''Select Channels'' button to scan files and select.';
+            app.ChannelEditField.Tooltip      = 'Comma-separated list of channels to run. Click ''Select'' button to scan files and select.';
+            app.ChannelEditFieldLabel.Tooltip = 'Comma-separated list of channels to run. Click ''Select'' button to scan files and select.';
 
             app.FileDelimiterDropDownLabel.Tooltip = 'Select delimiter used in the staging file';
             app.DelimeterOptionField.Tooltip       = 'Select delimiter used in the staging file';
@@ -2898,6 +3024,47 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.z.Enable = 'on';
 
         end % runBatch
+
+         function applyFont(app)
+            % applyFont  Walk every labelled UI control and stamp app.FontName onto it.
+            %
+            %   Called once at the end of createComponents(), after all controls
+            %   exist. Uses the matlab.ui.Figure Children tree so new controls
+            %   added in future are picked up automatically without touching this
+            %   function.
+            %
+            %   Controls that receive FontName:
+            %     Label, Button, CheckBox, EditField, NumericEditField,
+            %     TextArea, DropDown, ListBox
+            %
+            %   FontSize is left at whatever was set during construction so that
+            %   bespoke sizes (FontSizeTitle, FontSizeSmall) are preserved.
+
+            targetClasses = { ...
+                'matlab.ui.control.Label', ...
+                'matlab.ui.control.Button', ...
+                'matlab.ui.control.CheckBox', ...
+                'matlab.ui.control.EditField', ...
+                'matlab.ui.control.NumericEditField', ...
+                'matlab.ui.control.TextArea', ...
+                'matlab.ui.control.DropDown', ...
+                'matlab.ui.control.ListBox' };
+ 
+            % findall() descends through all grid/tab/panel containers
+            allChildren = findall(app.UIFigure);
+ 
+            for k = 1:numel(allChildren)
+                ctrl = allChildren(k);
+                if ismember(class(ctrl), targetClasses)
+                    try
+                        ctrl.FontName = app.FontName;
+                    catch
+                        % Some read-only or transient controls may reject the
+                        % assignment — silently skip them.
+                    end
+                end
+            end
+        end
 
     end % private methods
 
