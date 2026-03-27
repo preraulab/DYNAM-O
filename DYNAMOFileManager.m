@@ -91,28 +91,28 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
         % --- File Format Dropdowns (FileFormat) ---
         SplineFiguresGrid               matlab.ui.container.GridLayout  % Grid row for spline figures format
-        SplineFiguresDropDown           matlab.ui.control.DropDown      % File format for spline figures
+        SplineFiguresDropDown                % File format for spline figures
         SplineFiguresDropDownLabel      matlab.ui.control.Label
         ParametricFiguresGrid           matlab.ui.container.GridLayout  % Grid row for parametric figures format
-        ParametricFiguresDropDown       matlab.ui.control.DropDown      % File format for parametric figures
+        ParametricFiguresDropDown            % File format for parametric figures
         ParametricFiguresDropDownLabel  matlab.ui.control.Label
         DataSummaryGrid                 matlab.ui.container.GridLayout  % Grid row for data summary format
-        DataSummaryDropDown             matlab.ui.control.DropDown      % File format for data summary figures
+        DataSummaryDropDown                  % File format for data summary figures
         DataSummaryDropDownLabel        matlab.ui.control.Label
         AuxiliaryDataGrid               matlab.ui.container.GridLayout  % Grid row for auxiliary data format
-        AuxiliaryDataDropDown           matlab.ui.control.DropDown      % File format for auxiliary data
+        AuxiliaryDataDropDown                % File format for auxiliary data
         AuxiliaryDataDropDownLabel      matlab.ui.control.Label
         SplineBasisGrid                 matlab.ui.container.GridLayout  % Grid row for spline basis format
-        SplineBasisDropDown             matlab.ui.control.DropDown      % File format for spline basis data
+        SplineBasisDropDown                  % File format for spline basis data
         SplineBasisDropDownLabel        matlab.ui.control.Label
         ParametricBasisGrid             matlab.ui.container.GridLayout  % Grid row for parametric basis format
-        ParametricBasisDropDown         matlab.ui.control.DropDown      % File format for parametric basis data
+        ParametricBasisDropDown              % File format for parametric basis data
         ParametricBasisDropDownLabel    matlab.ui.control.Label
         SOPowerHistogramsGrid           matlab.ui.container.GridLayout  % Grid row for SO-Power Histogram format
-        SOPowerHistogramsDropDown       matlab.ui.control.DropDown      % File format for SO-Power Histograms
+        SOPowerHistogramsDropDown            % File format for SO-Power Histograms
         SOPowerHistogramsDropDownLabel  matlab.ui.control.Label
         PeakStatsTableGrid              matlab.ui.container.GridLayout  % Grid row for peak stats table format
-        PeakStatsTableDropDown          matlab.ui.control.DropDown      % File format for peak stats tables
+        PeakStatsTableDropDown               % File format for peak stats tables
         PeakStatsTableDropDownLabel     matlab.ui.control.Label
         FigureFileFormatLabel           matlab.ui.control.Label         % Column header: 'Figure File Format'
         DataFileFormatLabel             matlab.ui.control.Label         % Column header: 'Data File Format'
@@ -124,7 +124,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         StagingOptionsPanelGridRight    matlab.ui.container.GridLayout  % Right column: file format inputs
         StagingOptionsInstructions      matlab.ui.control.Label         % Instruction text for stage identifiers
         StagingOptionsGridRightTop      matlab.ui.container.GridLayout  % Grid for delimiter/column/header fields
-        DelimeterOptionField            matlab.ui.control.DropDown      % Delimiter used in staging file
+        DelimeterOptionField                 % Delimiter used in staging file
         FileDelimiterDropDownLabel      matlab.ui.control.Label
         HeaderRowsEditField             matlab.ui.control.NumericEditField  % Number of header rows to skip
         HeaderRowsEditFieldLabel        matlab.ui.control.Label
@@ -1015,17 +1015,15 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.HeaderRowsEditField.Value                 = [];
 
             % File delimiter dropdown
-            app.FileDelimiterDropDownLabel                     = uilabel(app.StagingOptionsGridRightTop);
-            app.FileDelimiterDropDownLabel.HorizontalAlignment = 'right';
-            app.FileDelimiterDropDownLabel.Layout.Row          = 1;
-            app.FileDelimiterDropDownLabel.Layout.Column       = 1;
-            app.FileDelimiterDropDownLabel.Text                = 'File Delimiter';
+app.DelimeterOptionField = shadowdropdown(app.StagingOptionsGridRightTop, ...
+    'Label', 'File Delimiter', ...
+    'Items', {'Comma', 'Tab', 'Space', 'Semicolon'}, ...
+    'Value', 'Comma', ...
+    'Accent', '#5f7080');
 
-            app.DelimeterOptionField               = uidropdown(app.StagingOptionsGridRightTop);
-            app.DelimeterOptionField.Items         = {'Comma', 'Tab', 'Space', 'Semicolon'};
-            app.DelimeterOptionField.Layout.Row    = 1;
-            app.DelimeterOptionField.Layout.Column = 2;
-            app.DelimeterOptionField.Value         = 'Comma';
+% Span the grid columns
+app.DelimeterOptionField.HTMLComponent.Layout.Row = 1;
+app.DelimeterOptionField.HTMLComponent.Layout.Column = [1 2];
 
             % Section header for staging options
             app.StagingOptionsLabel               = uilabel(app.StagingOptionsGrid);
@@ -1530,8 +1528,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.ChannelEditField.Tooltip      = 'Comma-separated list of channels to run. Click ''Select'' button to scan files and select.';
             app.ChannelEditFieldLabel.Tooltip = 'Comma-separated list of channels to run. Click ''Select'' button to scan files and select.';
 
-            app.FileDelimiterDropDownLabel.Tooltip = 'Select delimiter used in the staging file';
-            app.DelimeterOptionField.Tooltip       = 'Select delimiter used in the staging file';
+            app.DelimeterOptionField.HTMLComponent.Tooltip       = 'Select delimiter used in the staging file';
 
             % Apply tooltips to all stage label fields programmatically
             stage_label_list = {'Artifact','Wake','REM','N1','N2','N3','Unknown'};
