@@ -1390,7 +1390,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % Three columns
             app.BottomGrid             = uigridlayout(app.FullDYNAMOSetupGrid);
             app.BottomGrid.ColumnWidth = {'3x', '2x', '3x'};
-             app.BottomGrid.RowHeight = {app.ButtonHeight * 4};   % ~4 stacked buttons tall
+             app.BottomGrid.RowHeight = {app.ButtonHeight * 4.5};   % ~4 stacked buttons tall
             app.BottomGrid.Padding     = [5 5 5 5];
             app.BottomGrid.ColumnSpacing = 0;
             app.BottomGrid.RowSpacing  = 0;
@@ -1423,9 +1423,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.RunBatchGrid             = uigridlayout(app.BottomGrid);
             app.RunBatchGrid.ColumnWidth = {'1x', '1x'};
             app.RunBatchGrid.RowHeight   = {'1x'};
-            app.RunBatchGrid.ColumnSpacing = 10;
-            app.RunBatchGrid.Padding     = [app.ButtonWidth * 0.5, 0, ...
-                                        app.ButtonWidth * 0.5, 0];
+            app.RunBatchGrid.ColumnSpacing = 0;
+            app.RunBatchGrid.Padding  = [80 0 80 0];
             app.RunBatchGrid.Layout.Row  = 1;
             app.RunBatchGrid.Layout.Column = 2;
 
@@ -1434,6 +1433,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Color',   '#fdecea', ...
                 'Accent',  '#b71c1c', ...
                 'Text',    'STOP', ...
+                'Padding', [0 10 15 0],...
                 'Icon', '<rect x="5" y="5" width="14" height="14"/>');
             app.StopBatchButton.HTMLComponent.Layout.Row    = 1;
             app.StopBatchButton.HTMLComponent.Layout.Column = 1;
@@ -1446,6 +1446,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Color',   '#e8f5e9', ...
                 'Accent',  '#2e7d32', ...
                 'Text',    'RUN', ...
+                'Padding', [0 10 15 0],...
                 'Icon', '<path d="M8 5v14l11-7z"/>');
             app.RunBatchButton.HTMLComponent.Layout.Row    = 1;
             app.RunBatchButton.HTMLComponent.Layout.Column = 2;
