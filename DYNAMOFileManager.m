@@ -42,12 +42,12 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         TimeEstimateGrid                matlab.ui.container.GridLayout  % Holds progress bar widget
         RunBatchGrid                    matlab.ui.container.GridLayout  % Grid for run/stop buttons and options
         RunBatchOptionsGrid             matlab.ui.container.GridLayout  % Sub-grid for run checkbox options
-        OverwriteExistingFilesCheckBox  matlab.ui.control.CheckBox      % If checked, overwrite existing output files
-        RunInReverse                    matlab.ui.control.CheckBox      % If checked, process files in reverse order
+        OverwriteExistingFilesCheckBox        % If checked, overwrite existing output files
+        RunInReverse                          % If checked, process files in reverse order
         RunBatchButton                      % Initiates batch processing
         StopBatchButton                     % Requests graceful stop after current subject
         RightColumnGrid   matlab.ui.container.GridLayout
-        
+
         % --- Status / Log Area ---
         StatusTextGrid                  matlab.ui.container.GridLayout  % Grid for status label and text area
         StatusLabel                     matlab.ui.control.Label         % 'Status:' label
@@ -73,14 +73,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
         % --- Save Option Checkboxes ---
         SavingOptionsCheckBoxGrid       matlab.ui.container.GridLayout  % Grid holding save option checkboxes
-        SaveSplineImagesCheckBox        matlab.ui.control.CheckBox      % Save spline basis figures
-        SaveParamImagesCheckBox         matlab.ui.control.CheckBox      % Save parametric basis figures
-        SaveDataSummaryCheckBox         matlab.ui.control.CheckBox      % Save data summary figures
-        SaveAuxDataCheckBox             matlab.ui.control.CheckBox      % Save auxiliary data (.mat)
-        SaveSplineBasisCheckBox         matlab.ui.control.CheckBox      % Save spline basis data
-        SaveParamBasisCheckBox          matlab.ui.control.CheckBox      % Save parametric basis data
-        SaveSOPHsCheckBox               matlab.ui.control.CheckBox      % Save SO-Power Histograms
-        SavePeakStatsCheckBox           matlab.ui.control.CheckBox      % Save TF-peak stats table
+        SaveSplineImagesCheckBox              % Save spline basis figures
+        SaveParamImagesCheckBox               % Save parametric basis figures
+        SaveDataSummaryCheckBox               % Save data summary figures
+        SaveAuxDataCheckBox                   % Save auxiliary data (.mat)
+        SaveSplineBasisCheckBox               % Save spline basis data
+        SaveParamBasisCheckBox                % Save parametric basis data
+        SaveSOPHsCheckBox                     % Save SO-Power Histograms
+        SavePeakStatsCheckBox                 % Save TF-peak stats table
         FigurestoSaveLabel              matlab.ui.control.Label         % Column header: 'Figures to Save'
         DatatoSaveLabel                 matlab.ui.control.Label         % Column header: 'Data to Save'
 
@@ -275,14 +275,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % -------------------------
         progress_bar   % SmoothProgressBar handle displayed in TimeEstimateGrid
 
-         % -------------------------
+        % -------------------------
         %   UI Dimension Constants
         % -------------------------
         WindowWidth             = 1600   % Default figure width in pixels
         WindowHeight            = 1000   % Default figure height in pixels
         ButtonHeight            = 25     % Standard button height in pixels
         ButtonWidth             = 120    % Button width in pixels (used for fixed-width controls)
- 
+
         % -------------------------
         %   Global Typography
         % -------------------------
@@ -479,7 +479,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.FileInputGrid.Layout.Row  = 1;
             app.FileInputGrid.Layout.Column = 1;
 
-             % ---- Data File Action Buttons ----
+            % ---- Data File Action Buttons ----
             app.DataFileButtonGrid             = uigridlayout(app.FileInputGrid);
             app.DataFileButtonGrid.ColumnWidth = {'1x','1x','1x','1x','1x'};
             app.DataFileButtonGrid.RowHeight   = {'1x'};
@@ -487,7 +487,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DataFileButtonGrid.Padding     = [10 0 10 0];
             app.DataFileButtonGrid.Layout.Row  = 3;
             app.DataFileButtonGrid.Layout.Column = 1;
- 
+
             % Common shadowbutton style params for all file-list buttons
             sbColor     = '#f0f2f5';                    % subtle grey face
             sbHighlight = 'rgba(255,255,255,0.95)';
@@ -496,7 +496,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             sbRounding  = 6;
             sbGap  = 3;
             sbPadding = [5 20 15 5];
- 
+
             % -- Add single EDF file --
             app.DataAddFileButton = shadowbutton(app.DataFileButtonGrid, ...
                 'Shape',    'rectangle', ...
@@ -513,7 +513,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DataAddFileButton.HTMLComponent.Layout.Row    = 1;
             app.DataAddFileButton.HTMLComponent.Layout.Column = 1;
             app.DataAddFileButton.HTMLComponent.Tooltip       = 'Add single EDF file';
- 
+
             % -- Add EDF folder --
             app.DataAddFolderButton = shadowbutton(app.DataFileButtonGrid, ...
                 'Shape',    'rectangle', ...
@@ -529,7 +529,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DataAddFolderButton.HTMLComponent.Layout.Row    = 1;
             app.DataAddFolderButton.HTMLComponent.Layout.Column = 2;
             app.DataAddFolderButton.HTMLComponent.Tooltip       = 'Add all EDF files in folder';
- 
+
             % -- Remove selected EDF file --
             app.DataRemoveButton = shadowbutton(app.DataFileButtonGrid, ...
                 'Shape',    'rectangle', ...
@@ -545,7 +545,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DataRemoveButton.HTMLComponent.Layout.Row    = 1;
             app.DataRemoveButton.HTMLComponent.Layout.Column = 3;
             app.DataRemoveButton.HTMLComponent.Tooltip       = 'Remove selected EDF file';
- 
+
             % -- Move EDF file up --
             app.DataMoveUpButton = shadowbutton(app.DataFileButtonGrid, ...
                 'Shape',    'rectangle', ...
@@ -561,7 +561,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DataMoveUpButton.HTMLComponent.Layout.Row    = 1;
             app.DataMoveUpButton.HTMLComponent.Layout.Column = 4;
             app.DataMoveUpButton.HTMLComponent.Tooltip       = 'Move current EDF file up';
- 
+
             % -- Move EDF file down --
             app.DataMoveDownButton = shadowbutton(app.DataFileButtonGrid, ...
                 'Shape',    'rectangle', ...
@@ -577,12 +577,12 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DataMoveDownButton.HTMLComponent.Layout.Row    = 1;
             app.DataMoveDownButton.HTMLComponent.Layout.Column = 5;
             app.DataMoveDownButton.HTMLComponent.Tooltip       = 'Move current EDF file down';
- 
- 
-% =========================================================================
-%  BLOCK 2 — STAGING FILE ACTION BUTTONS
-% =========================================================================
- 
+
+
+            % =========================================================================
+            %  BLOCK 2 — STAGING FILE ACTION BUTTONS
+            % =========================================================================
+
             % ---- Staging File Action Buttons ----
             app.StagingFileButtonGrid             = uigridlayout(app.FileInputGrid);
             app.StagingFileButtonGrid.ColumnWidth = {'1x','1x','1x','1x','1x'};
@@ -592,7 +592,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StagingFileButtonGrid.Layout.Row  = 3;
             app.StagingFileButtonGrid.Layout.Column = 2;
 
- 
+
             % -- Add single staging file --
             app.StagingAddFileButton = shadowbutton(app.StagingFileButtonGrid, ...
                 'Shape',    'rectangle', ...
@@ -608,7 +608,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StagingAddFileButton.HTMLComponent.Layout.Row    = 1;
             app.StagingAddFileButton.HTMLComponent.Layout.Column = 1;
             app.StagingAddFileButton.HTMLComponent.Tooltip       = 'Add single staging file';
- 
+
             % -- Add staging folder --
             app.StagingAddFolderButton = shadowbutton(app.StagingFileButtonGrid, ...
                 'Shape',    'rectangle', ...
@@ -623,7 +623,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StagingAddFolderButton.HTMLComponent.Layout.Row    = 1;
             app.StagingAddFolderButton.HTMLComponent.Layout.Column = 2;
             app.StagingAddFolderButton.HTMLComponent.Tooltip       = 'Add all staging files in folder';
- 
+
             % -- Remove selected staging file --
             app.StagingRemoveButton = shadowbutton(app.StagingFileButtonGrid, ...
                 'Shape',    'rectangle', ...
@@ -639,7 +639,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StagingRemoveButton.HTMLComponent.Layout.Row    = 1;
             app.StagingRemoveButton.HTMLComponent.Layout.Column = 3;
             app.StagingRemoveButton.HTMLComponent.Tooltip       = 'Remove selected staging file';
- 
+
             % -- Move staging file up --
             app.StagingMoveUpBotton = shadowbutton(app.StagingFileButtonGrid, ...
                 'Shape',    'rectangle', ...
@@ -655,7 +655,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StagingMoveUpBotton.HTMLComponent.Layout.Row    = 1;
             app.StagingMoveUpBotton.HTMLComponent.Layout.Column = 4;
             app.StagingMoveUpBotton.HTMLComponent.Tooltip       = 'Move current staging file up';
- 
+
             % -- Move staging file down --
             app.StagingMoveDownButton = shadowbutton(app.StagingFileButtonGrid, ...
                 'Shape',    'rectangle', ...
@@ -671,7 +671,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StagingMoveDownButton.HTMLComponent.Layout.Row    = 1;
             app.StagingMoveDownButton.HTMLComponent.Layout.Column = 5;
             app.StagingMoveDownButton.HTMLComponent.Tooltip       = 'Move current staging file down';
- 
+
 
             % ---- Data List Box ----
             % Double-click opens the EDF header viewer
@@ -1072,63 +1072,48 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.FigurestoSaveLabel.FontWeight    = 'bold';
             app.FigurestoSaveLabel.Text          = 'Figures to Save';
 
-            % Data save checkboxes (left column)
-            app.SavePeakStatsCheckBox               = uicheckbox(app.SavingOptionsCheckBoxGrid);
-            app.SavePeakStatsCheckBox.Text          = 'Peak Stats Tables';
-            app.SavePeakStatsCheckBox.Value         = 1;
-            app.SavePeakStatsCheckBox.Layout.Row    = 2;
-            app.SavePeakStatsCheckBox.Layout.Column = 1;
-            app.SavePeakStatsCheckBox.Tooltip       = 'Save TFpeak stats tables, which store individual peak features for all detected TFpeaks';
 
-            app.SaveSOPHsCheckBox               = uicheckbox(app.SavingOptionsCheckBoxGrid);
-            app.SaveSOPHsCheckBox.Text          = 'SO-Power Histogram';
-            app.SaveSOPHsCheckBox.Value         = 1;
-            app.SaveSOPHsCheckBox.Layout.Row    = 3;
-            app.SaveSOPHsCheckBox.Layout.Column = 1;
-            app.SaveSOPHsCheckBox.Tooltip = 'Save SO-power and SO-phase histograms';
+            % --- Data Tables (Left Column) ---
+            app.SavePeakStatsCheckBox = shadowswitch(app.SavingOptionsCheckBoxGrid, 'Text', 'Peak Stats Tables', 'value', 1);
+            app.SavePeakStatsCheckBox.HTMLComponent.Layout.Row    = 2;
+            app.SavePeakStatsCheckBox.HTMLComponent.Layout.Column = 1;
+            app.SavePeakStatsCheckBox.HTMLComponent.Tooltip       = 'Save TFpeak stats tables, which store individual peak features for all detected TFpeaks';
 
-            app.SaveParamBasisCheckBox               = uicheckbox(app.SavingOptionsCheckBoxGrid);
-            app.SaveParamBasisCheckBox.Text          = 'Parametric Basis';
-            app.SaveParamBasisCheckBox.Value         = 1;
-            app.SaveParamBasisCheckBox.Layout.Row    = 4;
-            app.SaveParamBasisCheckBox.Layout.Column = 1;
-            app.SaveParamBasisCheckBox.Tooltip       = 'Save tables of estimated mode feature parameters for SO-power and SO-phase histograms';
+            app.SaveSOPHsCheckBox = shadowswitch(app.SavingOptionsCheckBoxGrid, 'Text', 'SO-Power Histogram', 'value', 1);
+            app.SaveSOPHsCheckBox.HTMLComponent.Layout.Row    = 3;
+            app.SaveSOPHsCheckBox.HTMLComponent.Layout.Column = 1;
+            app.SaveSOPHsCheckBox.HTMLComponent.Tooltip       = 'Save SO-power and SO-phase histograms';
 
-            app.SaveSplineBasisCheckBox               = uicheckbox(app.SavingOptionsCheckBoxGrid);
-            app.SaveSplineBasisCheckBox.Text          = 'Spline Basis';
-            app.SaveSplineBasisCheckBox.Value         = 1;
-            app.SaveSplineBasisCheckBox.Layout.Row    = 5;
-            app.SaveSplineBasisCheckBox.Layout.Column = 1;
-            app.SaveSplineBasisCheckBox.Tooltip       = 'Save matrix of spline knot parameters';
+            app.SaveParamBasisCheckBox = shadowswitch(app.SavingOptionsCheckBoxGrid, 'Text', 'Parametric Basis', 'value', 1);
+            app.SaveParamBasisCheckBox.HTMLComponent.Layout.Row    = 4;
+            app.SaveParamBasisCheckBox.HTMLComponent.Layout.Column = 1;
+            app.SaveParamBasisCheckBox.HTMLComponent.Tooltip       = 'Save tables of estimated mode feature parameters for SO-power and SO-phase histograms';
 
-            app.SaveAuxDataCheckBox               = uicheckbox(app.SavingOptionsCheckBoxGrid);
-            app.SaveAuxDataCheckBox.Text          = 'Auxiliary Data';
-            app.SaveAuxDataCheckBox.Value         = 1;
-            app.SaveAuxDataCheckBox.Layout.Row    = 6;
-            app.SaveAuxDataCheckBox.Layout.Column = 1;
-            app.SaveAuxDataCheckBox.Tooltip       = 'Save auxiliary data helpful for rapid recomputation and figure generation without accessing the raw data (e.g., SO-power, Fs, etc.)';
+            app.SaveSplineBasisCheckBox = shadowswitch(app.SavingOptionsCheckBoxGrid, 'Text', 'Spline Basis', 'value', 1);
+            app.SaveSplineBasisCheckBox.HTMLComponent.Layout.Row    = 5;
+            app.SaveSplineBasisCheckBox.HTMLComponent.Layout.Column = 1;
+            app.SaveSplineBasisCheckBox.HTMLComponent.Tooltip       = 'Save matrix of spline knot parameters';
 
-            % Figure save checkboxes (right column)
-            app.SaveDataSummaryCheckBox               = uicheckbox(app.SavingOptionsCheckBoxGrid);
-            app.SaveDataSummaryCheckBox.Text          = 'Data Summary Figures';
-            app.SaveDataSummaryCheckBox.Value         = 1;
-            app.SaveDataSummaryCheckBox.Layout.Row    = 2;
-            app.SaveDataSummaryCheckBox.Layout.Column = 2;
-            app.SaveDataSummaryCheckBox.Tooltip       = 'Save DYNAM-O summary figures, showing spectrgram, SO-power, detected peaks, and SO-power/phase histograms';
+            app.SaveAuxDataCheckBox = shadowswitch(app.SavingOptionsCheckBoxGrid, 'Text', 'Auxiliary Data', 'value', 1);
+            app.SaveAuxDataCheckBox.HTMLComponent.Layout.Row    = 6;
+            app.SaveAuxDataCheckBox.HTMLComponent.Layout.Column = 1;
+            app.SaveAuxDataCheckBox.HTMLComponent.Tooltip       = 'Save auxiliary data helpful for rapid recomputation and figure generation without accessing the raw data';
 
-            app.SaveParamImagesCheckBox               = uicheckbox(app.SavingOptionsCheckBoxGrid);
-            app.SaveParamImagesCheckBox.Text          = 'Parametric Basis Figures';
-            app.SaveParamImagesCheckBox.Value         = 1;
-            app.SaveParamImagesCheckBox.Layout.Row    = 3;
-            app.SaveParamImagesCheckBox.Layout.Column = 2;
-            app.SaveParamImagesCheckBox.Tooltip       = 'Save the output figures for parametric fits';
+            % --- Figure Save Checkboxes (Right Column) ---
+            app.SaveDataSummaryCheckBox = shadowswitch(app.SavingOptionsCheckBoxGrid, 'Text', 'Data Summary Figures', 'value', 1);
+            app.SaveDataSummaryCheckBox.HTMLComponent.Layout.Row    = 2;
+            app.SaveDataSummaryCheckBox.HTMLComponent.Layout.Column = 2;
+            app.SaveDataSummaryCheckBox.HTMLComponent.Tooltip       = 'Save DYNAM-O summary figures, showing spectrogram, SO-power, detected peaks, and SO-power/phase histograms';
 
-            app.SaveSplineImagesCheckBox               = uicheckbox(app.SavingOptionsCheckBoxGrid);
-            app.SaveSplineImagesCheckBox.Text          = 'Spline Basis Figures';
-            app.SaveSplineImagesCheckBox.Value         = 1;
-            app.SaveSplineImagesCheckBox.Layout.Row    = 4;
-            app.SaveSplineImagesCheckBox.Layout.Column = 2;
-            app.SaveSplineImagesCheckBox.Tooltip       = 'Save the output figures for spline fits';
+            app.SaveParamImagesCheckBox = shadowswitch(app.SavingOptionsCheckBoxGrid, 'Text', 'Parametric Basis Figures', 'value', 1);
+            app.SaveParamImagesCheckBox.HTMLComponent.Layout.Row    = 3;
+            app.SaveParamImagesCheckBox.HTMLComponent.Layout.Column = 2;
+            app.SaveParamImagesCheckBox.HTMLComponent.Tooltip       = 'Save the output figures for parametric fits';
+
+            app.SaveSplineImagesCheckBox = shadowswitch(app.SavingOptionsCheckBoxGrid, 'Text', 'Spline Basis Figures', 'value', 1);
+            app.SaveSplineImagesCheckBox.HTMLComponent.Layout.Row    = 4;
+            app.SaveSplineImagesCheckBox.HTMLComponent.Layout.Column = 2;
+            app.SaveSplineImagesCheckBox.HTMLComponent.Tooltip       = 'Save the output figures for spline fits';
 
             % ---- Output Directory Row ----
             app.SavingDirectoryGrid             = uigridlayout(app.SavingOptionsTabGrid);
@@ -1161,12 +1146,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.OutputDirButton.HTMLComponent.Layout.Row    = 2;
             app.OutputDirButton.HTMLComponent.Layout.Column = 2;
             app.OutputDirButton.ButtonPushedFcn =  @(src,event) browseOutputDir(app);
-
-            % app.OutputDirButton = uibutton(app.SavingDirectoryGrid, 'push', ...
-            %     'ButtonPushedFcn', @(src,event) browseOutputDir(app));
-            % app.OutputDirButton.Layout.Row    = 2;
-            % app.OutputDirButton.Layout.Column = 2;
-            % app.OutputDirButton.Text          = 'Browse';
 
             % Label is overlaid by edit field (edit field takes precedence visually)
             app.EditFieldLabel                     = uilabel(app.SavingDirectoryGrid);
@@ -1390,7 +1369,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % Three columns
             app.BottomGrid             = uigridlayout(app.FullDYNAMOSetupGrid);
             app.BottomGrid.ColumnWidth = {'3x', '2x', '3x'};
-             app.BottomGrid.RowHeight = {app.ButtonHeight * 4.5};   % ~4 stacked buttons tall
+            app.BottomGrid.RowHeight = {app.ButtonHeight * 4.5};   % ~4 stacked buttons tall
             app.BottomGrid.Padding     = [5 5 5 5];
             app.BottomGrid.ColumnSpacing = 0;
             app.BottomGrid.RowSpacing  = 0;
@@ -1517,7 +1496,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.InstructionText.Layout.Row           = 1;
             app.InstructionText.Layout.Column        = 2;
             app.InstructionText.Text = 'Add data and staging files, select output directory, choose options, then run batch.';
-         
+
 
             %Help button
             app.HelpButton = shadowbutton(app.TopTextGrid, ...
@@ -3026,7 +3005,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
         end % runBatch
 
-         function applyFont(app)
+        function applyFont(app)
             % applyFont  Walk every labelled UI control and stamp app.FontName onto it.
             %
             %   Called once at the end of createComponents(), after all controls
@@ -3050,10 +3029,10 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'matlab.ui.control.TextArea', ...
                 'matlab.ui.control.DropDown', ...
                 'matlab.ui.control.ListBox' };
- 
+
             % findall() descends through all grid/tab/panel containers
             allChildren = findall(app.UIFigure);
- 
+
             for k = 1:numel(allChildren)
                 ctrl = allChildren(k);
                 if ismember(class(ctrl), targetClasses)
