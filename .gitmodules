@@ -16,6 +16,6 @@
 [submodule "toolbox/helper_functions/read_EDF"]
 	path = toolbox/helper_functions/read_EDF
 	url = git@github.com:preraulab/read_EDF.git
-[submodule "toolbox/helper_functions/uihtmlbutton"]
-	path = toolbox/helper_functions/uihtmlbutton
-	url = git@github.com:preraulab/uihtmlbutton.git
+[submodule "toolbox/helper_functions/CSSuicontrols"]
+	path = toolbox/helper_functions/CSSuicontrols
+	url = git@github.com:preraulab/CSSuicontrols.git
