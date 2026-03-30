@@ -508,7 +508,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Padding', sbPadding,...
                 'Gap',      sbGap, ...
                 'Text',     'Add File', ...
-                'Icon',     '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 7V3.5L18.5 9H13z M11 10h2v2h2v2h-2v2h-2v-2h-2v-2h2v-2z"/>', ...
+                'Icon',     '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 7V3.5L18.5 9H13z M11 13h2v-2h2v2h2v2h-2v2h-2v-2h-2z"/>', ...
                 'ButtonPushedFcn', createCallbackFcn(app, @DataAddFileButtonPushed, true));
             app.DataAddFileButton.HTMLComponent.Layout.Row    = 1;
             app.DataAddFileButton.HTMLComponent.Layout.Column = 1;
@@ -603,7 +603,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Rounding', sbRounding, ...
                 'Padding', sbPadding,...
                 'Text',     'Add File', ...
-                'Icon',     '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 7V3.5L18.5 9H13z M11 10h2v2h2v2h-2v2h-2v-2h-2v-2h2v-2z"/>', ...
+                'Icon',     '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 7V3.5L18.5 9H13z M11 13h2v-2h2v2h2v2h-2v2h-2v-2h-2z"/>', ...
                 'ButtonPushedFcn', createCallbackFcn(app, @StagingAddFileButtonPushed, true));
             app.StagingAddFileButton.HTMLComponent.Layout.Row    = 1;
             app.StagingAddFileButton.HTMLComponent.Layout.Column = 1;
@@ -1015,15 +1015,15 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.HeaderRowsEditField.Value                 = [];
 
             % File delimiter dropdown
-app.DelimeterOptionField = shadowdropdown(app.StagingOptionsGridRightTop, ...
-    'Label', 'File Delimiter', ...
-    'Items', {'Comma', 'Tab', 'Space', 'Semicolon'}, ...
-    'Value', 'Comma', ...
-    'Accent', '#5f7080');
+            app.DelimeterOptionField = shadowdropdown(app.StagingOptionsGridRightTop, ...
+                'Label', 'File Delimiter', ...
+                'Items', {'Comma', 'Tab', 'Space', 'Semicolon'}, ...
+                'Value', 'Comma', ...
+                'Accent', '#5f7080');
 
-% Span the grid columns
-app.DelimeterOptionField.HTMLComponent.Layout.Row = 1;
-app.DelimeterOptionField.HTMLComponent.Layout.Column = [1 2];
+            % Span the grid columns
+            app.DelimeterOptionField.HTMLComponent.Layout.Row = 1;
+            app.DelimeterOptionField.HTMLComponent.Layout.Column = [1 2];
 
             % Section header for staging options
             app.StagingOptionsLabel               = uilabel(app.StagingOptionsGrid);
@@ -1166,188 +1166,106 @@ app.DelimeterOptionField.HTMLComponent.Layout.Column = [1 2];
 
             app.FileFormatTabGrid             = uigridlayout(app.FileFormatTab);
             app.FileFormatTabGrid.ColumnWidth = {'1x'};
-            app.FileFormatTabGrid.RowHeight   = {'4x', '1x'};
+            app.FileFormatTabGrid.RowHeight   = {'1x'};
 
-            % Six-row, two-column grid of file format dropdowns
-            app.FileFormatCheckBoxGrid             = uigridlayout(app.FileFormatTabGrid);
-            app.FileFormatCheckBoxGrid.RowHeight   = {'1x','1x','1x','1x','1x','1x'};
-            app.FileFormatCheckBoxGrid.Padding     = [0 10 0 10];
-            app.FileFormatCheckBoxGrid.Layout.Row  = 1;
-            app.FileFormatCheckBoxGrid.Layout.Column = 1;
+            % Layout constants
+            ddH  = 35;   % px — row height for each dropdown
+            ddW  = 70;   % px — fixed width of the dropdown widget itself
 
-            % Column headers
-            app.DataFileFormatLabel            = uilabel(app.FileFormatCheckBoxGrid);
-            app.DataFileFormatLabel.Layout.Row = 1;
+            % Seven-row, two-column grid: header + 5 data rows + 1x spacer
+            app.FileFormatCheckBoxGrid                = uigridlayout(app.FileFormatTabGrid);
+            app.FileFormatCheckBoxGrid.ColumnWidth    = {'1x', '1x'};
+            app.FileFormatCheckBoxGrid.RowHeight      = {22, ddH, ddH, ddH, ddH, ddH, '1x'};
+            app.FileFormatCheckBoxGrid.Padding        = [0 10 0 10];
+            app.FileFormatCheckBoxGrid.Layout.Row     = 1;
+            app.FileFormatCheckBoxGrid.Layout.Column  = 1;
+
+            % ----- Column headers -----
+            app.DataFileFormatLabel              = uilabel(app.FileFormatCheckBoxGrid);
+            app.DataFileFormatLabel.Layout.Row   = 1;
             app.DataFileFormatLabel.Layout.Column = 1;
-            app.DataFileFormatLabel.Text       = 'Data File Format';
-            app.DataFileFormatLabel.FontWeight = 'bold';
+            app.DataFileFormatLabel.Text         = 'Data File Format';
+            app.DataFileFormatLabel.FontWeight   = 'bold';
 
-            app.FigureFileFormatLabel            = uilabel(app.FileFormatCheckBoxGrid);
-            app.FigureFileFormatLabel.Layout.Row = 1;
+            app.FigureFileFormatLabel              = uilabel(app.FileFormatCheckBoxGrid);
+            app.FigureFileFormatLabel.Layout.Row   = 1;
             app.FigureFileFormatLabel.Layout.Column = 2;
-            app.FigureFileFormatLabel.Text       = 'Figure File Format';
-            app.FigureFileFormatLabel.FontWeight = 'bold';
+            app.FigureFileFormatLabel.Text         = 'Figure File Format';
+            app.FigureFileFormatLabel.FontWeight   = 'bold';
 
-            % Peak Stats Table format dropdown
-            app.PeakStatsTableGrid             = uigridlayout(app.FileFormatCheckBoxGrid);
-            app.PeakStatsTableGrid.ColumnWidth = {'2.3x', '1x'};
-            app.PeakStatsTableGrid.RowHeight   = {'1x'};
-            app.PeakStatsTableGrid.ColumnSpacing = 0;
-            app.PeakStatsTableGrid.Padding     = [0 0 0 0];
-            app.PeakStatsTableGrid.Layout.Row  = 2;
-            app.PeakStatsTableGrid.Layout.Column = 1;
+            % ----- Data column dropdowns (col 1) -----
+            app.PeakStatsTableDropDown = shadowdropdown(app.FileFormatCheckBoxGrid, ...
+                'Label',         'Peak Stats Table', ...
+                'LabelSide',     'left', ...
+                'DropdownWidth', ddW, ...
+                'Items',         {'--', '.csv', '.mat', 'All'}, ...
+                'Value',         '.csv');
+            app.PeakStatsTableDropDown.HTMLComponent.Layout.Row    = 2;
+            app.PeakStatsTableDropDown.HTMLComponent.Layout.Column = 1;
 
-            app.PeakStatsTableDropDownLabel               = uilabel(app.PeakStatsTableGrid);
-            app.PeakStatsTableDropDownLabel.Layout.Row    = 1;
-            app.PeakStatsTableDropDownLabel.Layout.Column = 1;
-            app.PeakStatsTableDropDownLabel.Text          = 'Peak Stats Table';
+            app.SOPowerHistogramsDropDown = shadowdropdown(app.FileFormatCheckBoxGrid, ...
+                'Label',         'SO-Power Histograms', ...
+                'LabelSide',     'left', ...
+                'DropdownWidth', ddW, ...
+                'Items',         {'--', '.tiff', '.mat', 'All'}, ...
+                'Value',         '.tiff');
+            app.SOPowerHistogramsDropDown.HTMLComponent.Layout.Row    = 3;
+            app.SOPowerHistogramsDropDown.HTMLComponent.Layout.Column = 1;
 
-            app.PeakStatsTableDropDown               = uidropdown(app.PeakStatsTableGrid);
-            app.PeakStatsTableDropDown.Items         = {'--', '.csv', '.mat', 'All'};
-            app.PeakStatsTableDropDown.Layout.Row    = 1;
-            app.PeakStatsTableDropDown.Layout.Column = 2;
-            app.PeakStatsTableDropDown.Value         = '.csv';
+            app.ParametricBasisDropDown = shadowdropdown(app.FileFormatCheckBoxGrid, ...
+                'Label',         'Parametric Basis', ...
+                'LabelSide',     'left', ...
+                'DropdownWidth', ddW, ...
+                'Items',         {'--', '.csv', '.mat', 'All'}, ...
+                'Value',         '.csv');
+            app.ParametricBasisDropDown.HTMLComponent.Layout.Row    = 4;
+            app.ParametricBasisDropDown.HTMLComponent.Layout.Column = 1;
 
-            % SO-Power Histograms format dropdown
-            app.SOPowerHistogramsGrid             = uigridlayout(app.FileFormatCheckBoxGrid);
-            app.SOPowerHistogramsGrid.ColumnWidth = {'2.3x', '1x'};
-            app.SOPowerHistogramsGrid.RowHeight   = {'1x'};
-            app.SOPowerHistogramsGrid.ColumnSpacing = 0;
-            app.SOPowerHistogramsGrid.Padding     = [0 0 0 0];
-            app.SOPowerHistogramsGrid.Layout.Row  = 3;
-            app.SOPowerHistogramsGrid.Layout.Column = 1;
+            app.SplineBasisDropDown = shadowdropdown(app.FileFormatCheckBoxGrid, ...
+                'Label',         'Spline Basis', ...
+                'LabelSide',     'left', ...
+                'DropdownWidth', ddW, ...
+                'Items',         {'--', '.tiff', '.mat', 'All'}, ...
+                'Value',         '.mat');
+            app.SplineBasisDropDown.HTMLComponent.Layout.Row    = 5;
+            app.SplineBasisDropDown.HTMLComponent.Layout.Column = 1;
 
-            app.SOPowerHistogramsDropDownLabel               = uilabel(app.SOPowerHistogramsGrid);
-            app.SOPowerHistogramsDropDownLabel.Layout.Row    = 1;
-            app.SOPowerHistogramsDropDownLabel.Layout.Column = 1;
-            app.SOPowerHistogramsDropDownLabel.Text          = 'SO-Power Histograms';
+            app.AuxiliaryDataDropDown = shadowdropdown(app.FileFormatCheckBoxGrid, ...
+                'Label',         'Auxiliary Data', ...
+                'LabelSide',     'left', ...
+                'DropdownWidth', ddW, ...
+                'Items',         {'.mat', '--'}, ...
+                'Value',         '.mat');
+            app.AuxiliaryDataDropDown.HTMLComponent.Layout.Row    = 6;
+            app.AuxiliaryDataDropDown.HTMLComponent.Layout.Column = 1;
 
-            app.SOPowerHistogramsDropDown               = uidropdown(app.SOPowerHistogramsGrid);
-            app.SOPowerHistogramsDropDown.Items         = {'--', '.tiff', '.mat', 'All'};
-            app.SOPowerHistogramsDropDown.Layout.Row    = 1;
-            app.SOPowerHistogramsDropDown.Layout.Column = 2;
-            app.SOPowerHistogramsDropDown.Value         = '.tiff';
+            % ----- Figure column dropdowns (col 2) -----
+            app.DataSummaryDropDown = shadowdropdown(app.FileFormatCheckBoxGrid, ...
+                'Label',         'Data Summary', ...
+                'LabelSide',     'left', ...
+                'DropdownWidth', ddW, ...
+                'Items',         {'--', '.png', '.jpg', '.jpeg'}, ...
+                'Value',         '.png');
+            app.DataSummaryDropDown.HTMLComponent.Layout.Row    = 2;
+            app.DataSummaryDropDown.HTMLComponent.Layout.Column = 2;
 
-            % Parametric Basis format dropdown
-            app.ParametricBasisGrid             = uigridlayout(app.FileFormatCheckBoxGrid);
-            app.ParametricBasisGrid.ColumnWidth = {'2.3x', '1x'};
-            app.ParametricBasisGrid.RowHeight   = {'1.5x'};
-            app.ParametricBasisGrid.ColumnSpacing = 0;
-            app.ParametricBasisGrid.Padding     = [0 0 0 0];
-            app.ParametricBasisGrid.Layout.Row  = 4;
-            app.ParametricBasisGrid.Layout.Column = 1;
+            app.ParametricFiguresDropDown = shadowdropdown(app.FileFormatCheckBoxGrid, ...
+                'Label',         'Parametric Figures', ...
+                'LabelSide',     'left', ...
+                'DropdownWidth', ddW, ...
+                'Items',         {'--', '.png', '.jpg', '.jpeg'}, ...
+                'Value',         '.png');
+            app.ParametricFiguresDropDown.HTMLComponent.Layout.Row    = 3;
+            app.ParametricFiguresDropDown.HTMLComponent.Layout.Column = 2;
 
-            app.ParametricBasisDropDownLabel               = uilabel(app.ParametricBasisGrid);
-            app.ParametricBasisDropDownLabel.Layout.Row    = 1;
-            app.ParametricBasisDropDownLabel.Layout.Column = 1;
-            app.ParametricBasisDropDownLabel.Text          = 'Parametric Basis';
-
-            app.ParametricBasisDropDown               = uidropdown(app.ParametricBasisGrid);
-            app.ParametricBasisDropDown.Items         = {'--', '.csv', '.mat', 'All'};
-            app.ParametricBasisDropDown.Layout.Row    = 1;
-            app.ParametricBasisDropDown.Layout.Column = 2;
-            app.ParametricBasisDropDown.Value         = '.csv';
-
-            % Spline Basis format dropdown
-            app.SplineBasisGrid             = uigridlayout(app.FileFormatCheckBoxGrid);
-            app.SplineBasisGrid.ColumnWidth = {'2.3x', '1x'};
-            app.SplineBasisGrid.RowHeight   = {'1x'};
-            app.SplineBasisGrid.ColumnSpacing = 0;
-            app.SplineBasisGrid.Padding     = [0 0 0 0];
-            app.SplineBasisGrid.Layout.Row  = 5;
-            app.SplineBasisGrid.Layout.Column = 1;
-
-            app.SplineBasisDropDownLabel               = uilabel(app.SplineBasisGrid);
-            app.SplineBasisDropDownLabel.Layout.Row    = 1;
-            app.SplineBasisDropDownLabel.Layout.Column = 1;
-            app.SplineBasisDropDownLabel.Text          = 'Spline Basis';
-
-            app.SplineBasisDropDown               = uidropdown(app.SplineBasisGrid);
-            app.SplineBasisDropDown.Items         = {'--', '.tiff', '.mat', 'All'};
-            app.SplineBasisDropDown.Layout.Row    = 1;
-            app.SplineBasisDropDown.Layout.Column = 2;
-            app.SplineBasisDropDown.Value         = '.mat';
-
-            % Auxiliary Data format dropdown
-            app.AuxiliaryDataGrid             = uigridlayout(app.FileFormatCheckBoxGrid);
-            app.AuxiliaryDataGrid.ColumnWidth = {'2.3x', '1x'};
-            app.AuxiliaryDataGrid.RowHeight   = {'1x'};
-            app.AuxiliaryDataGrid.ColumnSpacing = 0;
-            app.AuxiliaryDataGrid.Padding     = [0 0 0 0];
-            app.AuxiliaryDataGrid.Layout.Row  = 6;
-            app.AuxiliaryDataGrid.Layout.Column = 1;
-
-            app.AuxiliaryDataDropDownLabel               = uilabel(app.AuxiliaryDataGrid);
-            app.AuxiliaryDataDropDownLabel.Layout.Row    = 1;
-            app.AuxiliaryDataDropDownLabel.Layout.Column = 1;
-            app.AuxiliaryDataDropDownLabel.Text          = 'Auxiliary Data';
-
-            app.AuxiliaryDataDropDown               = uidropdown(app.AuxiliaryDataGrid);
-            app.AuxiliaryDataDropDown.Items         = {'.mat', '--'};
-            app.AuxiliaryDataDropDown.Layout.Row    = 1;
-            app.AuxiliaryDataDropDown.Layout.Column = 2;
-            app.AuxiliaryDataDropDown.Value         = '.mat';
-
-            % Data Summary figure format dropdown
-            app.DataSummaryGrid             = uigridlayout(app.FileFormatCheckBoxGrid);
-            app.DataSummaryGrid.ColumnWidth = {'2.2x', '1x'};
-            app.DataSummaryGrid.RowHeight   = {'1x'};
-            app.DataSummaryGrid.ColumnSpacing = 0;
-            app.DataSummaryGrid.Padding     = [0 0 0 0];
-            app.DataSummaryGrid.Layout.Row  = 2;
-            app.DataSummaryGrid.Layout.Column = 2;
-
-            app.DataSummaryDropDownLabel               = uilabel(app.DataSummaryGrid);
-            app.DataSummaryDropDownLabel.Layout.Row    = 1;
-            app.DataSummaryDropDownLabel.Layout.Column = 1;
-            app.DataSummaryDropDownLabel.Text          = 'Data Summary';
-
-            app.DataSummaryDropDown               = uidropdown(app.DataSummaryGrid);
-            app.DataSummaryDropDown.Items         = {'--', '.png', '.jpg', '.jpeg'};
-            app.DataSummaryDropDown.Layout.Row    = 1;
-            app.DataSummaryDropDown.Layout.Column = 2;
-            app.DataSummaryDropDown.Value         = '.png';
-
-            % Parametric Figures format dropdown
-            app.ParametricFiguresGrid             = uigridlayout(app.FileFormatCheckBoxGrid);
-            app.ParametricFiguresGrid.ColumnWidth = {'2.2x', '1x'};
-            app.ParametricFiguresGrid.RowHeight   = {'1x'};
-            app.ParametricFiguresGrid.ColumnSpacing = 0;
-            app.ParametricFiguresGrid.Padding     = [0 0 0 0];
-            app.ParametricFiguresGrid.Layout.Row  = 3;
-            app.ParametricFiguresGrid.Layout.Column = 2;
-
-            app.ParametricFiguresDropDownLabel               = uilabel(app.ParametricFiguresGrid);
-            app.ParametricFiguresDropDownLabel.Layout.Row    = 1;
-            app.ParametricFiguresDropDownLabel.Layout.Column = 1;
-            app.ParametricFiguresDropDownLabel.Text          = 'Parametric Figures';
-
-            app.ParametricFiguresDropDown               = uidropdown(app.ParametricFiguresGrid);
-            app.ParametricFiguresDropDown.Items         = {'--', '.png', '.jpg', '.jpeg'};
-            app.ParametricFiguresDropDown.Layout.Row    = 1;
-            app.ParametricFiguresDropDown.Layout.Column = 2;
-            app.ParametricFiguresDropDown.Value         = '.png';
-
-            % Spline Figures format dropdown
-            app.SplineFiguresGrid             = uigridlayout(app.FileFormatCheckBoxGrid);
-            app.SplineFiguresGrid.ColumnWidth = {'2.2x', '1x'};
-            app.SplineFiguresGrid.RowHeight   = {'1x'};
-            app.SplineFiguresGrid.ColumnSpacing = 0;
-            app.SplineFiguresGrid.Padding     = [0 0 0 0];
-            app.SplineFiguresGrid.Layout.Row  = 4;
-            app.SplineFiguresGrid.Layout.Column = 2;
-
-            app.SplineFiguresDropDownLabel               = uilabel(app.SplineFiguresGrid);
-            app.SplineFiguresDropDownLabel.Layout.Row    = 1;
-            app.SplineFiguresDropDownLabel.Layout.Column = 1;
-            app.SplineFiguresDropDownLabel.Text          = 'Spline Figures';
-
-            app.SplineFiguresDropDown               = uidropdown(app.SplineFiguresGrid);
-            app.SplineFiguresDropDown.Items         = {'--', '.png', '.jpg', '.jpeg'};
-            app.SplineFiguresDropDown.Layout.Row    = 1;
-            app.SplineFiguresDropDown.Layout.Column = 2;
-            app.SplineFiguresDropDown.Value         = '.png';
-
+            app.SplineFiguresDropDown = shadowdropdown(app.FileFormatCheckBoxGrid, ...
+                'Label',         'Spline Figures', ...
+                'LabelSide',     'left', ...
+                'DropdownWidth', ddW, ...
+                'Items',         {'--', '.png', '.jpg', '.jpeg'}, ...
+                'Value',         '.png');
+            app.SplineFiguresDropDown.HTMLComponent.Layout.Row    = 4;
+            app.SplineFiguresDropDown.HTMLComponent.Layout.Column = 2;
             % ============================================================
             %   DYNAM-O SETTINGS TAB
             % ============================================================
@@ -1443,30 +1361,31 @@ app.DelimeterOptionField.HTMLComponent.Layout.Column = [1 2];
             app.RightColumnGrid.Layout.Row  = 1;
             app.RightColumnGrid.Layout.Column = 3;
 
-            % Checkboxes: 4-row inner grid, spacers on rows 1 & 4 push
-            % the two fit-height checkboxes to the vertical centre.
+            % Switches: 4-row inner grid, spacers on rows 1 & 4 push
+            % the two switches to the vertical centre.
+            % NOTE: 'fit' cannot be used with uihtml-based components —
+            % explicit pixel heights are required instead.
             app.RunBatchOptionsGrid             = uigridlayout(app.RightColumnGrid);
             app.RunBatchOptionsGrid.ColumnWidth = {'1x'};
-            app.RunBatchOptionsGrid.RowHeight   = {'1x', 'fit', 'fit', '1x'};
+            app.RunBatchOptionsGrid.RowHeight   = {'1x', app.ButtonHeight, app.ButtonHeight, '1x'};
             app.RunBatchOptionsGrid.RowSpacing  = 4;
             app.RunBatchOptionsGrid.Padding     = [10 0 10 0];
             app.RunBatchOptionsGrid.Layout.Row  = 1;
             app.RunBatchOptionsGrid.Layout.Column = 1;
 
-            app.RunInReverse          = uicheckbox(app.RunBatchOptionsGrid);
-            app.RunInReverse.Text     = 'Run in Reverse';
-            app.RunInReverse.FontSize = app.FontSizeBase;
-            app.RunInReverse.Layout.Row    = 2;
-            app.RunInReverse.Layout.Column = 1;
-            app.RunInReverse.Tooltip  = 'Check to run through batch files from bottom to top. This is useful when running two instances of the manager in parallel on the same dataset';
+            app.RunInReverse = shadowswitch(app.RunBatchOptionsGrid, ...
+                'Text',    'Run in Reverse', ...
+                'Enabled', true);
+            app.RunInReverse.HTMLComponent.Layout.Row    = 2;
+            app.RunInReverse.HTMLComponent.Layout.Column = 1;
+            app.RunInReverse.HTMLComponent.Tooltip = 'Check to run through batch files from bottom to top. This is useful when running two instances of the manager in parallel on the same dataset';
 
-            app.OverwriteExistingFilesCheckBox          = uicheckbox(app.RunBatchOptionsGrid);
-            app.OverwriteExistingFilesCheckBox.Text     = 'Overwrite Existing Files';
-            app.OverwriteExistingFilesCheckBox.FontSize = app.FontSizeBase;
-            app.OverwriteExistingFilesCheckBox.Layout.Row    = 3;
-            app.OverwriteExistingFilesCheckBox.Layout.Column = 1;
-            app.OverwriteExistingFilesCheckBox.Tooltip  = 'By default, output files will automatically be skipped if already generated. Check to overwrite all files.';
-
+            app.OverwriteExistingFilesCheckBox = shadowswitch(app.RunBatchOptionsGrid, ...
+                'Text',    'Overwrite Existing Files', ...
+                'Enabled', true);
+            app.OverwriteExistingFilesCheckBox.HTMLComponent.Layout.Row    = 3;
+            app.OverwriteExistingFilesCheckBox.HTMLComponent.Layout.Column = 1;
+            app.OverwriteExistingFilesCheckBox.HTMLComponent.Tooltip = 'By default, output files will automatically be skipped if already generated. Check to overwrite all files.';
             % Progress bar occupies the right sub-column, full height
             app.TimeEstimateGrid             = uigridlayout(app.RightColumnGrid);
             app.TimeEstimateGrid.ColumnWidth = {'1x'};
