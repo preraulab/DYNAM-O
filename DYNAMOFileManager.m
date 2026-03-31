@@ -290,8 +290,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %     'ValidationCallback' – function_handle(filepath) -> logical
             %     'Title'              – char window title (default: 'DYNAM-O Toolbox')
             %     'Position'           – [x y w h] figure position vector
-            addpath(genpath(fileparts(which('DYNAMOFileManager.m'))))
-
             p = inputParser;
             addParameter(p,'BatchCallback',[],@(x) isempty(x)||isa(x,'function_handle'));
             addParameter(p,'ValidationCallback',[],@(x) isempty(x)||isa(x,'function_handle'));
