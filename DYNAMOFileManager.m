@@ -290,6 +290,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %     'ValidationCallback' – function_handle(filepath) -> logical
             %     'Title'              – char window title (default: 'DYNAM-O Toolbox')
             %     'Position'           – [x y w h] figure position vector
+
             p = inputParser;
             addParameter(p,'BatchCallback',[],@(x) isempty(x)||isa(x,'function_handle'));
             addParameter(p,'ValidationCallback',[],@(x) isempty(x)||isa(x,'function_handle'));
@@ -509,31 +510,22 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DataRemoveButton.HTMLComponent.Tooltip       = 'Remove selected EDF file';
 
             % -- Move EDF file up --
-            app.DataMoveUpButton =  CSSuiButton(app.DataFileButtonGrid, ...
-                'Text', 'Move Up', ...
-                'Style','shadow',...
-                'ButtonPushedFcn',  createCallbackFcn(app, @DataMoveUpButtonPushed, true), ...
-                'IconPosition', 'left',...
-                'Icon', '<path d="M12 5l-7 9h5v8h4v-8h5z"/>' ...
-                );
-
+            app.DataMoveUpButton = CSSuiButton(app.DataFileButtonGrid, ...
+                'Text', 'Move Up', 'Style', 'shadow', 'Padding', '15px', ...
+                'IconPosition', 'left', 'Icon', '<path d="M12 5l-7 9h5v8h4v-8h5z"/>', ...
+                'ButtonPushedFcn', createCallbackFcn(app, @DataMoveUpButtonPushed, true));
             app.DataMoveUpButton.Row    = 1;
             app.DataMoveUpButton.Column = 4;
-            app.DataMoveUpButton.HTMLComponent.Tooltip       = 'Move current EDF file up';
-            app.DataMoveUpButton.Padding = '15px';
+            app.DataMoveUpButton.HTMLComponent.Tooltip = 'Move current EDF file up';
 
             % -- Move EDF file down --
-            app.DataMoveDownButton =  CSSuiButton(app.DataFileButtonGrid, ...
-                'Text', 'Move Down', ...
-                'Style','shadow',...
-                'ButtonPushedFcn',  createCallbackFcn(app, @DataMoveDownButtonPushed, true), ...
-                'IconPosition', 'left',...
-                'Icon', '<path d="M12 19l-7-9h5v-8h4v8h5z"/>' ...
-                );
-            app.DataMoveDownButton.Padding = '15px';
+            app.DataMoveDownButton = CSSuiButton(app.DataFileButtonGrid, ...
+                'Text', 'Move Down', 'Style', 'shadow', 'Padding', '15px', ...
+                'IconPosition', 'left', 'Icon', '<path d="M12 19l-7-9h5v-8h4v8h5z"/>', ...
+                'ButtonPushedFcn', createCallbackFcn(app, @DataMoveDownButtonPushed, true));
             app.DataMoveDownButton.Row    = 1;
             app.DataMoveDownButton.Column = 5;
-            app.DataMoveDownButton.HTMLComponent.Tooltip       = 'Move current EDF file down';
+            app.DataMoveDownButton.HTMLComponent.Tooltip = 'Move current EDF file down';
 
 
             % =========================================================================
@@ -642,12 +634,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DataFileTopGrid.Layout.Row  = 1;
             app.DataFileTopGrid.Layout.Column = 1;
 
-            app.DataFileInstructionText            = CSSuiLabel(app.DataFileTopGrid, 'Style','shadow');
-            app.DataFileInstructionText.FontSize   = '13px';
-            app.DataFileInstructionText.FontWeight   = '700';
-            app.DataFileInstructionText.Row = 2;
+            app.DataFileInstructionText = CSSuiLabel(app.DataFileTopGrid, ...
+                'Style', 'shadow', 'FontSize', '13px', 'FontWeight', '700', ...
+                'Text', upper('Add PSG files (EDF). Double-click file for header info.'));
+            app.DataFileInstructionText.Row    = 2;
             app.DataFileInstructionText.Column = 1;
-            app.DataFileInstructionText.Text       = upper('Add PSG files (EDF). Double-click file for header info.');
 
             % Centred title grid with file count label
             app.DataFileTitleGrid             = uigridlayout(app.DataFileTopGrid);
@@ -657,12 +648,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DataFileTitleGrid.Layout.Row  = 1;
             app.DataFileTitleGrid.Layout.Column = 1;
 
-            app.DataLabel                      = CSSuiLabel(app.DataFileTitleGrid, 'Style','shadow');
-            app.DataLabel.FontWeight           = '700';
-            app.DataLabel.Layout.Row           = 1;
-            app.DataLabel.Layout.Column        = 2;
-            app.DataLabel.FontSize             =  app.FontSizeTitle;
-            app.DataLabel.Text                 = 'DATA (0 Files)';
+            app.DataLabel = CSSuiLabel(app.DataFileTitleGrid, ...
+                'Style', 'shadow', 'FontWeight', '700', 'FontSize', app.FontSizeTitle, ...
+                'Text', 'DATA (0 Files)');
+            app.DataLabel.Layout.Row    = 1;
+            app.DataLabel.Layout.Column = 2;
 
             % ---- Staging File Title + Instruction ----
             app.StagingFileTopGrid             = uigridlayout(app.FileInputGrid);
@@ -674,12 +664,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StagingFileTopGrid.Layout.Row  = 1;
             app.StagingFileTopGrid.Layout.Column = 2;
 
-            app.StagingFileInstructionText            = CSSuiLabel(app.StagingFileTopGrid, 'Style','shadow');
-            app.StagingFileInstructionText.FontSize   =  '12px';
-            app.StagingFileInstructionText.FontWeight = '700';
-            app.StagingFileInstructionText.Layout.Row = 2;
+            app.StagingFileInstructionText = CSSuiLabel(app.StagingFileTopGrid, ...
+                'Style', 'shadow', 'FontSize', '12px', 'FontWeight', '700', ...
+                'Text', upper('Add staging files (CSV/TXT). Ensure order matches data files.'));
+            app.StagingFileInstructionText.Layout.Row    = 2;
             app.StagingFileInstructionText.Layout.Column = 1;
-            app.StagingFileInstructionText.Text       = upper('Add staging files (CSV/TXT). Ensure order matches data files.');
 
             app.StagingFileTitleGrid             = uigridlayout(app.StagingFileTopGrid);
             app.StagingFileTitleGrid.ColumnWidth = {'2x', '5x', '2x'};
@@ -688,14 +677,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StagingFileTitleGrid.Layout.Row  = 1;
             app.StagingFileTitleGrid.Layout.Column = 1;
 
-            app.StagingLabel                      = CSSuiLabel(app.StagingFileTitleGrid, 'Style', 'shadow');
-            app.StagingLabel.FontWeight           = '700';
-            app.StagingLabel.FontSize           = '12px';
-            app.StagingLabel.Layout.Row           = 1;
-            app.StagingLabel.Layout.Column        = 2;
-            app.StagingLabel.FontSize             = app.FontSizeTitle;
-            app.StagingLabel.HorizontalAlignment  = 'center';
-            app.StagingLabel.Text                 = 'STAGING (0 Files)';
+            app.StagingLabel = CSSuiLabel(app.StagingFileTitleGrid, ...
+                'Style', 'shadow', 'FontWeight', '700', 'FontSize', app.FontSizeTitle, ...
+                'HorizontalAlignment', 'center', 'Text', 'STAGING (0 Files)');
+            app.StagingLabel.Layout.Row    = 1;
+            app.StagingLabel.Layout.Column = 2;
 
             % ============================================================
             %   RUNTIME OPTIONS (right column)
@@ -729,10 +715,10 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.ChannelInputGrid.Layout.Row  = 3;
             app.ChannelInputGrid.Layout.Column = 1;
 
-            app.ChannelEditFieldLabel                     = CSSuiLabel(app.ChannelInputGrid,'Style','shadow');
-            app.ChannelEditFieldLabel.Layout.Row          = 1;
-            app.ChannelEditFieldLabel.Layout.Column       = 1;
-            app.ChannelEditFieldLabel.Text                = 'Channel(s):';
+            app.ChannelEditFieldLabel = CSSuiLabel(app.ChannelInputGrid, ...
+                'Style', 'shadow', 'Text', 'Channel(s):');
+            app.ChannelEditFieldLabel.Layout.Row    = 1;
+            app.ChannelEditFieldLabel.Layout.Column = 1;
 
             app.ChannelEditField               = CSSuiEditField(app.ChannelInputGrid, 'Style','shadow');
             app.ChannelEditField.Layout.Row    = 1;
@@ -746,12 +732,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.ViewChannelsButton.ButtonPushedFcn = createCallbackFcn(app, @viewChannelsButtonPushed, true);
 
             % Section header
-            app.RuntimeOptionsLabel                      = CSSuiLabel(app.RuntimeOptionsTopGrid, 'Style','shadow');
-            app.RuntimeOptionsLabel.FontWeight           = '700';
-            app.RuntimeOptionsLabel.Layout.Row           = 1;
-            app.RuntimeOptionsLabel.Layout.Column        = 1;
-            app.RuntimeOptionsLabel.FontSize             = app.FontSizeTitle;
-            app.RuntimeOptionsLabel.Text                 = 'RUNTIME OPTIONS';
+            app.RuntimeOptionsLabel = CSSuiLabel(app.RuntimeOptionsTopGrid, ...
+                'Style', 'shadow', 'FontWeight', '700', 'FontSize', app.FontSizeTitle, ...
+                'Text', 'RUNTIME OPTIONS');
+            app.RuntimeOptionsLabel.Layout.Row    = 1;
+            app.RuntimeOptionsLabel.Layout.Column = 1;
 
             % Instruction text for channel input
             app.ChannelOptionsGrid             = uigridlayout(app.RuntimeOptionsTopGrid);
@@ -761,11 +746,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.ChannelOptionsGrid.Layout.Row  = 2;
             app.ChannelOptionsGrid.Layout.Column = 1;
 
-            app.ChannelOptionsInstructionsLabel                    = CSSuiLabel(app.ChannelOptionsGrid, 'Style','shadow');
-            app.ChannelOptionsInstructionsLabel.FontSize           = '12px';
-            app.ChannelOptionsInstructionsLabel.Layout.Row         = 1;
-            app.ChannelOptionsInstructionsLabel.Layout.Column      = 1;
-            app.ChannelOptionsInstructionsLabel.Text               = 'Enter comma-separated list of channels or select from files.';
+            app.ChannelOptionsInstructionsLabel = CSSuiLabel(app.ChannelOptionsGrid, ...
+                'Style', 'shadow', 'FontSize', '12px', ...
+                'Text', 'Enter comma-separated list of channels or select from files.');
+            app.ChannelOptionsInstructionsLabel.Layout.Row    = 1;
+            app.ChannelOptionsInstructionsLabel.Layout.Column = 1;
 
             % ---- Staging Options (Row 2) ----
             % Two-sub-column panel: left = stage label identifiers, right = file format inputs
@@ -788,136 +773,128 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StagingOptionsPanelGrid.Layout.Column = 1;
 
             % Artifact stage identifiers
-            app.ArtifactEditFieldLabel                     = CSSuiLabel(app.StagingOptionsPanelGrid, 'Style','shadow');
-            app.ArtifactEditFieldLabel.Layout.Row          = 1;
-            app.ArtifactEditFieldLabel.Layout.Column       = 1;
-            app.ArtifactEditFieldLabel.Text                = 'Artifact';
+            app.ArtifactEditFieldLabel = CSSuiLabel(app.StagingOptionsPanelGrid, ...
+                'Style', 'shadow', 'Text', 'Artifact');
+            app.ArtifactEditFieldLabel.Layout.Row    = 1;
+            app.ArtifactEditFieldLabel.Layout.Column = 1;
 
-            app.ArtifactEditField               = CSSuiEditField(app.StagingOptionsPanelGrid, 'Style','shadow');
+            app.ArtifactEditField = CSSuiEditField(app.StagingOptionsPanelGrid, ...
+                'Style', 'shadow', 'Value', 'art, artifact, A, 6');
             app.ArtifactEditField.Layout.Row    = 1;
             app.ArtifactEditField.Layout.Column = 2;
-            app.ArtifactEditField.Value         = 'art, artifact, A, 6';
 
             % Wake stage identifiers
-            app.WakeEditFieldLabel                     = CSSuiLabel(app.StagingOptionsPanelGrid, 'Style','shadow');
-            app.WakeEditFieldLabel.Layout.Row          = 2;
-            app.WakeEditFieldLabel.Layout.Column       = 1;
-            app.WakeEditFieldLabel.Text                = 'Wake';
+            app.WakeEditFieldLabel = CSSuiLabel(app.StagingOptionsPanelGrid, ...
+                'Style', 'shadow', 'Text', 'Wake');
+            app.WakeEditFieldLabel.Layout.Row    = 2;
+            app.WakeEditFieldLabel.Layout.Column = 1;
 
-            app.WakeEditField               = CSSuiEditField(app.StagingOptionsPanelGrid, 'Style','shadow');
+            app.WakeEditField = CSSuiEditField(app.StagingOptionsPanelGrid, ...
+                'Style', 'shadow', 'Value', 'wake, W, 5');
             app.WakeEditField.Layout.Row    = 2;
             app.WakeEditField.Layout.Column = 2;
-            app.WakeEditField.Value         = 'wake, W, 5';
 
             % REM stage identifiers
-            app.REMEditFieldLabel                     = CSSuiLabel(app.StagingOptionsPanelGrid, 'Style','shadow');
-            app.REMEditFieldLabel.Layout.Row          = 3;
-            app.REMEditFieldLabel.Layout.Column       = 1;
-            app.REMEditFieldLabel.Text                = 'REM';
+            app.REMEditFieldLabel = CSSuiLabel(app.StagingOptionsPanelGrid, ...
+                'Style', 'shadow', 'Text', 'REM');
+            app.REMEditFieldLabel.Layout.Row    = 3;
+            app.REMEditFieldLabel.Layout.Column = 1;
 
-            app.REMEditField               = CSSuiEditField(app.StagingOptionsPanelGrid, 'Style','shadow');
+            app.REMEditField = CSSuiEditField(app.StagingOptionsPanelGrid, ...
+                'Style', 'shadow', 'Value', 'REM, R, 4');
             app.REMEditField.Layout.Row    = 3;
             app.REMEditField.Layout.Column = 2;
-            app.REMEditField.Value         = 'REM, R, 4';
 
             % N1 stage identifiers
-            app.N1EditFieldLabel                     = CSSuiLabel(app.StagingOptionsPanelGrid, 'Style','shadow');
-            app.N1EditFieldLabel.Layout.Row          = 4;
-            app.N1EditFieldLabel.Layout.Column       = 1;
-            app.N1EditFieldLabel.Text                = 'N1';
+            app.N1EditFieldLabel = CSSuiLabel(app.StagingOptionsPanelGrid, ...
+                'Style', 'shadow', 'Text', 'N1');
+            app.N1EditFieldLabel.Layout.Row    = 4;
+            app.N1EditFieldLabel.Layout.Column = 1;
 
-            app.N1EditField               = CSSuiEditField(app.StagingOptionsPanelGrid, 'Style','shadow');
+            app.N1EditField = CSSuiEditField(app.StagingOptionsPanelGrid, ...
+                'Style', 'shadow', 'Value', 'N1, Stage 1, 1');
             app.N1EditField.Layout.Row    = 4;
             app.N1EditField.Layout.Column = 2;
-            app.N1EditField.Value         = 'N1, Stage 1, 1';
 
             % N2 stage identifiers
-            app.N2EditFieldLabel                     = CSSuiLabel(app.StagingOptionsPanelGrid, 'Style','shadow');
-            app.N2EditFieldLabel.Layout.Row          = 5;
-            app.N2EditFieldLabel.Layout.Column       = 1;
-            app.N2EditFieldLabel.Text                = 'N2';
+            app.N2EditFieldLabel = CSSuiLabel(app.StagingOptionsPanelGrid, ...
+                'Style', 'shadow', 'Text', 'N2');
+            app.N2EditFieldLabel.Layout.Row    = 5;
+            app.N2EditFieldLabel.Layout.Column = 1;
 
-            app.N2EditField               = CSSuiEditField(app.StagingOptionsPanelGrid, 'Style','shadow');
+            app.N2EditField = CSSuiEditField(app.StagingOptionsPanelGrid, ...
+                'Style', 'shadow', 'Value', 'N2, Stage 2, 2');
             app.N2EditField.Layout.Row    = 5;
             app.N2EditField.Layout.Column = 2;
-            app.N2EditField.Value         = 'N2, Stage 2, 2';
 
             % N3 stage identifiers
-            app.N3EditFieldLabel                     = CSSuiLabel(app.StagingOptionsPanelGrid, 'Style','shadow');
-            app.N3EditFieldLabel.Layout.Row          = 6;
-            app.N3EditFieldLabel.Layout.Column       = 1;
-            app.N3EditFieldLabel.Text                = 'N3';
+            app.N3EditFieldLabel = CSSuiLabel(app.StagingOptionsPanelGrid, ...
+                'Style', 'shadow', 'Text', 'N3');
+            app.N3EditFieldLabel.Layout.Row    = 6;
+            app.N3EditFieldLabel.Layout.Column = 1;
 
-            app.N3EditField               = CSSuiEditField(app.StagingOptionsPanelGrid, 'Style','shadow');
+            app.N3EditField = CSSuiEditField(app.StagingOptionsPanelGrid, ...
+                'Style', 'shadow', 'Value', 'N3, Stage 3, 3');
             app.N3EditField.Layout.Row    = 6;
             app.N3EditField.Layout.Column = 2;
-            app.N3EditField.Value         = 'N3, Stage 3, 3';
 
             % Unknown stage identifiers
-            app.UnknownEditFieldLabel                     = CSSuiLabel(app.StagingOptionsPanelGrid, 'Style','shadow');
-            app.UnknownEditFieldLabel.Layout.Row          = 7;
-            app.UnknownEditFieldLabel.Layout.Column       = 1;
-            app.UnknownEditFieldLabel.Text                = 'Unknown';
+            app.UnknownEditFieldLabel = CSSuiLabel(app.StagingOptionsPanelGrid, ...
+                'Style', 'shadow', 'Text', 'Unknown');
+            app.UnknownEditFieldLabel.Layout.Row    = 7;
+            app.UnknownEditFieldLabel.Layout.Column = 1;
 
-            app.UnknownEditField               = CSSuiEditField(app.StagingOptionsPanelGrid, 'Style','shadow');
+            app.UnknownEditField = CSSuiEditField(app.StagingOptionsPanelGrid, ...
+                'Style', 'shadow', 'Value', 'Unk, U, Unknown');
             app.UnknownEditField.Layout.Row    = 7;
             app.UnknownEditField.Layout.Column = 2;
-            app.UnknownEditField.Value         = 'Unk, U, Unknown';
 
             % Stages column index
-            app.StagesColumnEditFieldLabel                     = CSSuiLabel(app.StagingOptionsPanelGrid,'Style','shadow');
-            app.StagesColumnEditFieldLabel.Layout.Row          = 3;
-            app.StagesColumnEditFieldLabel.Layout.Column       = 3;
-            app.StagesColumnEditFieldLabel.Text                = 'Stages Column';
+            app.StagesColumnEditFieldLabel = CSSuiLabel(app.StagingOptionsPanelGrid, ...
+                'Style', 'shadow', 'Text', 'Stages Column');
+            app.StagesColumnEditFieldLabel.Layout.Row    = 3;
+            app.StagesColumnEditFieldLabel.Layout.Column = 3;
 
-            app.StagesColumnEditField                       = CSSuiNumericField(app.StagingOptionsPanelGrid,'Style','shadow');
-            app.StagesColumnEditField.Limits                = [0 Inf];
-            app.StagesColumnEditField.Layout.Row            = 3;
-            app.StagesColumnEditField.Layout.Column         = 4;
-            app.StagesColumnEditField.Value                 = [];
+            app.StagesColumnEditField = CSSuiNumericField(app.StagingOptionsPanelGrid, ...
+                'Style', 'shadow', 'Min', 0);
+            app.StagesColumnEditField.Layout.Row    = 3;
+            app.StagesColumnEditField.Layout.Column = 4;
 
             % Times column index
-            app.TimesColumnEditFieldLabel                     = CSSuiLabel(app.StagingOptionsPanelGrid,'Style','shadow');
-            app.TimesColumnEditFieldLabel.Row          = 4;
-            app.TimesColumnEditFieldLabel.Column       = 3;
-            app.TimesColumnEditFieldLabel.Text                = 'Times Column';
+            app.TimesColumnEditFieldLabel = CSSuiLabel(app.StagingOptionsPanelGrid, ...
+                'Style', 'shadow', 'Text', 'Times Column');
+            app.TimesColumnEditFieldLabel.Row    = 4;
+            app.TimesColumnEditFieldLabel.Column = 3;
 
-            app.TimesColumnEditField                       = CSSuiNumericField(app.StagingOptionsPanelGrid,'Style','shadow');
-            app.TimesColumnEditField.Limits                = [0 Inf];
-            app.TimesColumnEditField.Row            = 4;
-            app.TimesColumnEditField.Column         = 4;
-            app.TimesColumnEditField.Value                 = [];
+            app.TimesColumnEditField = CSSuiNumericField(app.StagingOptionsPanelGrid, ...
+                'Style', 'shadow', 'Min', 0);
+            app.TimesColumnEditField.Row    = 4;
+            app.TimesColumnEditField.Column = 4;
 
             % Header rows count
-            app.HeaderRowsEditFieldLabel                     = CSSuiLabel(app.StagingOptionsPanelGrid,'Style','shadow');
-            app.HeaderRowsEditFieldLabel.Row          = 5;
-            app.HeaderRowsEditFieldLabel.Column       = 3;
-            app.HeaderRowsEditFieldLabel.Text                = 'Header Rows';
+            app.HeaderRowsEditFieldLabel = CSSuiLabel(app.StagingOptionsPanelGrid, ...
+                'Style', 'shadow', 'Text', 'Header Rows');
+            app.HeaderRowsEditFieldLabel.Row    = 5;
+            app.HeaderRowsEditFieldLabel.Column = 3;
 
-            app.HeaderRowsEditField                       = CSSuiNumericField(app.StagingOptionsPanelGrid,'Style','shadow');
-            app.HeaderRowsEditField.Limits                = [0 Inf];
-            app.HeaderRowsEditField.Row            = 5;
-            app.HeaderRowsEditField.Column         = 4;
-            app.HeaderRowsEditField.Value                 = [];
+            app.HeaderRowsEditField = CSSuiNumericField(app.StagingOptionsPanelGrid, ...
+                'Style', 'shadow', 'Min', 0);
+            app.HeaderRowsEditField.Row    = 5;
+            app.HeaderRowsEditField.Column = 4;
 
             % File delimiter dropdown
-            app.DelimeterOptionField = CSSuiDropdown(app.StagingOptionsPanelGrid,'Style','shadow', ...
-                'Label', 'File Delimiter', ...
-                'Items', {'Comma', 'Tab', 'Space', 'Semicolon'}, ...
-                'Value', 'Comma');
-
-            % Span the grid columns
-            app.DelimeterOptionField.Row = 1;
+            app.DelimeterOptionField = CSSuiDropdown(app.StagingOptionsPanelGrid, ...
+                'Style', 'shadow', 'Label', 'File Delimiter', ...
+                'Items', {'Comma', 'Tab', 'Space', 'Semicolon'}, 'Value', 'Comma', ...
+                'FontWeight', 'normal');
+            app.DelimeterOptionField.Row    = 1;
             app.DelimeterOptionField.Column = [3 4];
-            app.DelimeterOptionField.FontWeight = 'normal';
 
             % Section header for staging options
-            app.StagingOptionsLabel               = CSSuiLabel(app.StagingOptionsGrid,'Style','shadow');
+            app.StagingOptionsLabel = CSSuiLabel(app.StagingOptionsGrid, ...
+                'Style', 'shadow', 'FontWeight', '700', 'Text', 'STAGING OPTIONS');
             app.StagingOptionsLabel.Layout.Row    = 1;
             app.StagingOptionsLabel.Layout.Column = 1;
-            app.StagingOptionsLabel.Text          = 'STAGING OPTIONS';
-            pause(.5)
-            app.StagingOptionsLabel.FontWeight    = '700';
 
             % ============================================================
             %   SAVING OPTIONS (Row 3 of RuntimeOptionsGrid)
@@ -947,17 +924,15 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.SavingOptionsCheckBoxGrid.Layout.Column = 1;
 
             % Column headers
-            app.DatatoSaveLabel               = CSSuiLabel(app.SavingOptionsCheckBoxGrid,'Style','shadow');
+            app.DatatoSaveLabel = CSSuiLabel(app.SavingOptionsCheckBoxGrid, ...
+                'Style', 'shadow', 'FontWeight', '700', 'Text', 'DATA TO SAVE');
             app.DatatoSaveLabel.Layout.Row    = 1;
             app.DatatoSaveLabel.Layout.Column = 1;
-            app.DatatoSaveLabel.FontWeight    = '700';
-            app.DatatoSaveLabel.Text          = 'DATA TO SAVE';
 
-            app.FigurestoSaveLabel               = CSSuiLabel(app.SavingOptionsCheckBoxGrid,'Style','shadow');
+            app.FigurestoSaveLabel = CSSuiLabel(app.SavingOptionsCheckBoxGrid, ...
+                'Style', 'shadow', 'FontWeight', '700', 'Text', 'FIGURES TO SAVE');
             app.FigurestoSaveLabel.Layout.Row    = 1;
             app.FigurestoSaveLabel.Layout.Column = 2;
-            app.FigurestoSaveLabel.FontWeight    = '700';
-            app.FigurestoSaveLabel.Text          = 'FIGURES TO SAVE';
 
 
             % --- Data Tables (Left Column) ---
@@ -1011,37 +986,31 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.SavingDirectoryGrid.Layout.Row  = 2;
             app.SavingDirectoryGrid.Layout.Column = 1;
 
-            app.OutputDirLabel            = CSSuiLabel(app.SavingDirectoryGrid, 'Style','shadow');
-            app.OutputDirLabel.FontSize   = '12px';
-            app.OutputDirLabel.Layout.Row = 1;
+            app.OutputDirLabel = CSSuiLabel(app.SavingDirectoryGrid, ...
+                'Style', 'shadow', 'FontSize', '12px', 'Text', ' Select output directory:');
+            app.OutputDirLabel.Layout.Row    = 1;
             app.OutputDirLabel.Layout.Column = 1;
-            app.OutputDirLabel.Text       = ' Select output directory:';
 
-
-            %Help button
             app.OutputDirButton = CSSuiButton(app.SavingDirectoryGrid, ...
-                'Text',    'Browse', 'Style', 'shadow');
+                'Text', 'Browse', 'Style', 'shadow', ...
+                'ButtonPushedFcn', @(src,event) browseOutputDir(app));
             app.OutputDirButton.Row    = 2;
             app.OutputDirButton.Column = 2;
-            app.OutputDirButton.ButtonPushedFcn =  @(src,event) browseOutputDir(app);
 
-            % Label is overlaid by edit field (edit field takes precedence visually)
-            app.EditFieldLabel                     = CSSuiLabel(app.SavingDirectoryGrid);
-            app.EditFieldLabel.Layout.Row          = 2;
-            app.EditFieldLabel.Layout.Column       = 1;
-            app.EditFieldLabel.Text                = 'Edit Field';
+            % Placeholder label under the edit field (edit field renders on top)
+            app.EditFieldLabel = CSSuiLabel(app.SavingDirectoryGrid, 'Text', 'Edit Field');
+            app.EditFieldLabel.Layout.Row    = 2;
+            app.EditFieldLabel.Layout.Column = 1;
 
-            app.OutputDirEditField               = CSSuiEditField(app.SavingDirectoryGrid);
+            app.OutputDirEditField = CSSuiEditField(app.SavingDirectoryGrid);
             app.OutputDirEditField.Layout.Row    = 2;
             app.OutputDirEditField.Layout.Column = 1;
-            app.OutputDirEditField.HTMLComponent.Tooltip       = 'Select the root directory from which to generate the output file structure';
-
-            pause(1)
+            app.OutputDirEditField.HTMLComponent.Tooltip = 'Select the root directory from which to generate the output file structure';
 
             % ============================================================
             %   FILE FORMAT TAB
             % ============================================================
-
+            pause(1);
             app.FileFormatTab       = uitab(app.SavingOptionsTabGroup);
             app.FileFormatTab.Title = 'File Formats';
             app.SavingOptionsTabGroup.SelectedTab = app.FileFormatTab;
@@ -1052,17 +1021,15 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.FileFormatCheckBoxGrid.ColumnSpacing      = 0;
 
             % ----- Column headers -----
-            app.DataFileFormatLabel              = CSSuiLabel(app.FileFormatCheckBoxGrid, 'Style', 'shadow');
-            app.DataFileFormatLabel.Layout.Row   = 1;
+            app.DataFileFormatLabel = CSSuiLabel(app.FileFormatCheckBoxGrid, ...
+                'Style', 'shadow', 'FontWeight', '700', 'Text', 'DATA FILE FORMAT');
+            app.DataFileFormatLabel.Layout.Row    = 1;
             app.DataFileFormatLabel.Layout.Column = [1 2];
-            app.DataFileFormatLabel.Text         = 'DATA FILE FORMAT';
-            app.DataFileFormatLabel.FontWeight   = '700';
 
-            app.FigureFileFormatLabel              = CSSuiLabel(app.FileFormatCheckBoxGrid, 'Style', 'shadow');
-            app.FigureFileFormatLabel.Layout.Row   = 1;
+            app.FigureFileFormatLabel = CSSuiLabel(app.FileFormatCheckBoxGrid, ...
+                'Style', 'shadow', 'FontWeight', '700', 'Text', 'FIGURE FILE FORMAT');
+            app.FigureFileFormatLabel.Layout.Row    = 1;
             app.FigureFileFormatLabel.Layout.Column = [3 4];
-            app.FigureFileFormatLabel.Text         = 'FIGURE FILE FORMAT';
-            app.FigureFileFormatLabel.FontWeight   = '700';
 
             % ----- Data column dropdowns (col 1) -----
             lab = CSSuiLabel(app.FileFormatCheckBoxGrid,'Style','shadow', ...
@@ -1163,7 +1130,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.SplineFiguresDropDown.Row    = 4;
             app.SplineFiguresDropDown.Column = 4;
 
-            pause(1)
+            pause(1);
             app.SavingOptionsTabGroup.SelectedTab = app.SavingOptionsTab;
 
             % ============================================================
@@ -1202,18 +1169,16 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StatusTextGrid.Layout.Row  = 1;
             app.StatusTextGrid.Layout.Column = 1;
 
-            app.StatusLabel          = CSSuiLabel(app.StatusTextGrid,'Style','shadow');
-            app.StatusLabel.FontSize = '13px';
+            app.StatusLabel = CSSuiLabel(app.StatusTextGrid, ...
+                'Style', 'shadow', 'FontSize', '13px', 'Text', 'STATUS:');
             app.StatusLabel.Layout.Row    = 1;
             app.StatusLabel.Layout.Column = 1;
-            app.StatusLabel.Text     = 'STATUS:';
 
-            app.TextArea          = CSSuiTextArea(app.StatusTextGrid,'Style','shadow');
-            app.TextArea.BackgroundColor = '#EEE';
-            app.TextArea.Editable = 'off';
-            app.TextArea.Row    = 2;
+            app.TextArea = CSSuiTextArea(app.StatusTextGrid, ...
+                'Style', 'shadow', 'BackgroundColor', '#EEE', 'Editable', false);
+            app.TextArea.Row   = 2;
             app.TextArea.Column = 1;
-            app.TextArea.Value    = {'Add files, select settings, and press ''Run Batch'' to run'};
+            app.TextArea.Value = {'Add files, select settings, and press ''Run Batch'' to run'};
 
             % ---- Column 2: Run / Stop buttons ----
             app.RunBatchGrid             = uigridlayout(app.BottomGrid);
@@ -1224,27 +1189,24 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.RunBatchGrid.Layout.Row  = 1;
             app.RunBatchGrid.Layout.Column = 2;
 
-            app.StopBatchButton = CSSuiButton(app.RunBatchGrid, 'Style','shadow',....
-                'Text',    'STOP', ...
-                'Icon', '<rect x="5" y="5" width="14" height="14"/>');
-            app.StopBatchButton.BackgroundColor    = '#fdecea';
-            app.StopBatchButton.Enabled = false;
-            app.StopBatchButton.BorderRadius    = '100%';
-            app.StopBatchButton.FontSize = '15px';
+            app.StopBatchButton = CSSuiButton(app.RunBatchGrid, ...
+                'Style', 'shadow', 'Text', 'STOP', ...
+                'Icon', '<rect x="5" y="5" width="14" height="14"/>', ...
+                'BackgroundColor', '#fdecea', 'BorderRadius', '100%', ...
+                'FontSize', '15px', 'Enabled', false, ...
+                'ButtonPushedFcn', createCallbackFcn(app, @StopBatchButtonPushed, true));
             app.StopBatchButton.Row    = 1;
             app.StopBatchButton.Column = 1;
-            app.StopBatchButton.ButtonPushedFcn = createCallbackFcn(app, @StopBatchButtonPushed, true);
             app.StopBatchButton.HTMLComponent.Tooltip = 'Stop batch run after completion of current file';
 
-            app.RunBatchButton = CSSuiButton(app.RunBatchGrid, 'Style','shadow',...
-                'Text',    'RUN', ...
-                'Icon', '<path d="M8 5v14l11-7z"/>');
-            app.RunBatchButton.BorderRadius    = '100%';
-            app.RunBatchButton.BackgroundColor    = '#e8f5e9';
-            app.RunBatchButton.FontSize = '15px';
+            app.RunBatchButton = CSSuiButton(app.RunBatchGrid, ...
+                'Style', 'shadow', 'Text', 'RUN', ...
+                'Icon', '<path d="M8 5v14l11-7z"/>', ...
+                'BackgroundColor', '#e8f5e9', 'BorderRadius', '100%', ...
+                'FontSize', '15px', ...
+                'ButtonPushedFcn', createCallbackFcn(app, @RunBatchButtonPushed, true));
             app.RunBatchButton.Row    = 1;
             app.RunBatchButton.Column = 2;
-            app.RunBatchButton.ButtonPushedFcn = createCallbackFcn(app, @RunBatchButtonPushed, true);
             app.RunBatchButton.HTMLComponent.Tooltip = 'Batch run DYNAM-O';
 
             % ---- Column 3: Checkboxes (left) + Progress bar (right) ----
@@ -1306,20 +1268,17 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.TopTextGrid.Layout.Row  = 1;
             app.TopTextGrid.Layout.Column = 1;
 
-            app.InstructionText                      = CSSuiLabel(app.TopTextGrid, 'Style','shadow');
-            app.InstructionText.FontSize             = app.FontSizeBase;
-            app.InstructionText.FontWeight           = '700';
-            app.InstructionText.Layout.Row           = 1;
-            app.InstructionText.Layout.Column        = 2;
-            app.InstructionText.Text = 'Add data and staging files, select output directory, choose options, then run batch.';
+            app.InstructionText = CSSuiLabel(app.TopTextGrid, ...
+                'Style', 'shadow', 'FontSize', app.FontSizeBase, 'FontWeight', '700', ...
+                'Text', 'Add data and staging files, select output directory, choose options, then run batch.');
+            app.InstructionText.Layout.Row    = 1;
+            app.InstructionText.Layout.Column = 2;
 
-
-            %Help button
-            app.HelpButton = CSSuiButton(app.TopTextGrid, 'Style','shadow',...
-                'Text',    'Help');
+            app.HelpButton = CSSuiButton(app.TopTextGrid, ...
+                'Style', 'shadow', 'Text', 'Help', ...
+                'ButtonPushedFcn', @(src,event) showHelpButtonPushed(app));
             app.HelpButton.Row    = 1;
             app.HelpButton.Column = 3;
-            app.HelpButton.ButtonPushedFcn = @(src,event) showHelpButtonPushed(app);
 
 
             % ============================================================
