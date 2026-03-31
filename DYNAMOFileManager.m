@@ -34,24 +34,24 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % --- Top-Level Layout Grids ---
         FullDYNAMOSetupGrid             matlab.ui.container.GridLayout  % Root grid inside DYNAMOSetupTab
         TopTextGrid                     matlab.ui.container.GridLayout  % Grid for instruction label + help button
-        HelpButton                      CSSuiButton                     % Opens help dialog
-        InstructionText                 CSSuiLabel                      % Top instruction label
+        HelpButton                      % CSSuiButton                   % Opens help dialog
+        InstructionText                 % CSSuiLabel                    % Top instruction label
         BottomGrid                      matlab.ui.container.GridLayout  % Grid containing status, run buttons, time estimate
 
         % --- Time Estimate & Run Controls ---
         TimeEstimateGrid                matlab.ui.container.GridLayout  % Holds progress bar widget
         RunBatchGrid                    matlab.ui.container.GridLayout  % Grid for run/stop buttons and options
         RunBatchOptionsGrid             matlab.ui.container.GridLayout  % Sub-grid for run checkbox options
-        OverwriteExistingFilesCheckBox  CSSuiSwitch                     % If checked, overwrite existing output files
-        RunInReverse                    CSSuiSwitch                     % If checked, process files in reverse order
-        RunBatchButton                  CSSuiButton                     % Initiates batch processing
-        StopBatchButton                 CSSuiButton                     % Requests graceful stop after current subject
+        OverwriteExistingFilesCheckBox  % CSSuiSwitch                   % If checked, overwrite existing output files
+        RunInReverse                    % CSSuiSwitch                   % If checked, process files in reverse order
+        RunBatchButton                  % CSSuiButton                   % Initiates batch processing
+        StopBatchButton                 % CSSuiButton                   % Requests graceful stop after current subject
         RightColumnGrid                 matlab.ui.container.GridLayout
 
         % --- Status / Log Area ---
         StatusTextGrid                  matlab.ui.container.GridLayout  % Grid for status label and text area
-        StatusLabel                     CSSuiLabel                      % 'Status:' label
-        TextArea                        CSSuiTextArea                   % Displays current processing status messages
+        StatusLabel                     % CSSuiLabel                    % 'Status:' label
+        TextArea                        % CSSuiTextArea                 % Displays current processing status messages
 
         % --- Inner Tab Groups ---
         BatchRunTabGroup                matlab.ui.container.TabGroup    % Tabs: File Selection | DYNAM-O Settings
@@ -66,23 +66,23 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         SavingOptionsTab                matlab.ui.container.Tab         % Basic save checkboxes and output directory
         SavingOptionsTabGrid            matlab.ui.container.GridLayout  % Grid inside saving options tab
         SavingDirectoryGrid             matlab.ui.container.GridLayout  % Grid for output directory row
-        OutputDirEditField              CSSuiEditField                  % Displays/edits output directory path
-        EditFieldLabel                  CSSuiLabel                      % Label for output directory edit field
-        OutputDirButton                 CSSuiButton                     % Browse button for output directory
-        OutputDirLabel                  CSSuiLabel                      % Instruction label above directory row
+        OutputDirEditField              % CSSuiEditField                % Displays/edits output directory path
+        EditFieldLabel                  % CSSuiLabel                    % Label for output directory edit field
+        OutputDirButton                 % CSSuiButton                   % Browse button for output directory
+        OutputDirLabel                  % CSSuiLabel                    % Instruction label above directory row
 
         % --- Save Option Switches ---
         SavingOptionsCheckBoxGrid       matlab.ui.container.GridLayout  % Grid holding save option switches
-        SaveSplineImagesCheckBox        CSSuiSwitch                     % Save spline basis figures
-        SaveParamImagesCheckBox         CSSuiSwitch                     % Save parametric basis figures
-        SaveDataSummaryCheckBox         CSSuiSwitch                     % Save data summary figures
-        SaveAuxDataCheckBox             CSSuiSwitch                     % Save auxiliary data (.mat)
-        SaveSplineBasisCheckBox         CSSuiSwitch                     % Save spline basis data
-        SaveParamBasisCheckBox          CSSuiSwitch                     % Save parametric basis data
-        SaveSOPHsCheckBox               CSSuiSwitch                     % Save SO-Power Histograms
-        SavePeakStatsCheckBox           CSSuiSwitch                     % Save TF-peak stats table
-        FigurestoSaveLabel              CSSuiLabel                      % Column header: 'Figures to Save'
-        DatatoSaveLabel                 CSSuiLabel                      % Column header: 'Data to Save'
+        SaveSplineImagesCheckBox        % CSSuiSwitch                   % Save spline basis figures
+        SaveParamImagesCheckBox         % CSSuiSwitch                   % Save parametric basis figures
+        SaveDataSummaryCheckBox         % CSSuiSwitch                   % Save data summary figures
+        SaveAuxDataCheckBox             % CSSuiSwitch                   % Save auxiliary data (.mat)
+        SaveSplineBasisCheckBox         % CSSuiSwitch                   % Save spline basis data
+        SaveParamBasisCheckBox          % CSSuiSwitch                   % Save parametric basis data
+        SaveSOPHsCheckBox               % CSSuiSwitch                   % Save SO-Power Histograms
+        SavePeakStatsCheckBox           % CSSuiSwitch                   % Save TF-peak stats table
+        FigurestoSaveLabel              % CSSuiLabel                    % Column header: 'Figures to Save'
+        DatatoSaveLabel                 % CSSuiLabel                    % Column header: 'Data to Save'
 
         % --- FileFormat Saving Tab ---
         FileFormatTab                   matlab.ui.container.Tab         % FileFormat file format options tab
@@ -90,86 +90,86 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         FileFormatCheckBoxGrid          matlab.ui.container.GridLayout  % Grid for format dropdowns
 
         % --- File Format Dropdowns (FileFormat) ---
-        SplineFiguresDropDown           CSSuiDropdown                   % File format for spline figures
-        ParametricFiguresDropDown       CSSuiDropdown                   % File format for parametric figures
-        DataSummaryDropDown             CSSuiDropdown                   % File format for data summary figures
-        AuxiliaryDataDropDown           CSSuiDropdown                   % File format for auxiliary data
-        SplineBasisDropDown             CSSuiDropdown                   % File format for spline basis data
-        ParametricBasisDropDown         CSSuiDropdown                   % File format for parametric basis data
-        SOPowerHistogramsDropDown       CSSuiDropdown                   % File format for SO-Power Histograms
-        PeakStatsTableDropDown          CSSuiDropdown                   % File format for peak stats tables
-        FigureFileFormatLabel           CSSuiLabel                      % Column header: 'Figure File Format'
-        DataFileFormatLabel             CSSuiLabel                      % Column header: 'Data File Format'
+        SplineFiguresDropDown           % CSSuiDropdown                 % File format for spline figures
+        ParametricFiguresDropDown       % CSSuiDropdown                 % File format for parametric figures
+        DataSummaryDropDown             % CSSuiDropdown                 % File format for data summary figures
+        AuxiliaryDataDropDown           % CSSuiDropdown                 % File format for auxiliary data
+        SplineBasisDropDown             % CSSuiDropdown                 % File format for spline basis data
+        ParametricBasisDropDown         % CSSuiDropdown                 % File format for parametric basis data
+        SOPowerHistogramsDropDown       % CSSuiDropdown                 % File format for SO-Power Histograms
+        PeakStatsTableDropDown          % CSSuiDropdown                 % File format for peak stats tables
+        FigureFileFormatLabel           % CSSuiLabel                    % Column header: 'Figure File Format'
+        DataFileFormatLabel             % CSSuiLabel                    % Column header: 'Data File Format'
 
         % --- Staging Options Panel ---
         StagingOptionsGrid              matlab.ui.container.GridLayout  % Grid for staging options section
-        StagingOptionsLabel             CSSuiLabel                      % Section label: 'Staging Options'
+        StagingOptionsLabel             % CSSuiLabel                    % Section label: 'Staging Options'
         StagingOptionsPanelGrid         matlab.ui.container.GridLayout  % Two-column panel grid
         StagingOptionsPanelGridRight    matlab.ui.container.GridLayout  % Right column: file format inputs
-        StagingOptionsInstructions      CSSuiLabel                      % Instruction text for stage identifiers
+        StagingOptionsInstructions      % CSSuiLabel                    % Instruction text for stage identifiers
         StagingOptionsGridRightTop      matlab.ui.container.GridLayout  % Grid for delimiter/column/header fields
-        DelimeterOptionField            CSSuiDropdown                   % Delimiter used in staging file
-        FileDelimiterDropDownLabel                                       % (unused label placeholder)
-        HeaderRowsEditField             CSSuiNumericField               % Number of header rows to skip
-        HeaderRowsEditFieldLabel        CSSuiLabel
-        TimesColumnEditField            CSSuiNumericField               % Column index for epoch times
-        TimesColumnEditFieldLabel       CSSuiLabel
-        StagesColumnEditField           CSSuiNumericField               % Column index for stage labels
-        StagesColumnEditFieldLabel      CSSuiLabel
+        DelimeterOptionField            % CSSuiDropdown                 % Delimiter used in staging file
+        FileDelimiterDropDownLabel                                      % (unused label placeholder)
+        HeaderRowsEditField             % CSSuiNumericField             % Number of header rows to skip
+        HeaderRowsEditFieldLabel        % CSSuiLabel
+        TimesColumnEditField            % CSSuiNumericField             % Column index for epoch times
+        TimesColumnEditFieldLabel       % CSSuiLabel
+        StagesColumnEditField           % CSSuiNumericField             % Column index for stage labels
+        StagesColumnEditFieldLabel      % CSSuiLabel
 
         % --- Stage Label Inputs (Left Panel) ---
         StagingOptionsPanelGridLeft     matlab.ui.container.GridLayout  % Grid for stage label text fields
-        UnknownEditField                CSSuiEditField                  % Identifiers for 'Unknown' stage
-        UnknownEditFieldLabel           CSSuiLabel
-        N3EditField                     CSSuiEditField                  % Identifiers for 'N3' stage
-        N3EditFieldLabel                CSSuiLabel
-        N2EditField                     CSSuiEditField                  % Identifiers for 'N2' stage
-        N2EditFieldLabel                CSSuiLabel
-        N1EditField                     CSSuiEditField                  % Identifiers for 'N1' stage
-        N1EditFieldLabel                CSSuiLabel
-        REMEditField                    CSSuiEditField                  % Identifiers for 'REM' stage
-        REMEditFieldLabel               CSSuiLabel
-        WakeEditField                   CSSuiEditField                  % Identifiers for 'Wake' stage
-        WakeEditFieldLabel              CSSuiLabel
-        ArtifactEditField               CSSuiEditField                  % Identifiers for 'Artifact' stage
-        ArtifactEditFieldLabel          CSSuiLabel
+        UnknownEditField                % CSSuiEditField                % Identifiers for 'Unknown' stage
+        UnknownEditFieldLabel           % CSSuiLabel
+        N3EditField                     % CSSuiEditField                % Identifiers for 'N3' stage
+        N3EditFieldLabel                % CSSuiLabel
+        N2EditField                     % CSSuiEditField                % Identifiers for 'N2' stage
+        N2EditFieldLabel                % CSSuiLabel
+        N1EditField                     % CSSuiEditField                % Identifiers for 'N1' stage
+        N1EditFieldLabel                % CSSuiLabel
+        REMEditField                    % CSSuiEditField                % Identifiers for 'REM' stage
+        REMEditFieldLabel               % CSSuiLabel
+        WakeEditField                   % CSSuiEditField                % Identifiers for 'Wake' stage
+        WakeEditFieldLabel              % CSSuiLabel
+        ArtifactEditField               % CSSuiEditField                % Identifiers for 'Artifact' stage
+        ArtifactEditFieldLabel          % CSSuiLabel
 
         % --- Channel / Runtime Options ---
         RuntimeOptionsTopGrid           matlab.ui.container.GridLayout  % Grid for channel section
         ChannelOptionsGrid              matlab.ui.container.GridLayout  % Grid for channel instruction text
-        ChannelOptionsInstructionsLabel CSSuiLabel                      % Channel input instruction
-        RuntimeOptionsLabel             CSSuiLabel                      % Section label: 'Runtime Options'
+        ChannelOptionsInstructionsLabel % CSSuiLabel                    % Channel input instruction
+        RuntimeOptionsLabel             % CSSuiLabel                    % Section label: 'Runtime Options'
         ChannelInputGrid                matlab.ui.container.GridLayout  % Grid for channel label + field + info button
-        ChannelEditField                CSSuiEditField                  % Comma-separated channel names to process
-        ChannelEditFieldLabel           CSSuiLabel
-        ViewChannelsButton              CSSuiButton                     % Opens dialog listing all EDF channels
+        ChannelEditField                % CSSuiEditField                % Comma-separated channel names to process
+        ChannelEditFieldLabel           % CSSuiLabel
+        ViewChannelsButton              % CSSuiButton                   % Opens dialog listing all EDF channels
 
         % --- File List Panels ---
         FileInputGrid                   matlab.ui.container.GridLayout  % Grid for both file list columns
         StagingFileTopGrid              matlab.ui.container.GridLayout  % Grid for staging list title row
         StagingFileTitleGrid            matlab.ui.container.GridLayout  % Grid centering the staging count label
-        StagingLabel                    CSSuiLabel                      % Displays 'Staging (N Files)'
-        StagingFileInstructionText      CSSuiLabel                      % Instruction text for staging files
+        StagingLabel                    % CSSuiLabel                    % Displays 'Staging (N Files)'
+        StagingFileInstructionText      % CSSuiLabel                    % Instruction text for staging files
         DataFileTopGrid                 matlab.ui.container.GridLayout  % Grid for data list title row
         DataFileTitleGrid               matlab.ui.container.GridLayout  % Grid centering the data count label
-        DataLabel                       CSSuiLabel                      % Displays 'Data (N Files)'
-        DataFileInstructionText         CSSuiLabel                      % Instruction text for data files
+        DataLabel                       % CSSuiLabel                    % Displays 'Data (N Files)'
+        DataFileInstructionText         % CSSuiLabel                    % Instruction text for data files
         StagingListBox                  matlab.ui.control.ListBox       % Scrollable list of staging file paths
         DataListBox                     matlab.ui.control.ListBox       % Scrollable list of EDF file paths
 
         % --- File List Action Buttons ---
         StagingFileButtonGrid           matlab.ui.container.GridLayout  % Grid for staging list action buttons
-        StagingMoveDownButton           CSSuiButton                     % Move selected staging item down
-        StagingMoveUpButton             CSSuiButton                     % Move selected staging item up
-        StagingRemoveButton             CSSuiButton                     % Remove selected staging file
-        StagingAddFolderButton          CSSuiButton                     % Add all staging files from a folder
-        StagingAddFileButton            CSSuiButton                     % Add individual staging file(s)
+        StagingMoveDownButton           % CSSuiButton                   % Move selected staging item down
+        StagingMoveUpButton             % CSSuiButton                   % Move selected staging item up
+        StagingRemoveButton             % CSSuiButton                   % Remove selected staging file
+        StagingAddFolderButton          % CSSuiButton                   % Add all staging files from a folder
+        StagingAddFileButton            % CSSuiButton                   % Add individual staging file(s)
         DataFileButtonGrid              matlab.ui.container.GridLayout  % Grid for data list action buttons
-        DataMoveDownButton              CSSuiButton                     % Move selected data item down
-        DataMoveUpButton                CSSuiButton                     % Move selected data item up
-        DataRemoveButton                CSSuiButton                     % Remove selected data file
-        DataAddFolderButton             CSSuiButton                     % Add all EDF files from a folder
-        DataAddFileButton               CSSuiButton                     % Add individual EDF file(s)
+        DataMoveDownButton              % CSSuiButton                   % Move selected data item down
+        DataMoveUpButton                % CSSuiButton                   % Move selected data item up
+        DataRemoveButton                % CSSuiButton                   % Remove selected data file
+        DataAddFolderButton             % CSSuiButton                   % Add all EDF files from a folder
+        DataAddFileButton               % CSSuiButton                   % Add individual EDF file(s)
 
         % --- DYNAM-O Settings & Analysis Tabs ---
         DYNAMOSettingsTab               matlab.ui.container.Tab         % Tab hosting DYNAMOOptions sub-app
@@ -178,14 +178,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % -------------------------
         %   Callback Handles
         % -------------------------
-        BatchProcessCallback    function_handle  % Called when batch run begins; receives file lists + options
-        FileValidationCallback  function_handle  % Called per file; returns true if file is valid
+        BatchProcessCallback            function_handle                 % Called when batch run begins; receives file lists + options
+        FileValidationCallback          function_handle                 % Called per file; returns true if file is valid
 
         % -------------------------
         %   File Storage
         % -------------------------
-        DataList    cell = {}   % Cell array of full EDF file paths (in processing order)
-        StagingList cell = {}   % Cell array of full staging file paths (in processing order)
+        DataList                        cell = {}                       % Cell array of full EDF file paths (in processing order)
+        StagingList                     cell = {}                       % Cell array of full staging file paths (in processing order)
 
         % -------------------------
         %   Output File Name Stems
@@ -290,6 +290,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %     'ValidationCallback' – function_handle(filepath) -> logical
             %     'Title'              – char window title (default: 'DYNAM-O Toolbox')
             %     'Position'           – [x y w h] figure position vector
+            addpath(genpath(fileparts(which('DYNAMOFileManager.m'))))
 
             p = inputParser;
             addParameter(p,'BatchCallback',[],@(x) isempty(x)||isa(x,'function_handle'));
