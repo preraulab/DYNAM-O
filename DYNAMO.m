@@ -626,10 +626,6 @@ classdef DYNAMO < handle
                 tabGroup = uitabgroup(fig, 'Position', [10 60 880 580]);
                 fig.AutoResizeChildren = true;
             else
-                % tabPos = tab.Position;
-                % main_gap = 30;
-                % main_pos = [tabPos(1), tabPos(2), tabPos(3), tabPos(4) - main_gap];
-                % tabGroup = uitabgroup(tab, 'Position', main_pos);
                 tabGroup = uitabgroup(tab);
             end
 
@@ -715,18 +711,16 @@ classdef DYNAMO < handle
                 basic_tables{jj} = createTable(tab, obj.(basic_configs{jj}.field), basic_configs{jj});
             end
 
-            %% TO-DO: COME BACK TO THIS LATER
+         
             if showButtons
-                param_tab_gap = 90;
+                tabs_position = [0 .1 1 .9];
             else
-                param_tab_gap = 30;
+                tabs_position = [0 0 1 1];
             end
-            param_tab_pos = tabGroup.Position;
-            param_tab_pos(4) = param_tab_pos(4) - param_tab_gap;
 
             % Create Parametric Fit main tab with subtabs
             param_tab = uitab(tabGroup, 'Title', 'Parametric Fit');
-            param_subtab_group = uitabgroup(param_tab, 'Position', param_tab_pos);
+            param_subtab_group = uitabgroup(param_tab, 'units', 'normalized', 'Position', tabs_position);
             %param_subtab_group = uitabgroup(param_tab);
 
             % Parametric subtab configurations
@@ -743,7 +737,7 @@ classdef DYNAMO < handle
 
             % Create Spline Fit main tab with subtabs
             spline_tab = uitab(tabGroup, 'Title', 'Spline Fit');
-            spline_subtab_group = uitabgroup(spline_tab, 'Position', param_tab_pos);
+            spline_subtab_group = uitabgroup(spline_tab, 'units', 'normalized', 'Position', tabs_position);
 
             % Spline subtab configurations
             spline_configs = {
@@ -863,7 +857,8 @@ classdef DYNAMO < handle
                     'ColumnName', {'Parameter', 'Description', 'Value'}, ...
                     'ColumnWidth', {180, 500, 'auto'}, ...
                     'ColumnEditable', [false false true], ...
-                    'Position', table_pos, ...
+                    'Units', 'normalized',...
+                    'Position', [0 0 1 1], ...
                     'CellEditCallback', @(src,ev) editCell(src, ev, config), ...
                     'CellSelectionCallback', @(src,ev) selectCell(src, ev, config));
             end
@@ -879,16 +874,14 @@ classdef DYNAMO < handle
                 %
 
                 tableData = createTableData(opts, config);
-
-                sub_table_gap = 30;
-                sub_table_pos = parent.Position;
-                sub_table_pos(4) = sub_table_pos(4) - sub_table_gap;
+              
 
                 tbl = uitable(parent, 'Data', tableData, ...
                     'ColumnName', {'Parameter', 'Description', 'Value'}, ...
                     'ColumnWidth', {180, 480, 'auto'}, ...
                     'ColumnEditable', [false false true], ...
-                    'Position', sub_table_pos, ...
+                    'Units', 'Normalized',...
+                    'Position', [0 0 1 1], ...
                     'CellEditCallback', @(src,ev) editCell(src, ev, config), ...
                     'CellSelectionCallback', @(src,ev) selectCell(src, ev, config));
             end

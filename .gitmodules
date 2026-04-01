@@ -1,9 +1,3 @@
-[submodule "submodules/multitaper"]
-	path = submodules/multitaper
-	url = git@github.com:preraulab/multitaper.git
-[submodule "submodules/multicomp_test"]
-	path = submodules/multicomp_test
-	url = git@github.com:preraulab/multicomp_test.git
 [submodule "toolbox/helper_functions/multitaper_spectrogram"]
 	path = toolbox/helper_functions/multitaper_spectrogram
 	url = git@github.com:preraulab/multitaper.git
@@ -16,3 +10,6 @@
 [submodule "toolbox/helper_functions/read_EDF"]
 	path = toolbox/helper_functions/read_EDF
 	url = git@github.com:preraulab/read_EDF.git
+[submodule "toolbox/helper_functions/CSSuicontrols"]
+	path = toolbox/helper_functions/CSSuicontrols
+	url = git@github.com:preraulab/CSSuicontrols.git
