@@ -277,6 +277,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         FontSizeBase   = 13   % Body / instruction text font size (px)
         FontSizeTitle  = 15   % Section-header and list-title font size (px)
         FontSizeSmall  = 11   % Supplementary / caption font size (px)
+
+        MinWidth
+        MinHeight
     end
 
     % ======================================================================
@@ -412,6 +415,21 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.UIFigure.Position = [260, 115, app.WindowWidth, app.WindowHeight];
             app.UIFigure.Name = 'DYNAM-O File Manager';
 
+            % Store minimum size
+            app.MinWidth = app.WindowWidth;
+            app.MinHeight = app.WindowHeight;
+
+            % Attach resize callback
+            % Create a proxy panel that covers the whole figure
+            proxy = uipanel(app.UIFigure, 'Position', [0 0 app.UIFigure.Position(3) app.UIFigure.Position(4)], ...
+                'AutoResizeChildren', 'off', ...
+                'BorderType', 'none', ...
+                'BackgroundColor', app.UIFigure.Color);
+
+            % Set the callback ON THE PANEL, not the figure
+            proxy.SizeChangedFcn = @(src, event) app.enforceMinSize;
+
+
             % ---- File Menu ----
             app.FileMenu      = uimenu(app.UIFigure);
             app.FileMenu.Text = 'File';
@@ -450,25 +468,30 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % Two-column grid: left = file + staging lists, right = runtime options
             app.FileSelectionGrid                   = uigridlayout(app.FileSelectionTab);
-            app.FileSelectionGrid.ColumnWidth       = {'2x', '1x'};
+            app.FileSelectionGrid.ColumnWidth       = {'2x', 500};
             app.FileSelectionGrid.RowHeight         = {'1x'};
             app.FileSelectionGrid.ColumnSpacing     = 10;
 
             % The left column is further broken into two columns
             % 3-row grid: title + instruction | list boxes | action buttons
+                                   filelist_icon_size = '1.5em';
+            button_width = 95;
+            button_height = 80;
+
             app.FileInputGrid                   = uigridlayout(app.FileSelectionGrid);
             app.FileInputGrid.ColumnWidth       = {'1x', '1x'};
-            app.FileInputGrid.RowHeight         = {'3x', '20x', '2.5x'};
+            app.FileInputGrid.RowHeight         = {'3x', '20x', button_height};
             app.FileInputGrid.ColumnSpacing     = 20;
             app.FileInputGrid.RowSpacing        = 0;
             app.FileInputGrid.Padding           = [10 0 10 0];
             app.FileInputGrid.Layout.Row        = 1;
             app.FileInputGrid.Layout.Column     = 1;
 
+            
             % ============================================================
             %   FILE SELECTION (left column)
             % ============================================================
-
+            
             % ---- Data File Title + Instruction ----
             app.DataFileTopGrid                     = uigridlayout(app.FileInputGrid);
             app.DataFileTopGrid.ColumnWidth         = {'1x'};
@@ -517,8 +540,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % ---- Data File Action Buttons ----
             app.DataFileButtonGrid                  = uigridlayout(app.FileInputGrid);
-            app.DataFileButtonGrid.ColumnWidth      = {'1x','1x','1x','1x','1x'};
-            app.DataFileButtonGrid.RowHeight        = {'1x'};
+            app.DataFileButtonGrid.ColumnWidth      = {'1x', button_width,button_width,button_width,button_width,button_width,'1x'};
+            app.DataFileButtonGrid.RowHeight        = {button_height};
             app.DataFileButtonGrid.ColumnSpacing    = 5;
             app.DataFileButtonGrid.Padding          = [5 0 5 0];
             app.DataFileButtonGrid.Layout.Row       = 3;
@@ -530,10 +553,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Text', 'Add File', ...
                 'ButtonPushedFcn', createCallbackFcn(app, @DataAddFileButtonPushed, true), ...
                 'IconPosition', 'left', ...
+                'IconSize', filelist_icon_size,...
                 'Icon',     '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 7V3.5L18.5 9H13z M11 13h2v-2h2v2h2v2h-2v2h-2v-2h-2z"/>' ...
                 );
             app.DataAddFileButton.Row    = 1;
-            app.DataAddFileButton.Column = 1;
+            app.DataAddFileButton.Column = 2;
             app.DataAddFileButton.HTMLComponent.Tooltip       = 'Add single EDF file';
 
             % -- Add EDF folder --
@@ -542,10 +566,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Text', 'Add Folder', ...
                 'ButtonPushedFcn',  createCallbackFcn(app, @DataAddFolderButtonPushed, true), ...
                 'IconPosition', 'left', ...
+                'IconSize', filelist_icon_size,...
                 'Icon', '<path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/><path d="M13 14h-2v-2h-2v2H7v2h2v2h2v-2h2v-2z" fill="white" opacity="0.9"/>' ...
                 );
             app.DataAddFolderButton.Row    = 1;
-            app.DataAddFolderButton.Column = 2;
+            app.DataAddFolderButton.Column = 3;
             app.DataAddFolderButton.HTMLComponent.Tooltip       = 'Add all EDF files in folder';
 
             % -- Remove selected EDF file --
@@ -554,10 +579,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Text', 'Delete File', ...
                 'ButtonPushedFcn',  createCallbackFcn(app, @DataAddFolderButtonPushed, true), ...
                 'IconPosition', 'left', ...
+                'IconSize', filelist_icon_size,...
                 'Icon', '<path d="M3 6h18v2H3V6zm2 2h14l-1.5 14h-11L5 8zm5 2v8h2v-8h-2zm4 0v8h2v-8h-2zM8 4h8v2H8V4z"/>' ...
                 );
             app.DataRemoveButton.Row    = 1;
-            app.DataRemoveButton.Column = 3;
+            app.DataRemoveButton.Column = 4;
             app.DataRemoveButton.HTMLComponent.Tooltip       = 'Remove selected EDF file';
 
             % -- Move EDF file up --
@@ -567,10 +593,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'ButtonPushedFcn', createCallbackFcn(app, @DataMoveUpButtonPushed, true), ...
                 'Padding', '15px', ...
                 'IconPosition', 'left', ...
+                'IconSize', filelist_icon_size,...
                 'Icon', '<path d="M12 5l-7 9h5v8h4v-8h5z"/>' ...
                 );
             app.DataMoveUpButton.Row    = 1;
-            app.DataMoveUpButton.Column = 4;
+            app.DataMoveUpButton.Column = 5;
             app.DataMoveUpButton.HTMLComponent.Tooltip = 'Move current EDF file up';
 
             % -- Move EDF file down --
@@ -580,10 +607,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'ButtonPushedFcn', createCallbackFcn(app, @DataMoveDownButtonPushed, true), ...
                 'Padding', '15px', ...
                 'IconPosition', 'left', ...
+                'IconSize', filelist_icon_size,...
                 'Icon', '<path d="M12 19l-7-9h5v-8h4v8h5z"/>' ...
                 );
             app.DataMoveDownButton.Row    = 1;
-            app.DataMoveDownButton.Column = 5;
+            app.DataMoveDownButton.Column = 6;
             app.DataMoveDownButton.HTMLComponent.Tooltip = 'Move current EDF file down';
 
             % =========================================================================
@@ -635,8 +663,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % ---- Staging File Action Buttons ----
             app.StagingFileButtonGrid             = uigridlayout(app.FileInputGrid);
-            app.StagingFileButtonGrid.ColumnWidth = {'1x','1x','1x','1x','1x'};
-            app.StagingFileButtonGrid.RowHeight   = {'1x'};
+            app.StagingFileButtonGrid.ColumnWidth = {'1x', button_width,button_width,button_width,button_width,button_width,'1x'};
+            app.StagingFileButtonGrid.RowHeight   = {button_height};
             app.StagingFileButtonGrid.ColumnSpacing = 5;
             app.StagingFileButtonGrid.Padding     = [5 0 5 0];
             app.StagingFileButtonGrid.Layout.Row  = 3;
@@ -648,10 +676,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Text', 'Add File', ...
                 'ButtonPushedFcn', createCallbackFcn(app, @StagingAddFileButtonPushed, true), ...
                 'IconPosition', 'left', ...
+                'IconSize', filelist_icon_size,...
                 'Icon',     '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 7V3.5L18.5 9H13z M11 13h2v-2h2v2h2v2h-2v2h-2v-2h-2z"/>' ...
                 );
             app.StagingAddFileButton.Row    = 1;
-            app.StagingAddFileButton.Column = 1;
+            app.StagingAddFileButton.Column = 2;
             app.StagingAddFileButton.HTMLComponent.Tooltip       = 'Add single EDF file';
 
             app.StagingAddFolderButton = CSSuiButton(app.StagingFileButtonGrid, ...
@@ -659,10 +688,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Text', 'Add Folder', ...
                 'ButtonPushedFcn',  createCallbackFcn(app, @StagingAddFolderButtonPushed, true), ...
                 'IconPosition', 'left', ...
+                'IconSize', filelist_icon_size,...
                 'Icon', '<path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/><path d="M13 14h-2v-2h-2v2H7v2h2v2h2v-2h2v-2z" fill="white" opacity="0.9"/>' ...
                 );
             app.StagingAddFolderButton.Row    = 1;
-            app.StagingAddFolderButton.Column = 2;
+            app.StagingAddFolderButton.Column = 3;
             app.StagingAddFolderButton.HTMLComponent.Tooltip       = 'Add all staging files in folder';
 
             % -- Remove selected staging file --
@@ -671,10 +701,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Text', 'Delete File', ...
                 'ButtonPushedFcn',  createCallbackFcn(app, @StagingAddFolderButtonPushed, true), ...
                 'IconPosition', 'left', ...
+                'IconSize', filelist_icon_size,...
                 'Icon', '<path d="M3 6h18v2H3V6zm2 2h14l-1.5 14h-11L5 8zm5 2v8h2v-8h-2zm4 0v8h2v-8h-2zM8 4h8v2H8V4z"/>' ...
                 );
             app.StagingRemoveButton.Row    = 1;
-            app.StagingRemoveButton.Column = 3;
+            app.StagingRemoveButton.Column = 4;
             app.StagingRemoveButton.HTMLComponent.Tooltip       = 'Remove selected staging file';
 
             % -- Move staging file up --
@@ -683,10 +714,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Text', 'Move Up', ...
                 'ButtonPushedFcn',  createCallbackFcn(app, @StagingMoveUpButtonPushed, true), ...
                 'IconPosition', 'left', ...
+                'IconSize', filelist_icon_size,...
                 'Icon', '<path d="M12 5l-7 9h5v8h4v-8h5z"/>' ...
                 );
             app.StagingMoveUpButton.Row    = 1;
-            app.StagingMoveUpButton.Column = 4;
+            app.StagingMoveUpButton.Column = 5;
             app.StagingMoveUpButton.HTMLComponent.Tooltip       = 'Move current staging file up';
 
             % -- Move staging file down --
@@ -695,10 +727,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Text', 'Move Down', ...
                 'ButtonPushedFcn',  createCallbackFcn(app, @StagingMoveDownButtonPushed, true), ...
                 'IconPosition', 'left', ...
+                'IconSize', filelist_icon_size,...
                 'Icon', '<path d="M12 19l-7-9h5v-8h4v8h5z"/>' ...
                 );
             app.StagingMoveDownButton.Row    = 1;
-            app.StagingMoveDownButton.Column = 5;
+            app.StagingMoveDownButton.Column = 6;
             app.StagingMoveDownButton.HTMLComponent.Tooltip       = 'Move current staging file down';
 
             % ============================================================
@@ -1109,7 +1142,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             app.FileFormatCheckBoxGrid                = uigridlayout(app.FileFormatTab);
             app.FileFormatCheckBoxGrid.ColumnWidth    = {'1x', '1x', '1x', '1x'};
-            app.FileFormatCheckBoxGrid.RowHeight      = {'1x', '1x','1x','1x','1x','1x','1x'};
+            app.FileFormatCheckBoxGrid.RowHeight = {30,30,30,30,30,30,30};
             app.FileFormatCheckBoxGrid.ColumnSpacing      = 0;
 
             % ----- Column headers -----
@@ -1306,16 +1339,19 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             app.TextArea = CSSuiTextArea(app.StatusTextGrid, ...
                 'Style', 'shadow', ...
-                'BackgroundColor', '#EEE', ...
-                'Editable', false ...
+                'Editable', false, ...
+                'Color', '#414c57',...
+                'FontWeight','600'...
                 );
             app.TextArea.Row   = 2;
             app.TextArea.Column = 1;
             app.TextArea.Value = {'Add files, select settings, and press ''Run Batch'' to run'};
 
             % ---- Column 2: Run / Stop buttons ----
+            buttonicon_size = '2em';
+
             app.RunBatchGrid             = uigridlayout(app.BottomGrid);
-            app.RunBatchGrid.ColumnWidth = {'1x', '1x'};
+            app.RunBatchGrid.ColumnWidth = {150, 150};
             app.RunBatchGrid.RowHeight   = {'1x'};
             app.RunBatchGrid.ColumnSpacing = 0;
             app.RunBatchGrid.Padding  = [80 0 80 0];
@@ -1324,12 +1360,16 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             app.StopBatchButton = CSSuiButton(app.RunBatchGrid, ...
                 'Style', 'shadow', ...
+                'Shape','circle',...
                 'Text', 'STOP', ...
                 'ButtonPushedFcn', createCallbackFcn(app, @StopBatchButtonPushed, true), ...
                 'Icon', '<rect x="5" y="5" width="14" height="14"/>', ...
+                'IconPosition', 'top', ...
+                'IconSize',buttonicon_size, ...
                 'BackgroundColor', '#fdecea', ...
-                'BorderRadius', '100%', ...
                 'FontSize', '15px', ...
+                'Width','100px',...
+                'MinWidth','80px',...
                 'Enabled', false ...
                 );
             app.StopBatchButton.Row    = 1;
@@ -1338,11 +1378,15 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             app.RunBatchButton = CSSuiButton(app.RunBatchGrid, ...
                 'Style', 'shadow', ...
+                'Shape','circle',...
                 'Text', 'RUN', ...
                 'ButtonPushedFcn', createCallbackFcn(app, @RunBatchButtonPushed, true), ...
                 'Icon', '<path d="M8 5v14l11-7z"/>', ...
+                'IconPosition', 'top', ...
+                'IconSize',buttonicon_size, ...
                 'BackgroundColor', '#e8f5e9', ...
-                'BorderRadius', '100%', ...
+                'Width','100px',...
+                'MinWidth','80px',...
                 'FontSize', '15px', ...
                 'Enabled', true ...
                 );
@@ -2959,6 +3003,22 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                     end
                 end
             end
+        end
+
+        function enforceMinSize(app)
+            pos = app.UIFigure.Position;
+
+            % Enforce minimum width
+            if pos(3) < app.MinWidth
+                pos(3) = app.MinWidth;
+            end
+
+            % Enforce minimum height
+            if pos(4) < app.MinHeight
+                pos(4) = app.MinHeight;
+            end
+
+            app.UIFigure.Position = pos;
         end
 
     end % private methods
