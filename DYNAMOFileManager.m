@@ -60,6 +60,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % --- File Selection Layout ---
         FileSelectionGrid               matlab.ui.container.GridLayout  % Two-column grid: file lists | runtime options
         RuntimeOptionsGrid              matlab.ui.container.GridLayout  % Right-column grid: channel, staging, saving options
+        RuntimeOptionsMidGrid           matlab.ui.container.GridLayout  % Mid grid of the right-column: channel, staging
 
         % --- Saving Options Tab Group ---
         SavingOptionsTabGroup           matlab.ui.container.TabGroup    % Tabs: Saving Options | FileFormat
@@ -154,7 +155,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         DataFileTitleGrid               matlab.ui.container.GridLayout  % Grid centering the data count label
         DataLabel                       % CSSuiLabel                    % Displays 'Data (N Files)'
         DataFileInstructionText         % CSSuiLabel                    % Instruction text for data files
+        StagingListBoxGrid              matlab.ui.container.GridLayout  % Grid to hold the staging list box
         StagingListBox                  matlab.ui.control.ListBox       % Scrollable list of staging file paths
+        DataListBoxGrid                 matlab.ui.container.GridLayout  % Grid to hold the data list box
         DataListBox                     matlab.ui.control.ListBox       % Scrollable list of EDF file paths
 
         % --- File List Action Buttons ---
@@ -442,33 +445,82 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.BatchRunTabGroup.Layout.Row     = 2;
             app.BatchRunTabGroup.Layout.Column  = 1;
 
+            app.FileSelectionTab       = uitab(app.BatchRunTabGroup);
+            app.FileSelectionTab.Title = 'File Selection';
+
+            % Two-column grid: left = file + staging lists, right = runtime options
+            app.FileSelectionGrid                   = uigridlayout(app.FileSelectionTab);
+            app.FileSelectionGrid.ColumnWidth       = {'2x', '1x'};
+            app.FileSelectionGrid.RowHeight         = {'1x'};
+            app.FileSelectionGrid.ColumnSpacing     = 10;
+
+            % The left column is further broken into two columns
+            % 3-row grid: title + instruction | list boxes | action buttons
+            app.FileInputGrid                   = uigridlayout(app.FileSelectionGrid);
+            app.FileInputGrid.ColumnWidth       = {'1x', '1x'};
+            app.FileInputGrid.RowHeight         = {'3x', '20x', '2.5x'};
+            app.FileInputGrid.ColumnSpacing     = 20;
+            app.FileInputGrid.RowSpacing        = 0;
+            app.FileInputGrid.Padding           = [10 0 10 0];
+            app.FileInputGrid.Layout.Row        = 1;
+            app.FileInputGrid.Layout.Column     = 1;
+
             % ============================================================
             %   FILE SELECTION (left column)
             % ============================================================
 
-            app.FileSelectionTab       = uitab(app.BatchRunTabGroup);
-            app.FileSelectionTab.Title = 'File Selection';
+            % ---- Data File Title + Instruction ----
+            app.DataFileTopGrid                     = uigridlayout(app.FileInputGrid);
+            app.DataFileTopGrid.ColumnWidth         = {'1x'};
+            app.DataFileTopGrid.RowHeight           = {'2x', '1x'};
+            app.DataFileTopGrid.ColumnSpacing       = 0;
+            app.DataFileTopGrid.RowSpacing          = 0;
+            app.DataFileTopGrid.Padding             = [0 0 0 0];
+            app.DataFileTopGrid.Layout.Row          = 1;
+            app.DataFileTopGrid.Layout.Column       = 1;
 
-            % Two-column grid: left = file lists, right = runtime options
-            app.FileSelectionGrid             = uigridlayout(app.FileSelectionTab);
-            app.FileSelectionGrid.ColumnWidth = {'2x', '1x'};
-            app.FileSelectionGrid.RowHeight   = {'1x'};
+            app.DataLabel = CSSuiLabel(app.DataFileTopGrid, ...
+                'Style', 'shadow', ...
+                'FontWeight', '700', ...
+                'FontSize', app.FontSizeTitle, ...
+                'Text', 'DATA (0 Files)' ...
+                );
+            app.DataLabel.Layout.Row    = 1;
+            app.DataLabel.Layout.Column = 1;
 
-            % ---- File Input Grid (left column) ----
-            % 3-row grid: title + instruction | list boxes | action buttons
-            app.FileInputGrid                   = uigridlayout(app.FileSelectionGrid);
-            app.FileInputGrid.RowHeight         = {'3x', '20x', '2.3x'};
-            app.FileInputGrid.RowSpacing        = 0;
-            app.FileInputGrid.Padding           = [0 0 0 0];
-            app.FileInputGrid.Layout.Row        = 1;
-            app.FileInputGrid.Layout.Column     = 1;
+            app.DataFileInstructionText = CSSuiLabel(app.DataFileTopGrid, ...
+                'Style', 'shadow', ...
+                'FontSize', '11.5px', ...
+                'FontWeight', '700', ...
+                'Text', 'ADD PSG FILES (.edf). DOUBLE-CLICK FILE FOR HEADER INFO.' ...
+                );
+            app.DataFileInstructionText.Row    = 2;
+            app.DataFileInstructionText.Column = 1;
+
+            % ---- Data List Box ----
+            app.DataListBoxGrid                  = uigridlayout(app.FileInputGrid);
+            app.DataListBoxGrid.ColumnWidth      = {'1x'};
+            app.DataListBoxGrid.RowHeight        = {'1x'};
+            app.DataListBoxGrid.Padding          = [0 5 0 5];
+            app.DataListBoxGrid.Layout.Row       = 2;
+            app.DataListBoxGrid.Layout.Column    = 1;
+
+            % Double-click opens the EDF header viewer
+            app.DataListBox = uilistbox(app.DataListBoxGrid);
+            app.DataListBox.Items            = {};
+            app.DataListBox.Multiselect      = 'on';
+            app.DataListBox.Layout.Row       = 1;
+            app.DataListBox.Layout.Column    = 1;
+            app.DataListBox.DoubleClickedFcn = createCallbackFcn(app, @ShowHeader, true);
+            app.DataListBox.Value            = {};
+            app.DataListBox.Tooltip          = 'Double-click a file to view the header';
 
             % ---- Data File Action Buttons ----
             app.DataFileButtonGrid                  = uigridlayout(app.FileInputGrid);
             app.DataFileButtonGrid.ColumnWidth      = {'1x','1x','1x','1x','1x'};
             app.DataFileButtonGrid.RowHeight        = {'1x'};
-            app.DataFileButtonGrid.ColumnSpacing    = 10;
-            app.DataFileButtonGrid.Padding          = [0 0 10 0];
+            app.DataFileButtonGrid.ColumnSpacing    = 5;
+            app.DataFileButtonGrid.Padding          = [5 0 5 0];
             app.DataFileButtonGrid.Layout.Row       = 3;
             app.DataFileButtonGrid.Layout.Column    = 1;
 
@@ -538,12 +590,55 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %  STAGING SELECTION (middle column)
             % =========================================================================
 
+            % ---- Staging File Title + Instruction ----
+            app.StagingFileTopGrid                  = uigridlayout(app.FileInputGrid);
+            app.StagingFileTopGrid.ColumnWidth      = {'1x'};
+            app.StagingFileTopGrid.RowHeight        = {'2x', '1x'};
+            app.StagingFileTopGrid.ColumnSpacing    = 0;
+            app.StagingFileTopGrid.RowSpacing       = 0;
+            app.StagingFileTopGrid.Padding          = [0 0 0 0];
+            app.StagingFileTopGrid.Layout.Row       = 1;
+            app.StagingFileTopGrid.Layout.Column    = 2;
+
+            app.StagingLabel = CSSuiLabel(app.StagingFileTopGrid, ...
+                'Style', 'shadow', ...
+                'FontWeight', '700', ...
+                'FontSize', app.FontSizeTitle, ...
+                'HorizontalAlignment', 'center', 'Text', 'STAGING (0 Files)' ...
+                );
+            app.StagingLabel.Layout.Row    = 1;
+            app.StagingLabel.Layout.Column = 1;
+
+            app.StagingFileInstructionText = CSSuiLabel(app.StagingFileTopGrid, ...
+                'Style', 'shadow', ...
+                'FontSize', '11.5px', ...
+                'FontWeight', '700', ...
+                'Text', 'ADD STAGING FILES (.csv/.txt). ENSURE ORDER MATCHES DATA FILES.' ...
+                );
+            app.StagingFileInstructionText.Layout.Row    = 2;
+            app.StagingFileInstructionText.Layout.Column = 1;
+
+            % ---- Staging List Box ----
+            app.StagingListBoxGrid                  = uigridlayout(app.FileInputGrid);
+            app.StagingListBoxGrid.ColumnWidth      = {'1x'};
+            app.StagingListBoxGrid.RowHeight        = {'1x'};
+            app.StagingListBoxGrid.Padding          = [0 5 0 5];
+            app.StagingListBoxGrid.Layout.Row       = 2;
+            app.StagingListBoxGrid.Layout.Column    = 2;
+
+            app.StagingListBox = uilistbox(app.StagingListBoxGrid);
+            app.StagingListBox.Items         = {};
+            app.StagingListBox.Multiselect   = 'on';
+            app.StagingListBox.Layout.Row    = 1;
+            app.StagingListBox.Layout.Column = 1;
+            app.StagingListBox.Value         = {};
+
             % ---- Staging File Action Buttons ----
             app.StagingFileButtonGrid             = uigridlayout(app.FileInputGrid);
             app.StagingFileButtonGrid.ColumnWidth = {'1x','1x','1x','1x','1x'};
             app.StagingFileButtonGrid.RowHeight   = {'1x'};
-            app.StagingFileButtonGrid.ColumnSpacing = 3;
-            app.StagingFileButtonGrid.Padding     = [10 0 10 0];
+            app.StagingFileButtonGrid.ColumnSpacing = 5;
+            app.StagingFileButtonGrid.Padding     = [5 0 5 0];
             app.StagingFileButtonGrid.Layout.Row  = 3;
             app.StagingFileButtonGrid.Layout.Column = 2;
 
@@ -606,96 +701,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StagingMoveDownButton.Column = 5;
             app.StagingMoveDownButton.HTMLComponent.Tooltip       = 'Move current staging file down';
 
-            % ---- Data List Box ----
-            % Double-click opens the EDF header viewer
-            app.DataListBox = uilistbox(app.FileInputGrid);
-            app.DataListBox.Items            = {};
-            app.DataListBox.Multiselect      = 'on';
-            app.DataListBox.Layout.Row       = 2;
-            app.DataListBox.Layout.Column    = 1;
-            app.DataListBox.DoubleClickedFcn = createCallbackFcn(app, @ShowHeader, true);
-            app.DataListBox.Value            = {};
-            app.DataListBox.Tooltip          = 'Double-click a file to view the header';
-
-            % ---- Staging List Box ----
-            app.StagingListBox = uilistbox(app.FileInputGrid);
-            app.StagingListBox.Items         = {};
-            app.StagingListBox.Multiselect   = 'on';
-            app.StagingListBox.Layout.Row    = 2;
-            app.StagingListBox.Layout.Column = 2;
-            app.StagingListBox.Value         = {};
-
-            % ---- Data File Title + Instruction ----
-            app.DataFileTopGrid                     = uigridlayout(app.FileInputGrid);
-            app.DataFileTopGrid.ColumnWidth         = {'1x'};
-            app.DataFileTopGrid.RowHeight           = {'2x', '1x'};
-            app.DataFileTopGrid.ColumnSpacing       = 0;
-            app.DataFileTopGrid.RowSpacing          = 0;
-            app.DataFileTopGrid.Padding             = [0 0 0 0];
-            app.DataFileTopGrid.Layout.Row          = 1;
-            app.DataFileTopGrid.Layout.Column       = 1;
-
-            app.DataFileInstructionText = CSSuiLabel(app.DataFileTopGrid, ...
-                'Style', 'shadow', ...
-                'FontSize', '13px', ...
-                'FontWeight', '700', ...
-                'Text', upper('Add PSG files (EDF). Double-click file for header info.') ...
-                );
-            app.DataFileInstructionText.Row    = 2;
-            app.DataFileInstructionText.Column = 1;
-
-            % Centred title grid with file count label
-            app.DataFileTitleGrid                   = uigridlayout(app.DataFileTopGrid);
-            app.DataFileTitleGrid.ColumnWidth       = {'2x', '5x', '2x'};
-            app.DataFileTitleGrid.RowHeight         = {'1x'};
-            app.DataFileTitleGrid.Padding           = [0 12 0 12];
-            app.DataFileTitleGrid.Layout.Row        = 1;
-            app.DataFileTitleGrid.Layout.Column     = 1;
-
-            app.DataLabel = CSSuiLabel(app.DataFileTitleGrid, ...
-                'Style', 'shadow', ...
-                'FontWeight', '700', ...
-                'FontSize', app.FontSizeTitle, ...
-                'Text', 'DATA (0 Files)' ...
-                );
-            app.DataLabel.Layout.Row    = 1;
-            app.DataLabel.Layout.Column = 2;
-
-            % ---- Staging File Title + Instruction ----
-            app.StagingFileTopGrid                  = uigridlayout(app.FileInputGrid);
-            app.StagingFileTopGrid.ColumnWidth      = {'1x'};
-            app.StagingFileTopGrid.RowHeight        = {'2x', '1x'};
-            app.StagingFileTopGrid.ColumnSpacing    = 0;
-            app.StagingFileTopGrid.RowSpacing       = 0;
-            app.StagingFileTopGrid.Padding          = [0 0 0 0];
-            app.StagingFileTopGrid.Layout.Row       = 1;
-            app.StagingFileTopGrid.Layout.Column    = 2;
-
-            app.StagingFileInstructionText = CSSuiLabel(app.StagingFileTopGrid, ...
-                'Style', 'shadow', ...
-                'FontSize', '12px', ...
-                'FontWeight', '700', ...
-                'Text', upper('Add staging files (CSV/TXT). Ensure order matches data files.') ...
-                );
-            app.StagingFileInstructionText.Layout.Row    = 2;
-            app.StagingFileInstructionText.Layout.Column = 1;
-
-            app.StagingFileTitleGrid                    = uigridlayout(app.StagingFileTopGrid);
-            app.StagingFileTitleGrid.ColumnWidth        = {'2x', '5x', '2x'};
-            app.StagingFileTitleGrid.RowHeight          = {'1x'};
-            app.StagingFileTitleGrid.Padding            = [0 12 0 12];
-            app.StagingFileTitleGrid.Layout.Row         = 1;
-            app.StagingFileTitleGrid.Layout.Column      = 1;
-
-            app.StagingLabel = CSSuiLabel(app.StagingFileTitleGrid, ...
-                'Style', 'shadow', ...
-                'FontWeight', '700', ...
-                'FontSize', app.FontSizeTitle, ...
-                'HorizontalAlignment', 'center', 'Text', 'STAGING (0 Files)' ...
-                );
-            app.StagingLabel.Layout.Row    = 1;
-            app.StagingLabel.Layout.Column = 2;
-
             % ============================================================
             %   RUNTIME OPTIONS (right column)
             % ============================================================
@@ -703,29 +708,48 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % Three-row right column: channel options | staging options | saving options
             app.RuntimeOptionsGrid                  = uigridlayout(app.FileSelectionGrid);
             app.RuntimeOptionsGrid.ColumnWidth      = {'1x'};
-            app.RuntimeOptionsGrid.RowHeight        = {'1x', '2.2x', '2.2x'};
+            app.RuntimeOptionsGrid.RowHeight        = {'3x', '12.5x', '10x'};
             app.RuntimeOptionsGrid.ColumnSpacing    = 0;
             app.RuntimeOptionsGrid.RowSpacing       = 0;
-            app.RuntimeOptionsGrid.Padding          = [0 0 0 0];
+            app.RuntimeOptionsGrid.Padding          = [0 5.5 10 0];
             app.RuntimeOptionsGrid.Layout.Row       = 1;
             app.RuntimeOptionsGrid.Layout.Column    = 2;
 
-            % ---- Channel / Runtime Options (Row 1) ----
-            app.RuntimeOptionsTopGrid                   = uigridlayout(app.RuntimeOptionsGrid);
-            app.RuntimeOptionsTopGrid.ColumnWidth       = {'1x'};
-            app.RuntimeOptionsTopGrid.RowHeight         = {'4x', '2x', '2x', '1x'};
-            app.RuntimeOptionsTopGrid.ColumnSpacing     = 0;
-            app.RuntimeOptionsTopGrid.RowSpacing        = 0;
-            app.RuntimeOptionsTopGrid.Padding           = [0 0 0 0];
-            app.RuntimeOptionsTopGrid.Layout.Row        = 1;
-            app.RuntimeOptionsTopGrid.Layout.Column     = 1;
+            % The middle row is further broken into two rows
+            app.RuntimeOptionsMidGrid                     = uigridlayout(app.RuntimeOptionsGrid);
+            app.RuntimeOptionsMidGrid.ColumnWidth         = {'1x'};
+            app.RuntimeOptionsMidGrid.RowHeight           = {'1x', '9x'};
+            app.RuntimeOptionsMidGrid.ColumnSpacing       = 0;
+            app.RuntimeOptionsMidGrid.RowSpacing          = 0;
+            app.RuntimeOptionsMidGrid.Padding             = [0 0 0 0];
+            app.RuntimeOptionsMidGrid.Layout.Row          = 2;
+            app.RuntimeOptionsMidGrid.Layout.Column       = 1;
 
-            % Channel input: label | edit field | info button
-            app.ChannelInputGrid                   = uigridlayout(app.RuntimeOptionsTopGrid);
-            app.ChannelInputGrid.ColumnWidth       = {'3x', '10x', '4x'};
+            % ---- RunTime Title + Instruction ----
+            app.RuntimeOptionsTopGrid                     = uigridlayout(app.RuntimeOptionsGrid);
+            app.RuntimeOptionsTopGrid.ColumnWidth         = {'1x'};
+            app.RuntimeOptionsTopGrid.RowHeight           = {'2x', '1x'};
+            app.RuntimeOptionsTopGrid.ColumnSpacing       = 0;
+            app.RuntimeOptionsTopGrid.RowSpacing          = 0;
+            app.RuntimeOptionsTopGrid.Padding             = [0 0 0 0];
+            app.RuntimeOptionsTopGrid.Layout.Row          = 1;
+            app.RuntimeOptionsTopGrid.Layout.Column       = 1;
+
+            app.RuntimeOptionsLabel = CSSuiLabel(app.RuntimeOptionsTopGrid, ...
+                'Style', 'shadow', ...
+                'FontWeight', '700', ...
+                'FontSize', app.FontSizeTitle, ...
+                'Text', 'RUNTIME OPTIONS' ...
+                );
+            app.RuntimeOptionsLabel.Layout.Row    = 1;
+            app.RuntimeOptionsLabel.Layout.Column = 1;
+
+            % ---- Channel Selection (Row 1) ----
+            app.ChannelInputGrid                   = uigridlayout(app.RuntimeOptionsMidGrid);
+            app.ChannelInputGrid.ColumnWidth       = {'2x', '7x', '2x'};
             app.ChannelInputGrid.RowHeight         = {'1x'};
             app.ChannelInputGrid.Padding           = [0 0 0 0];
-            app.ChannelInputGrid.Layout.Row        = 3;
+            app.ChannelInputGrid.Layout.Row        = 1;
             app.ChannelInputGrid.Layout.Column     = 1;
 
             app.ChannelEditFieldLabel = CSSuiLabel(app.ChannelInputGrid, ...
@@ -735,7 +759,10 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.ChannelEditFieldLabel.Layout.Row    = 1;
             app.ChannelEditFieldLabel.Layout.Column = 1;
 
-            app.ChannelEditField               = CSSuiEditField(app.ChannelInputGrid, 'Style','shadow');
+            app.ChannelEditField               = CSSuiEditField(app.ChannelInputGrid, ...
+                'Style','shadow', ...
+                'Value', 'Enter comma-separated list of channels' ...
+                );
             app.ChannelEditField.Layout.Row    = 1;
             app.ChannelEditField.Layout.Column = 2;
 
@@ -748,49 +775,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.ViewChannelsButton.Column = 3;
             app.ViewChannelsButton.ButtonPushedFcn = createCallbackFcn(app, @viewChannelsButtonPushed, true);
 
-            % Section header
-            app.RuntimeOptionsLabel = CSSuiLabel(app.RuntimeOptionsTopGrid, ...
-                'Style', 'shadow', ...
-                'FontWeight', '700', ...
-                'FontSize', app.FontSizeTitle, ...
-                'Text', 'RUNTIME OPTIONS' ...
-                );
-            app.RuntimeOptionsLabel.Layout.Row    = 1;
-            app.RuntimeOptionsLabel.Layout.Column = 1;
-
-            % Instruction text for channel input
-            app.ChannelOptionsGrid                  = uigridlayout(app.RuntimeOptionsTopGrid);
-            app.ChannelOptionsGrid.ColumnWidth      = {'4x'};
-            app.ChannelOptionsGrid.RowHeight        = {'1x'};
-            app.ChannelOptionsGrid.Padding          = [0 0 0 0];
-            app.ChannelOptionsGrid.Layout.Row       = 2;
-            app.ChannelOptionsGrid.Layout.Column    = 1;
-
-            app.ChannelOptionsInstructionsLabel = CSSuiLabel(app.ChannelOptionsGrid, ...
-                'Style', 'shadow', ...
-                'FontSize', '12px', ...
-                'Text', 'Enter comma-separated list of channels or select from files.' ...
-                );
-            app.ChannelOptionsInstructionsLabel.Layout.Row    = 1;
-            app.ChannelOptionsInstructionsLabel.Layout.Column = 1;
-
             % ---- Staging Options (Row 2) ----
             % Two-sub-column panel: left = stage label identifiers, right = file format inputs
-            app.StagingOptionsGrid                  = uigridlayout(app.RuntimeOptionsGrid);
-            app.StagingOptionsGrid.ColumnWidth      = {'1x'};
-            app.StagingOptionsGrid.RowHeight        = {'1x', '10x'};
-            app.StagingOptionsGrid.ColumnSpacing    = 0;
-            app.StagingOptionsGrid.RowSpacing       = 0;
-            app.StagingOptionsGrid.Padding          = [0 0 0 0];
-            app.StagingOptionsGrid.Layout.Row       = 2;
-            app.StagingOptionsGrid.Layout.Column    = 1;
-
-            app.StagingOptionsPanelGrid                 = uigridlayout(app.RuntimeOptionsGrid);
-            app.StagingOptionsPanelGrid.ColumnWidth     = {'2x', '5x', '3x', '2x'} ;
-            app.StagingOptionsGrid.RowHeight            = {'1x','1x','1x','1x','1x','1x','1x'};
+            app.StagingOptionsPanelGrid                 = uigridlayout(app.RuntimeOptionsMidGrid);
+            app.StagingOptionsPanelGrid.ColumnWidth     = {'2x', '4x', '3x', '2x'} ;
+            app.StagingOptionsPanelGrid.RowHeight       = {'1x','1x','1x','1x','1x','1x','1x'};
             app.StagingOptionsPanelGrid.ColumnSpacing   = 20;
             app.StagingOptionsPanelGrid.RowSpacing      = 0;
-            app.StagingOptionsPanelGrid.Padding         = [20 20 0 0];
+            app.StagingOptionsPanelGrid.Padding         = [0 20 0 20];
             app.StagingOptionsPanelGrid.Layout.Row      = 2;
             app.StagingOptionsPanelGrid.Layout.Column   = 1;
 
@@ -955,24 +947,15 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DelimeterOptionField.Row    = 1;
             app.DelimeterOptionField.Column = [3 4];
 
-            % Section header for staging options
-            app.StagingOptionsLabel = CSSuiLabel(app.StagingOptionsGrid, ...
-                'Style', 'shadow', ...
-                'FontWeight', '700', ...
-                'Text', 'STAGING OPTIONS' ...
-                );
-            app.StagingOptionsLabel.Layout.Row    = 1;
-            app.StagingOptionsLabel.Layout.Column = 1;
+            % ---- Saving Options and File Formats (Row 3) ----
+            app.SavingOptionsTabGroup                   = uitabgroup(app.RuntimeOptionsGrid);
+            app.SavingOptionsTabGroup.Layout.Row        = 3;
+            app.SavingOptionsTabGroup.Layout.Column     = 1;
 
             % ============================================================
-            %   SAVING OPTIONS (Row 3 of RuntimeOptionsGrid)
+            %   SAVING OPTIONS TAB
             % ============================================================
 
-            app.SavingOptionsTabGroup              = uitabgroup(app.RuntimeOptionsGrid);
-            app.SavingOptionsTabGroup.Layout.Row   = 3;
-            app.SavingOptionsTabGroup.Layout.Column = 1;
-
-            % ---- Basic Saving Options Tab ----
             app.SavingOptionsTab       = uitab(app.SavingOptionsTabGroup);
             app.SavingOptionsTab.Title = 'Saving Options';
             app.SavingOptionsTabGroup.SelectedTab = app.SavingOptionsTab;
@@ -1083,10 +1066,10 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % ---- Output Directory Row ----
             app.SavingDirectoryGrid             = uigridlayout(app.SavingOptionsTabGrid);
-            app.SavingDirectoryGrid.ColumnWidth = {'5x', '1x'};
-            app.SavingDirectoryGrid.RowHeight   = {'2x', '3x'};
+            app.SavingDirectoryGrid.ColumnWidth = {'8x', '2x'};
+            app.SavingDirectoryGrid.RowHeight   = {'2x', '4x'};
             app.SavingDirectoryGrid.RowSpacing  = 0;
-            app.SavingDirectoryGrid.Padding     = [5 5 10 1];
+            app.SavingDirectoryGrid.Padding     = [5 5 5 0];
             app.SavingDirectoryGrid.Layout.Row  = 2;
             app.SavingDirectoryGrid.Layout.Column = 1;
 
@@ -1423,9 +1406,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % ============================================================
 
             app.TopTextGrid             = uigridlayout(app.FullDYNAMOSetupGrid);
-            app.TopTextGrid.ColumnWidth = {'1x', '15x', '2x'};
+            app.TopTextGrid.ColumnWidth = {'15x', '1x'};
             app.TopTextGrid.RowHeight   = {'1x'};
-            app.TopTextGrid.ColumnSpacing = 50;
             app.TopTextGrid.Padding     = [0 0 0 0];
             app.TopTextGrid.Layout.Row  = 1;
             app.TopTextGrid.Layout.Column = 1;
@@ -1437,7 +1419,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Text', 'Add data and staging files, select output directory, choose options, then run batch.' ...
                 );
             app.InstructionText.Layout.Row    = 1;
-            app.InstructionText.Layout.Column = 2;
+            app.InstructionText.Layout.Column = 1;
 
             app.HelpButton = CSSuiButton(app.TopTextGrid, ...
                 'Style', 'shadow', ...
@@ -1445,7 +1427,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'ButtonPushedFcn', @(src,event) showHelpButtonPushed(app) ...
                 );
             app.HelpButton.Row    = 1;
-            app.HelpButton.Column = 3;
+            app.HelpButton.Column = 2;
 
             % ============================================================
             %   DYNAM-O SETTINGS (sub-app embedded in its tab)
