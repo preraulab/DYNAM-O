@@ -524,7 +524,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DataListBoxGrid                  = uigridlayout(app.FileInputGrid);
             app.DataListBoxGrid.ColumnWidth      = {'1x'};
             app.DataListBoxGrid.RowHeight        = {'1x'};
-            app.DataListBoxGrid.Padding          = [0 5 0 5];
+            app.DataListBoxGrid.Padding          = [0 5 0 6];
             app.DataListBoxGrid.Layout.Row       = 2;
             app.DataListBoxGrid.Layout.Column    = 1;
 
@@ -650,7 +650,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StagingListBoxGrid                  = uigridlayout(app.FileInputGrid);
             app.StagingListBoxGrid.ColumnWidth      = {'1x'};
             app.StagingListBoxGrid.RowHeight        = {'1x'};
-            app.StagingListBoxGrid.Padding          = [0 5 0 5];
+            app.StagingListBoxGrid.Padding          = [0 5 0 6];
             app.StagingListBoxGrid.Layout.Row       = 2;
             app.StagingListBoxGrid.Layout.Column    = 2;
 
