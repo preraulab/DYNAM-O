@@ -499,7 +499,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.FileInputGrid                   = uigridlayout(app.FileSelectionGrid);
             app.FileInputGrid.ColumnWidth       = {'1x', '1x'};
             app.FileInputGrid.RowHeight         = {30, 20, '1x', button_height};
-            app.FileInputGrid.ColumnSpacing     = 0;
+            app.FileInputGrid.ColumnSpacing     = 10;
             app.FileInputGrid.RowSpacing        = 0;
             app.FileInputGrid.Padding           = 0;
             app.FileInputGrid.Layout.Row        = 1;
