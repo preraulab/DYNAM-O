@@ -712,10 +712,10 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % Three-row right column: channel options | staging options | saving options
             app.RuntimeOptionsGrid                  = uigridlayout(app.FileSelectionGrid);
             app.RuntimeOptionsGrid.ColumnWidth      = {'1x'};
-            app.RuntimeOptionsGrid.RowHeight        = {50, 30, 280, '1x', 270};
+            app.RuntimeOptionsGrid.RowHeight        = {50, 35, 280, '1x', 270};
             app.RuntimeOptionsGrid.ColumnSpacing    = 0;
             app.RuntimeOptionsGrid.RowSpacing       = 0;
-            app.RuntimeOptionsGrid.Padding          = [0 0 0 0];
+            app.RuntimeOptionsGrid.Padding          = [0 6 0 0];
             app.RuntimeOptionsGrid.Layout.Row       = 1;
             app.RuntimeOptionsGrid.Layout.Column    = 2;
             % app.RuntimeOptionsGrid.BackgroundColor = 'black';
@@ -730,7 +730,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 );
             app.RuntimeOptionsLabel.Layout.Row    = 1;
             app.RuntimeOptionsLabel.Layout.Column = 1;
-
 
             % ---- Channel Selection (Row 1) ----
             app.ChannelInputGrid                   = uigridlayout(app.RuntimeOptionsGrid);
@@ -749,7 +748,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             app.ChannelEditField               = CSSuiEditField(app.ChannelInputGrid, ...
                 'Style','shadow', ...
-                'Value', 'Comma-separated channel labels' ...
+                'Value', 'Enter comma-separated channel labels' ...
                 );
             app.ChannelEditField.Layout.Row    = 1;
             app.ChannelEditField.Layout.Column = 2;
@@ -1353,7 +1352,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.RunBatchButton.Row    = 1;
             app.RunBatchButton.Column = 3;
             app.RunBatchButton.HTMLComponent.Tooltip = 'Batch run DYNAM-O';
-
 
             % Switches: 4-row inner grid, spacers on rows 1 & 4 push
             % the two switches to the vertical centre.
