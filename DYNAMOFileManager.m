@@ -2493,7 +2493,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % Optionally save the parametric basis figure
             if app.SaveParamImagesCheckBox.Value
-                app.anything_run  = 1;
+                app.anything_run = 1;
                 app.output_param_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
                     '/figures/param_basis/',app.input_fbase,'_param_basis_figure_', ...
                     app.channel, app.DataSummaryDropDown.Value);
