@@ -59,6 +59,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         RuntimeOptionsGrid              matlab.ui.container.GridLayout  % Right-column grid: channel, staging, saving options
 
         % --- Saving Options Tab Group ---
+        SavingOptionsTabGroupGrid       matlab.ui.container.GridLayout  % Grid for saving options tab
         SavingOptionsTabGroup           matlab.ui.container.TabGroup    % Tabs: Saving Options | FileFormat
         SavingOptionsTab                matlab.ui.container.Tab         % Basic save checkboxes and output directory
         SavingOptionsTabGrid            matlab.ui.container.GridLayout  % Grid inside saving options tab
@@ -935,8 +936,15 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DelimeterOptionField.Column = [3 4];
 
             % ---- Saving Options and File Formats (Row 3) ----
-            app.SavingOptionsTabGroup                   = uitabgroup(app.RuntimeOptionsGrid);
-            app.SavingOptionsTabGroup.Layout.Row        = 5;
+            app.SavingOptionsTabGroupGrid                   = uigridlayout(app.RuntimeOptionsGrid);
+            app.SavingOptionsTabGroupGrid.ColumnWidth       = {'1x'};
+            app.SavingOptionsTabGroupGrid.RowHeight         = {'1x'};
+            app.SavingOptionsTabGroupGrid.Padding           = [0 0 5 0];
+            app.SavingOptionsTabGroupGrid.Layout.Row        = 5;
+            app.SavingOptionsTabGroupGrid.Layout.Column     = 1;
+
+            app.SavingOptionsTabGroup                   = uitabgroup(app.SavingOptionsTabGroupGrid);
+            app.SavingOptionsTabGroup.Layout.Row        = 1;
             app.SavingOptionsTabGroup.Layout.Column     = 1;
 
             % ============================================================
