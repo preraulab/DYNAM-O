@@ -242,7 +242,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % -------------------------
         %   UI Dimension Constants
         % -------------------------
-
         WindowWidth             = 1600   % Default figure width in pixels
         WindowHeight            = 1000   % Default figure height in pixels
 
@@ -250,12 +249,10 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         %   Global Typography
         % -------------------------
         FontName       = 'Helvetica Nue'  % Font applied to every labelled UI control.
+        FontSizeSmall  = 11   % Supplementary / caption font size (px)
         FontSizeBase   = 13   % Body / instruction text font size (px)
         FontSizeTitle  = 15   % Section-header and list-title font size (px)
-        FontSizeSmall  = 11   % Supplementary / caption font size (px)
 
-        MinWidth  % Minimal width of the GUI window
-        MinHeight  % Minimal height of the GUI window
     end
 
     % ======================================================================
@@ -404,10 +401,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.UIFigure.Position = [x, y, app.WindowWidth, app.WindowHeight];
             app.UIFigure.Name = 'DYNAM-O File Manager';
             app.UIFigure.AutoResizeChildren = 'off';   % grid handles it, not figure
-
-            % Store minimum size
-            app.MinWidth = 1100;
-            app.MinHeight = 850;
 
             % Set the callback ON THE PANEL, not the figure
             app.UIFigure.SizeChangedFcn = @(src, event) app.enforceMinSize;
@@ -558,7 +551,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Style','shadow', ...
                 'Text', 'Delete File', ...
                 'MaxWidth', '120px',...
-                'ButtonPushedFcn',  createCallbackFcn(app, @DataAddFolderButtonPushed, true), ...
+                'ButtonPushedFcn',  createCallbackFcn(app, @DataRemoveButtonPushed, true), ...
                 'IconPosition', 'top', ...
                 'IconSize', filelist_icon_size,...
                 'IconOnlyWidth', icon_only_width,...
@@ -673,7 +666,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Style','shadow', ...
                 'Text', 'Delete File', ...
                 'MaxWidth', '120px',...
-                'ButtonPushedFcn',  createCallbackFcn(app, @StagingAddFolderButtonPushed, true), ...
+                'ButtonPushedFcn',  createCallbackFcn(app, @StagingRemoveButtonPushed, true), ...
                 'IconPosition', 'top', ...
                 'IconSize', filelist_icon_size,...
                 'IconOnlyWidth', icon_only_width,...
@@ -2921,7 +2914,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %     TextArea, DropDown, ListBox
             %
             %   FontSize is left at whatever was set during construction so that
-            %   bespoke sizes (FontSizeTitle, FontSizeSmall) are preserved.
+            %   bespoke sizes (FontSizeTitle) are preserved.
 
             targetClasses = { ...
                 ' ', ...
