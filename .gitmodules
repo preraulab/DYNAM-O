@@ -1,15 +1,20 @@
 [submodule "toolbox/helper_functions/multitaper_spectrogram"]
 	path = toolbox/helper_functions/multitaper_spectrogram
 	url = git@github.com:preraulab/multitaper.git
+	branch = master
 [submodule "toolbox/helper_functions/statistical_tests"]
 	path = toolbox/helper_functions/statistical_tests
 	url = git@github.com:preraulab/multicomp_test.git
+	branch = master
 [submodule "toolbox/helper_functions/artifact_detection"]
 	path = toolbox/helper_functions/artifact_detection
 	url = git@github.com:preraulab/artifact_detection.git
+	branch = master
 [submodule "toolbox/helper_functions/read_EDF"]
 	path = toolbox/helper_functions/read_EDF
 	url = git@github.com:preraulab/read_EDF.git
+	branch = master
 [submodule "toolbox/helper_functions/CSSuicontrols"]
 	path = toolbox/helper_functions/CSSuicontrols
 	url = git@github.com:preraulab/CSSuicontrols.git
+	branch = master
