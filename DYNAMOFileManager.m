@@ -959,7 +959,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.SavingOptionsTabGrid.ColumnWidth = {'1x'};
             app.SavingOptionsTabGrid.RowHeight   = {'3x', '1x'};
             app.SavingOptionsTabGrid.RowSpacing  = 0;
-            app.SavingOptionsTabGrid.Padding     = [10 0 10 2];
+            app.SavingOptionsTabGrid.Padding     = [10 0 5 2];
 
             % Six-row, two-column grid of save checkboxes
             app.SavingOptionsCheckBoxGrid             = uigridlayout(app.SavingOptionsTabGrid);
