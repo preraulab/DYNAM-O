@@ -406,11 +406,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
 
             % Store minimum size
-            app.MinWidth = 1574;
-            app.MinHeight = 999;
+            app.MinWidth = 1100;
+            app.MinHeight = 850;
 
             % Set the callback ON THE PANEL, not the figure
-            % app.UIFigure.SizeChangedFcn = @(src, event) app.enforceMinSize;
+            app.UIFigure.SizeChangedFcn = @(src, event) app.enforceMinSize;
 
 
             % ---- File Menu ----
@@ -461,7 +461,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % Two-column grid: left = file + staging lists, right = runtime options
             app.FileSelectionGrid                   = uigridlayout(app.FileSelectionTab);
-            app.FileSelectionGrid.ColumnWidth       = {'1x', 400};
+            app.FileSelectionGrid.ColumnWidth       = {'1x', 450};
             app.FileSelectionGrid.RowHeight         = {'1x'};
             app.FileSelectionGrid.ColumnSpacing     = 5;
             % app.FileSelectionGrid.BackgroundColor = 'green';
@@ -2954,18 +2954,18 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
         function enforceMinSize(app)
             pos = app.UIFigure.Position;
-            disp(pos)
-            % % Enforce minimum width
-            % if pos(3) < app.MinWidth
-            %     pos(3) = app.MinWidth;
-            % end
-            %
-            % % Enforce minimum height
-            % if pos(4) < app.MinHeight
-            %     pos(4) = app.MinHeight;
-            % end
-            %
-            % app.UIFigure.Position = pos;
+
+            % Enforce minimum width
+            if pos(3) < app.MinWidth
+                pos(3) = app.MinWidth;
+            end
+
+            % Enforce minimum height
+            if pos(4) < app.MinHeight
+                pos(4) = app.MinHeight;
+            end
+
+            app.UIFigure.Position = pos;
 
             %Cap the distance between the buttons
             g = app.RunBatchGrid;
