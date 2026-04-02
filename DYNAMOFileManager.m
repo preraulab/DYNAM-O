@@ -939,7 +939,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.SavingOptionsTabGroupGrid                   = uigridlayout(app.RuntimeOptionsGrid);
             app.SavingOptionsTabGroupGrid.ColumnWidth       = {'1x'};
             app.SavingOptionsTabGroupGrid.RowHeight         = {'1x'};
-            app.SavingOptionsTabGroupGrid.Padding           = [0 0 5 0];
+            app.SavingOptionsTabGroupGrid.Padding           = [0 0 5 0];  % dedicated grid to add padding
             app.SavingOptionsTabGroupGrid.Layout.Row        = 5;
             app.SavingOptionsTabGroupGrid.Layout.Column     = 1;
 
