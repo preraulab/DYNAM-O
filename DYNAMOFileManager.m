@@ -196,6 +196,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % -------------------------
         channel           % Currently active channel name (string)
         ChannelList       % Cell array of channel names parsed from ChannelEditField
+        delimeter         % Delimiter character used when reading staging files (e.g. ',' '\t')
 
         % Sleep stage identifier lists (cell arrays of strings from edit fields)
         ArtifactUserInput
@@ -205,8 +206,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         REMUserInput
         WakeUserInput
         UnknownUserInput
-
-        delimeter   % Delimiter character used when reading staging files (e.g. ',' '\t')
 
         % -------------------------
         %   Options / Struct Storage
@@ -249,8 +248,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         %   Global Typography
         % -------------------------
         FontName       = 'Helvetica Nue'  % Font applied to every labelled UI control.
-        FontSizeSmall  = 11   % Supplementary / caption font size (px)
-        FontSizeBase   = 13   % Body / instruction text font size (px)
+        % FontSizeSmall  = 11   % Supplementary / caption font size (px)
+        % FontSizeBase   = 13   % Body / instruction text font size (px)
         FontSizeTitle  = 15   % Section-header and list-title font size (px)
 
     end
