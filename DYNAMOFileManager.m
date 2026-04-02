@@ -250,8 +250,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
         WindowWidth             = 1600   % Default figure width in pixels
         WindowHeight            = 1000   % Default figure height in pixels
-        ButtonHeight            = 25     % Standard button height in pixels
-        ButtonWidth             = 120    % Button width in pixels (used for fixed-width controls)
 
         % -------------------------
         %   Global Typography
@@ -296,8 +294,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             end
 
             sc = get(0, 'ScreenSize');
-            WindowWidth             = min(1600,sc(3)-100);   % Default figure width in pixels
-            WindowHeight            = min(100,sc(4)-100);
+            app.WindowWidth             = min(app.WindowWidth, sc(3));   % Default figure width in pixels
+            app.WindowHeight            = min(app.WindowHeight, sc(4));
 
             % Build all UI components
             createComponents(app, p.Results.Title, p.Results.Position);
@@ -400,7 +398,15 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % ---- Figure ----
             % Create UIFigure and hide until all components are created
             app.UIFigure = uifigure('Visible', 'off');
-            app.UIFigure.Position = [0, 0, app.WindowWidth, app.WindowHeight];
+            % Get screen size
+            screenSize = get(0, 'ScreenSize');  % [left bottom width height]
+
+            % Compute centered position
+            x = (screenSize(3) - app.WindowWidth) / 2;
+            y = (screenSize(4) - app.WindowHeight) / 2;
+
+            % Set figure position
+            app.UIFigure.Position = [x, y, app.WindowWidth, app.WindowHeight];
             app.UIFigure.Name = 'DYNAM-O File Manager';
             app.UIFigure.AutoResizeChildren = 'off';   % grid handles it, not figure
 
@@ -723,10 +729,10 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % Three-row right column: channel options | staging options | saving options
             app.RuntimeOptionsGrid                  = uigridlayout(app.FileSelectionGrid);
             app.RuntimeOptionsGrid.ColumnWidth      = {'1x'};
-            app.RuntimeOptionsGrid.RowHeight        = {50, 30, 280, '1x', 300};
+            app.RuntimeOptionsGrid.RowHeight        = {50, 30, 280, '1x', 270};
             app.RuntimeOptionsGrid.ColumnSpacing    = 0;
             app.RuntimeOptionsGrid.RowSpacing       = 0;
-            app.RuntimeOptionsGrid.Padding          = 0;
+            app.RuntimeOptionsGrid.Padding          = [0 0 0 0];
             app.RuntimeOptionsGrid.Layout.Row       = 1;
             app.RuntimeOptionsGrid.Layout.Column    = 2;
             % app.RuntimeOptionsGrid.BackgroundColor = 'black';
@@ -781,7 +787,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StagingOptionsPanelGrid.RowHeight       = {'1x','1x','1x','1x','1x','1x','1x'};
             app.StagingOptionsPanelGrid.ColumnSpacing   = 10;
             app.StagingOptionsPanelGrid.RowSpacing      = 0;
-            app.StagingOptionsPanelGrid.Padding         = [0 20 0 20];
+            app.StagingOptionsPanelGrid.Padding         = [0 5 0 5];
             app.StagingOptionsPanelGrid.Layout.Row      = 3;
             app.StagingOptionsPanelGrid.Layout.Column   = 1;
 
@@ -1372,7 +1378,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % explicit pixel heights are required instead.
             app.RunBatchOptionsGrid             = uigridlayout(app.RunBatchGrid);
             app.RunBatchOptionsGrid.ColumnWidth = {500};
-            app.RunBatchOptionsGrid.RowHeight   = {'1x', app.ButtonHeight, app.ButtonHeight, '1x'};
+            app.RunBatchOptionsGrid.RowHeight   = {'1x', '1x', '1x', '1x'};
             app.RunBatchOptionsGrid.RowSpacing  = 4;
             app.RunBatchOptionsGrid.Padding     = [10 0 10 0];
             app.RunBatchOptionsGrid.Layout.Row  = 1;
@@ -2953,19 +2959,19 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         end
 
         function enforceMinSize(app)
-            pos = app.UIFigure.Position;
-
-            % Enforce minimum width
-            if pos(3) < app.MinWidth
-                pos(3) = app.MinWidth;
-            end
-
-            % Enforce minimum height
-            if pos(4) < app.MinHeight
-                pos(4) = app.MinHeight;
-            end
-
-            app.UIFigure.Position = pos;
+            % pos = app.UIFigure.Position;
+            %
+            % % Enforce minimum width
+            % if pos(3) < app.MinWidth
+            %     pos(3) = app.MinWidth;
+            % end
+            %
+            % % Enforce minimum height
+            % if pos(4) < app.MinHeight
+            %     pos(4) = app.MinHeight;
+            % end
+            %
+            % app.UIFigure.Position = pos;
 
             %Cap the distance between the buttons
             g = app.RunBatchGrid;
@@ -2993,7 +2999,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 % The remaining three '1x' columns will share the leftover space.
                 if ~isequal(g.ColumnWidth, {'1x', 150, 150, '1x', '1x'})
                     g.ColumnWidth = {'1x', 150, 150, '1x', '1x'};
-                    disp('capping')
+                    % disp('capping')
                 end
             else
                 % Otherwise, let all five be equal '1x'
