@@ -83,7 +83,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
         % --- FileFormat Saving Tab ---
         FileFormatTab                   matlab.ui.container.Tab         % FileFormat file format options tab
-        FileFormatTabGrid               matlab.ui.container.GridLayout  % Grid inside FileFormat tab
         FileFormatCheckBoxGrid          matlab.ui.container.GridLayout  % Grid for format dropdowns
 
         % --- File Format Dropdowns (FileFormat) ---
@@ -109,7 +108,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         StagesColumnEditFieldLabel      % CSSuiLabel
 
         % --- Stage Label Inputs (Left Panel) ---
-        StagingOptionsPanelGridLeft     matlab.ui.container.GridLayout  % Grid for stage label text fields
         UnknownEditField                % CSSuiEditField                % Identifiers for 'Unknown' stage
         UnknownEditFieldLabel           % CSSuiLabel
         N3EditField                     % CSSuiEditField                % Identifiers for 'N3' stage
@@ -138,9 +136,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         StagingFileInstructionText      % CSSuiLabel                    % Instruction text for staging files
         DataLabel                       % CSSuiLabel                    % Displays 'Data (N Files)'
         DataFileInstructionText         % CSSuiLabel                    % Instruction text for data files
-        StagingListBoxGrid              matlab.ui.container.GridLayout  % Grid to hold the staging list box
         StagingListBox                  matlab.ui.control.ListBox       % Scrollable list of staging file paths
-        DataListBoxGrid                 matlab.ui.container.GridLayout  % Grid to hold the data list box
         DataListBox                     matlab.ui.control.ListBox       % Scrollable list of EDF file paths
 
         % --- File List Action Buttons ---
@@ -187,7 +183,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         output_splinefit_phase_name = '' % Full path for spline fit (phase) output
         output_param_name       = ''   % Full path for parametric basis figure output
         output_spline_name      = ''   % Full path for spline basis figure output
-
 
         % -------------------------
         %   EDF Header Viewer
@@ -259,8 +254,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         FontSizeTitle  = 15   % Section-header and list-title font size (px)
         FontSizeSmall  = 11   % Supplementary / caption font size (px)
 
-        MinWidth
-        MinHeight
+        MinWidth  % Minimal width of the GUI window
+        MinHeight  % Minimal height of the GUI window
     end
 
     % ======================================================================
@@ -410,14 +405,12 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.UIFigure.Name = 'DYNAM-O File Manager';
             app.UIFigure.AutoResizeChildren = 'off';   % grid handles it, not figure
 
-
             % Store minimum size
             app.MinWidth = 1100;
             app.MinHeight = 850;
 
             % Set the callback ON THE PANEL, not the figure
             app.UIFigure.SizeChangedFcn = @(src, event) app.enforceMinSize;
-
 
             % ---- File Menu ----
             app.FileMenu      = uimenu(app.UIFigure);
@@ -441,8 +434,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             rootGrid.ColumnWidth = {'1x'};
 
             % ---- Tab group lives inside the grid, NOT positioned manually ----
-            app.ProjectTabGroup = uitabgroup(rootGrid);   % parent = grid, not figure
-            % app.ProjectTabGroup.Position = [1, 1, app.WindowWidth, app.WindowHeight];
+            app.ProjectTabGroup = uitabgroup(rootGrid); % parent = grid, not figure
 
             % ---- DYNAM-O Setup Tab ----
             app.DYNAMOSetupTab       = uitab(app.ProjectTabGroup);
@@ -481,17 +473,16 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.FileInputGrid                   = uigridlayout(app.FileSelectionGrid);
             app.FileInputGrid.ColumnWidth       = {'1x', '1x'};
             app.FileInputGrid.RowHeight         = {30, 20, '1x', button_height};
-            app.FileInputGrid.ColumnSpacing     = 10;
+            app.FileInputGrid.ColumnSpacing     = 15;
             app.FileInputGrid.RowSpacing        = 0;
-            app.FileInputGrid.Padding           = 0;
+            app.FileInputGrid.Padding           = [5 0 10 0];
             app.FileInputGrid.Layout.Row        = 1;
             app.FileInputGrid.Layout.Column     = 1;
-
             % app.FileInputGrid.BackgroundColor = 'red';
+
             % ============================================================
             %   FILE SELECTION (left column)
             % ============================================================
-
 
             app.DataLabel = CSSuiLabel(app.FileInputGrid, ...
                 'Style', 'shadow', ...
@@ -2973,7 +2964,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %
             % app.UIFigure.Position = pos;
 
-            %Cap the distance between the buttons
+            % 1. Cap the distance between the buttons
             g = app.RunBatchGrid;
             innerPos = g.InnerPosition; % [left bottom width height]
             totalAvailableWidth = innerPos(3);
