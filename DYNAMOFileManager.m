@@ -2123,6 +2123,12 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % Check that every file in both lists actually exists on disk
             missing = {};
+            if size(app.DataList,1) < size(app.DataList,2)
+                app.DataList = app.DataList';
+            end
+            if size(app.StagingList,1) < size(app.StagingList,2)
+                app.StagingList = app.StagingList';
+            end
             for f = [app.DataList, app.StagingList]
                 if ~isfile(f{1}), missing{end+1} = f{1}; end %#ok<AGROW>
             end
