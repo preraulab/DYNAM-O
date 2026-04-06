@@ -93,7 +93,7 @@ end
 bd = stats_table.Boundaries;
 hold on;
 for ii = 1:length(bd)
-    plot(bd{ii}(:, 1)/3600, bd{ii}(:, 2), 'w', 'LineWidth', 1)
+    plot(bd{ii}(:, 1)/3600, bd{ii}(:, 2), 'w', 'LineWidth', 2)
 end
 
 %% Plot EEG trace
