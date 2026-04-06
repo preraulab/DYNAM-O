@@ -231,8 +231,6 @@ t_time_range = t_data(time_range_inds);
 baseline_exclude = baseline_exclude(time_range_inds);
 
 %% Compute spectrogram
-% For more information on the multitaper spectrogram parameters and
-% implementation visit: https://github.com/preraulab/multitaper
 [spect, stimes, sfreqs, dur_min, bw_min, ht_db_min] = compute_spectrogram(mtm_taper_params, [mtm_window_length_1, mtm_window_stepsize], data_time_range, Fs, mtm_dsfreqs, mtm_freq_range, verbose);
 stimes = stimes + t_time_range(1); % adjust the time axis to t_data
 
@@ -251,16 +249,8 @@ end
 exclude_stages = ~ismember(stage_vals, baseline_stages); %stages to use passed in
 exclude_stages_resamp = interp1(stage_times, single(exclude_stages), t_time_range, 'previous')~=0; % ~=0 excludes both 1 and NaN (when t_time_range exceeds the interp1 range)
 baseline_exclude = artifacts(:) | exclude_stages_resamp(:) | baseline_exclude(:);
-% get excluded baseline times occurring at spectrogram times
-baseline_exclude_stimes = logical(interp1(t_time_range, single(baseline_exclude), stimes, 'nearest')); % no need to use ~=0 since t_time_range matches stimes
-% Applying time period trimming for baseline computation
-baseline_range_inds = stimes >= baseline_range(1) & stimes <= baseline_range(2);
-% Exclude segments with artifact/not in baseline include or not within baseline_range for baseline computation
-spect_bl = spect;
-spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
-% Get baseline
-valid_baseline_inds = ~baseline_exclude_stimes & baseline_range_inds;
-baseline = prctile(spect_bl(:, valid_baseline_inds), baseline_ptile, 2); % 2 here indicates along second dimension
+
+baseline = compute_baseline(spect, stimes, t_time_range, baseline_exclude, baseline_range, baseline_ptile);
 
 %% Compute time-frequency peaks
 if verbose
@@ -304,33 +294,11 @@ if double_watershed
     [spect, stimes, sfreqs, ~, bw_min, ht_db_min] = compute_spectrogram(mtm_taper_params, [mtm_window_length_2, mtm_window_stepsize], data_time_range, Fs, mtm_dsfreqs, mtm_freq_range, verbose);
     stimes = stimes + t_time_range(1); % adjust the time axis to t_data
 
-    % Update baseline exclusion - this block is identical to the first round
-    baseline_exclude_stimes = logical(interp1(t_time_range, single(baseline_exclude), stimes, 'nearest')); % no need to use ~=0 since t_time_range matches stimes
-    % Applying time period trimming for baseline computation
-    baseline_range_inds = stimes >= baseline_range(1) & stimes <= baseline_range(2);
-    % Re-compute baseline spectrum
-    % Exclude artifacts, baseline_exclude, and times corresponding to stages not in baseline_stages from baseline computation
-    spect_bl = spect;
-    spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
-    % Get baseline
-    valid_baseline_inds = ~baseline_exclude_stimes & baseline_range_inds;
-    baseline = prctile(spect_bl(:, valid_baseline_inds), baseline_ptile, 2); % 2 here indicates along second dimension
+    % Recompute baseline using the same baseline_exclude computed above
+    baseline = compute_baseline(spect, stimes, t_time_range, baseline_exclude, baseline_range, baseline_ptile);
 
     % Mask the spectrogram using extracted TFpeaks from the first round of watershed
-    % Remove the offset between start times of spects from the two rounds
-    dt = stimes(2)-stimes(1);
-    indshift = round((stimes(1)-stimes_first(1)) / dt) * size(spect, 1); % assuming same sfreqs across spects
-
-    % mask all pixels outside of peak regions as zero
-    region_inds = cat(1, regions{:}) - indshift;
-    region_inds = region_inds(region_inds>=1 & region_inds<=numel(spect)); % limit to valid indices
-    spect_masked = zeros(size(spect));
-    spect_masked(region_inds) = spect(region_inds);
-
-    % mask all border pixels as zero as well
-    border_inds = cat(1, borders{:}) - indshift;
-    border_inds = border_inds(border_inds>=1 & border_inds<=numel(spect)); % limit to valid indices
-    spect_masked(border_inds) = 0;
+    spect_masked = mask_spectrogram(spect, stimes_first, stimes, regions, borders);
 
     % Compute time-frequency peaks
     if verbose
@@ -380,8 +348,11 @@ end
 end
 
 
-%% Helper functions to compute spectrogram and return various parameters
+%% Helper functions
 function [spect, stimes, sfreqs, dur_min, bw_min, ht_db_min] = compute_spectrogram(taper_params, time_window_params, data_time_range, Fs, dsfreqs, freq_range, verbose)
+% For more information on the multitaper spectrogram parameters and implementation visit:
+% https://github.com/preraulab/multitaper
+
 % Fixed multitaper computation parameters
 nfft = 2^(nextpow2(Fs/dsfreqs)); % zero pad data to this minimum value for fft
 detrend = 'constant'; % do not detrend
@@ -411,6 +382,46 @@ else
     [spect,stimes,sfreqs] = multitaper_spectrogram(data_time_range, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
     warning(sprintf('Unable to use mex version of multitaper_spectrogram. Using compiled multitaper spectrogram function will greatly increase the speed of this computaton. \n\nFind mex code at:\n    https://github.com/preraulab/multitaper_toolbox')); %#ok<SPWRN>
 end
+end
+
+
+function baseline = compute_baseline(spect, stimes, t_time_range, baseline_exclude, baseline_range, baseline_ptile)
+% Get excluded baseline times occurring at spectrogram times
+baseline_exclude_stimes = logical(interp1(t_time_range, single(baseline_exclude), stimes, 'nearest')); % no need to use ~=0 since t_time_range matches stimes
+
+% Applying time period trimming for baseline computation
+baseline_range_inds = stimes >= baseline_range(1) & stimes <= baseline_range(2);
+
+% Exclude segments with artifact/not in baseline include or not within baseline_range for baseline computation
+spect_bl = spect;
+spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
+
+% Find valid time points to compute baseline
+valid_baseline_inds = ~baseline_exclude_stimes & baseline_range_inds;
+if ~any(valid_baseline_inds)
+    error('No valid baseline time bins remain after applying artifacts, stage filtering, and baseline_range.');
+end
+
+% Compute baseline
+baseline = prctile(spect_bl(:, valid_baseline_inds), baseline_ptile, 2); % 2 here indicates along second dimension
+end
+
+
+function spect_masked = mask_spectrogram(spect, stimes_first, stimes, regions, borders)
+% Remove the offset between start times of spects from the two rounds
+dt = stimes(2)-stimes(1);
+indshift = round((stimes(1)-stimes_first(1)) / dt) * size(spect, 1); % assuming same sfreqs across spects
+
+% mask all pixels outside of peak regions as zero
+region_inds = cat(1, regions{:}) - indshift;
+region_inds = region_inds(region_inds>=1 & region_inds<=numel(spect)); % limit to valid indices
+spect_masked = zeros(size(spect));
+spect_masked(region_inds) = spect(region_inds);
+
+% mask all border pixels as zero as well
+border_inds = cat(1, borders{:}) - indshift;
+border_inds = border_inds(border_inds>=1 & border_inds<=numel(spect)); % limit to valid indices
+spect_masked(border_inds) = 0;
 end
 
 
