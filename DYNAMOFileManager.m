@@ -2704,7 +2704,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 uialert(app.UIFigure, ...
                     'All files exist and counts match. Ready to process.', ...
                     'Success', 'Icon', 'success');
-                app.StopBatchButton.Enable = 'on';
+                app.StopBatchButton.Enabled = 'on';
             else
                 uialert(app.UIFigure, sprintf('%s\n', app.run_error_list{:}), ...
                     'Run Error', 'Icon', 'error');
@@ -2731,7 +2731,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             end
 
             runBatch(app)
-            app.StopBatchButton.Enable = 'on';
+            app.StopBatchButton.Enabled = 'on';
         end
 
         % ------------------------------------------------------------------
@@ -2908,7 +2908,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.progress_bar.complete();
             fclose(app.consolelog_fid);   % Also stops diary
             fclose(app.runlog_fid);
-            app.z.Enable = 'on';
+            app.z.Enabled = 'on';
 
         end % runBatch
 
