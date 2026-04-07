@@ -38,7 +38,7 @@ function [SOpow_data, SOpow_prop_data, SOpow_time_data, SOphase_data, SOphase_pr
 %
 %   Last modified:
 %       - Created - Tom Possidente 1/03/2022
-%%%************************************************************************************%%%
+%**********************************************************************
 
 
 assert((length(elect_inds) == length(subj_inds)), 'elect_inds and subj_inds must be the same length');

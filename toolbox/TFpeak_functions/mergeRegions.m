@@ -6,7 +6,7 @@ function [regions, borders, adj_mat, pick_update] = mergeRegions(regions,a,b,lbl
 % Usage:
 %   [regions, borders, adj_mat, pick_update] = mergeRegions(regions,a,b,lbls,borders,adj_mat)
 %
-% INPUTS:
+%   Inputs:
 %   regions   -- a 1D cell array with each cell containing a vector of linear
 %            indices of the pixels in the region.
 %   a     -- region label to be merged into
@@ -21,17 +21,17 @@ function [regions, borders, adj_mat, pick_update] = mergeRegions(regions,a,b,lbl
 %            the first column are "to regions", the second column
 %            are "from regions, and the third column is the weight.
 %
-% OUTPUTS:
+%   Outputs:
 %   regions, borders, adj_mat -- versions of inputs after merger
 %   pick_update        -- logical vector indicating weights that need to be
 %                         updated
 %
 %
-%   Please provide the following citation for all use:
+%   Citation:
 %       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-%       for Electroencephalographic Phenotyping and Biomarker Identification,
-%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%       Robert Stickgold, Michael J Prerau, "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification", Sleep, 2022; zsac223.
+%       https://doi.org/10.1093/sleep/zsac223
 %
 %**********************************************************************
 

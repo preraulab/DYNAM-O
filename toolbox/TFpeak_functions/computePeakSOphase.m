@@ -1,5 +1,5 @@
 function [stats_table, SOphase, SOphase_times, SOdata] = computePeakSOphase(varargin)
-% COMPUTEPEAKSOPHASE: Computes the slow oscillation phase for each TF peak in stats_table
+%COMPUTEPEAKSOPHASE  Compute the slow oscillation phase for each TF peak in stats_table
 %
 %   Usage:
 %       [stats_table, SOphase, SOphase_times, SOdata] = computePeakSOphase(stats_table, data, Fs, <options>)
@@ -26,11 +26,11 @@ function [stats_table, SOphase, SOphase_times, SOdata] = computePeakSOphase(vara
 %       SOdata: 1xN double - SO filtered timeseries data
 %
 %
-%   Please provide the following citation for all use:
+%   Citation:
 %       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-%       for Electroencephalographic Phenotyping and Biomarker Identification,
-%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%       Robert Stickgold, Michael J Prerau, "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification", Sleep, 2022; zsac223.
+%       https://doi.org/10.1093/sleep/zsac223
 %**********************************************************************
 
 %%

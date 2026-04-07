@@ -4,7 +4,7 @@ function [spect, bl_threshold] = removeBaseline(spect, baseline, bl_thresh, CI_u
 %   Usage:
 %       [spect, bl_threshold] = removeBaseline(spect, baseline, bl_thresh, CI_upper_bl, f_verb)
 %
-% INPUTS:
+%   Inputs:
 %   spect        --  2D image data used to extract TFpeaks [freq, time] --required
 %   baseline     --  1D baseline spectrum used to normalize the spectrogram. default []
 %   bl_thresh    -- flag indicating use of baseline thresholding to reduce volume of data
@@ -16,17 +16,17 @@ function [spect, bl_threshold] = removeBaseline(spect, baseline, bl_thresh, CI_u
 %                   1 - output current function level.
 %                   defaults to 0. >2 is not recommended unless data is single chunk.
 %
-% OUTPUTS:
+%   Outputs:
 %   spect: spect input with baseline subtracted
 %   wshed_threshold: optional threhsold used to remove noise TFpeaks later
 %
 %
 %
-%   Please provide the following citation for all use:
+%   Citation:
 %       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-%       for Electroencephalographic Phenotyping and Biomarker Identification,
-%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%       Robert Stickgold, Michael J Prerau, "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification", Sleep, 2022; zsac223.
+%       https://doi.org/10.1093/sleep/zsac223
 %**********************************************************************
 
 if nargin<1 || isempty(spect)

@@ -1,27 +1,24 @@
 function [ Ldata ] = cell2Ldata(rgn, data_size, Lborders, min_area)
-%CELL2LDATA takes rgn matrix and converts to labeled 2D form
+%CELL2LDATA  Convert a cell array of region pixel indices to a labeled 2D image matrix
 %
-% Usage:
-%   [ Ldata ] = cell2Ldata( rgn, data_size, Lborders , min_area)
+%   Usage:
+%       Ldata = cell2Ldata(rgn, data_size, Lborders, min_area)
 %
-% OUTPUTS:
-%   rgn       -- two-column matrix of labeled pixels
-%                first col is linear idx of pixels, second col is region label 
-%                border pixels are labeled twice
-%   data_size -- [num_rows num_cols]
-%   Lborders  -- 1D cell array of vector lists of linear idx of border pixels for each region
-%                If given, ASSUMES idx in Lborders corresponds to region
-%                label.
-%   min_area  -- size below which region is zeroed out and ignored. Defaults to zero.  
-% INPUTS:
-%   Ldata   -- 2D matrix of image data. 0 indicates border pixels.
+%   Inputs:
+%       rgn:       cell array - each cell contains a vector of linear pixel indices for a region
+%       data_size: [1x2] double - [num_rows, num_cols] size of the full image
+%       Lborders:  cell array - vector lists of linear idx of border pixels for each region.
+%                  If given, ASSUMES idx in Lborders corresponds to region label. (default: [])
+%       min_area:  double - minimum region size; smaller regions are zeroed out (default: 0)
 %
-%      
-%   Please provide the following citation for all use:
-%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach, 
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis 
-%       for Electroencephalographic Phenotyping and Biomarker Identification, 
-%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%   Outputs:
+%       Ldata:     2D double matrix - labeled image data. 0 indicates border or unlabeled pixels.
+%
+%   Citation:
+%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
+%       Robert Stickgold, Michael J Prerau, "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification", Sleep, 2022; zsac223.
+%       https://doi.org/10.1093/sleep/zsac223
 %
 %**********************************************************************
 

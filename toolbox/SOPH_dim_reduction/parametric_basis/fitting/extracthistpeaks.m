@@ -1,7 +1,8 @@
 function [stats_table, label_img] = extracthistpeaks(img, x, y, merge_thresh, dur_min, bw_min, height_min, trim_vol, f_disp, f_verb)
-%% EXTRACTHISTPEAKS - Determine peak regions within a spectral topography and extract features using watershed
+%EXTRACTHISTPEAKS  Determine peak regions within a spectral topography and extract features using watershed
 %
-%   [stats_table, label_img] = extracthistpeaks(img, x, y, merge_thresh, dur_min, bw_min, height_min, trim_vol, f_disp)
+%   Usage:
+%       [stats_table, label_img] = extracthistpeaks(img, x, y, merge_thresh, dur_min, bw_min, height_min, trim_vol, f_disp, f_verb)
 %
 %   This function determines the peak regions within a spectral topography and extracts a set of features for each peak.
 %
@@ -25,11 +26,11 @@ function [stats_table, label_img] = extracthistpeaks(img, x, y, merge_thresh, du
 %   It returns the peak statistics as a table and, optionally, a labeled RGB image.
 %
 %
-%   Please provide the following citation for all use:
+%   Citation:
 %       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-%       for Electroencephalographic Phenotyping and Biomarker Identification,
-%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%       Robert Stickgold, Michael J Prerau, "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification", Sleep, 2022; zsac223.
+%       https://doi.org/10.1093/sleep/zsac223
 %
 %   Copyright 2023 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
 %**************************************************************************

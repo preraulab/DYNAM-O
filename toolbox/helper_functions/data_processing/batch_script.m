@@ -1,5 +1,40 @@
 function batch_script(varargin)
-%% STILL NEEDS OFFICIAL DOCSTRING
+%BATCH_SCRIPT  Run the DYNAM-O pipeline on a batch of EDF and staging file pairs
+%
+%   Usage:
+%       batch_script(edf_fpaths, scoring_fpaths, output_fpath, stage_col, time_col, channels, ...)
+%
+%   Required Inputs:
+%       edf_fpaths:      char or cell - path(s) to EDF file(s) -- required
+%       scoring_fpaths:  char or cell - path(s) to scoring file(s), one per EDF -- required
+%       output_fpath:    char or cell - output directory path -- required
+%       stage_col:       double - column number for sleep stage data (1-based) -- required
+%       time_col:        double - column number for time data (1-based) -- required
+%       channels:        char or cell - EEG channel label(s) to process -- required
+%
+%   Optional Inputs:
+%       stage_vals_in:               cell - custom 1x7 stage label mappings (default: [])
+%       header_lines:                double - number of header lines in scoring file (default: 0)
+%       start_time:                  char/string - recording start time (default: NaN)
+%       epoch_dur:                   double - epoch duration in seconds (default: 30)
+%       plot_on_staging:             logical - plot hypnogram during staging (default: false)
+%       resample_freq:               double - target resampling frequency in Hz (default: [])
+%       time_range:                  [1x2] double - analysis time range in seconds (default: [])
+%       baseline_options:            struct - baseline estimation options (default: baseline_opts())
+%       detection_options:           struct - TF-peak detection options (default: detection_opts())
+%       SOPH_options:                struct - SOPH options (default: SOpowerphasehist_opts())
+%       param_basis_power_options:   struct - parametric basis options for power (default: param_basis_opts('power'))
+%       param_basis_phase_options:   struct - parametric basis options for phase (default: param_basis_opts('phase'))
+%       spline_basis_power_options:  struct - spline basis options for power (default: spline_basis_opts('power'))
+%       spline_basis_phase_options:  struct - spline basis options for phase (default: spline_basis_opts('phase'))
+%       verbose:                     logical - print progress info (default: true)
+%       save_output_image:           logical - save output images to disk (default: true)
+%       output_fname:                char - output filename base (default: 'DYNAM-O_output')
+%       fit_param_basis:             logical - run parametric fitting (default: true)
+%       fit_spline_basis:            logical - run spline fitting (default: true)
+%
+%   Copyright 2024 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
+%% ********************************************************************
 p = inputParser;
 % Required inputs
 addRequired(p, 'edf_fpaths', @(x) validateattributes(x, {'char','cell'},{}));

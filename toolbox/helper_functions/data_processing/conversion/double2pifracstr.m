@@ -1,31 +1,26 @@
-%%
-%DOUBLE2PIFRACSTR Convert a double to a string representation in terms of pi fractions
+function pi_str = double2pifracstr(val, tol)
+%DOUBLE2PIFRACSTR  Convert a double to a string representation in terms of pi fractions
 %
 %   Usage:
 %       pi_str = double2pifracstr(val, tol)
 %
 %   Input:
 %       val: double - the value to convert to a pi fraction string -- required
-%       tol: double - the tolerance for determining the closeness to a pi fraction (default: 1e-4)
+%       tol: double - tolerance for determining closeness to a pi fraction (default: 1e-10)
 %
 %   Output:
-%       pi_str: char - the string representation of the input value as a fraction of pi or the value itself if not close to a pi fraction
+%       pi_str: char - the string representation of the input value as a fraction of pi,
+%               or the numeric string itself if not close to any simple pi fraction
 %
 %   Example:
-%   In this example, we convert a value close to pi/2 and a value that is not close to any pi fraction.
 %       val1 = pi/2;
-%       tol = 1e-4;
-%       pi_str1 = double2pifracstr(val1, tol);
-%       % pi_str1 should be 'pi/2'
+%       pi_str1 = double2pifracstr(val1);   % Returns 'pi/2'
 %
 %       val2 = 3;
-%       pi_str2 = double2pifracstr(val2);
-%       % pi_str2 should be '3'
+%       pi_str2 = double2pifracstr(val2);   % Returns '3'
 %
-%    Copyright 2023 Prerau Laboratory - sleepEEG.org
+%   Copyright 2023 Prerau Laboratory - sleepEEG.org
 %% ********************************************************************
-
-function pi_str = double2pifracstr(val, tol)
 if nargin < 2
     tol = 1e-10;
 end
@@ -38,13 +33,13 @@ if n<100 && d<100
         pi_str = '-pi';
     elseif n == 1
         pi_str = 'pi';
-    else
+    elseif n == 0
+        pi_str = '0';
+    elseif d == 1
         pi_str = [num2str(n) '*pi'];
-    end
-
-    if d>1
-        pi_str = [pi_str '/' num2str(d)];
+    else
+        pi_str = ['(' num2str(n) '*pi)/' num2str(d)];
     end
 else
-   pi_str = [];
+    pi_str = num2str(val);
 end

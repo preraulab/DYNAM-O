@@ -1,10 +1,10 @@
 function stats_table = computePeakStatsTable(regions,boundaries,data,xvalues,yvalues,segment_num, features)
 % COMPUTEPEAKSTATSTABLE Creates a table of the region properties for the peaks
 %
-% USAGE:
+%   Usage:
 %   statsTable = computePeakStatsTable(regions, boundaries, data, xvalues, yvalues, segment_num)
 %
-% INPUTS:
+%   Inputs:
 %   regions    -- 1D cell array of vector lists of linear idx of all pixels for each region.
 %   boundaries -- 1D cell array of vector lists of linear idx of border pixels for each region.
 %   data       -- 2D matrix of image data. defaults to peaks(100).
@@ -15,15 +15,15 @@ function stats_table = computePeakStatsTable(regions,boundaries,data,xvalues,yva
 %                 {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData', 
 %                  'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. default 'all'
 %
-% OUTPUTS:
+%   Outputs:
 %   stats_table   -- Table of peak statistics
 %
 %
-%   Please provide the following citation for all use:
+%   Citation:
 %       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-%       for Electroencephalographic Phenotyping and Biomarker Identification,
-%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%       Robert Stickgold, Michael J Prerau, "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification", Sleep, 2022; zsac223.
+%       https://doi.org/10.1093/sleep/zsac223
 %
 %**********************************************************************
 

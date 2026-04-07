@@ -2,409 +2,677 @@
 <img src=https://user-images.githubusercontent.com/78376124/214062562-4f8fc73b-5a0a-4cf7-b219-9d0de101528d.png>
 </p>
 
-## DYNAM-O: The Dynamic Oscillation Toolbox for MATLAB - Prerau Laboratory ([sleepEEG.org](https://prerau.bwh.harvard.edu/))
+## DYNAM-O: The Dynamic Oscillation Toolbox for MATLAB — Prerau Laboratory ([sleepEEG.org](https://prerau.bwh.harvard.edu/))
 
-#### This repository contains the updated and optimized MATLAB toolbox code for extracting time-frequency peaks from EEG data and creating slow-oscillation power and phase histograms. [Our Python port, pyDYNAM-O is available here.](https://github.com/preraulab/pyDYNAM-O)
+This repository contains the updated and optimized MATLAB toolbox for extracting transient oscillatory events from sleep EEG and characterizing them via slow-oscillation power and phase histograms. A [Python port (pyDYNAM-O)](https://github.com/preraulab/pyDYNAM-O) is also available.
 
-## Citations
-### Paper and Toolbox
-Please cite the following paper when using this package: 
-> Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach, Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis for Electroencephalographic Phenotyping and Biomarker Identification, Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+---
 
-The toolbox can be referred to in the text as:
-> Prerau Lab's Dynamic Oscillation Toolbox (DYNAM-O) v1.0 (sleepEEG.org/)
+## Citation
 
-The paper is available open access at https://doi.org/10.1093/sleep/zsac223
+Please cite the following paper when using this toolbox:
 
-#### Perceptually Uniform Colormaps
-Included in this package are versions of a rainbow and "gouldian" colormap, designed to be more perceptually uniform than jet and parula, respectively. If you use them, please cite:
-> Peter Kovesi. Good Colour Maps: How to Design Them. arXiv:1509.03700 [cs.GR] 2015 https://arxiv.org/abs/1509.03700
---- 
-## Initial Clone 
+> Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach, Robert Stickgold, Michael J Prerau, *Transient Oscillation Dynamics During Sleep Provide a Robust Basis for Electroencephalographic Phenotyping and Biomarker Identification*, Sleep, 2022; zsac223. https://doi.org/10.1093/sleep/zsac223
 
-To clone the DYNAM-O_dev.git repository to your own computer or remote work station, you need to create an empty folder to contain the repository. You can name it whatever you want and place it wherever you want. For a post on the subtle differences between different git versions on initial clone: https://stackoverflow.com/questions/3796927/how-to-git-clone-including-submodules 
- 
- ##### create an empty folder:
-	mkdir DYNAM-O_dev
+Refer to the toolbox in text as:
+> Prerau Lab's Dynamic Oscillation Toolbox (DYNAM-O) v1.0 (sleepEEG.org)
 
- ##### clone the repository to the folder you created:
-	git clone --recursive git@github.com:preraulab/DYNAM-O_dev.git DYNAM-O_dev
+If using the included perceptually uniform colormaps (`gouldian`, `rainbow4`), also cite:
+> Peter Kovesi. *Good Colour Maps: How to Design Them*. arXiv:1509.03700 [cs.GR] 2015. https://arxiv.org/abs/1509.03700
 
- ##### set to master branch for all submodules:
-	git submodule foreach --recursive git checkout master
- 
- ##### to update submodules:
-	git submodule update --remote
- --- 
-## Tutorial
-A full description of the toolbox and tutorial [can be found on the Prerau Lab site](https://prerau.bwh.harvard.edu/DYNAM-O/).
+---
 
 ## Table of Contents
-* [Overview](#overview)
-* [Background and Motiviation](#background-and-motivation)
-* [Quick Start](#quick-start-using-the-toolbox)
-* [Algorithm Summary](#algorithm-summary)
-* [Optimizations](#optimizations)
-* [Repository Structure](#repository-structure)
 
-## Overview 
+- [Overview](#overview)
+- [Background and Motivation](#background-and-motivation)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Main Pipeline Functions](#main-pipeline-functions)
+  - [runDYNAMO](#rundynamo)
+  - [DYNAMO (OOP class)](#dynamo-oop-class)
+  - [DYNAMOFileManager (GUI)](#dynamofilemanager-gui)
+- [Key Sub-Functions](#key-sub-functions)
+  - [computeTFPeaks](#computetfpeaks)
+  - [SOpowerphaseHistogram](#sopowerphasehIstogram)
+- [Options and Configuration](#options-and-configuration)
+  - [Detection Options](#detection-options-detection_opts)
+  - [Baseline Options](#baseline-options-baseline_opts)
+  - [SO-Power/Phase Histogram Options](#so-powerphase-histogram-options-sopowerphasehist_opts)
+- [Output Reference](#output-reference)
+  - [stats_table — TF-Peak Features](#stats_table--tf-peak-features)
+  - [SOPHs — Histogram Struct](#sophs--histogram-struct)
+- [Algorithm Details](#algorithm-details)
+  - [Part 1: TF-Peak Detection](#part-1-tf-peak-detection)
+  - [Part 2: Feature Computation](#part-2-feature-computation)
+  - [Part 3: Feature Histograms](#part-3-feature-histograms)
+  - [Part 4: Statistical Testing](#part-4-statistical-testing)
+  - [SO-Power Computation and Normalization](#so-power-computation-and-normalization)
+  - [SO-Phase Computation](#so-phase-computation)
+- [Repository Structure](#repository-structure)
+- [Required Toolboxes](#required-toolboxes)
 
-This repository contains code to detect time-frequency peaks (TF peaks) in a spectrogram of EEG data using the approach based on the one described in ([Stokes et. al, 2022](https://doi.org/10.1093/sleep/zsac223)). TF peaks represent transient oscillatory neural activity with in the EEG, which by definition will appear as a peak in the time-frequency topography of the spectrogram. Within sleep, perhaps the most important transient EEG oscillation is the sleep spindle, which has been linked to memory consolidation, and changes spindle activity have been linked with natural aging as well as numerous psychiatric and neurodegenerative disorders. This approach extracts TF peaks by identifies salient peaks in the time-frequency topography of the spectrogram, using a method based on the watershed algorithm, which was original developed for computer vision applications. The dynamics of the TF peaks can then be described in terms of continuous correlates of sleep depth and cortical up/down states using representations called slow-oscillation (SO) power and phase histograms. This package provides the tools for TF peak extraction as well as the creation of the SO-power/phase histograms.
+---
+
+## Overview
+
+The primary goal of DYNAM-O is to provide an analytic framework for characterizing and understanding the multidimensional dynamics of spindle-like transient oscillations in the sleep EEG spectrogram. This framework includes methods to extract time-frequency peaks (TF-peaks) and their properties, to visualize distributions of TF-peak features in an interpretable and efficient manner, and to conduct statistical tests to gain insights into sleep physiology. In doing so, DYNAM-O provides a powerful tool through which researchers can explore stable features of sleep EEG, efficiently capturing the neural dynamics of tens of thousands of transient oscillatory events throughout the night.
+
+The pipeline is structured into four main parts:
+
+1. **TF-peak identification** — extract transient oscillation events from a multitaper spectrogram using a watershed-based algorithm
+2. **Feature computation** — compute microscopic (geometry, location) and macroscopic (sleep stage, SO-power, SO-phase) properties for each peak
+3. **Feature histograms** — encode the overnight distribution of TF-peak properties into SO-power and SO-phase histograms, with optional parametric and spline dimensionality reduction
+4. **Statistical testing** — whole-histogram and mode-based group comparisons with FDR correction and permutation testing
+
+The analyses can be applied autonomously to any single-channel electrophysiological recording from overnight sleep EEG data.
+
+---
 
 ## Background and Motivation
 
-Scientists typically study brain activity during sleep using the electroencephalogram, or EEG, which measures brainwaves at the scalp. Starting in the mid 1930s, the sleep EEG was first studied by looking at the traces of brainwaves drawn on a paper tape by a machine. Many important features of sleep are still based on what people almost a century ago could most easily observe in the complex waveform traces. Even the latest machine learning and signal processing algorithms for detecting sleep waveforms are judged against their ability to recreate human observation. What then can we learn if we expand our notion of sleep brainwaves beyond what was historically easy to identify by eye? 
+Electroencephalography (EEG) is one of the most important modalities for studying sleep physiology. Both macroscopic structures of sleep, such as distinct sleep stages, and microscopic features such as sleep spindles, have been established as part of the clinical manual for sleep scoring. However, brain wave patterns in polysomnography (PSG) are noisy and difficult to quantify, often producing diverging results from repeated recordings or from two different raters reading the same recording. It is challenging to determine whether within-subject changes in EEG measures over multiple nights are meaningful or simply natural variability.
 
-<figure><img src="https://prerau.bwh.harvard.edu/images/EEG-time%20trace.png" alt="eeg trace" style="width:100%">
-<figcaption align = "center"><b>An original paper tape trace of EEG from the 1930s, showing sleep spindles. (Loomis et. al 1935)</b></figcaption></figure>
-<br/><br/>
+EEG signals during sleep are primarily generated by cortical activity, whose neuronal and subcortical origins presumably do not change drastically from night to night. This suggests that some features of sleep should be robust to nightly perturbations while being highly individualized. Indeed, recent studies have revealed numerous stable and individualized features of sleep, including aspects of the EEG power spectrum, waveform morphological traits, and properties of sleep spindles. Measures that capture these stable patterns carry great potential to be more representative of an individual's physiological state during sleep and more informative of underlying neural dynamics.
 
-One particularly important set of sleep brainwave events are called sleep spindles. These spindles are short oscillation waveforms, usually lasting less than 1-2 seconds, that are linked to our ability to convert short-term memories to long-term memories. Changes in spindle activity have been linked with numerous disorders such as schizophrenia, autism, and Alzheimer’s disease, as well as with natural aging. Rather than looking for spindle activity according to the historical definition, we develop a new approach to automatically extract tens of thousands of short spindle-like transient oscillation waveform events from the EEG data throughout the entire night. This approach takes advantage of the fact that transient oscillations will looks like high-power regions in the spectrogram, which represent salient time-frequency peaks (TF peaks) in the spectrogram.
-<br/><br/>
+A common challenge for sleep EEG measures is that conventional measures are often derived heuristically rather than from a principled basis. Sleep spindles, for example, are traditionally defined as a train of distinct waves oscillating within 11–16 Hz lasting more than 0.5 seconds — a definition that stems from the earliest days of visual PSG inspection. Imposing hard-coded cutoffs may appear to enforce consistent standards but in fact renders outcome measures more variable and less interpretable due to bias. Our earlier work showed that sleep spindles detected by human experts represent only about 30% of spindle-like transient oscillations in the spindle frequency range during NREM sleep. When considering all detectable transient oscillations, there is a much stronger night-to-night stability in event counts than in spindle rates or spectral power.
 
-<figure><img src="https://prerau.bwh.harvard.edu/images/TF peak%20detection_small.png" alt="TF peaks" style="width:100%"> <figcaption align = "center"><b>Transient oscillation activity in the time domain will appear as contiguous high-power regions in the spectrogram, which represent salient peaks (TF peaks) in the time-frequency topography.</b></figcaption></figure>
-<br/><br/>
+By studying all transient oscillations from spectrograms in an agnostic way, we coined the term **time-frequency peaks (TF-peaks)** to denote spindle-like electrophysiological events in sleep EEG. These TF-peaks turned out to be highly robust and individualized across multiple nights of sleep from the same subjects. Furthermore, studying TF-peaks allowed us to summarize in a single view the dynamics of tens of thousands of transient oscillations, revealing previously unreported changes in low-alpha transient oscillations in schizophrenia patients compared to controls.
 
-The TF peak detection method is based on the watershed algorithm, which is commonly used in computer vision applications to segment an image into distinct objects. The watershed method treats an image as a topography and identifies the catchment basins, that is, the troughs, into which water falling on the terrain would collect.
-<br/><br/>
+<figure><img src="https://prerau.bwh.harvard.edu/images/TF peak%20detection_small.png" alt="TF peaks" style="width:100%">
+<figcaption><b>Transient oscillation activity in the time domain appears as contiguous high-power regions (TF-peaks) in the spectrogram.</b></figcaption></figure>
+<br/>
 
-<figure><img src="https://prerau.bwh.harvard.edu/images/SOpowphase_small.png" alt="SO-power/phase histograms" style="width:100%"> <figcaption align = "center"><b>Slow-oscillation power and phase histograms create representations of TF peak activity as function of continuous depth-of-sleep and as a function of timing with respect to cortical up/down states.</b></figcaption></figure>
-<br/><br/>
+Rather than stratifying TF-peaks by fixed sleep stages, DYNAM-O characterizes their activity against two continuous markers of brain state during sleep:
+- **Slow-oscillation power (SO-power)**: a continuous proxy for depth of sleep
+- **Slow-oscillation phase (SO-phase)**: timing relative to cortical up/down states
 
-Next, instead of looking at the waveforms in terms of fixed sleep stages (i.e., Wake, REM, and non-REM stages 1-3) as di standard sleep studies, we can characterize the full continuum of gradual changes that occur in the brain during sleep. We use the slow oscillation power (SO-phase) as a metric of continuous depth of sleep, and slow-oscillation phase (SO-phase) to represent timing with respect to cortical up/down states. By characterizing TF peak activity in terms of these two metrics, we can create graphical representations, called SO-power and SO-phase histograms. This creates a comprehensive representation of transient oscillation dynamics at different time scales, providing a highly informative new visualization technique and powerful basis for EEG phenotyping and biomarker identification in pathological states. To form the SO-power histogram, the central frequency of the TF peak and SO-power at which the peak occured are computed. Each TF peak is then sorted into its corresponding 2D frequency x SO-power bin and the count in each bin is normalized by the total sleep time in that SO-power bin to obtain TF peak density in each grid bin. The same process is used to form the SO-phase histograms except the SO-phase at the time of the TF peak is used in place of SO-power, and each row is normalized by the total peak count in the row to create probability densities.
+These produce **SO-power** and **SO-phase histograms** — comprehensive, continuous representations of transient oscillation dynamics that capture structures of TF-peak distributions more robustly than conventional averaging approaches.
 
-## Quick Start: Using the Toolbox
+<figure><img src="https://prerau.bwh.harvard.edu/images/SOpowphase_small.png" alt="SO-power/phase histograms" style="width:100%">
+<figcaption><b>SO-power and SO-phase histograms encode TF-peak activity as a function of sleep depth and cortical state timing.</b></figcaption></figure>
 
-An [example script](https://github.com/preraulab/DYNAM-O/blob/main_public/example_script.m) is provided in the repository that takes an excerpt of a single channel of [example sleep EEG data](https://github.com/preraulab/DYNAM-O/blob/main_public/example_data/example_data.mat) and runs the TF peak detection watershed algorithm and the SO-power and SO-phase analyses, plotting the resulting hypnogram, spectrogram, TF peak scatterplot, SO-power histogram, and SO-phase histogram (shown below). 
+---
 
-After installing the package, execute the example script on the command line:
+## Installation
 
-``` matlab
-> example_script;
+Clone the repository with submodules:
+
+```bash
+mkdir DYNAM-O_dev
+git clone --recursive git@github.com:preraulab/DYNAM-O_dev.git DYNAM-O_dev
+git submodule foreach --recursive git checkout master
 ```
 
-Once a parallel pool has started (if applicable), the following result should be generated: 
+To update submodules later:
 
-<figure ><img src="https://prerau.bwh.harvard.edu/images/TFpeakDynamics_segment.png" alt="example segment" width="40%;">
-<figcaption><b>Output from the example segment of data provided with the toolbox.</b></figcaption></figure>
-<br/><br/>
-
-This is the general output for the algorithm. On top is the hypnogram, EEG spectrogram, and the SO-power trace. In the middle is a scatterplot of the TF peaks with x = time, y = frequency, size = peak prominence, and color = SO-phase. On the bottom are the SO-power and SO-phase histograms.
-
-Additionally, you should get a peak statistics table `stats_table` that has all of the detected peaks. The example script also creates `stats_table_SOPH`, which has the features for just the peaks used in the SO-power/phase histograms and is used for plotting. 
-
-These tables have the following features for each peak:
-
-| **Feature**   | **Description**                                                  | **Units**       |
-|---------------|------------------------------------------------------------------|-----------------|
-| Area          | Time-frequency area of peak                                      | sec*Hz          |
-| BoundingBox   | Bounding Box: (top-left time, top-left freq, width, height)      | (sec, Hz, sec, Hz) |
-| HeightData    | Height of all pixels within peak region                          | μV^2/Hz         |
-| Volume        | Time-frequency volume of peak in s*μV^2                          | sec*μV^2        |
-| Boundaries    | (time, frequency) of peak region boundary pixels                 | (seconds, Hz)    |
-| PeakTime      | Peak time based on weighted centroid                             | sec             |
-| PeakFrequency | Peak frequency based on weighted centroid                        | Hz              |
-| Height        | Peak height above baseline                                       | μV^2/Hz         |
-| Duration      | Peak duration in seconds                                         | sec             |
-| Bandwidth     | Peak bandwidth in Hz                                             | Hz              |
-| SegmentNum    | Data segment number                                              | #               |
-| PeakStage     | Stage: 6 = Artifact, 5 = W, 4 = R, 3 = N1, 2 = N2, 1 = N3, 0 = Unknown | Stage #         |
-| SOpower       | Slow-oscillation power at peak time                              | dB              |
-| SOphase       | Slow-oscillation phase at peak time                              | rad             |
-
-
-You can also look at an overview of the resultant peak data by typing the following in the command prompt (omit the semicolon to see output):
-``` matlab
-summary(stats_table)
-```
-### Changing the Preset Time Range
-Once the segment has succesfully completed, you can run the full night of data by changing the following line in the example script under `DATA SETTINGS`, such that the variable data_range changes from 'segment' to 'night'.
-
-``` matlab
-%%Select 'segment' or 'night' for example data range
-data_range = 'night';
-```
-This should produce the following output:
-<figure><img src="https://prerau.bwh.harvard.edu/images/TFpeakDynamics.png" alt="full night example" style="width:40%"> <figcaption><b>Output from the example full night of data provided with the toolbox.</b></figcaption></figure>
-<br/><br/>
-
-For more in-depth information and documentation on the Transient Oscillation Dynamics algorithms visit [the Prerau Lab website.](https://prerau.bwh.harvard.edu/DYNAM-O)
-<br/><br/>
-
-### Changing the Quality Settings
-The following preset settings are available in our example script under `ALGORITHM SETTINGS`. As all data are different, it is essential to verify equivalency before relying on a speed-optimized solution other than precision.
-
-- “precision”:  Most accurate assessment of individual peak bounds and phase
-- “fast”: Faster approach, with accurate SO-power/phase histograms, minimal difference in phase
-- “draft”: Fastest approach. Good SO-power/phase histograms but with increased high-frequency peaks. Not recommended for assessment of individual peaks or precision phase estimation.
-
-Adjust these by selecting the appropriate and changing `quality_setting` from 'fast' to the appropriate quality setting.
-
-``` matlab
-%Quality settings for the algorithm:
-%   'precision': high res settings
-%   'fast': speed-up with minimal impact on results *suggested*
-%   'draft': faster speed-up with increased high frequency TF peaks, *not recommended for analyzing SOphase*
-quality_setting = 'draft';
+```bash
+git submodule update --remote
 ```
 
-### Changing the SO-power Normalization
+No separate installation step is needed. `runDYNAMO` automatically adds the toolbox to the MATLAB path via `addpath(genpath(...))`.
 
-There are also multiple normalization schemes that can be used for the SO-power.
+---
 
-- 'none': No normalization. The unaltered SO-power in dB.
-- 'p5shift':	Percentile shifted. The Nth percentile of artifact free SO-power during sleep (non-wake) times is computed and subtracted. We use the 5th percentile by default, as it roughly corresponds with aligning subjects by N1 power. This is the recommended normalization for any multi-subject comparisons.
-- 'percent': %SO-power. SO-power is scaled between 1st and 99th percentile of artifact free data during sleep (non-wake) times. This this only appropriate for within-night comparisons or when it is known all subjects reach the same stage of sleep.
-- 'proportional': The ratio of slow to total SO-power.
+## Quick Start
 
-To change this, change `SOpower_norm_method` to the appropriate value.
+### Run the bundled example
 
-``` matlab
-%Normalization setting for computing SO-power histogram:
-%   'p5shift': Aligns at the 5th percentile, important for comparing across subjects
-%   'percent': Scales between 1st and 99th ptile. Use percent only if subjects all reach stage 3
-%   'proportion': ratio of SO-power to total power
-%   'none': No normalization. Raw dB power
-SOpower_norm_method = 'p5shift';
+```matlab
+% Segment (~90 minutes):
+runDYNAMO('segment');
+
+% Full night:
+runDYNAMO('night');
 ```
 
-### Changing Extracted Features
+This loads `example_data/example_data.mat`, runs the full pipeline, and produces a summary figure showing the hypnogram, spectrogram, TF-peak scatter, and SO-power/phase histograms.
 
-There are multiple different features that can be extracted for each peak region during the watershed pipeline (see table above).
+### Run on your own data
 
-To change this, adjust `features` to include the names of interested features.
-
-``` matlab
-%Select features for speed:
-%To include all features swap out with the line below
-%features = 'all';
-%or select from:
-%features = {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData',...
-%            'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'}
-features = {'Area', 'Bandwidth', 'Duration', 'Height', 'PeakFrequency', 'PeakTime', 'Volume'};
+```matlab
+% Minimal call — all options use defaults
+[stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = ...
+    runDYNAMO(data, Fs, stage_times, stage_vals);
 ```
 
-## Saving Output
-You can save the image output by adjusting these lines: 
-``` matlab
-%Save figure image
-save_output_image = false;
-output_fname = [];
+### OOP interface
+
+```matlab
+d = DYNAMO(data, Fs, stage_times, stage_vals);
+d.runDYNAMO();
+d.fitParamBasis();
+fh = d.displaySummaryPlot();
 ```
 
-You can also save the raw data with by changing the value of `save_peak_properties`:
-``` matlab
-%Save peak property data
-%   0: Does not save anything
-%   1: Saves a subset of properties for each TFpeak 
-%   2: Saves all properties for all peaks (including rejected noise peaks) 
-save_peak_properties = 0;
+### GUI batch processing
+
+```matlab
+DYNAMOFileManager();
 ```
 
-## Running Your Own Data
-The two main functions to run are computeTFPeaks() and SOpowerphaseHistogram().
+---
 
-The first function applys the watershed algorithm to extract time-frequency peaks
-``` matlab
-computeTFPeaks(data, Fs, stage_vals, stage_times, <options>);
-```
-It uses the following inputs:
-``` matlab
-%       data (req):                [1xn] double - timeseries data to be analyzed
-%       Fs (req):                  double - sampling frequency of data (Hz)
-%       stage_vals (req):          [1xm] double - sleep stage values at eaach time in
-%                                  stage_times. Note the staging convention: 0=unidentified, 1=N3,
-%                                  2=N2, 3=N1, 4=REM, 5=WAKE
-%       stage_times (req):         [1xm] double - timestamps of stage_vals
-%       t_data (opt):              [1xn] double - timestamps for data. Default = (0:length(data)-1)/Fs;
-%       time_range (opt):          [1x2] double - section of EEG to use in analysis
-%                                  (seconds). Default = [min(t_data), max(t_data)]
-%       downsample_spect(opt):     2x1 double indicating number of rows and columns to downsize spect to
-%       features (opt):            [1xf] char or cell array of char -
-%                                  features to be extracted from each peak region. Can be any subset of
-%                                  {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData', 
-%                                   'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. Default = 'all'
-%       artifacts (opt):           [1xn] logical - boolean indicating artifact time points. Default = [], run detect_artifacts()
-%       artifact_filters (opt):    struct with 2 digitalFilter fields "hpFilt_high","hpFilt_broad" -
-%                                  filters to be used for artifact detection
-%       stages_include (opt):      [1xp] double - which stages to include in the SO-power and
-%                                  SO-phase histograms. Default = [1,2,3,4]
-%                                  W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
-%       verbose (opt):             logical - display extra info. Default = true
-%       quality_setting (opt):     charcater - Quality settings for the algorithm:
-%                                       'precision': high res settings
-%                                       'fast' (default): speed-up with minimal impact on results *suggested*
-%                                       'draft': faster speed-up with increased high frequency TF peaks, *not recommended for analyzing SOphase*
-```
-The outputs are:
-``` matlab
-%       stats_table:  table - time, frequency, height, SOpower, and SOphase
-%                     for each TFpeak
-%       spect:        2D double - spectrogram of data
-%       stimes:       1D double - timestamp bin center values for dimension 2 of
-%                     spect
-%       sfreqs:       1D double - frequency bin center values for dimension 1 of
-%                     spect
-%       data_trunc:   [1xn] double - timeseries data in time_range
-%       t_data_trunc: [1xn] double - timestamps for data in time_range
-%       artifacts:    1xT logical of times flagged as artifacts (logical OR of hf and bb artifacts)
+## Main Pipeline Functions
+
+### `runDYNAMO`
+
+The primary functional entry point. Orchestrates the complete pipeline and returns all outputs.
+
+```matlab
+[stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = ...
+    runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options, ...)
 ```
 
-The second function works in tandem with the first and computes slow-oscillation power and phase histograms
-``` matlab
-SOpowerphaseHistogram(data_trunc, Fs, stats_table.PeakFrequency, stats_table.PeakTime, <options>);
-```
-It uses the following inputs:
-``` matlab
-%    REQUIRED:
-%       EEG: 1xN double - timeseries EEG data --required
-%       Fs: numerical - sampling frequency of EEG (Hz) --required
-%       TFpeak_freqs: Px1 - frequency each TF peak occurs (Hz) --required
-%       TFpeak_times: Px1 - times each TF peak occurs (s) --required
-%
-%    OPTIONAL:
-%       TFpeak_stages: Px1 - sleep stage each TF peak occurs 5=W,4=R,3=N1,2=N2,1=N3
-%       stage_vals:  1xS double - numeric stage values 5=W,4=R,3=N1,2=N2,1=N3
-%       stage_times: 1xS double - stage times
-%       freq_range: 1x2 double - min and max frequencies of TF peak to include in the histograms
-%                   (Hz). Default = [0,40]
-%       freq_binsizestep: 1x2 double - [size, step] frequency bin size and bin step for frequency
-%                         axis of SO power/phase histograms (Hz). Default = [1, 0.2]
-%       SOpower_range: 1x2 double - min and max SO power values to consider in SO power analysis.
-%                      Default calculated using min and max of SO power
-%       SOpower_binsizestep: 1x2 double - [size, step] SO power bin size and step for SO power axis
-%                            of histogram. Units are radians. Default
-%                            size is (SOpower_range(2)-SOpower_range(1))/5, default step is
-%                            (SOpower_range(2)-SOpower_range(1))/100
-%       SOphase_range: 1x2 double - min and max SO phase values (radians) to consider in SO phase analysis.
-%                                   Default is [-pi, pi]
-%       SOphase_binsizestep: 1x2 double - [size, step] SO phase bin size and step for SO phase axis
-%                            of histogram. Units are radians. Default size is 2*pi/5, default step is 2*pi/100
-%       SO_freqrange: 1x2 double - min and max frequencies (Hz) considered to be "slow oscillation".
-%                     Default = [0.3, 1.5]
-%       SOPH_stages: stages in which to restrict the SOPHs. Default: 1:3 (NREM only)
-%                    W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
-%       compute_rate: logical - histogram output in terms of TFpeaks/min instead of count.
-%                               Default = true.
-%       SOpower_outlier_threshold: double - cutoff threshold in standard deviation for excluding outlier SOpower values.
-%                                  Default = 3.
-%       SOpower_norm_method: char - normalization method for SOpower. Options:'pNshiftS', 'percent', 'proportion', 'none'. Default: 'p2shift1234'
-%                         For shift, it follows the format pNshiftS where N is the percentile and S is the list of stages (5=W,4=R,3=N1,2=N2,1=N3).
-%                         (e.g. p2shift1234 = use the 2nd percentile of stages N3, N2, N1, and REM,
-%                               p5shift123 = use the 5th percentile of stages N3, N2 and N1)
-%       SOpower_retain_Fs: logical - whether to upsample calculated SOpower to the sampling rate of EEG. Default = true
-%       SOpower_min_time_in_bin: numerical - time (minutes) required in each SO power bin to include
-%                                          in SOpower analysis. Otherwise all values in that SO power bin will
-%                                          be NaN. Default = 10.
-%       SOphase_filter: 1xF double - custom filter that will be used to estimate SOphase
-%       SOphase_norm_dim: integer - which dimension of the SOphase histogram to normalize to add to 1. Default = 1
-%       EEG_times: 1xN double - times for each EEG sample. Default = (0:length(EEG)-1)/Fs
-%       time_range: 1x2 double - min and max times for which to include TFpeaks. Also used to normalize
-%                   SOpower. Default = [EEG_times(1), EEG_times(end)]
-%       isexcluded: 1xN logical - marks each timestep of EEG as artifact or non-artifact. Default = all false.
-%
-%       plot_on: logical - SO power histogram plots. Default = false
-%       verbose: logical - Verbose output. Default = true
-```
-The outputs are:
-``` matlab
-%       SOpow_mat:    2D double - SO power histogram data
-%       SOphase_mat:  2D double - SO phase histogram data
-%       SOpow_bins:   1D double - SO power bin center values for dimension 1 of SOpow_mat
-%       SOphase_bins: 1D double - SO phase bin center values for dimension 1 of SOphase_mat
-%       freq_bins:    1D double - frequency bin center values for dimension 2
-%                     of SOpow_mat and SOphase_mat
-%       SOpow_TIB:    1xT double - time (minutes) in each SOpower bin for all stages 1-5 (0min if not in SOPH_stages)
-%       SOphase_TIB:  1xT double - time (minutes) in each SOphase bin for all stages 1-5 (0min if not in SOPH_stages)
-%       peak_SOpower: 1xP double - normalized slow oscillation power at each TFpeak
-%       peak_SOphase: 1xP double - slow oscillation phase at each TFpeak
-%       peak_selection_inds: 1xP logical - which TFpeaks are counted in the histogram
-%       SOpower: 1xM double - SO power timeseries data
-%       SOpower_times: 1xM double - SO power timeseries times
-%       SOphase: 1xN double - SO phase timeseries data
-%       SOphase_times: 1xN double - SO phase timeseries times
+**Required inputs:**
+
+| Argument | Type | Description |
+|---|---|---|
+| `data` | `[N×1] double` | Single-channel EEG time series |
+| `Fs` | `double` | Sampling frequency (Hz) |
+| `stage_times` | `[1×S] double` | Sleep stage time markers (s) |
+| `stage_vals` | `[1×S] double` | Stage labels: 1=N3, 2=N2, 3=N1, 4=REM, 5=Wake |
+
+**Optional name-value inputs:**
+
+| Name | Default | Description |
+|---|---|---|
+| `time_range` | full scored range | `[start, end]` in seconds |
+| `baseline_options` | `baseline_opts()` | Baseline subtraction parameters |
+| `detection_options` | `detection_opts()` | TF-peak detection parameters |
+| `SOPH_options` | `SOpowerphasehist_opts()` | Histogram computation parameters |
+| `param_basis_power_options` | `param_basis_opts('power')` | Parametric fit options for SO-power histogram |
+| `param_basis_phase_options` | `param_basis_opts('phase')` | Parametric fit options for SO-phase histogram |
+| `spline_basis_power_options` | `spline_basis_opts('power')` | Spline fit options for SO-power histogram |
+| `spline_basis_phase_options` | `spline_basis_opts('phase')` | Spline fit options for SO-phase histogram |
+| `stats_table` | `[]` | Precomputed peak table (bypasses detection) |
+| `fit_param_basis` | `true` | Run parametric Gaussian/von Mises fits |
+| `fit_spline_basis` | `true` | Run spline fits |
+| `plot_on` | `true` | Generate summary figure |
+| `save_output_image` | `false` | Save figure to disk |
+| `output_fname` | `'DYNAM-O_output'` | Output filename for saved figure |
+| `verbose` | `true` | Print progress info |
+
+**Outputs:** See [Output Reference](#output-reference).
+
+---
+
+### `DYNAMO` (OOP class)
+
+An object-oriented wrapper around `runDYNAMO` that stores data, options, and results as properties.
+
+```matlab
+d = DYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options);
+d.runDYNAMO();
+d.fitParamBasis();
+d.fitSplineBasis();
+fh = d.displaySummaryPlot();
 ```
 
-# Documentation and Tutorials
+**Key properties:** `Data`, `Fs`, `stage_times`, `stage_vals`, `stats_table`, `spect`, `stimes`, `sfreqs`, `artifacts`, `SOPHs`
 
-For more comprehensive documentation see [this tutorial on the Prerau Lab site](https://prerau.bwh.harvard.edu/DYNAM-O/)
+**Key methods:**
 
-## Algorithm Summary
-Here we provide a brief summary of the steps for the TF peak detection as well as for the SO-power histogram. 
+| Method | Description |
+|---|---|
+| `runDYNAMO()` | Run the full pipeline |
+| `updateOptions(opts)` | Update options and re-run |
+| `fitParamBasis()` | Fit parametric Gaussian/von Mises to histograms |
+| `fitSplineBasis()` | Fit spline basis to histograms |
+| `displaySummaryPlot()` | Generate and return summary figure |
+| `displayTFPeaks()` | Overlay detected peaks on spectrogram |
 
-### Transient Oscillation Detection 
-Inputs: Raw EEG timeseries and Spectrogram of EEG timeseries 
-1. Artifact Detection 
-2. Baseline Subtraction
-    * Find 2nd percentile of non-artifact data and subtract from spectrogram 
-3. Spectrogram Segmentation
-    * Breaks spectrogram into 30 second segments enabling parallel processing on each segment concurrently
-4. Extract TF peaks for each segment (in parallel):
-    * Downsample high resolution segment via decimation depending on downsampling settings. Using a lower resolution version of the segment for watershed and merging allows a large runtime decrease.
-    * Run Matlab watershed image segmentation on lower resolution segment
-    * Create adjacency list for each region found from watershed
-      * Loop over each region and dialate slightly to find all neighboring regions
-    * Merge over-segmented regions to form large, distinct TF peaks 
-      * Calculate a merge weight for each set of neighbors
-      * Regions are merged iteratively starting with the largest merge weight, and affected merge weights are recalculated after each merge until all merge weights are below a set threshold.
-    * Interpolate TF peak boundaries back onto high-resolution version of spectrogram segment
-    * Reject TF peaks below bandwidth and duration cutoff criteria (done here to reduce number of peaks going forward to save on computation time)
-    * Trim all TF peaks to 80% of their total volume
-    * Compute and store statistics for each peak (pixel indices, boundary indices, centroid frequency and time, amplitude, bandwidth, duration, etc.)
-5. Package TF peak statistics from all segments into a single feature matrix
-6. Reject TF peaks above or below bandwidth and duration cutoff criteria
+---
 
-### SO-power Histogram Calculation
-Inputs: Raw EEG timeseries and TF peak frequencies and times
-1. Compute SO-Power on artifact rejected EEG timeseries
-    * Compute multitaper spectrogram of EEG timeseries (30s windows, 15s stepsize, 29 tapers, 1Hz resolution)
-    * Integrate spectrogram between 0.3 and 1.5 Hz 
-2. Normalize SO-Power via selected method
-    * Percent normalization: Subtracts 1st percentile and divides by 99th percentile. Used only if subjects all reach stage 3
-    * p5shift normalization: Subtracts 5th percentile, important for comparing across subjects
-    * proportion normalization: Ratio of SO-power to total power
-    * No normalization
-3. Create SO-Power and frequency bins based on desired SO-Power and frequency window and step sizes
-4. Compute TF peak rate in each pixel of SO-Power-Frequency histogram
-    * Count how many TF peaks fall into each pixel's given frequency and SO-Power bin
-    * Divide by total sleep time spent in the given SO-Power bin
- 
-### SO-phase Histogram Calculation
-Inputs: Raw EEG timeseries and TF peak frequencies and times
-1. Compute SO-Phase on 0.3-1.5Hz bandpassed EEG timeseries
-    * Compute Herbert transform of bandpassed signal
-    * Unwrap Herbert phase (so that it is in terms of cumulative radians)
-    * Interpolate phase at each TF peak time 
-    * Rewrap phase of each TF peak so that 0 radians corresponds to SO peak and -pi or pi corresponds to SO trough
-2. Create SO-Phase and frequency bins based on desired SO-Phase and frequency window and step sizes
-3. Compute TF peak rate in each pixel of SO-Phase-Frequency histogram
-    * Count how many TF peaks fall into each pixel's given frequency and SO-Phase bin
-    * Divide by total sleep time spent in the given SO-Phase bin
-4. Normalize each frequency row of histogram so that row integration adds to 1
- 
-## Optimizations 
-This code is an optimized version of what was used in Stokes et. al., 2022. The following is a list of the changes made during optimization. The original unoptimized paper code can be found [here](https://github.com/preraulab/DYNAM-O/tree/transient_oscillation_paper).
-* Candidate TF peak regions that are below the duration and bandwidth cutoffs are now removed prior to trimming and peak property calculations
-* Empty regions that come out of the merge procedure are now removed prior to trimming and peak property calculations
-* Watershed and the merging procedure now run on a lower resolution spectrogram (downsampled from the input spectrogram using decimation) to get the rough watershed regions, which are then mapped back onto the high-resolution spectrogram, from which trimming and peak property calculations are done.
-* Spectrogram segment size reduced from 60s to 30s
-* During the merging process, the adjacency list is now stored as unidirectional graph (instead of bidirectional), and only the larger of the merging weights between two regions is stored during iterative merge weight computation. 
+### `DYNAMOFileManager` (GUI)
+
+An App Designer application for batch processing EDF polysomnography files.
+
+```matlab
+DYNAMOFileManager();
+```
+
+**Features:**
+- Add/remove EDF and staging file pairs
+- Channel selection and staging format configuration (delimiter, column indices, stage labels)
+- Configure all pipeline options via the GUI
+- Save outputs: figures, stats tables, parametric fits, spline fits
+- Batch progress tracking with per-file logging
+
+---
+
+## Key Sub-Functions
+
+### `computeTFPeaks`
+
+Runs the watershed-based TF-peak extraction pipeline on raw EEG.
+
+```matlab
+[stats_table, spect, stimes, sfreqs, data_trunc, t_data_trunc, artifacts] = ...
+    computeTFPeaks(data, Fs, stage_vals, stage_times, ...)
+```
+
+**Required inputs:**
+
+| Argument | Description |
+|---|---|
+| `data` | `[1×N] double` — EEG time series |
+| `Fs` | Sampling frequency (Hz) |
+| `stage_vals` | Sleep stage values at each `stage_times` |
+| `stage_times` | Timestamps of stage values |
+
+**Key optional inputs:**
+
+| Name | Default | Description |
+|---|---|---|
+| `t_data` | `(0:N-1)/Fs` | Timestamps for data samples |
+| `time_range` | full data range | `[start, end]` (s) to analyze |
+| `features` | `'all'` | Features to extract (see table below) |
+| `artifacts` | `[]` (auto-detect) | Precomputed artifact mask |
+| `quality_setting` | `'default'` | `'stokes_2023'`, `'precision'`, or `'default'` |
+| `verbose` | `true` | Print progress |
+
+**Outputs:**
+
+| Name | Description |
+|---|---|
+| `stats_table` | Table of TF-peak features (see below) |
+| `spect` | `[F×T]` multitaper spectrogram |
+| `stimes` | Spectrogram time centers (s) |
+| `sfreqs` | Frequency bins (Hz) |
+| `data_trunc` | Data within `time_range` |
+| `t_data_trunc` | Timestamps for `data_trunc` |
+| `artifacts` | `[1×T] logical` artifact mask |
+
+---
+
+### `SOpowerphaseHistogram`
+
+Creates 2D SO-power and SO-phase histograms from TF-peak data.
+
+```matlab
+[SOpow_mat, SOphase_mat, SOpow_bins, SOphase_bins, freq_bins, ...
+ SOpow_TIB, SOphase_TIB, peak_SOpower, peak_SOphase, ...
+ peak_selection_inds, SOpower, SOpower_times, SOphase, SOphase_times] = ...
+    SOpowerphaseHistogram(EEG, Fs, TFpeak_freqs, TFpeak_times, ...)
+```
+
+**Required inputs:**
+
+| Argument | Description |
+|---|---|
+| `EEG` | `[1×N] double` — EEG time series |
+| `Fs` | Sampling frequency (Hz) |
+| `TFpeak_freqs` | `[P×1]` — frequency of each TF peak (Hz) |
+| `TFpeak_times` | `[P×1]` — time of each TF peak (s) |
+
+**Key optional inputs:**
+
+| Name | Default | Description |
+|---|---|---|
+| `stage_vals` / `stage_times` | — | For stage-restricted histograms |
+| `freq_range` | `[0, 40]` Hz | Frequency axis range |
+| `freq_binsizestep` | `[1, 0.2]` Hz | Frequency bin size and step |
+| `SO_freqrange` | `[0.3, 1.5]` Hz | Slow-oscillation band definition |
+| `SOpower_norm_method` | `'p2shift1234'` | SO-power normalization (see below) |
+| `SOPH_stages` | `[1, 2, 3]` | Stages to include (default: NREM only) |
+| `compute_rate` | `true` | Output peaks/min instead of count |
+| `SOpower_min_time_in_bin` | `10` min | Minimum occupancy per SO-power bin |
+| `plot_on` | `false` | Plot histograms |
+
+**Outputs:**
+
+| Name | Description |
+|---|---|
+| `SOpow_mat` | `[B×F]` SO-power histogram |
+| `SOphase_mat` | `[B×F]` SO-phase histogram |
+| `SOpow_bins` | SO-power bin centers |
+| `SOphase_bins` | SO-phase bin centers (rad) |
+| `freq_bins` | Frequency bin centers (Hz) |
+| `SOpow_TIB` | Time-in-bin per SO-power bin (min) |
+| `SOphase_TIB` | Time-in-bin per SO-phase bin (min) |
+| `peak_SOpower` | Normalized SO-power at each peak |
+| `peak_SOphase` | SO-phase at each peak (rad) |
+| `SOpower` / `SOpower_times` | Full SO-power timeseries |
+| `SOphase` / `SOphase_times` | Full SO-phase timeseries |
+
+---
+
+## Options and Configuration
+
+### Detection Options (`detection_opts`)
+
+Control the spectrogram computation, watershed algorithm, and peak filtering.
+
+```matlab
+opts = detection_opts('quality_setting', 'default', 'trim_vol', 0.8, ...);
+```
+
+**Quality presets** (set `downsample_spect`, `seg_time`, `merge_thresh` together):
+
+| Setting | Downsample | Segment | Merge Threshold | Use Case |
+|---|---|---|---|---|
+| `'stokes_2023'` | none | 60 s | 8 | Reproduces published results |
+| `'precision'` | none | 30 s | 8 | Highest accuracy |
+| `'default'` | 2×2 | 30 s | 11 | Recommended for general use |
+
+**All parameters:**
+
+| Parameter | Default | Description |
+|---|---|---|
+| `quality_setting` | `'default'` | Preset (see above) |
+| `double_watershed` | `true` | Use two-pass watershed (1s + 2s windows) |
+| `downsample_spect` | `[]` | `[time_factor, freq_factor]` decimation before watershed |
+| `seg_time` | `[]` | Segment duration for parallel processing (s) |
+| `merge_thresh` | `[]` | Stop merging when weight falls below this value |
+| `max_merges` | `Inf` | Maximum region merges allowed |
+| `trim_vol` | `0.8` | Trim peaks to this fraction of maximum volume |
+| `dur_max` | `5` s | Reject peaks longer than this |
+| `bw_max` | `15` Hz | Reject peaks wider than this |
+| `mtm_freq_range` | `[0, 30]` Hz | Spectrogram frequency range |
+| `mtm_taper_params` | `[2, 3]` | Multitaper `[time-BW, num-tapers]` |
+| `mtm_window_length_1` | `1` s | Window for first watershed pass |
+| `mtm_window_length_2` | `2` s | Window for second watershed pass |
+| `mtm_window_stepsize` | `0.05` s | Spectrogram window step |
+| `mtm_dsfreqs` | `0.1` Hz | Spectrogram frequency resolution |
+| `refinement` | `true` | Refine peak frequency with 1Hz Hann spectrum |
+| `features` | `'all'` | Features to extract (see stats_table below) |
+| `show_pbar` | `true` | Show progress bar during segmented processing |
+| `debug_mode` | `false` | Run segments serially instead of parfor |
+
+---
+
+### Baseline Options (`baseline_opts`)
+
+Control how the spectrogram baseline is estimated and subtracted.
+
+```matlab
+opts = baseline_opts('baseline_ptile', 2, 'baseline_stages', [1,2,3,4,5]);
+```
+
+| Parameter | Default | Description |
+|---|---|---|
+| `baseline_stages` | `[1,2,3,4,5]` | Sleep stages used for baseline estimation |
+| `baseline_exclude` | `[]` | Additional time points to exclude from baseline |
+| `baseline_ptile` | `2` | Percentile of power used as baseline |
+| `baseline_trim` | `[-Inf, Inf]` | Time range for baseline estimation, or buffer (min) around first/last sleep period |
+
+---
+
+### SO-Power/Phase Histogram Options (`SOpowerphasehist_opts`)
+
+Control binning, normalization, and filtering for the SO-power and SO-phase histograms.
+
+```matlab
+opts = SOpowerphasehist_opts('SOpower_norm_method', 'p5shift123', 'SOPH_stages', 1:3);
+```
+
+**Key parameters:**
+
+| Parameter | Default | Description |
+|---|---|---|
+| `freq_range` | `[0, 40]` Hz | Frequency axis range for histograms |
+| `freq_binsizestep` | `[1, 0.2]` Hz | Frequency `[bin size, step]` |
+| `SO_freqrange` | `[0.3, 1.5]` Hz | Band defining "slow oscillation" |
+| `SOpower_norm_method` | `'p2shift1234'` | Normalization (see below) |
+| `SOpower_binsizestep` | adaptive | SO-power `[bin size, step]` |
+| `SOphase_binsizestep` | `[2π/5, 2π/100]` rad | SO-phase `[bin size, step]` |
+| `SOPH_stages` | `[1, 2, 3]` | Stages included in histograms (NREM by default) |
+| `SOpower_min_time_in_bin` | `10` min | Minimum time-in-bin for SO-power axis |
+| `SOphase_min_peak_at_freq` | `1` | Minimum peaks per frequency row in SO-phase histogram |
+| `SOphase_norm_dim` | `1` | Dimension over which SO-phase rows normalize to 1 |
+| `SOpower_outlier_threshold` | `3` SD | Exclude SO-power outliers beyond this threshold |
+| `compute_rate` | `true` | Output peaks/min (rate) rather than raw count |
+| `SOpower_retain_Fs` | `true` | Upsample SO-power timeseries to EEG sampling rate |
+| `tapers` | `[5, 9]` | Multitaper params for SO-power computation |
+| `window_params` | `[5, 0.5]` s | Window `[length, step]` for SO-power spectrogram |
+
+**SO-power normalization methods:**
+
+| Method | Description |
+|---|---|
+| `'p2shift1234'` | Subtract 2nd percentile of NREM+REM SO-power *(default)* |
+| `'pNshiftS'` | Subtract Nth percentile computed over stages S (e.g., `'p5shift123'` = 5th percentile of N3/N2/N1) |
+| `'percent'` | Scale between 1st and 99th percentile of artifact-free sleep data |
+| `'proportion'` | Ratio of SO-power to total power |
+| `'none'` | No normalization — raw dB power |
+
+> **Note:** `p5shift` (percentile-shifted) is recommended for multi-subject comparisons as it aligns subjects at approximately the same sleep depth baseline. `percent` is only appropriate for within-night comparisons where all subjects reach N3.
+
+---
+
+## Output Reference
+
+### `stats_table` — TF-Peak Features
+
+A MATLAB table with one row per detected TF peak. Available features (controlled by `detection_opts.features`):
+
+| Feature | Units | Description |
+|---|---|---|
+| `PeakTime` | s | Peak centroid time (weighted) |
+| `PeakFrequency` | Hz | Peak centroid frequency (refined with 1Hz Hann window) |
+| `Height` | μV²/Hz | Peak amplitude above baseline |
+| `Area` | s·Hz | Time-frequency area of peak region |
+| `Duration` | s | Peak duration |
+| `Bandwidth` | Hz | Peak bandwidth |
+| `Volume` | s·μV² | Time-frequency volume of peak |
+| `BoundingBox` | (s, Hz, s, Hz) | `[top-left time, top-left freq, width, height]` |
+| `HeightData` | μV²/Hz | Amplitude at every pixel within peak region |
+| `Boundaries` | (s, Hz) | `(time, frequency)` of boundary pixels |
+| `SegmentNum` | # | Index of the processing segment containing this peak |
+| `PeakStage` | — | Sleep stage at peak time (0=Unknown, 1=N3, 2=N2, 3=N1, 4=REM, 5=Wake, 6=Artifact) |
+| `SOpower` | dB | Normalized SO-power at peak time |
+| `SOphase` | rad | SO-phase at peak time (0=SO peak, ±π=SO trough) |
+
+---
+
+### `SOPHs` — Histogram Struct
+
+The `SOPHs` struct returned by `runDYNAMO` contains:
+
+| Field | Description |
+|---|---|
+| `SOpow_mat` | `[B×F]` SO-power histogram (peaks/min or count) |
+| `SOphase_mat` | `[B×F]` SO-phase histogram (probability density or count) |
+| `SOpow_bins` | SO-power bin centers |
+| `SOphase_bins` | SO-phase bin centers (rad) |
+| `freq_bins` | Frequency bin centers (Hz) |
+| `SOpow_TIB` | Time-in-bin for each SO-power bin (min) |
+| `SOphase_TIB` | Time-in-bin for each SO-phase bin (min) |
+| `peak_SOpower` | Normalized SO-power at each TF peak |
+| `peak_SOphase` | SO-phase at each TF peak (rad) |
+| `peak_selection_inds` | Logical mask of peaks included in histograms |
+| `SOpower` / `SOpower_times` | Full SO-power timeseries and times |
+| `SOphase` / `SOphase_times` | Full SO-phase timeseries and times |
+| `pow_param_fit` | Parametric fit results for SO-power histogram (if `fit_param_basis=true`) |
+| `phase_param_fit` | Parametric fit results for SO-phase histogram (if `fit_param_basis=true`) |
+| `pow_spline_fit` | Spline fit for SO-power histogram (if `fit_spline_basis=true`) |
+| `phase_spline_fit` | Spline fit for SO-phase histogram (if `fit_spline_basis=true`) |
+
+---
+
+## Algorithm Details
+
+### Part 1: TF-Peak Detection
+
+```
+computeTFPeaks()
+├── multitaper_spectrogram()       DPSS tapers, [2,3] params, 1s/0.05s window
+├── detect_artifacts()             dual z-score threshold (HF + broadband)
+├── removeBaseline()               subtract 2nd-percentile baseline spectrum
+└── runSegmentedData()             split into 30s segments, run in parfor
+    ├── [downsample spectrogram]   decimation for speed (quality-dependent)
+    ├── runWatershed()             watershed on negated spectrogram
+    ├── computeMergeWeights()      edge intensity between adjacent regions
+    ├── mergeRegions()             iterative merge until weight < merge_thresh
+    ├── [map back to full res]     interpolate boundaries onto original grid
+    ├── trimWshedRegions()         trim to 80% of total peak volume
+    ├── computePeakStatsTable()    area, centroid, bandwidth, height, etc.
+    └── [filter by dur/bw]         reject peaks outside dur_max / bw_max
+```
+
+**Spectrogram estimation.** DYNAM-O uses the multi-taper method (MTM) with Fourier transforms to obtain spectrograms. While wavelet transforms are often used in sleep EEG analysis, MTM provides regularly discretized and equal controls of spectral and temporal resolutions, and MTM spectrograms are more conducive for the subsequent image processing steps used to identify transient oscillation events.
+
+**Spectrogram normalization.** Electrophysiological recordings exhibit a 1/f-shaped drop-off in power with frequency. To emphasize transient increases in spectral power from oscillations above and beyond this aperiodic background, DYNAM-O normalizes the spectrogram by subtracting a baseline spectrum estimated as the 2nd percentile of spectral power at each frequency across non-artifact periods of the recording.
+
+**Watershed segmentation.** The watershed algorithm — an image segmentation method widely used in computer vision — identifies local sinks on a landscape where water flowing downward would get trapped. By applying the watershed algorithm to a baseline-corrected spectrogram with negated power spectral density, DYNAM-O identifies all prominent local peaks at once, where each "catchment basin" corresponds to a candidate transient oscillation event.
+
+**Region merging.** Running watershed on a noisy spectrogram produces an enormous number of small peaks, since every tiny local maximum will be treated as a distinct region (severe over-segmentation). DYNAM-O addresses this with a custom merging algorithm that iteratively recombines neighboring watershed regions into larger peaks with better-defined structure. Merging is based on a mathematical rule that gives rise to an iterative bootstrapping process; neighboring regions are merged in order of decreasing edge weight until all remaining weights fall below `merge_thresh`. Merged peaks above minimal detection thresholds are retained as TF-peaks; the rest are discarded as noise.
+
+**Volume trimming.** Because spectral peaks are relatively sparse on real EEG spectrograms, the output of the merging algorithm contains a few prominent peaks each with a wide, flat base extending to the border of the next peak. These extended contours do not well represent the main body of the spectral peak. Each detected peak is therefore trimmed to retain 80% of its volume, yielding contours that tightly enclose the central mass of the peak and exclude the flat regions from watershed/merging.
+
+**Sequential optimization for temporal and spectral resolution.** The ability to distinguish adjacent TF-peaks is limited by the spectrogram's spectral and temporal resolutions, which are determined by MTM parameters. Due to the uncertainty principle, trading off these resolutions at the spectrogram stage is unavoidable. DYNAM-O therefore performs two rounds of watershed-merging-trimming on two spectrograms computed with different MTM parameters (1s and 2s windows), sequentially optimizing first for temporal and then for spectral resolution. This allows transient oscillation events that are adjacent in the time-frequency space to be identified as distinct TF-peaks.
+
+**Parallel processing.** The pipeline splits the spectrogram into 30-second segments processed independently in a `parfor` loop, then stitches results together. For speed, watershed and merging run on a decimated version of the spectrogram; boundaries are interpolated back to the full-resolution grid afterward.
+
+---
+
+### Part 2: Feature Computation
+
+For each identified TF-peak, DYNAM-O computes two types of feature properties:
+
+**Microscopic properties** describe the geometry and location of the peak on the spectrogram: time, frequency, height, area, duration, bandwidth, volume, and bounding box (see [stats_table](#stats_table--tf-peak-features)).
+
+**Macroscopic properties** capture the contextual brain state at the time of each peak: scored sleep stage, slow-oscillation power (SO-power), and slow-oscillation phase (SO-phase). These are motivated by extensive literature on discrete sleep stages, continuous measures of sleep depth, and cross-frequency coupling of fast transient oscillations with cortical up/down states reflected by slow oscillations.
+
+**Peak frequency refinement.** The spectrogram used for TF-peak extraction has a spectral resolution of ~2 Hz (from the 2s MTM window). Many electroencephalographic phenomena during sleep — such as slow vs. fast sleep spindles — manifest with frequency separations less than 2 Hz. DYNAM-O therefore performs an additional peak frequency estimation using a Hann window function to achieve a refined spectral resolution, reducing variability and better preserving the separability of TF-peak clusters at close frequencies. This refinement is critical for the interpretability of subsequent feature histograms.
+
+---
+
+### Part 3: Feature Histograms
+
+Rather than stratifying TF-peaks by fixed frequency cutoffs or sleep stage labels — which impose arbitrary boundaries and ignore substantial within-stage variability — DYNAM-O takes a distributional approach. Feature histograms encode the occurrence of tens of thousands of discrete TF-peak events across the multi-dimensional feature space, providing a condensed snapshot of overnight sleep dynamics.
+
+**SO-power histogram.** A 2D histogram encoding the density of TF-peak occurrence (events/minute) as a function of peak frequency and SO-power (a continuous proxy for depth of sleep). This reveals how different types of transient oscillations emerge and change across the full continuum of sleep depth throughout the night.
+
+**SO-phase histogram.** A 2D histogram encoding the density of TF-peaks as a function of peak frequency and SO-phase (the instantaneous phase of the slow oscillation, where 0 rad = SO peak and ±π = SO trough). Because SO-phase is circular, row densities are normalized to sum to 1 across each peak frequency, producing probability distributions. This reveals the preferred timing of different oscillation types relative to cortical up/down states.
+
+<figure><img src="https://prerau.bwh.harvard.edu/images/SOpowphase_small.png" alt="SO-power/phase histograms" style="width:100%">
+<figcaption><b>Example SO-power (left) and SO-phase (right) histograms from an overnight sleep EEG recording.</b></figcaption></figure>
+<br/>
+
+**Dimensionality reduction.** Feature histograms are non-parametric summaries with ~8,000 bins, making direct statistical comparison challenging. DYNAM-O provides two approaches for dimensionality reduction:
+
+- **Parametric fitting** (`param_basis_power`, `param_basis_phase`): Seeds initial parameters by running a second watershed pass on the histogram itself (`extracthistpeaks`), then fits a sum of basis functions via nonlinear least squares:
+  - *SO-power*: rotated 2D Gaussians — `[amplitude, f_mean, f_std, power_mean, power_std, rotation_angle]`
+  - *SO-phase*: von Mises × Gaussian hybrids — `[amplitude, f_mean, f_std, phase_preference, kappa]` — handling the circular periodicity of phase
+  - Mode selection via `select_modes` prunes redundant modes by amplitude, overlap, and ΔR²; the `kneedle` algorithm identifies the optimal mode count from a scree plot
+
+- **Spline fitting** (`spline_basis` / `SOPH2spline`): Fits bivariate least-squares splines to the 2D histogram surface, reducing ~8,000 bins to ~100 spline coefficients. Produces smoother fits than the parametric approach, with fewer edge artifacts, and is better suited to complex or irregular mode patterns.
+
+---
+
+### Part 4: Statistical Testing
+
+**Feature and mode analysis.** Hypothesis testing can be performed on individual TF-peak feature properties from `stats_table` (analogous to conventional spindle analyses but extended to all TF-peaks), or on parametric mode parameters extracted from fitted histograms. Distributional comparisons (e.g., Kolmogorov–Smirnov tests) can be conducted on any feature property across conditions or cohorts.
+
+**Whole-histogram analysis.** Given feature histograms from multiple subjects or recording sessions, DYNAM-O supports "whole-histogram" group comparisons (analogous to whole-brain voxel-wise fMRI analyses). Two approaches are implemented:
+
+- **Pixel-wise FDR testing** (`FDR_2D`): Two-sample or paired-sample statistical tests at each histogram bin, with false discovery rate controlled at 10% using the Benjamini–Yekutieli procedure.
+- **Global permutation testing** (`gpermtest`): Tests on the linearized feature histograms based on the number of bins exceeding one-dimensional acceptance bounds, providing greater sensitivity to detect small but consistent differences between histograms.
+
+---
+
+### SO-Power Computation and Normalization
+
+SO-power is the integrated multitaper spectral power in the slow-oscillation band (default 0.3–1.5 Hz):
+
+1. Compute multitaper spectrogram (default: [5,9] tapers, 5s window, 0.5s step)
+2. Integrate spectrogram between 0.3 and 1.5 Hz
+3. Normalize by selected method (see [SO-power normalization methods](#so-power-normalization-methods))
+4. Optionally upsample to EEG sampling rate
+
+### SO-Phase Computation
+
+SO-phase is the instantaneous phase of the slow-oscillation signal:
+
+1. Bandpass filter EEG to SO band (default 0.3–1.5 Hz) — precomputed FIR filters or IIR fallback
+2. Apply Hilbert transform to obtain complex analytic signal
+3. Unwrap phase to be monotonically increasing (cumulative radians)
+4. Interpolate unwrapped phase at each TF peak time
+5. Re-wrap to `[-π, π]` where **0 rad = SO peak** and **±π = SO trough**
+
+---
 
 ## Repository Structure
-The contents of the "toolbox" folder is organized as follows, with key functions:
 
 ```
-.REPO_ROOT
-├── example_script.m:         Quick start example, computes the SO-Power and SO-Phase histograms, and plots a summary 
-│                                 figure. Uses example data contained in example_data folder.│   
-├── example_data/  CONTAINS EXAMPLE DATA
-└── toolbox/       MAIN TOOLBOX FOLDER  
-    ├── SOphase_filters/   
-    │         - SOphase_filters.mat: File containing precomputed digital filters used in the SO-Phase calculation
-    ├── SOpowphase_functions/
-    │         - SOpowerphaseHistogram.m: Compute SO-power and SO-phase histograms 
-    ├── TFpeak_functions/
-    │         - computeTFPeaks.m: Run watershed pipeline on spectrogram to extract time-frequency peaks  
-    └── helper_functions/
-              - Contains various utility functions for spectral estimation and plotting
+DYNAMO_dev/
+├── DYNAMO.m                         OOP pipeline class
+├── runDYNAMO.m                      Functional pipeline entry point
+├── DYNAMOFileManager.m              GUI batch processing app
+├── example_data/
+│   ├── example_data.mat             Single-channel sleep EEG example
+│   └── runExampleData.m             Example data loader
+└── toolbox/
+    ├── TFpeak_functions/            Watershed TF-peak extraction
+    │   ├── computeTFPeaks.m         Main detection function
+    │   ├── runWatershed.m           MATLAB watershed segmentation
+    │   ├── runSegmentedData.m       Parallel segment processing
+    │   ├── extractTFPeaks.m         Region feature extraction
+    │   ├── computePeakStatsTable.m  Build stats table from regions
+    │   ├── mergeRegions.m           Region merge implementation
+    │   ├── computeMergeWeights.m    Adjacency edge weights
+    │   ├── trimWshedRegions.m       Volume-based peak trimming
+    │   ├── removeBaseline.m         Percentile baseline subtraction
+    │   ├── refinePeakFrequency.m    Sub-resolution frequency refinement
+    │   ├── computePeakStage.m       Assign sleep stage to each peak
+    │   ├── computePeakSOpower.m     Assign SO-power to each peak
+    │   ├── computePeakSOphase.m     Assign SO-phase to each peak
+    │   ├── displaySummaryPlot.m     Summary visualization
+    │   ├── displayTFPeaks.m         Peak overlay on spectrogram
+    │   └── option_sets/
+    │       ├── detection_opts.m     Detection parameter struct
+    │       └── baseline_opts.m      Baseline parameter struct
+    ├── SOpowphase_functions/        SO-power/phase computation and histograms
+    │   ├── SOpowerphaseHistogram.m  Main histogram function
+    │   ├── computeSOpower.m         SO-power timeseries
+    │   ├── computeSOphase.m         SO-phase timeseries (Hilbert)
+    │   ├── SOpowerHistogram.m       SO-power histogram wrapper
+    │   ├── SOphaseHistogram.m       SO-phase histogram wrapper
+    │   ├── TFPeakHistogram.m        1D frequency histogram
+    │   └── SOpowerphasehist_opts.m  Histogram options struct
+    ├── SOPH_dim_reduction/          Parametric and spline fitting
+    │   ├── param_basis_power.m      Rotated Gaussian fits (SO-power)
+    │   ├── param_basis_phase.m      von Mises fits (SO-phase)
+    │   ├── spline_basis.m           Bivariate spline fits
+    │   ├── fit_rotGauss.m           Rotated 2D Gaussian fitting
+    │   ├── fit_vmGauss.m            von Mises × Gaussian fitting
+    │   ├── extracthistpeaks.m       Watershed on histogram for seeding
+    │   ├── select_modes.m           Mode pruning and selection
+    │   ├── kneedle.m                Elbow detection in scree plots
+    │   ├── plot_SOPH_paramfits.m    Parametric fit visualization
+    │   ├── plot_SOPH_splinefits.m   Spline fit visualization
+    │   └── [utilities]              mode_centroid, mode_overlap, get_mode_params, ...
+    ├── TFsigma_peak_detector/       Alternative sigma-band peak detector
+    │   ├── TF_peak_detection.m      Frequency/time peak detection
+    │   ├── TF_peak_selection.m      Signal/noise discrimination
+    │   ├── find_frequency_peaks.m   Frequency-domain peak finding
+    │   ├── find_time_peaks.m        Time-domain peak finding
+    │   └── [utilities]              extract_freq_clusters, extract_event_centroid, ...
+    └── helper_functions/            Utilities organized by category
+        ├── multitaper_spectrogram/  DPSS multitaper spectral estimation (+ MEX)
+        ├── artifact_detection/      detect_artifacts, detect_artifacts_hjorth
+        ├── read_EDF/                read_EDF, header_gui, load_data
+        ├── plotting/                hypnoplot, figdesign, colormaps, scrollzoompan
+        ├── statistical_tests/       permtest, gpermtest, FDR_1D, FDR_2D
+        ├── data_processing/         nanzscore, nanpow2db, get_chunks, create_bins
+        └── conversion/              csv2table, read_staging, struct2nvp, hmstext2seconds
 ```
+
+---
+
+## Required Toolboxes
+
+| Toolbox | Required For |
+|---|---|
+| **Signal Processing Toolbox** | Filtering, Hilbert transform, DPSS windows |
+| **Curve Fitting Toolbox** | Parametric Gaussian/von Mises fitting |
+| **Statistics and Machine Learning Toolbox** | Distribution fitting, FDR correction |
+| **Parallel Computing Toolbox** | *(Optional)* `parfor` in `runSegmentedData` — significant speedup for long recordings |
+
+---
+
+## Documentation and Tutorials
+
+For in-depth documentation and video tutorials, visit the [Prerau Lab DYNAM-O page](https://prerau.bwh.harvard.edu/DYNAM-O/).

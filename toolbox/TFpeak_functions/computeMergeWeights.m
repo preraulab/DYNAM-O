@@ -6,7 +6,7 @@ function e_wts = computeMergeWeights(rgn,data,rgn_lbls,rgn_bnds,amatr,merge_rule
 % Usage:
 %    e_wts = computeMergeWeights(rgn,data,rgn_lbls,rgn_bnds,amatr,merge_rule,f_verb,verb_pref)
 %
-% INPUTS:
+%   Inputs:
 %   rgn      -- a 1D cell array with each cell containing a vector of linear
 %               indices of the pixels in the region.
 %   data     -- the 2D image matrix from which the regions were identified.
@@ -19,9 +19,11 @@ function e_wts = computeMergeWeights(rgn,data,rgn_lbls,rgn_bnds,amatr,merge_rule
 %               each row contains region lables of two adjacent regions.
 %               the first column are "to regions", and the second column
 %               are "from regions.
-%   merge_rule --
+%   merge_rule  - char   - merge weight formula to use; currently only
+%                          'default' is implemented (reserved for future
+%                          alternative merge rules). Pass [] to use default.
 %
-% OUTPUTS:
+%   Outputs:
 %   e_wts -- a vector storing the edge weights, one for each row of directed
 %            adjacency in amatr.
 %
@@ -138,8 +140,8 @@ min_bnds_ii = min(data(bnds_ii));
 min_bnds_jj = min(data(bnds_jj));
 
 %Get the max data values
-max_rgn_ii = max(data(rgn_jj));
-max_rgn_jj = max(data(rgn_ii));
+max_rgn_ii = max(data(rgn_ii));
+max_rgn_jj = max(data(rgn_jj));
 
 %Compute the weights for each
 eii = 2*max_adj - min_bnds_ii - max_rgn_jj;

@@ -1,5 +1,40 @@
 function [SOpower_norm, SOpower_times, SOpower_stages, norm_method, ptile] = computeSOpower(varargin)
-% COMPUTESOPOWER: Computes slow oscillation power
+%COMPUTESOPOWER  Compute slow oscillation power from EEG using multitaper spectral estimation
+%
+%   Usage:
+%       [SOpower_norm, SOpower_times, SOpower_stages, norm_method, ptile] = computeSOpower(EEG, Fs, ...)
+%
+%   Required Inputs:
+%       EEG:    [1xN] double - timeseries EEG data -- required
+%       Fs:     double - sampling frequency of data (Hz) -- required
+%
+%   Optional Inputs:
+%       stage_times:               [1xS] double - stage onset times (s) (default: [])
+%       stage_vals:                [1xS] double - sleep stage values 5=W,4=R,3=N1,2=N2,1=N3 (default: [])
+%       EEG_times:                 [1xN] double - timestamps for each EEG sample (default: 0:1/Fs:...)
+%       time_range:                [1x2] double - min/max times to include (default: full range)
+%       isexcluded:                [1xN] logical - mask for excluded time points (default: all false)
+%       SO_freqrange:              [1x2] double - SO frequency band in Hz (default: [0.3, 1.5])
+%       tapers:                    [1x2] double - multitaper parameters [TW, K] (default: [5, 9])
+%       window_params:             [1x2] double - [window size, step size] in seconds (default: [5, 0.5])
+%       SOpower_outlier_threshold: double - outlier exclusion threshold in std (default: 3)
+%       norm_method:               char - normalization method: 'pNshiftS', 'percent', 'proportion', 'none'
+%                                  (default: 'p2shift1234')
+%       retain_Fs:                 logical - upsample SOpower back to data sampling rate (default: true)
+%
+%   Outputs:
+%       SOpower_norm:    [1xM] double - normalized SO power timeseries
+%       SOpower_times:   [1xM] double - timestamps for SOpower samples (s)
+%       SOpower_stages:  [1xM] double - sleep stage at each SOpower time point
+%       norm_method:     char - normalization method used
+%       ptile:           double - percentile used for normalization (if applicable)
+%
+%   Citation:
+%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
+%       Robert Stickgold, Michael J Prerau, "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification", Sleep, 2022; zsac223.
+%       https://doi.org/10.1093/sleep/zsac223
+%**********************************************************************
 
 %% Parse input
 %Input Error handling
@@ -169,11 +204,11 @@ function [SO_power, stimes, sfreqs] = computeMTSpectPower(varargin)
 %
 %%   Copyright 2024 Prerau Lab - http://www.sleepEEG.org
 %
-%   Please provide the following citation for all use:
+%   Citation:
 %       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-%       for Electroencephalographic Phenotyping and Biomarker Identification,
-%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%       Robert Stickgold, Michael J Prerau, "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification", Sleep, 2022; zsac223.
+%       https://doi.org/10.1093/sleep/zsac223
 %**********************************************************************
 
 %% Parse input

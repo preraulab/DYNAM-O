@@ -4,14 +4,14 @@ function [rgn, rgn_lbls, Lborders, adj_list] = Ldata2graph(Ldata, exclusion_val,
 % Usage:
 %    [rgn, rgn_lbls, Lborders, adj_list] = Ldata2graph(Ldata, exclusion_val, f_disp, ax)
 %
-% INPUTS:
+%   Inputs:
 %   Ldata  -- 2D matrix of labeled image data. Assumes boundaries are
 %             labeled 0 as for the output of watershed.
 %             defaults to abs(peaks(50))+randn(50)*.01.
 %   exclusion_val -- value of
 %   f_disp -- flag indicator whether to plot.
 %             defaults to false, unless using default Ldata.
-% OUTPUTS:
+%   Outputs:
 %   rgn         -- 1D cell array of vector lists of linear idx of all pixels for each region.
 %   rgn_lbls    -- vector of region labels.
 %   Lborders    -- 1D cell array of vector lists of linear idx of border pixels for each region.
@@ -19,11 +19,11 @@ function [rgn, rgn_lbls, Lborders, adj_list] = Ldata2graph(Ldata, exclusion_val,
 %                  each row contains region lables of two adjacent regions.
 %
 %
-%   Please provide the following citation for all use:
+%   Citation:
 %       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-%       for Electroencephalographic Phenotyping and Biomarker Identification,
-%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%       Robert Stickgold, Michael J Prerau, "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification", Sleep, 2022; zsac223.
+%       https://doi.org/10.1093/sleep/zsac223
 %
 %**********************************************************************
 
