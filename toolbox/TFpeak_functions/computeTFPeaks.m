@@ -291,7 +291,7 @@ if double_watershed
     stimes_first = stimes;
 
     % Compute multitaper spectrogram using new parameters with smaller spectral resolution
-    [spect, stimes, sfreqs, ~, bw_min, ht_db_min] = compute_spectrogram(mtm_taper_params, [mtm_window_length_2, mtm_window_stepsize], data_time_range, Fs, mtm_dsfreqs, mtm_freq_range, verbose);
+    [spect, stimes, sfreqs, ~, bw_min, ht_db_min] = computeSpectrogram(mtm_taper_params, [mtm_window_length_2, mtm_window_stepsize], data_time_range, Fs, mtm_dsfreqs, mtm_freq_range, verbose);
     stimes = stimes + t_time_range(1); % adjust the time axis to t_data
 
     % Recompute baseline using the same baseline_exclude computed above
