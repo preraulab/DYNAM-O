@@ -4,7 +4,7 @@ function Ldata = runWatershed(data, conn, bl_thresh, f_verb, verb_pref, f_disp)
 % Usage:
 %   Ldata = runWatershed(data, conn, bl_thresh, f_verb, verb_pref, f_disp)
 %
-% INPUTS:
+%   Inputs:
 %   data   -- 2D matrix of image data. defaults to peaks(100).
 %   conn   -- pixel connection to be used by watershed. default 8. 
 %   bl_thresh  -- power threshold used to cut off low power data to speed
@@ -15,15 +15,15 @@ function Ldata = runWatershed(data, conn, bl_thresh, f_verb, verb_pref, f_disp)
 %   verb_pref -- prefix string for verbose output. defaults to ''.
 %   f_disp -- flag indicator whether to plot. 
 %             defaults to false, unless using default data.
-% OUTPUTS:
+%   Outputs:
 %   Ldata: labeled region data
 %
 %      
-%   Please provide the following citation for all use:
-%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach, 
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis 
-%       for Electroencephalographic Phenotyping and Biomarker Identification, 
-%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%   Citation:
+%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
+%       Robert Stickgold, Michael J Prerau, "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification", Sleep, 2022; zsac223.
+%       https://doi.org/10.1093/sleep/zsac223
 %
 %**********************************************************************
 

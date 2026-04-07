@@ -1,16 +1,32 @@
 function [filter_idx, dur_inds, bw_inds, pf_inds, ht_inds] = filterStatsTable(stats_table, dur_minmax, bw_minmax, freq_minmax, ht_db_min, verbose)
-%FILTERSTATSTABLE gets indices of peaks that pass the BW, duration,
-%height, and frequency criteria
+%FILTERSTATSTABLE  Get indices of TF peaks passing duration, bandwidth, frequency, and height criteria
 %
-% Usage:
-%   [filter_idx, dur_inds, bw_inds, pf_inds, ht_inds] = filterStatsTable(stats_table, dur_minmax, bw_minmax, freq_minmax, ht_db_min, verbose)
+%   Usage:
+%       [filter_idx, dur_inds, bw_inds, pf_inds, ht_inds] = ...
+%           filterStatsTable(stats_table, dur_minmax, bw_minmax, freq_minmax, ht_db_min, verbose)
 %
+%   Required Inputs:
+%       stats_table:  table - peak statistics table (output of computePeakStatsTable) -- required
 %
-%   Please provide the following citation for all use:
+%   Optional Inputs:
+%       dur_minmax:   [1x2] double - [min, max] duration range in seconds (default: [0.5, 5])
+%       bw_minmax:    [1x2] double - [min, max] bandwidth range in Hz (default: [2, 15])
+%       freq_minmax:  [1x2] double - [min, max] peak frequency range in Hz (default: [0, 40])
+%       ht_db_min:    double - minimum peak height in dB (default: 7.63)
+%       verbose:      logical - print rejection summary (default: false)
+%
+%   Outputs:
+%       filter_idx:   [Px1] logical - true for peaks passing all criteria
+%       dur_inds:     [Px1] logical - true for peaks passing duration criterion
+%       bw_inds:      [Px1] logical - true for peaks passing bandwidth criterion
+%       pf_inds:      [Px1] logical - true for peaks passing frequency criterion
+%       ht_inds:      [Px1] logical - true for peaks passing height criterion
+%
+%   Citation:
 %       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-%       for Electroencephalographic Phenotyping and Biomarker Identification,
-%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%       Robert Stickgold, Michael J Prerau, "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification", Sleep, 2022; zsac223.
+%       https://doi.org/10.1093/sleep/zsac223
 %**********************************************************************
 
 %% Deal with Inputs

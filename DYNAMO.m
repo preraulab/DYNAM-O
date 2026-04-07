@@ -175,12 +175,6 @@ classdef DYNAMO < handle
                 addOptional(p, 'spline_basis_power_options', spline_basis_opts('power'), @(x) isstruct(x));
                 addOptional(p, 'spline_basis_phase_options', spline_basis_opts('phase'), @(x) isstruct(x));
                 addOptional(p, 'stats_table', [], @(x) istable(x) || isempty(x));
-                %% COME BACK TO THIS- RUN DYNAMO INPUTS
-                % addOptional(p, 'verbose', default_verbose, @(x) islogical(x) || isnumeric(x));
-                % addOptional(p, 'plot_on', true, @(x) islogical(x) || isnumeric(x));
-                % addOptional(p, 'save_output_image', false, @(x) islogical(x) || isnumeric(x));
-                % addOptional(p, 'output_fname', 'DYNAM-O_output', @(x) ischar(x) || isstring(x));
-                % addOptional(p, 'fit_SOPH', true, @(x) islogical(x) || isnumeric(x));
                 addOptional(p, 'app', false, @(x) islogical(x) || isnumeric(x));
 
                 % Parse inputs

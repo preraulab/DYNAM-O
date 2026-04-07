@@ -24,11 +24,11 @@ function default_params = spline_basis_opts(type, varargin)
 %       default_params = spline_basis_opts('phase', 'freq_limits', [1, 30], 'plot_on', false);
 %
 %
-%   Please provide the following citation for all use:
+%   Citation:
 %       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-%       for Electroencephalographic Phenotyping and Biomarker Identification,
-%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%       Robert Stickgold, Michael J Prerau, "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification", Sleep, 2022; zsac223.
+%       https://doi.org/10.1093/sleep/zsac223
 %**********************************************************************
 
 %%

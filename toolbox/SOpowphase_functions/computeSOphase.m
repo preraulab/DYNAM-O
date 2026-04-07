@@ -1,5 +1,37 @@
 function [SOphase, SOphase_times, SOphase_stages, filtdata] = computeSOphase(varargin)
-% COMPUTESOPHASE computes slow-oscillation phase
+%COMPUTESOPHASE  Compute slow-oscillation phase from EEG using bandpass filtering and Hilbert transform
+%
+%   Usage:
+%       [SOphase, SOphase_times, SOphase_stages, filtdata] = computeSOphase(EEG, Fs, ...)
+%
+%   Required Inputs:
+%       EEG:    [1xN] double - timeseries EEG data -- required
+%       Fs:     double - sampling frequency of data (Hz) -- required
+%
+%   Optional Inputs:
+%       stage_times:    [1xS] double - stage onset times (s) (default: [])
+%       stage_vals:     [1xS] double - sleep stage values 5=W,4=R,3=N1,2=N2,1=N3 (default: [])
+%       EEG_times:      [1xN] double - timestamps for each EEG sample (default: 0:1/Fs:...)
+%       isexcluded:     [1xN] logical - mask for excluded time points (default: all false)
+%       SO_freqrange:   [1x2] double - SO frequency band in Hz (default: [0.3, 1.5])
+%       SOphase_filter: digitalFilter - custom bandpass filter for SO phase estimation (default: [])
+%
+%   Outputs:
+%       SOphase:        [1xN] double - unwrapped SO phase timeseries (radians)
+%       SOphase_times:  [1xN] double - timestamps for SOphase samples (s)
+%       SOphase_stages: [1xN] double - sleep stage at each SOphase time point
+%       filtdata:       [1xN] double - bandpass-filtered EEG data used for phase estimation
+%
+%   Notes:
+%       To use a custom precomputed SO phase filter, pass via the 'SOphase_filter' argument:
+%           custom_SOphase_filter = designfilt('bandpassfir', ...);
+%
+%   Citation:
+%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
+%       Robert Stickgold, Michael J Prerau, "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification", Sleep, 2022; zsac223.
+%       https://doi.org/10.1093/sleep/zsac223
+%**********************************************************************
 
 % To use a custom precomputed SO phase filter, use the 'SOphase_filter' argument
 % custom_SOphase_filter = designfilt('bandpassfir', 'StopbandFrequency1', 0.1, 'PassbandFrequency1', 0.4, ...

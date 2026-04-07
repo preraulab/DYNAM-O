@@ -1,159 +1,52 @@
 function [ fpeak_proms, tpeak_proms, tpeak_times, tpeak_durations, tpeak_center_times, tpeak_central_frequencies, tpeak_bandwidths, tpeak_bandwidth_bounds,...
     tpeak_sd_central_frequencies, tpeak_sd_bandwidths, tpeak_interpeak_intervals ]...
     = find_time_peaks(fpeak_proms, fpeak_freqs, fpeak_bandwidths, fpeak_bandwidth_bounds, stimes, varargin)
+%FIND_TIME_PEAKS  Detect peaks in the frequency-domain prominence curve in the time domain
 %
-% **PEAK PROMINENCE CALCULATION OF PROMINENCE CURVE IN THE TIME DOMAIN**
-%&#x1F536;
+%   Usage:
+%       [fpeak_proms, tpeak_proms, tpeak_times, tpeak_durations, tpeak_center_times,
+%        tpeak_central_frequencies, tpeak_bandwidths, tpeak_bandwidth_bounds,
+%        tpeak_sd_central_frequencies, tpeak_sd_bandwidths, tpeak_interpeak_intervals] = ...
+%           find_time_peaks(fpeak_proms, fpeak_freqs, fpeak_bandwidths, fpeak_bandwidth_bounds, stimes, ...)
 %
-% function used to calculate the peak prominence of the extracted
-% prominence curve in the time domain. The prominence curve time series,
-% ffreq, and fwidth can be calculated using the find_frequency_peaks.m
-% function that uses findpeaks in the frequency domain.
+%   Required Inputs:
+%       fpeak_proms:            [Tx1] double - frequency-domain peak prominence at each time point
+%                               (output of find_frequency_peaks) -- required
+%       fpeak_freqs:            [Tx1] double - frequency of the spectral peak at each time point (Hz)
+%                               -- required
+%       fpeak_bandwidths:       [Tx1] double - bandwidth of the spectral peak at each time point (Hz)
+%                               -- required
+%       fpeak_bandwidth_bounds: [Tx2] double - lower/upper frequency bounds of spectral peak -- required
+%       stimes:                 [1xT] double - time axis vector in seconds -- required
 %
-% Usage: [ tpeak_proms, tpeak_times, tpeak_widths, fwidth_at_tpeak, sd_ffreq, sd_fwidth, tpeak_intervals ] = ...
-%           find_time_peaks(prominence_curve, ffreq, fwidth, stimes, stages, stage_times, '<flag#1>',<arg#1>...'<flag#n>',<arg#n>);
+%   Optional Inputs:
+%       'smooth_sec':              double - seconds to smooth the prominence curve with movmean
+%                                  (default: 0.3)
+%       'only_NREM':               logical - detect peaks only during NREM sleep stages
+%                                  (default: true)
+%       'min_peak_width_sec':      double - minimum peak width (seconds) for findpeaks
+%                                  (default: 0.3)
+%       'min_peak_distance_sec':   double - minimum peak-to-peak distance (seconds) for findpeaks
+%                                  (default: 0)
+%       'report_width_scale':      double - scale factor converting half-height width to
+%                                  reported start/end times (default: 0.5)
 %
-% - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-% ##### Declared Inputs: [[[NEEDS UPDATES!!!]]]
+%   Outputs:
+%       fpeak_proms:                    [Tx1] double - (smoothed) frequency prominence curve
+%       tpeak_proms:                    [Px1] double - prominence of each detected time peak
+%       tpeak_times:                    [Px2] double - [start, end] times (seconds) of each peak
+%       tpeak_durations:                [Px1] double - duration (seconds) of each peak
+%       tpeak_center_times:             [Px1] double - center time (seconds) of each peak
+%       tpeak_central_frequencies:      [Px1] double - mean spectral peak frequency (Hz) within each peak
+%       tpeak_bandwidths:               [Px1] double - mean spectral bandwidth (Hz) within each peak
+%       tpeak_bandwidth_bounds:         [Px2] double - mean lower/upper frequency bounds within each peak
+%       tpeak_sd_central_frequencies:   [Px1] double - std of spectral peak frequency within each peak
+%       tpeak_sd_bandwidths:            [Px1] double - std of spectral bandwidth within each peak
+%       tpeak_interpeak_intervals:      [Px1] double - interval (seconds) from end of previous peak
+%                                       to start of next peak
 %
-%           The following variables are derived from
-%           find_frequency_peaks.m
-%
-%           - prominence_curve: This is the prominence of the peaks
-%                               detected on the normalized spectrum at
-%                               each time slice.
-%
-%           - ffreq:            The frequency of the peaks detected on the
-%                               normalized spectrum at each time slice.
-%
-%           - fwidth:           The width of the peaks detected on the
-%                               normalized spectrum at each time slice.
-%
-%           The following variable can be generated from the multitaper
-%           spectrogram function:
-%
-%           - stimes:           The time axis vector as used in multitaper
-%                               spectrogram estimation. This vector has the
-%                               same length as prominence_curve, ffreq, and
-%                               fwidth. Each sample is the time in seconds
-%                               for the center of the window used to
-%                               compute one time slice of the spectrogram.
-%                               This vector should be in seconds.
-%
-%           Other Parameters:
-%
-%           - stages:           Scored sleep stages as a vector. All motion
-%                               artifacts should already be marked as
-%                               periods of wake prior to calling this
-%                               function. This is important for detecting
-%                               spindles during only NREM segments.
-%
-%           - stage_times:      The is the vector of times at which every
-%                               new stage starts. This should be in
-%                               seconds.
-%
-% - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-% ##### Optional Inputs:
-%
-%           - 'smooth_sec':         The number of seconds to smooth the
-%                                   prominence curve by. This is
-%                                   implemented with movmean.m
-%                                   default: [0.3]
-%
-%           - 'only_NREM':          A boolean specifying whether only to
-%                                   detect peaks in prominence curve during
-%                                   NREM sleep stages. If false, peaks are
-%                                   also detected during REM sleep.
-%                                   default: True
-%
-%           - 'min_peak_width_sec':   The minimum peak width required for a
-%                                   peak to be detected by findpeaks. It
-%                                   is specified in seconds. Can be
-%                                   adjusted to prevent detecting tiny
-%                                   noisy peaks. A default value of 0.3 is
-%                                   chosen considering smoothing and the
-%                                   literature assumption of sleep spindles
-%                                   having durations in the range 0.3-3s. 
-%                                   default: [0.3]
-%
-%           - 'min_peak_distance_sec':The minimum distance between detected
-%                                   peaks in findpeaks. It is specified in
-%                                   seconds. Peak distance is measured from
-%                                   peak to peak. This corresponds to prior
-%                                   assumption about silence period between
-%                                   peaks. This parameter should match
-%                                   the step size and time window
-%                                   parameters in multitaper spectrogram.
-%                                   If a multitaper spectrogram is
-%                                   estimated with window lenth of 1s, then
-%                                   it is difficult to interpret two peaks
-%                                   that are less than 0.5s apart. However,
-%                                   default is set to be 0s here because
-%                                   usually this parameter doesn't change
-%                                   results by much.
-%                                   default: [0]
-%
-%           - 'report_width_scale': This parameter determines the
-%                                   conversion from half height width of
-%                                   detected peaks on the prominence curve
-%                                   to start and end times of possible
-%                                   spindle candidates. The spindle start
-%                                   and end times are derived as
-%
-%                                   tpeak_time - (report_width_scale*half_height_width)
-%                                                       ~
-%                                   tpeak_time + (report_width_scale*half_height_width)
-%
-%                                   thus, if report_width_scale is set to
-%                                   be 0.5, the width of detected peak will
-%                                   have the same width as the half height
-%                                   width.
-%                                   default = [0.5];
-%
-% - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-% ##### Outputs:
-%
-%           - tpeak_proms:      The prominence values of peaks detected
-%                               in the input prominence curve.
-%
-%           - tpeak_times:      The time points of detected peaks.
-%                               This will be the a 2 column vector in the
-%                               format: [start_times, end_times]. The times
-%                               are calculated based on the
-%                               report_width_scale.
-%
-%           - tpeak_widths:     The width of peaks detected in
-%                               the input prominence curve. These values
-%                               are reported in seconds.
-%
-%           - fwidth_at_tpeak:  The width of maximal spectral peak at the
-%                               time slice of a peak detected in the
-%                               prominence curve.
-%
-%           - sd_ffreq:         The standard deviation of the frequencies
-%                               of spectral peaks in the time slices where
-%                               a peak is detected in the prominence value.
-%                               These values are computed using ffreqs
-%                               from find_spectrogram_peaks.m
-%
-%           - sd_fwidth:        The standard deviation of the width of
-%                               spectral peaks in the time slices where a
-%                               peak is detected in the prominence value.
-%                               These values are computed using fwidth
-%                               from find_spectrogram_peaks.m
-%
-%           - ffreq_at_tpeak:   The frequency of maximal spectral peak at
-%                               the time slice of a peak detected in the
-%                               prominence curve.
-%
-%           - tpeak_intervals:  Intervals between tpeaks, calculated as end
-%                               time of previous peak to start time of next
-%                               peak. This is the upper bound for
-%                               peakdistance, which is calculated from peak
-%                               to peak. 
-%
-% - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
+%   Copyright 2024 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
+%% ********************************************************************
 %%
 % Parse inputs and preparation
 [ fpeak_proms, min_peak_width_sec, min_peak_distance_sec ] = tpeak_inputparse(fpeak_proms, stimes, varargin{:});

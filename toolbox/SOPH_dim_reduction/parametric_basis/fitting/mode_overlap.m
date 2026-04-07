@@ -1,8 +1,19 @@
-%MODE_OVERLAP Computes the pair-wise proportional volume overlap between modes
+function overlap = mode_overlap(powfit, goodpeaks, SOpow_bins, freq_bins)
+%MODE_OVERLAP  Computes the pairwise proportional volume overlap between modes.
 %
-%  overlap = mode_overlap(powfit, goodpeaks, SOpow_bins,freq_bins)
+%   Usage:
+%       overlap = mode_overlap(powfit, goodpeaks, SOpow_bins, freq_bins)
 %
-function overlap = mode_overlap(powfit, goodpeaks, SOpow_bins,freq_bins)
+%   Required Inputs:
+%       powfit      - cfit   - fitted parametric model object from fit_rotGauss or fit_vmGauss
+%       goodpeaks   - vector - indices of modes to compare
+%       SOpow_bins  - vector - SO-power or SO-phase bin centers
+%       freq_bins   - vector - frequency bin centers (Hz)
+%
+%   Outputs:
+%       overlap     - [NxN] double - upper-triangular matrix of pairwise
+%                     overlap fractions; overlap(p,q) = sum(min(p1,p2)) /
+%                     sum(max(p1,p2)) for modes p and q
 
 overlap = zeros(length(goodpeaks));
 %Get all pairwise overlap

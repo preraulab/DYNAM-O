@@ -1,6 +1,28 @@
 function [ max_curve, bin_centers, hist_olN2, hist_olN3 ] = extract_density_curve(sel_freqs, sel_stages, bin_width, bin_step, bin_range, N2_minutes, N3_minutes, ignore_N3_threshold, plot_on)
-% Using the heuristic of max(stage2, stage3) to extract the cumulated
-% histogram curves for mid-point frequency of TFpeaks
+%EXTRACT_DENSITY_CURVE  Extract cumulative frequency histogram density curves using max(N2, N3) heuristic
+%
+%   Usage:
+%       [max_curve, bin_centers, hist_olN2, hist_olN3] = extract_density_curve(sel_freqs, sel_stages, bin_width, bin_step, bin_range, N2_minutes, N3_minutes, ignore_N3_threshold, plot_on)
+%
+%   Inputs:
+%       sel_freqs:            [1xP] double - peak frequencies for selected TF peaks (Hz) -- required
+%       sel_stages:           [1xP] categorical - sleep stage label for each selected peak -- required
+%       bin_width:            double - frequency bin width (Hz) -- required
+%       bin_step:             double - frequency bin step size (Hz) -- required
+%       bin_range:            [1x2] double - [min, max] frequency range (Hz) -- required
+%       N2_minutes:           double - total duration of N2 sleep (minutes) -- required
+%       N3_minutes:           double - total duration of N3 sleep (minutes) -- required
+%       ignore_N3_threshold:  double - minimum N3 duration (minutes) below which N3 is ignored -- required
+%       plot_on:              logical or axes handle - plot results if nonzero (default: false)
+%
+%   Outputs:
+%       max_curve:    [1xB] double - max of N2 and N3 density curves at each frequency bin
+%       bin_centers:  [1xB] double - center of each frequency bin (Hz)
+%       hist_olN2:    [1xB] double - normalized N2 frequency density (events/min)
+%       hist_olN3:    [1xB] double - normalized N3 frequency density (events/min)
+%
+%   Copyright 2024 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
+%% ********************************************************************
 
 % set up bin starts and ends
 hb = bin_width/2;

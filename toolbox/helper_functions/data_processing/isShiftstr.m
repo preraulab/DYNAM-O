@@ -22,11 +22,11 @@ function isValid = isShiftstr(str)
 %   The regular expression pattern used to validate the string is '^p(0*[0-9]|[1-9][0-9]|100)shift[1-5]+$'.
 %
 %
-%   Please provide the following citation for all use:
+%   Citation:
 %       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-%       for Electroencephalographic Phenotyping and Biomarker Identification,
-%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%       Robert Stickgold, Michael J Prerau, "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification", Sleep, 2022; zsac223.
+%       https://doi.org/10.1093/sleep/zsac223
 %**********************************************************************
 
 % Define the regular expression pattern

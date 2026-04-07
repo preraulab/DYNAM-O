@@ -1,20 +1,19 @@
 function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts] = computeTFPeaks(varargin)
-%COMPUTETFPKEAKS: Run watershed algorithm to extract time-frequency peaks
-%                 from spectrogram of data
+%COMPUTETFPEAKS  Run watershed algorithm to extract time-frequency peaks from a spectrogram
 %
 %   Usage:
 %       [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts] = ...
 %               computeTFPeaks(data, Fs, stage_times, stage_vals, <options>)
 %
-%   Inputs:
-%       data (req):                [nx1] double - timeseries data to be analyzed
-%       Fs (req):                  double - sampling frequency of data (Hz)
-%       stage_times (req):         [1xm] double or single - timestamps of stage_vals
-%       stage_vals (req):          [1xm] double or single - sleep stage values at eaach time in
-%                                  stage_times. Note the staging convention: 0=unidentified, 1=N3,
-%                                  2=N2, 3=N1, 4=REM, 5=WAKE
+%   Required Inputs:
+%       data:                      [1xN] double - timeseries data to be analyzed -- required
+%       Fs:                        double - sampling frequency of data (Hz) -- required
+%       stage_times:               [1xM] double or single - timestamps of stage_vals -- required
+%       stage_vals:                [1xM] double or single - sleep stage values at each time in
+%                                  stage_times. Staging convention: 0=unidentified, 1=N3,
+%                                  2=N2, 3=N1, 4=REM, 5=WAKE -- required
 %
-%   Optional inputs:
+%   Optional Inputs:
 %       t_data (opt):              [1xn] double - timestamps for data. Default = (0:length(data)-1)/Fs
 %       time_range (opt):          [1x2] double - section of EEG to use in analysis (seconds).
 %                                  Default = [min(t_data), max(t_data)]
@@ -86,11 +85,11 @@ function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, art
 %       artifacts:          1xT logical of times flagged as artifacts (logical OR of hf and bb artifacts)
 %
 %
-%   Please provide the following citation for all use:
+%   Citation:
 %       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-%       for Electroencephalographic Phenotyping and Biomarker Identification,
-%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%       Robert Stickgold, Michael J Prerau, "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification", Sleep, 2022; zsac223.
+%       https://doi.org/10.1093/sleep/zsac223
 %**********************************************************************
 
 %%

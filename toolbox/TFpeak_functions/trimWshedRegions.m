@@ -5,7 +5,7 @@ function [trimmed_regions, trimmed_borders] = trimWshedRegions(data,regions,vol_
 % Usage:
 %   [trimmed_regions, trimmed_borders] = trimWshedRegions(data,regions,vol_thresh,shift_val,conn,f_verb,verb_pref,f_disp)
 %
-% INPUTS:
+%   Inputs:
 %   data       -- 2D matrix of image data. defaults to peaks(100).
 %   regions    -- 1D cell array of vector lists of linear idx of all pixels for each region.
 %   vol_thresh -- fraction maximum trimmed volume (from 0 to 1),
@@ -19,16 +19,16 @@ function [trimmed_regions, trimmed_borders] = trimWshedRegions(data,regions,vol_
 %   verb_pref  -- prefix string for verbose output. defaults to ''.
 %   f_disp     -- flag indicator of whether to plot.
 %                 defaults to 0, unless using default data.
-% OUTPUTS:
+%   Outputs:
 %   trimmed_regions -- 1D cell array of vector lists of linear idx of all pixels for each region.
 %   trimmed_borders -- 1D cell array of vector lists of linear idx of border pixels for each region.
 %
 %
-%   Please provide the following citation for all use:
+%   Citation:
 %       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-%       for Electroencephalographic Phenotyping and Biomarker Identification,
-%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%       Robert Stickgold, Michael J Prerau, "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification", Sleep, 2022; zsac223.
+%       https://doi.org/10.1093/sleep/zsac223
 %
 %**********************************************************************
 

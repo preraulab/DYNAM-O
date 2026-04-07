@@ -1,7 +1,7 @@
 function linkcaxes(ax)
 % LINKCAXES Links the color limits of multiple axes.
 %
-% INPUTS:
+%   Inputs:
 %   ax - Array of axis handles to be linked.
 %
 % GLOBAL VARIABLES:

@@ -1,5 +1,22 @@
 function [ freq_TFpeaks ] = extract_freq_clusters(freq_TFpeaks, sel_freqs)
-%Identify indices of TFpeaks falling within the extent of each cluster
+%EXTRACT_FREQ_CLUSTERS  Identify indices of TF peaks falling within the extent of each frequency cluster
+%
+%   Usage:
+%       freq_TFpeaks = extract_freq_clusters(freq_TFpeaks, sel_freqs)
+%
+%   Inputs:
+%       freq_TFpeaks: table - frequency cluster table with fields:
+%                      .peak_lower_freq:        lower frequency bound of each cluster (Hz)
+%                      .peak_upper_freq:        upper frequency bound of each cluster (Hz)
+%                      .boundary_from_lastpeak: frequency boundary between adjacent clusters (Hz)
+%       sel_freqs:    [1xP] double - selected TF peak frequencies (Hz)
+%
+%   Outputs:
+%       freq_TFpeaks: table - input table with TFpeak_idx cell column added, containing logical
+%                    indices into sel_freqs for each cluster
+%
+%   Copyright 2024 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
+%% ********************************************************************
 
 for ii = 1:size(freq_TFpeaks,1)
     low_bound = freq_TFpeaks.peak_lower_freq(ii) - (freq_TFpeaks.peak_upper_freq(ii) - freq_TFpeaks.peak_lower_freq(ii))/2;

@@ -1,4 +1,33 @@
 function [data, Fs, stage_times, stage_vals] = load_data(varargin)
+%LOAD_DATA  Load EEG data and sleep staging from EDF and delimited text files
+%
+%   Usage:
+%       [data, Fs, stage_times, stage_vals] = load_data(edf_fpath, scoring_fpath, stage_col, time_col, channels, ...)
+%
+%   Required Inputs:
+%       edf_fpath:      char or cell - path(s) to EDF file(s) -- required
+%       scoring_fpath:  char or cell - path(s) to scoring file(s) -- required
+%       stage_col:      double - column number for sleep stage data (1-based) -- required
+%       time_col:       double - column number for time data (1-based) -- required
+%       channels:       char or cell - EEG channel label(s) to load -- required
+%
+%   Optional Inputs:
+%       stage_vals_in:  cell - custom stage label mappings (default: [])
+%       header_lines:   double - number of header lines in scoring file (default: [])
+%       delimiter:      char - column delimiter (default: ',')
+%       start_time:     char or string - recording start time (default: NaN)
+%       epoch_dur:      double - epoch duration in seconds (default: 30)
+%       plot_on:        logical - plot hypnogram (default: false)
+%       resample_freq:  double - target resampling frequency in Hz (default: [])
+%
+%   Outputs:
+%       data:           [N x C] double - EEG data matrix (samples x channels)
+%       Fs:             double - sampling frequency in Hz
+%       stage_times:    [1 x T] double - sleep stage onset times in seconds
+%       stage_vals:     [1 x T] double - sleep stage values (0=Unk, 1=N3, 2=N2, 3=N1, 4=REM, 5=Wake)
+%
+%   Copyright 2024 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
+%% ********************************************************************
 
 %% INPUT PARSER
 p = inputParser;

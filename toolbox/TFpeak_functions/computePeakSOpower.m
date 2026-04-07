@@ -1,5 +1,5 @@
 function [stats_table, SOpower, SOpower_times, norm_method] = computePeakSOpower(varargin)
-% COMPUTEPEAKSOPOWER: Computes the slow oscillation power for each TF peak in stats_table
+%COMPUTEPEAKSOPOWER  Compute the slow oscillation power for each TF peak in stats_table
 %
 %   Usage:
 %       [stats_table, SOpower, SOpower_times, norm_method] = computePeakSOpower(stats_table, data, Fs, <options>)
@@ -38,11 +38,11 @@ function [stats_table, SOpower, SOpower_times, norm_method] = computePeakSOpower
 %       norm_method: char - normalization method for SOpower
 %
 %
-%   Please provide the following citation for all use:
+%   Citation:
 %       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-%       for Electroencephalographic Phenotyping and Biomarker Identification,
-%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%       Robert Stickgold, Michael J Prerau, "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification", Sleep, 2022; zsac223.
+%       https://doi.org/10.1093/sleep/zsac223
 %**********************************************************************
 
 %%

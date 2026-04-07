@@ -8,7 +8,7 @@ function [stats_table, regions, borders] = extractTFPeaks(img,x,y,features,num_s
 %       merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,...
 %       bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
 %
-% INPUTS:
+%   Inputs:
 %   img          -- 2D matrix of image data. defaults to peaks(100).
 %   x            -- x axis of image data. default 1:size(data,2).
 %   y            -- y axis of image data. default 1:size(data,1).
@@ -39,17 +39,17 @@ function [stats_table, regions, borders] = extractTFPeaks(img,x,y,features,num_s
 %   verb_pref    -- prefix string for verbose output. defaults to ''.
 %   f_disp       -- flag indicator of whether to plot.
 %                   defaults to 0, unless using default data.
-% OUTPUTS:
+%   Outputs:
 %   stats_table  -- Table of peak statistics. Each row is a peak.
 %   regions      -- A cell array of linear indices of peak regions in the current image.
 %   borders      -- A cell array of linear indices of peak borders in the current image.
 %
 %
-%   Please provide the following citation for all use:
+%   Citation:
 %       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-%       for Electroencephalographic Phenotyping and Biomarker Identification,
-%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%       Robert Stickgold, Michael J Prerau, "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification", Sleep, 2022; zsac223.
+%       https://doi.org/10.1093/sleep/zsac223
 %
 %**********************************************************************
 

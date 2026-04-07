@@ -20,7 +20,7 @@ function [bin_edges, bin_centers] = create_bins(bin_range, bin_width, bin_step, 
 %
 %      
 %   Authors: Michael Prerau, Thomas Possidente
-%%%************************************************************************************%%%
+%**********************************************************************
 
 if nargin<4 || isempty(bin_method)
     bin_method = 'full';

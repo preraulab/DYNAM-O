@@ -1,6 +1,25 @@
 function [ event_center_time, event_center_frequency ] = extract_event_centroid(mt_spect, tpeak_properties, signal_idx)
-%Compute centroid of 2D spectrogram to define the center times and middle
-%frequency of a TFpeak event
+%EXTRACT_EVENT_CENTROID  Compute centroid of 2D spectrogram to define center time and frequency of TF peak events
+%
+%   Usage:
+%       [event_center_time, event_center_frequency] = extract_event_centroid(mt_spect, tpeak_properties, signal_idx)
+%
+%   Inputs:
+%       mt_spect:           struct - multitaper spectrogram with fields:
+%                             .stimes: [1xT] double - time axis (s)
+%                             .spect:  [TxF] double - spectrogram power matrix
+%                             .sfreqs: [1xF] double - frequency axis (Hz)
+%       tpeak_properties:   struct - TF peak properties with fields:
+%                             .times: [Px2] double - [start, end] times for each peak (s)
+%                             .bandwidth_bounds: [Px2] double - [low, high] frequency bounds (Hz)
+%       signal_idx:         [1xP] logical - index of peaks to process (default: all true)
+%
+%   Outputs:
+%       event_center_time:      [1xP] double - centroid time for each TF peak event (s)
+%       event_center_frequency: [1xP] double - centroid frequency for each TF peak event (Hz)
+%
+%   Copyright 2024 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
+%% ********************************************************************
 
 if nargin < 3 || isempty(signal_idx)
     signal_idx = true(size(tpeak_properties.times, 1), 1);

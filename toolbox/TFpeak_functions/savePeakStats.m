@@ -6,7 +6,7 @@ function combined_mask = savePeakStats(peaks_matr, matr_names, matr_fields, Pixe
 %       savePeakStats(peaks_matr, matr_names, matr_fields, PixelIdxList, f_save, ofile_pref, ...
 %                     verb_pref, f_verb)
 %
-% INPUTS:
+%   Inputs:
 %       peaks_matr: feature data for each peak found
 %       matr_names: cell array of features in peaks_matr
 %       matr_fields: cell array indicating number of cells taken up by each
@@ -25,11 +25,11 @@ function combined_mask = savePeakStats(peaks_matr, matr_names, matr_fields, Pixe
 %       combined_mask: logical indicating which peaks are valid after peak rejection
 %
 %
-%   Please provide the following citation for all use:
+%   Citation:
 %       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-%       for Electroencephalographic Phenotyping and Biomarker Identification,
-%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
+%       Robert Stickgold, Michael J Prerau, "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%       for Electroencephalographic Phenotyping and Biomarker Identification", Sleep, 2022; zsac223.
+%       https://doi.org/10.1093/sleep/zsac223
 %**********************************************************************
 
 if f_verb > 0 && f_save > 0

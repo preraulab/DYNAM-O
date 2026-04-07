@@ -1,110 +1,51 @@
 function [ fpeak_proms, fpeak_freqs, fpeak_bandwidths, fpeak_bandwidth_bounds, normalized_spectrogram ] = find_frequency_peaks(spect,stimes,sfreqs,varargin)
+%FIND_FREQUENCY_PEAKS  Identify peaks in the frequency domain of a spectrogram at each time point
 %
-% **PEAK PROMINENCE CALCULATION IN THE FREQUENCY DOMAIN**
-%&#x1F536;
+%   Usage:
+%       [fpeak_proms, fpeak_freqs, fpeak_bandwidths, fpeak_bandwidth_bounds, normalized_spectrogram] = ...
+%           find_frequency_peaks(spect, stimes, sfreqs, ...)
 %
-% function used to calculate the peak prominence of the spectrum at each
-% point in a spectrogram. Works by looking for activity in the designated
-% frequency range. Normalizes the frequency values by dividing by a
-% percentile of the the spectral values. The percentile can be calculated
-% from a full night (artifact/wake-free sleep) or from a local segment with
-% length of X minutes. By default, no normalization is applied since the
-% prominence extraction implicitly takes care of the slow trend in the
-% frequency domain.
+%   Required Inputs:
+%       spect:   [TxF] double - spectrogram matrix (time x frequency) -- required
+%       stimes:  [1xT] double - time axis vector in seconds -- required
+%       sfreqs:  [1xF] double - frequency axis vector in Hz -- required
 %
-% Usage: [ fproms, ffreq, fwidth, x_fwidth, normalized_spectrogram ] = find_frequency_peaks(spectrogram,stimes,sfreqs,valid_time_inds,'<flag#1>',<arg#1>...<flag#n>',<arg#n>);
+%   Optional Inputs:
+%       'valid_time_inds':      [1xT] logical - time indices to include in peak detection
+%                               (default: true(1, length(stimes)))
+%       'peak_freq_range':      [1x2] double - frequency range (Hz) for peak detection
+%                               (default: [9, 17])
+%       'findpeaks_freq_range': [1x2] double - frequency range (Hz) for running findpeaks
+%                               (default: [6, 30])
+%       'in_db':                logical - convert spectrum to dB before finding peaks
+%                               (default: false)
+%       'smooth_Hz':            double - smoothing bandwidth in Hz applied before findpeaks
+%                               (default: 0)
+%       'norm_method':          char - normalization method: 'none' or 'percentile'
+%                               (default: 'none')
+%       'norm_time_inds':       [1xT] logical - time indices for normalization calculation
+%                               (default: true(1, length(stimes)))
+%       'percent_num':          double - percentile for normalization (default: 3)
+%       'local_norm_minutes':   double - window length in minutes for local normalization;
+%                               0 uses full-night normalization (default: 0)
+%       'plot_on':              logical - plot spectrum at each time step (default: false)
+%       'verbose':              logical - print parameter summary (default: false)
+%       'findpeaks_version':    char - processing mode: 'linear' or 'par' (default: 'linear')
 %
-% - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-% ##### Declared Inputs: [[[NEEDS UPDATES!!!]]]
+%   Outputs:
+%       fpeak_proms:            [Tx1] double - peak prominence at each time point
+%       fpeak_freqs:            [Tx1] double - peak frequency (Hz) at each time point
+%       fpeak_bandwidths:       [Tx1] double - peak bandwidth (Hz) at each time point
+%       fpeak_bandwidth_bounds: [Tx2] double - lower/upper frequency bounds of each peak
+%       normalized_spectrogram: [TxF] double - normalized spectrogram (after any normalization/smoothing)
 %
-%       The following variables can be generated from the
-%       multitaper_spectrogram function:
+%   Notes:
+%       By default no normalization is applied ('norm_method' = 'none') since the
+%       prominence extraction implicitly accounts for the slow spectral trend in the
+%       frequency domain. Use 'findpeaks_version' = 'par' to enable parallel processing.
 %
-%           - scube:        The spectrum at each time point. Format( Time X Frequency X Channels);
-%
-%           - stimes:       The time step vectors as defined by the mutlitaper
-%                           spectrogram parameters.
-%
-%           - sfreqs:       The frequency step vector as defined by the mutlitaper
-%                           spectrogram parameters.
-%
-%       Other Parameters:
-%
-%           - stages:       The sleep stages as a vector.
-%
-%           - epochsize:    The epochsize at which the stages were scored.
-%
-% - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-% ##### Optional Inputs:
-%
-%           - 'norm_method':        A string specifying what normalization
-%                                   method to use. Can be 'percentile',
-%                                   'detrend', or 'none' (default).
-%                                   default: 'none'
-%           - 'norm_time_inds':     Indices of time points to include in
-%                                   the normalization. Disabled for now
-%                                   since 'norm_method' is set to 'none'.
-%                                   default: true(1, length(stimes))
-%
-%           - 'peak_freq_range':    The range of frequencies to look for
-%                                   peak prominence values within.
-%                                   default: [9, 17]
-%
-%           - 'findpeaks_freq_range':    The range of frequencies to run
-%                                   findpeaks on
-%                                   default: [6, 30]
-%
-%           - 'plot_on':            Whether to plot the spectrum for
-%                                   visulization. Note: will plot at every
-%                                   time step.
-%                                   default : false
-%
-%           - 'percent_num':        At which percentile to perform the
-%                                   normalization at. Will take the
-%                                   percentile at each frequency point.
-%                                   default : 3
-%
-%           - 'in_db':              Whether to employ findpeaks on spectrum
-%                                   at each time slice after converting to
-%                                   dB scale.
-%                                   default: false
-%
-%           - 'smooth_Hz':          Will complete a smoothing at each time
-%                                   slice of the spectrum before finding a
-%                                   peak in the spindle frequence
-%                                   range. Enter the number of Hz.
-%                                   default: 0
-%
-%           - 'local_norm_minutes': Whether to perform the normalization of
-%                                   a spectrum basecd on the local spectral values
-%                                   versus the default which is the
-%                                   percentile calculated across the entire
-%                                   artifact/wake-free sleep recording.
-%                                   default: 0
-%
-%           - 'time_range':         Option to calculate only a portion of
-%                                   the night.
-%                                   default = [:] (full night)
-%
-% - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-% ##### Outputs:
-%       In case of multiple channels, outputs will have multiple columns representing
-%       the multiple channel input.
-%
-%           - fproms:           The peak prominence values at each time
-%                               point found in the designated frequency
-%                               range.
-%
-%           - ffreq:            The frequency at which the peak was
-%                               detected.
-%
-%           - fwidth:           The width of the peak that was detected in
-%                               the spectrum. The width is in units Hz.
-%
-%           - nscube:           Normalized spectrogram in the specified
-%                               findpeaks_freq_range.
-%
-% - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+%   Copyright 2024 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
+%% ********************************************************************
 
 %%
 fptic = tic;
