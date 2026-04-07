@@ -221,7 +221,7 @@ if ~isempty(downsample_spect) || ~isempty(seg_time) || ~isempty(merge_thresh)
     assert(isempty(quality_setting), 'Cannot specify quality parameters and quality_setting at the same time.')
 else
     assert(~isempty(quality_setting), 'Must set quality_setting when not directly providing quality parameters.')
-    [downsample_spect, seg_time, merge_thresh] = get_presets(quality_setting);
+    [downsample_spect, seg_time, merge_thresh] = getPresets(quality_setting);
 end
 
 %% Truncate data to time range
@@ -231,7 +231,7 @@ t_time_range = t_data(time_range_inds);
 baseline_exclude = baseline_exclude(time_range_inds);
 
 %% Compute spectrogram
-[spect, stimes, sfreqs, dur_min, bw_min, ht_db_min] = compute_spectrogram(mtm_taper_params, [mtm_window_length_1, mtm_window_stepsize], data_time_range, Fs, mtm_dsfreqs, mtm_freq_range, verbose);
+[spect, stimes, sfreqs, dur_min, bw_min, ht_db_min] = computeSpectrogram(mtm_taper_params, [mtm_window_length_1, mtm_window_stepsize], data_time_range, Fs, mtm_dsfreqs, mtm_freq_range, verbose);
 stimes = stimes + t_time_range(1); % adjust the time axis to t_data
 
 %% Artifact Detection
@@ -250,7 +250,7 @@ exclude_stages = ~ismember(stage_vals, baseline_stages); %stages to use passed i
 exclude_stages_resamp = interp1(stage_times, single(exclude_stages), t_time_range, 'previous')~=0; % ~=0 excludes both 1 and NaN (when t_time_range exceeds the interp1 range)
 baseline_exclude = artifacts(:) | exclude_stages_resamp(:) | baseline_exclude(:);
 
-baseline = compute_baseline(spect, stimes, t_time_range, baseline_exclude, baseline_range, baseline_ptile);
+baseline = computeBaseline(spect, stimes, t_time_range, baseline_exclude, baseline_range, baseline_ptile);
 
 %% Compute time-frequency peaks
 if verbose
@@ -295,10 +295,10 @@ if double_watershed
     stimes = stimes + t_time_range(1); % adjust the time axis to t_data
 
     % Recompute baseline using the same baseline_exclude computed above
-    baseline = compute_baseline(spect, stimes, t_time_range, baseline_exclude, baseline_range, baseline_ptile);
+    baseline = computeBaseline(spect, stimes, t_time_range, baseline_exclude, baseline_range, baseline_ptile);
 
     % Mask the spectrogram using extracted TFpeaks from the first round of watershed
-    spect_masked = mask_spectrogram(spect, stimes_first, stimes, regions, borders);
+    spect_masked = maskSpectrogram(spect, stimes_first, stimes, regions, borders);
 
     % Compute time-frequency peaks
     if verbose
@@ -349,7 +349,7 @@ end
 
 
 %% Helper functions
-function [spect, stimes, sfreqs, dur_min, bw_min, ht_db_min] = compute_spectrogram(taper_params, time_window_params, data_time_range, Fs, dsfreqs, freq_range, verbose)
+function [spect, stimes, sfreqs, dur_min, bw_min, ht_db_min] = computeSpectrogram(taper_params, time_window_params, data_time_range, Fs, dsfreqs, freq_range, verbose)
 % For more information on the multitaper spectrogram parameters and implementation visit:
 % https://github.com/preraulab/multitaper
 
@@ -385,7 +385,7 @@ end
 end
 
 
-function baseline = compute_baseline(spect, stimes, t_time_range, baseline_exclude, baseline_range, baseline_ptile)
+function baseline = computeBaseline(spect, stimes, t_time_range, baseline_exclude, baseline_range, baseline_ptile)
 % Get excluded baseline times occurring at spectrogram times
 baseline_exclude_stimes = logical(interp1(t_time_range, single(baseline_exclude), stimes, 'nearest')); % no need to use ~=0 since t_time_range matches stimes
 
@@ -407,7 +407,7 @@ baseline = prctile(spect_bl(:, valid_baseline_inds), baseline_ptile, 2); % 2 her
 end
 
 
-function spect_masked = mask_spectrogram(spect, stimes_first, stimes, regions, borders)
+function spect_masked = maskSpectrogram(spect, stimes_first, stimes, regions, borders)
 % Remove the offset between start times of spects from the two rounds
 dt = stimes(2)-stimes(1);
 indshift = round((stimes(1)-stimes_first(1)) / dt) * size(spect, 1); % assuming same sfreqs across spects
@@ -425,7 +425,7 @@ spect_masked(border_inds) = 0;
 end
 
 
-function [downsample_spect, seg_time, merge_thresh] = get_presets(quality_setting)
+function [downsample_spect, seg_time, merge_thresh] = getPresets(quality_setting)
 % Check quality settings
 switch lower(quality_setting)
     case {'stokes_2023'} %Matches Stokes et al. 2023 SLEEP paper settings exactly
