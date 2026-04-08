@@ -2512,7 +2512,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 switch app.ParametricBasisDropDown.Value
                     case '.csv'
                         SOpower_params = app.SOPHs.SOpower_paramfit.params;
-                        SOphase_params = app.SOPHs.SOpower_paramfit.params;  % Note: currently uses SOpower source
+                        SOphase_params = app.SOPHs.SOphase_paramfit.params;
                         app.output_paramfit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
                             '/param_basis/',app.input_fbase,'_SOpower_paramfit_',app.channel,'.csv');
                         app.output_paramfit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
@@ -2523,7 +2523,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                         writematrix(SOphase_params, app.output_paramfit_phase_name);
                     case '.mat'
                         SOpower_paramfit = app.SOPHs.SOpower_paramfit;
-                        SOphase_paramfit = app.SOPHs.SOpower_paramfit;  % Note: currently uses SOpower source
+                        SOphase_paramfit = app.SOPHs.SOphase_paramfit;
                         app.output_paramfit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
                             '/param_basis/',app.input_fbase,'_SOpower_paramfit_',app.channel,'.mat');
                         app.output_paramfit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
@@ -2533,7 +2533,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                     case 'All'
                         % Save both csv params and full mat structs
                         SOpower_params = app.SOPHs.SOpower_paramfit.params;
-                        SOphase_params = app.SOPHs.SOpower_paramfit.params;
+                        SOphase_params = app.SOPHs.SOphase_paramfit.params;
                         app.output_paramfit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
                             '/param_basis/',app.input_fbase,'_SOpower_paramfit_',app.channel,'.csv');
                         app.output_paramfit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
@@ -2544,7 +2544,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                         writematrix(SOphase_params, app.output_paramfit_phase_name);
 
                         SOpower_paramfit = app.SOPHs.SOpower_paramfit;
-                        SOphase_paramfit = app.SOPHs.SOpower_paramfit;
+                        SOphase_paramfit = app.SOPHs.SOphase_paramfit;
                         app.output_paramfit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
                             '/param_basis/',app.input_fbase,'_SOpower_paramfit_',app.channel,'.mat');
                         app.output_paramfit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
@@ -2908,7 +2908,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.progress_bar.complete();
             fclose(app.consolelog_fid);   % Also stops diary
             fclose(app.runlog_fid);
-            app.z.Enabled = 'on';
+            app.StopBatchButton.Enabled = 'on';
 
         end % runBatch
 
