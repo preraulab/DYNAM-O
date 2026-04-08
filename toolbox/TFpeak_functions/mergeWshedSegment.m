@@ -153,6 +153,9 @@ num_regions = length(regions);
 if num_regions == 1
     return
 end
+
+% Precompute label-to-index map for O(1) lookups in mergeRegions
+lbl_map = containers.Map(region_lbls, 1:length(region_lbls));
 [max_wt,max_idx] = max(ematr(:,3));
 
 % Set dynamic merge_thresh if merge_thresh is nan
@@ -179,7 +182,7 @@ while ~isempty(ematr) && max_wt > merge_thresh && num_merges < max_merges && num
     mrg_from = ematr(max_idx(1),2);
 
     % Merge regions
-    [regions, borders, ematr, pick_update] = mergeRegions(regions,mrg_to,mrg_from,region_lbls,borders,ematr);
+    [regions, borders, ematr, pick_update] = mergeRegions(regions,mrg_to,mrg_from,region_lbls,borders,ematr,lbl_map);
 
     % Update edge weights
     if ~isempty(find(pick_update,1))
