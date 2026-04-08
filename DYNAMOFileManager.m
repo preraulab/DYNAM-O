@@ -2090,6 +2090,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %     - Header rows not specified
             %     - Any listed file does not exist on disk
 
+            app.run_error_list = {};  % Clear before re-validating
+
             if isempty(app.DataList)
                 app.run_error_list(end+1) = {'- Data list empty. Need edf files to run.'};
             end
@@ -2123,19 +2125,13 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % Check that every file in both lists actually exists on disk
             missing = {};
-            if size(app.DataList,1) < size(app.DataList,2)
-                app.DataList = app.DataList';
-            end
-            if size(app.StagingList,1) < size(app.StagingList,2)
-                app.StagingList = app.StagingList';
-            end
-            for f = [app.DataList, app.StagingList]
+            allFiles = [app.DataList(:); app.StagingList(:)];
+            for f = allFiles'
                 if ~isfile(f{1}), missing{end+1} = f{1}; end %#ok<AGROW>
             end
 
-            % TO-DO: Test missing-file error formatting
             if ~isempty(missing)
-                app.run_error_list{end} = strcat('Missing files:\n%s', strjoin(missing, '\n'));
+                app.run_error_list{end+1} = sprintf('Missing files:\n%s', strjoin(missing, '\n'));
             end
         end
 
@@ -2325,15 +2321,20 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/SOPHs/'))
             end
 
-            % Build output file paths for existence checks
-            app.output_stats_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
+            % Build existence-check paths covering all possible saved formats
+            stats_csv    = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
+                '/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.csv');
+            stats_mat    = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
                 '/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.mat');
-            app.output_SOPH_name  = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
+            SOPH_mat     = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
                 '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat');
+            SOPH_tiff    = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
+                '/SOPHs/',app.input_fbase,'_SOPHs_power_',app.channel,'.tiff');
+            stats_exists = exist(stats_csv,'file') || exist(stats_mat,'file');
+            SOPH_exists  = exist(SOPH_mat,'file')  || exist(SOPH_tiff,'file');
 
             % Run DYNAMO only if outputs are missing or overwrite is requested
-            if app.OverwriteExistingFilesCheckBox.Value || ...
-                    (~exist(app.output_stats_name,'file') || ~exist(app.output_SOPH_name,'file'))
+            if app.OverwriteExistingFilesCheckBox.Value || ~stats_exists || ~SOPH_exists
 
                 app.anything_run = 1;
                 app.TextArea.Value = strcat('Running DYNAMO on subject ',{' '}, ...
@@ -2386,7 +2387,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                         case 'All'
                             % Save both tiff and mat
                             app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/SOPHs/',app.input_fbase,'_SOPHs_power',app.channel,'.tiff');
+                                '/SOPHs/',app.input_fbase,'_SOPHs_power_',app.channel,'.tiff');
                             app.writeTiff(app.output_SOPH_name, SOPHs.SOpower_mat);
                             app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
                                 '/SOPHs/',app.input_fbase,'_SOPHs_phase_',app.channel,'.tiff');
@@ -2433,7 +2434,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 if ~exist(csvPath,'file') && ~exist(matPath,'file')
                     runStatsTable(app);      % Compute from scratch
                 elseif exist(matPath,'file')
-                    app.stats_table = load(matPath,'stats_table');
+                    app.stats_table = load(matPath,'stats_table').stats_table;
                 else
                     app.stats_table = csv2table(csvPath);
                 end
@@ -2452,7 +2453,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                     app.input_fbase,', channel ',{' '},app.channel,'.');
                 app.anything_run = 1;
                 fh = app.displaySummaryPlot;
-                print(fh,'-dpng','-r300',app.output_fig_name);
+                switch app.DataSummaryDropDown.Value
+                    case {'.jpg','.jpeg'}, fig_driver = '-djpeg';
+                    otherwise,            fig_driver = '-dpng';
+                end
+                print(fh, fig_driver, '-r300', app.output_fig_name);
                 close all;
             end
         end % runDataSummaryFigure
@@ -2500,10 +2505,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 app.anything_run = 1;
                 app.output_param_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
                     '/figures/param_basis/',app.input_fbase,'_param_basis_figure_', ...
-                    app.channel, app.DataSummaryDropDown.Value);
+                    app.channel, app.ParametricFiguresDropDown.Value);
                 app.TextArea.Value = strcat('Saving parameter basis fit summary figure on subject ',{' '}, ...
                     app.input_fbase,', channel ',{' '},app.channel,'.');
-                print(fh,'-dpng','-r300',app.output_param_name);
+                switch app.ParametricFiguresDropDown.Value
+                    case {'.jpg','.jpeg'}, fig_driver = '-djpeg';
+                    otherwise,            fig_driver = '-dpng';
+                end
+                print(fh, fig_driver, '-r300', app.output_param_name);
             end
             close all;
 
@@ -2704,11 +2713,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 uialert(app.UIFigure, ...
                     'All files exist and counts match. Ready to process.', ...
                     'Success', 'Icon', 'success');
+                app.RunBatchButton.Enabled  = 'off';
                 app.StopBatchButton.Enabled = 'on';
             else
                 uialert(app.UIFigure, sprintf('%s\n', app.run_error_list{:}), ...
                     'Run Error', 'Icon', 'error');
-                app.run_error_list = {};  % Reset for next validation attempt
                 return;
             end
 
@@ -2731,7 +2740,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             end
 
             runBatch(app)
-            app.StopBatchButton.Enabled = 'on';
         end
 
         % ------------------------------------------------------------------
@@ -2811,6 +2819,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
                     % Honour stop request before starting each new iteration
                     if app.isStopBatchButtonPushed == true
+                        fclose(app.consolelog_fid);
+                        diary off;
+                        fclose(app.runlog_fid);
+                        app.RunBatchButton.Enabled  = 'on';
+                        app.StopBatchButton.Enabled = 'off';
                         return
                     end
 
@@ -2906,9 +2919,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %   CLEANUP
             % ---------------------------------------------------------------
             app.progress_bar.complete();
-            fclose(app.consolelog_fid);   % Also stops diary
+            fclose(app.consolelog_fid);
+            diary off;
             fclose(app.runlog_fid);
-            app.StopBatchButton.Enabled = 'on';
+            app.RunBatchButton.Enabled  = 'on';
+            app.StopBatchButton.Enabled = 'off';
 
         end % runBatch
 
