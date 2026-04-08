@@ -4,3 +4,4 @@ archive/*
 output_images/*
 tests/*
 *.asv
+.aider*

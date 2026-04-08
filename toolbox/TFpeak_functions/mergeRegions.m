@@ -1,4 +1,4 @@
-function [regions, borders, adj_mat, pick_update] = mergeRegions(regions,a,b,lbls,borders,adj_mat)
+function [regions, borders, adj_mat, pick_update] = mergeRegions(regions,a,b,lbls,borders,adj_mat,lbl_map)
 %MERGEREGIONS updates the pixel lists in region and borders and the adjacencies in
 % adj_mat according to mergion regions b into region a. It also returns an
 % indicator for what edge weights need to be updated
@@ -35,6 +35,9 @@ function [regions, borders, adj_mat, pick_update] = mergeRegions(regions,a,b,lbl
 %
 %**********************************************************************
 
+if nargin < 7
+    lbl_map = [];
+end
 if nargin < 6
     adj_mat = [];
 end
@@ -44,7 +47,11 @@ if nargin < 5
 end
 
 %Find the corresponding label for region a
-a_lbl_idx = lbls==a;
+if ~isempty(lbl_map)
+    a_lbl_idx = lbl_map(a); % O(1) map lookup
+else
+    a_lbl_idx = find(lbls==a); % fallback: O(N) linear scan
+end
 if ~isempty(borders)
     border_a = borders{a_lbl_idx};
 end
@@ -52,7 +59,11 @@ end
 %Loop through regions that are to be merged into region a
 for ii = 1:length(b)
     %Find the label index
-    b_lbl_idx = lbls==b(ii);
+    if ~isempty(lbl_map)
+        b_lbl_idx = lbl_map(b(ii)); % O(1) map lookup
+    else
+        b_lbl_idx = find(lbls==b(ii)); % fallback: O(N) linear scan
+    end
 
     %Update a to include all the b pixels
     % regions{a_lbl_idx} = unique([regions{a_lbl_idx}; regions{b_lbl_idx}]);
@@ -89,7 +100,11 @@ for ii = 1:length(b)
             cnx2 = adj_mat(:,2)==nbrs(jj);
             %merge any encircled region with a
             if all(a==adj_mat(cnx1,2)) && all(a==adj_mat(cnx2,1)) % the only neighbor is a = encircled by a
-                jj_lbl_idx = lbls==nbrs(jj);
+                if ~isempty(lbl_map)
+                    jj_lbl_idx = lbl_map(nbrs(jj)); % O(1) map lookup
+                else
+                    jj_lbl_idx = find(lbls==nbrs(jj)); % fallback: O(N) linear scan
+                end
                 regions{a_lbl_idx} = unique([regions{a_lbl_idx}; regions{jj_lbl_idx}]);
                 regions{jj_lbl_idx} = [];
                 if ~isempty(borders)
