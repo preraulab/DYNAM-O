@@ -94,8 +94,9 @@ classdef DYNAMO < handle
     %    CITATION
     %    If you use this toolbox in publications or derived work, please cite:
     %
-    %    He, M., Prerau, M. J.
-    %    "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics in Sleep EEG"
+    %    He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
+    %   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+    %   in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
     %
     %    Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
     %    Manoach, D. S., Stickgold, R., Prerau, M. J.
