@@ -45,8 +45,29 @@ function [ fpeak_proms, tpeak_proms, tpeak_times, tpeak_durations, tpeak_center_
 %       tpeak_interpeak_intervals:      [Px1] double - interval (seconds) from end of previous peak
 %                                       to start of next peak
 %
-%   Copyright 2024 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
-%% ********************************************************************
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
+%
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://harvard.edu
+%   GITHUB     https://github.com
+%
+%   CITATION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Prerau, M. J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%    in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%    for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
 %%
 % Parse inputs and preparation
 [ fpeak_proms, min_peak_width_sec, min_peak_distance_sec ] = tpeak_inputparse(fpeak_proms, stimes, varargin{:});

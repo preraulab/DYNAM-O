@@ -74,16 +74,36 @@ classdef DYNAMO < handle
     %       d.fitParamBasis();
     %       d.fitSplineBasis();
     %
-    %   Citation:
-    %       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun
-    %       Purcell, Dara S Manoach, Robert Stickgold, Michael J Prerau,
-    %       "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-    %       for Electroencephalographic Phenotyping and Biomarker Identification",
-    %       Sleep, 2022; zsac223. https://doi.org/10.1093/sleep/zsac223
+    % =========================================================================
+    %    ██████╗ ██╗   ██╗███╗   ██╗ █████╗ ███╗   ███╗        ██████╗
+    %    ██╔══██╗╚██╗ ██╔╝████╗  ██║██╔══██╗████╗ ████║       ██╔═══██╗
+    %    ██║  ██║ ╚████╔╝ ██╔██╗ ██║███████║██╔████╔██║  ███╗ ██║   ██║
+    %    ██║  ██║  ╚██╔╝  ██║╚██╗██║██╔══██║██║╚██╔╝██║  ╚══╝ ██║   ██║
+    %    ██████╔╝   ██║   ██║ ╚████║██║  ██║██║ ╚═╝ ██║       ╚██████╔╝
+    %    ╚═════╝    ╚═╝   ╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝     ╚═╝        ╚═════╝
     %
-    %   Copyright 2025 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
-    % *************************************************************************
-
+    % -------------------------------------------------------------------------
+    %    Characterizing Individualized Neural Dynamics in Sleep EEG
+    % -------------------------------------------------------------------------
+    %
+    %    Developed by the Prerau Laboratory
+    %    WEB:       https://sleepeeg.org
+    %    TUTORIALS: https://harvard.edu
+    %    GITHUB:    https://github.com
+    %
+    %    CITATION
+    %    If you use this toolbox in publications or derived work, please cite:
+    %
+    %    He, M., Prerau, M. J.
+    %    "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics in Sleep EEG"
+    %
+    %    Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+    %    Manoach, D. S., Stickgold, R., Prerau, M. J.
+    %    "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+    %     for Electroencephalographic Phenotyping and Biomarker Identification"
+    %    Sleep, 2022; zsac223. https://doi.org
+    %
+    % =========================================================================
     properties
         % EEG / staging / outputs
         data                % EEG time series
@@ -705,7 +725,7 @@ classdef DYNAMO < handle
                 basic_tables{jj} = createTable(tab, obj.(basic_configs{jj}.field), basic_configs{jj});
             end
 
-         
+
             if showButtons
                 tabs_position = [0 .1 1 .9];
             else
@@ -868,7 +888,7 @@ classdef DYNAMO < handle
                 %
 
                 tableData = createTableData(opts, config);
-              
+
 
                 tbl = uitable(parent, 'Data', tableData, ...
                     'ColumnName', {'Parameter', 'Description', 'Value'}, ...

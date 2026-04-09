@@ -1,4 +1,27 @@
 function plot_SOPH_paramfits( ...
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
+%
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://harvard.edu
+%   GITHUB     https://github.com
+%
+%   CITATION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Prerau, M. J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%    in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%    for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
     power_bins, power_wshed_img, SOPH_pow, model_SOPH_pow, params_pow, SOPH_clim_prctiles_pow, power_limits, freq_limits_pow, ...
     phase_bins, phase_wshed_img, SOPhH_phase, model_SOPhH_phase, params_phase, SOPH_clim_prctiles_phase, phase_limits, freq_limits_phase, ...
     freq_bins, power_fitobj, phase_fitobj)
