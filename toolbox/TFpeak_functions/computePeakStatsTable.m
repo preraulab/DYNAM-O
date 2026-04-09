@@ -19,9 +19,6 @@ function stats_table = computePeakStatsTable(regions,boundaries,data,xvalues,yva
 %   stats_table   -- Table of peak statistics
 %
 %
-%**********************************************
-% Set defaults for additional input arguments *
-%**********************************************
 % =========================================================================
 %                  DYNAM-O Toolbox  |  Prerau Laboratory
 %       Characterizing Individualized Neural Dynamics in Sleep EEG
@@ -45,6 +42,10 @@ function stats_table = computePeakStatsTable(regions,boundaries,data,xvalues,yva
 %   Sleep, 2022; zsac223. https://doi.org
 %
 % =========================================================================
+
+%**********************************************
+% Set defaults for additional input arguments *
+%**********************************************
 if nargin<3
     error('Regions, boundaries, and data are required')
 end
