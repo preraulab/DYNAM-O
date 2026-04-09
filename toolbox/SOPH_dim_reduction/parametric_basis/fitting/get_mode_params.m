@@ -39,8 +39,11 @@ mode_nums = parser.Results.mode_nums;
 valid = parser.Results.valid;
 param_type = parser.Results.param_type;
 
+% Compute once — used in multiple places below
+N = num_modes(fitobj);
+
 if isempty(mode_nums)
-    mode_nums = 1:num_modes(fitobj);
+    mode_nums = 1:N;
 end
 
 % Get mode coefficients
@@ -49,17 +52,19 @@ mode_params_all = coeffvalues(fitobj);
 % Extract baseline or mode parameters
 switch param_type
     case 'baseline'
-        mode_params = mode_params_all(num_modes(fitobj)*num_mode_params(fitobj)+1:end);
+        mode_params = mode_params_all(N*num_mode_params(fitobj)+1:end);
 
     case 'modes'
         if ~isempty(mode_nums)
 
             mode_params = zeros(length(mode_nums), num_mode_params(fitobj));
-            mode_inds_all = false(length(coeffvalues(fitobj)), 1);
+            mode_inds_all = false(length(mode_params_all), 1);
+
+            % Hoist coeffnames — avoids repeated calls inside the loop
+            cnames = coeffnames(fitobj);
 
             for ii = 1:length(mode_nums)
-                mode_num  = mode_nums(ii);
-                mode_inds = endsWith(coeffnames(fitobj), ['_' num2str(mode_num)]);
+                mode_inds = endsWith(cnames, ['_' num2str(mode_nums(ii))]);
                 mode_inds_all = mode_inds_all | mode_inds;
                 mode_params(ii,:) = mode_params_all(mode_inds);
             end
