@@ -1,4 +1,13 @@
-function plot_SOPH_splinefits( ...
+function plot_SOPH_splinefits(SOpower_mat, SOpower_bins, fit_pow, coefs_pow, knots_x_pow, knots_y_pow, opts_pow, ...
+    SOphase_mat, SOphase_bins, fit_phase, coefs_phase, knots_x_phase, knots_y_phase, opts_phase, ...
+    freq_bins)
+%PLOT_SOPH_SPLINEFITS  Plot SOPH histograms and spline reconstructions in one figure.
+%
+%   Plots SO-Power (top row) and SO-Phase (bottom row) histograms,
+%   their spline reconstructions, and spline coefficients in a 2x3 layout.
+%
+%   See also: SPLINE_BASIS
+%
 % =========================================================================
 %                  DYNAM-O Toolbox  |  Prerau Laboratory
 %       Characterizing Individualized Neural Dynamics in Sleep EEG
@@ -22,16 +31,6 @@ function plot_SOPH_splinefits( ...
 %   Sleep, 2022; zsac223. https://doi.org
 %
 % =========================================================================
-    SOpower_mat, SOpower_bins, fit_pow, coefs_pow, knots_x_pow, knots_y_pow, opts_pow, ...
-    SOphase_mat, SOphase_bins, fit_phase, coefs_phase, knots_x_phase, knots_y_phase, opts_phase, ...
-    freq_bins)
-
-%PLOT_SOPH_SPLINEFITS  Plot SOPH histograms and spline reconstructions in one figure.
-%
-%   Plots SO-Power (top row) and SO-Phase (bottom row) histograms,
-%   their spline reconstructions, and spline coefficients in a 2x3 layout.
-%
-%   See also: SPLINE_BASIS
 
 f = figure;
 ax = figdesign(f, 2, 3, ...
