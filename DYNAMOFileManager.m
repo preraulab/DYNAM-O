@@ -35,13 +35,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
     %    CITATION
     %    If you use this toolbox in publications or derived work, please cite:
     %
-    %    He, M., Prerau, M. J.
-    %    "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics in Sleep EEG"
+    %    He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
+    %    "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+    %    in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
     %
     %    Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
     %    Manoach, D. S., Stickgold, R., Prerau, M. J.
     %    "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-    %     for Electroencephalographic Phenotyping and Biomarker Identification"
+    %   for Electroencephalographic Phenotyping and Biomarker Identification"
     %    Sleep, 2022; zsac223. https://doi.org
     %
     % =========================================================================
@@ -2826,7 +2827,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'CITATION\n' ...
                 'If you use this toolbox in publications or derived work, please cite:\n' ...
                 '\n' ...
-                'He, M., Prerau, M. J.\n' ...
+                'He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.\n' ...
                 '"DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics\n' ...
                 ' in Sleep EEG"\n' ...
                 '\n' ...
