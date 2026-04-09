@@ -13,7 +13,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
     %   Usage:
     %       app = DYNAMOFileManager()
     %
-    %   See also: DYNAMO, matlab.apps.AppBase
+    %   See also: DYNAMO, runDYNAMO, matlab.apps.AppBase
     %
     % =========================================================================
     %    ██████╗ ██╗   ██╗███╗   ██╗ █████╗ ███╗   ███╗        ██████╗
