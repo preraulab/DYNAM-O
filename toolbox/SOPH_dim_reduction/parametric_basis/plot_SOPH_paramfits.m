@@ -1,4 +1,13 @@
-function plot_SOPH_paramfits( ...
+function plot_SOPH_paramfits(power_bins, power_wshed_img, SOPH_pow, model_SOPH_pow, params_pow, SOPH_clim_prctiles_pow, power_limits, freq_limits_pow, ...
+    phase_bins, phase_wshed_img, SOPhH_phase, model_SOPhH_phase, params_phase, SOPH_clim_prctiles_phase, phase_limits, freq_limits_phase, ...
+    freq_bins, power_fitobj, phase_fitobj)
+%PLOT_SOPH_PARAMFITS  Plot SOPH histograms and parametric Gaussian peak reconstructions in one figure.
+%
+%   Plots SO-Power (top row) and SO-Phase (bottom row) histograms,
+%   watershed segmentations, and their parametric reconstructions in a 2x3 layout.
+%
+%   See also: PARAM_BASIS_POWER and PARAM_BSIS_PHASE
+%
 % =========================================================================
 %                  DYNAM-O Toolbox  |  Prerau Laboratory
 %       Characterizing Individualized Neural Dynamics in Sleep EEG
@@ -22,16 +31,6 @@ function plot_SOPH_paramfits( ...
 %   Sleep, 2022; zsac223. https://doi.org
 %
 % =========================================================================
-    power_bins, power_wshed_img, SOPH_pow, model_SOPH_pow, params_pow, SOPH_clim_prctiles_pow, power_limits, freq_limits_pow, ...
-    phase_bins, phase_wshed_img, SOPhH_phase, model_SOPhH_phase, params_phase, SOPH_clim_prctiles_phase, phase_limits, freq_limits_phase, ...
-    freq_bins, power_fitobj, phase_fitobj)
-
-%PLOT_SOPH_PARAMFITS  Plot SOPH histograms and parametric Gaussian peak reconstructions in one figure.
-%
-%   Plots SO-Power (top row) and SO-Phase (bottom row) histograms,
-%   watershed segmentations, and their parametric reconstructions in a 2x3 layout.
-%
-%   See also: PARAM_BASIS_POWER and PARAM_BSIS_PHASE
 
 % Hover distance threshold (fraction of axis diagonal). Tweak this value as desired.
 hover_dist_threshold = 0.05;  % 0.05 = 5% of axis diagonal
