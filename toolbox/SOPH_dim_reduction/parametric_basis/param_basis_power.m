@@ -310,10 +310,8 @@ for ii = 1:max_peaks
     % Fit the model and obtain goodness-of-fit
     [fitobj, gof] = fitfunc(SOPH(valid_freq_bins, valid_power_bins), power_bins(valid_power_bins), freq_bins(valid_freq_bins), B0i, LBi, UBi, false);
 
-    % Save the fitted model SOPH (only needed when plotting iteration panels)
-    if plot_on > 1
-        model_SOPH = feval(fitobj, power_grid, freq_grid);
-    end
+    % Save the fitted model SOPH
+    model_SOPH = feval(fitobj, power_grid, freq_grid);
     N_modes = num_modes(fitobj);
 
     % Compute adjusted R-squared for the current iteration
@@ -401,8 +399,7 @@ for ii = 1:max_peaks
     end
 
     % Check if any peaks are too close in frequency
-    freq_too_close = size(B0i, 1) > 1 && min(diff(sort(B0i(:,2)))) < min_freq_diff;
-    if freq_too_close
+    if any(pdist(B0i(:,2)) < min_freq_diff)
         if verbose > 0
             disp(['    Peaks too close in frequency: ', num2str(B0i(:,2)')]);
         end

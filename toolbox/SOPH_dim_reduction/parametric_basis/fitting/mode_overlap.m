@@ -38,19 +38,13 @@ function overlap = mode_overlap(powfit, goodpeaks, SOpow_bins, freq_bins)
 %
 % =========================================================================
 
-N = length(goodpeaks);
-overlap = zeros(N);
+overlap = zeros(length(goodpeaks));
+%Get all pairwise overlap
+for p = 1:length(goodpeaks)
+    for q = p+1:length(goodpeaks)
+        p1 = select_modes(powfit, goodpeaks(p), SOpow_bins, freq_bins);
+        p2 = select_modes(powfit, goodpeaks(q), SOpow_bins, freq_bins);
 
-% Pre-compute each mode surface once, then use cached results for all pairs
-surfaces = cell(N, 1);
-for p = 1:N
-    surfaces{p} = select_modes(powfit, goodpeaks(p), SOpow_bins, freq_bins);
-end
-
-for p = 1:N
-    for q = p+1:N
-        p1 = surfaces{p};
-        p2 = surfaces{q};
-        overlap(p,q) = sum(min(p1,p2),'all') / sum(max(p1,p2),'all');
+        overlap(p,q) = sum(min(p1,p2),'all')/(sum(max(p1,p2),'all'));
     end
 end
