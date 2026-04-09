@@ -51,10 +51,10 @@ function [ fpeak_proms, tpeak_proms, tpeak_times, tpeak_durations, tpeak_center_
 % -------------------------------------------------------------------------
 %
 %   WEB        https://sleepeeg.org
-%   TUTORIALS  https://harvard.edu
+%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
 %   GITHUB     https://github.com
 %
-%   CITATION
+%   ATTRIBUTION
 %   If you use this toolbox, please cite:
 %
 %   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.

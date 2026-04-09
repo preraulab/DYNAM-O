@@ -25,10 +25,10 @@ function pi_str = double2pifracstr(val, tol)
 % -------------------------------------------------------------------------
 %
 %   WEB        https://sleepeeg.org
-%   TUTORIALS  https://harvard.edu
+%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
 %   GITHUB     https://github.com
 %
-%   CITATION
+%   ATTRIBUTION
 %   If you use this toolbox, please cite:
 %
 %   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.

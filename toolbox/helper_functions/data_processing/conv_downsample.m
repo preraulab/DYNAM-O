@@ -53,10 +53,10 @@ function img_downsampled = conv_downsample(img, scale_factor, method, plot_on)
 % -------------------------------------------------------------------------
 %
 %   WEB        https://sleepeeg.org
-%   TUTORIALS  https://harvard.edu
+%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
 %   GITHUB     https://github.com
 %
-%   CITATION
+%   ATTRIBUTION
 %   If you use this toolbox, please cite:
 %
 %   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.

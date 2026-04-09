@@ -35,10 +35,10 @@ function [SOpower_norm, SOpower_times, SOpower_stages, norm_method, ptile] = com
 % -------------------------------------------------------------------------
 %
 %   WEB        https://sleepeeg.org
-%   TUTORIALS  https://harvard.edu
+%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
 %   GITHUB     https://github.com
 %
-%   CITATION
+%   ATTRIBUTION
 %   If you use this toolbox, please cite:
 %
 %   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.

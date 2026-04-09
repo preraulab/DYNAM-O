@@ -33,10 +33,10 @@ function e_wts = computeMergeWeights(rgn,data,rgn_lbls,rgn_bnds,amatr,merge_rule
 % -------------------------------------------------------------------------
 %
 %   WEB        https://sleepeeg.org
-%   TUTORIALS  https://harvard.edu
+%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
 %   GITHUB     https://github.com
 %
-%   CITATION
+%   ATTRIBUTION
 %   If you use this toolbox, please cite:
 %
 %   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
