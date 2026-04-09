@@ -19,8 +19,29 @@ function pi_str = double2pifracstr(val, tol)
 %       val2 = 3;
 %       pi_str2 = double2pifracstr(val2);   % Returns '3'
 %
-%   Copyright 2023 Prerau Laboratory - sleepEEG.org
-%% ********************************************************************
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
+%
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://harvard.edu
+%   GITHUB     https://github.com
+%
+%   CITATION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Prerau, M. J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%    in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%    for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
 if nargin < 2
     tol = 1e-10;
 end

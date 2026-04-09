@@ -50,9 +50,29 @@ function equalize_axes(ax, varargin)
 %       equalize_axes(ax([1 3 5]), 'c');
 %       equalize_axes(ax([2 4 6]), 'xy');
 %
-% Copyright 2024 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
-%**************************************************************************
-
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
+%
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://harvard.edu
+%   GITHUB     https://github.com
+%
+%   CITATION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Prerau, M. J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%    in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%    for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
 if nargin == 0
     %Create a figure with images and plots
     figure
@@ -163,7 +183,5 @@ if linked
         hlink = linkprop(ax, 'CLim');
     end
 end
-
-
 
 

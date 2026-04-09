@@ -21,10 +21,30 @@ function [ max_curve, bin_centers, hist_olN2, hist_olN3 ] = extract_density_curv
 %       hist_olN2:    [1xB] double - normalized N2 frequency density (events/min)
 %       hist_olN3:    [1xB] double - normalized N3 frequency density (events/min)
 %
-%   Copyright 2024 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
-%% ********************************************************************
-
 % set up bin starts and ends
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
+%
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://harvard.edu
+%   GITHUB     https://github.com
+%
+%   CITATION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Prerau, M. J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%    in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%    for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
 hb = bin_width/2;
 bin_centers = bin_range(1)+hb:bin_step:bin_range(2)-hb;
 bin_starts = bin_centers - hb;

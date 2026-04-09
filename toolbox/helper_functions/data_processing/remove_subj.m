@@ -34,13 +34,29 @@ function [SOpow_data, SOpow_prop_data, SOpow_time_data, SOphase_data, SOphase_pr
 %       Sophase_time_data: Same as input with nans replacing data for selected subjs/elects
 %
 %
-%   Authors: Thomas Possidente
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
 %
-%   Last modified:
-%       - Created - Tom Possidente 1/03/2022
-%**********************************************************************
-
-
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://harvard.edu
+%   GITHUB     https://github.com
+%
+%   CITATION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Prerau, M. J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%    in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%    for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
 assert((length(elect_inds) == length(subj_inds)), 'elect_inds and subj_inds must be the same length');
 
 num_remove = length(elect_inds);
