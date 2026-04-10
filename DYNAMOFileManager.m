@@ -272,7 +272,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % -------------------------
         %   Miscellaneous UI
         % -------------------------
-        progress_bar   % SmoothProgressBar handle displayed in TimeEstimateGrid
+        ProgressBar   % SmoothProgressBar handle displayed in TimeEstimateGrid
 
         % -------------------------
         %   UI Dimension Constants
@@ -1432,7 +1432,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.TimeEstimateGrid.RowHeight   = {'1x'};
             app.TimeEstimateGrid.Padding     = [5 5 5 5];
             app.TimeEstimateGrid.Layout.Row  = 1;
-            app.TimeEstimateGrid.Layout.Column = 2;
+            app.TimeEstimateGrid.Layout.Column = 3;
 
             app.HelpButton = CSSuiButton(app.TimeEstimateGrid, ...
                 'Style', 'shadow', ...
@@ -1449,6 +1449,12 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 );
             app.HelpButton.Row    = 1;
             app.HelpButton.Column = 2;
+
+            app.ProgressBar = SmoothProgressBar(app.TimeEstimateGrid);
+            app.ProgressBar.N = 0;
+
+            app.ProgressBar.Layout.Row = 1;
+            app.ProgressBar.Layout.Column = 1;
 
             % ============================================================
             %   DYNAM-O SETTINGS (sub-app embedded in its tab)
@@ -2169,6 +2175,10 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             if isempty(app.HeaderRowsEditField.Value)
                 app.run_error_list(end+1) = {'- No header rows given in the staging file.'};
+            end
+
+            if strcmpi(app.ChannelEditField.Value, 'Enter comma-separated channel labels') | isempty(app.ChannelEditField.Value)
+                app.run_error_list(end+1) = {'- No channels selected.'};
             end
 
             % Check that every file in both lists actually exists on disk
@@ -2920,13 +2930,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.TextArea.Value = {'Processing channel inputs.'};
             updateChannelInput(app)
 
-            % Create (or refresh) the progress bar widget
-            if isempty(app.progress_bar)
-                app.progress_bar = SmoothProgressBar(app.TimeEstimateGrid, ...
-                    length(app.DataList), app.TimeEstimateGrid.Position);
-            else
-                app.progress_bar.refresh;
-            end
+            % Initialize the progress bar widget
+            app.ProgressBar.N = length(app.DataList);
+            app.ProgressBar.refresh;
 
             % ---------------------------------------------------------------
             %   MAIN BATCH LOOP
@@ -3030,7 +3036,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                     % Update progress bar (wrapped in try-catch to avoid aborting on UI errors)
                     try
                         app.curr_iteration = app.curr_iteration + 1;
-                        app.progress_bar.updateIteration(app.curr_iteration);
+                        app.ProgressBar.updateIteration(app.curr_iteration);
                     catch e
                         disp(e);
                         app.set_rundefault;
@@ -3043,7 +3049,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % ---------------------------------------------------------------
             %   CLEANUP
             % ---------------------------------------------------------------
-            app.progress_bar.complete();
+            app.ProgressBar.complete();
             fclose(app.consolelog_fid);
             diary off;
             fclose(app.runlog_fid);
