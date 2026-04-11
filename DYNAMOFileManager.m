@@ -1431,6 +1431,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.TimeEstimateGrid             = uigridlayout(app.BottomGrid);
             app.TimeEstimateGrid.ColumnWidth = {'1x',100};
             app.TimeEstimateGrid.RowHeight   = {'1x'};
+            app.TimeEstimateGrid.ColumnSpacing = 30;
             app.TimeEstimateGrid.Padding     = [5 5 5 5];
             app.TimeEstimateGrid.Layout.Row  = 1;
             app.TimeEstimateGrid.Layout.Column = 3;
@@ -1453,6 +1454,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             app.ProgressBar = SmoothProgressBar(app.TimeEstimateGrid);
             app.ProgressBar.N = 0;
+            app.ProgressBar.BarHeight = .4;
+            app.ProgressBar.refresh
 
             app.ProgressBar.Layout.Row = 1;
             app.ProgressBar.Layout.Column = 1;
