@@ -3,12 +3,13 @@ classdef SmoothProgressBar < matlab.ui.componentcontainer.ComponentContainer
     %
     %   This class provides a continuous-time progress bar for uifigure-based
     %   applications. The bar advances smoothly between iteration updates using a
-    %   generalized sigmoid interpolation. It supports a color gradient, optional
+    %   timer-driven display loop. It supports a color gradient, optional
     %   percentage display, time remaining, and x-axis tick marks.
     %
     % USAGE:
-    %   pb = SmoothProgressBar(parent)
-    %   pb = SmoothProgressBar(parent, N)
+    %   pb = SmoothProgressBar(parent)          % set N later via pb.N = 10
+    %   pb = SmoothProgressBar(parent, N)       % positional N  <-- works
+    %   pb = SmoothProgressBar(parent, 'N', N)  % name-value N
     %
     % NOTE:
     %   This ComponentContainer version is fully compatible with uigridlayout
@@ -19,18 +20,15 @@ classdef SmoothProgressBar < matlab.ui.componentcontainer.ComponentContainer
     %   N             - Total number of iterations or work units (positive scalar)
     %
     % PUBLIC PROPERTIES:
-    %   Parent             - Parent UI container (managed by ComponentContainer)
-    %   Axes               - UIAxes used for rendering
-    %   Bar                - Rectangle object representing filled portion
     %   N                  - Total iterations
-    %   Timer              - Timer object for smooth updates
-    %   Colormap           - Name of colormap
+    %   Colormap           - Name of colormap (changes take effect immediately)
     %   ShowTimeRemaining  - Toggle time remaining display
     %   ShowPercentage     - Toggle percentage display
-    %   BarHeight          - Relative bar height (0–1)
-    %   FontSize           - Title font size
-    %   FontColor          - Title font color
+    %   BarHeight          - Relative bar height (0-1, changes take effect immediately)
+    %   FontSize           - Title font size (changes take effect immediately)
+    %   FontColor          - Title font color (changes take effect immediately)
     %   TimerPeriod        - Timer update period in seconds (default: 0.05)
+    %   ShowTicks          - Show x-axis tick marks (changes take effect immediately)
     %
     % METHODS:
     %   start()            - Start or restart the timer
@@ -40,12 +38,11 @@ classdef SmoothProgressBar < matlab.ui.componentcontainer.ComponentContainer
     %
     % EXAMPLE:
     %   fig = uifigure('Position',[100 100 600 250]);
-    %   gl = uigridlayout(fig,[3 1]);
+    %   gl  = uigridlayout(fig,[3 1]);
     %
-    %   pb = SmoothProgressBar(gl, 10);
+    %   pb = SmoothProgressBar(gl, 10);   % positional N works
     %   pb.Layout.Row = 2;
-    %
-    %   pb.ShowPercentage = true;
+    %   pb.ShowPercentage    = true;
     %   pb.ShowTimeRemaining = true;
     %
     %   pb.start();
@@ -63,102 +60,109 @@ classdef SmoothProgressBar < matlab.ui.componentcontainer.ComponentContainer
     %   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
     %   GITHUB     https://github.com
     %
-    %   ATTRIBUTION
-    %   If you use this toolbox, please cite:
-    %
-    %   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
-    %   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
-    %   in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
-    %
-    %   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
-    %   Manoach, D. S., Stickgold, R., Prerau, M. J.
-    %   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-    %   for Electroencephalographic Phenotyping and Biomarker Identification"
-    %   Sleep, 2022; zsac223. https://doi.org
-    %
     % =========================================================================
 
     % ================= PUBLIC PROPERTIES =================
     properties
         N (1,1) double {mustBeNonnegative} = 0
-
-        Colormap = 'turbo'
-        ShowTimeRemaining (1,1) logical = true
-        ShowPercentage (1,1) logical = true
-
-        BarHeight (1,1) double {mustBePositive, mustBeLessThanOrEqual(BarHeight,1)} = 0.6
-
-        FontSize (1,1) double = 11
-        FontColor (1,3) double = [0.2 0.2 0.2]
-
         TimerPeriod (1,1) double {mustBePositive} = 0.05
-        ShowTicks (1,1) logical = false
+    end
+
+    properties (Access = public)
+        Colormap          = 'turbo'
+        ShowTimeRemaining (1,1) logical = true
+        ShowPercentage    (1,1) logical = true
+        ShowTicks         (1,1) logical = false
+        BarHeight (1,1) double {mustBePositive, mustBeLessThanOrEqual(BarHeight,1)} = 0.6
+        FontSize  (1,1) double = 11
+        FontColor (1,3) double = [0.2 0.2 0.2]
     end
 
     % ================= PRIVATE PROPERTIES =================
     properties (Access = private)
-        Axes
-        Bar
-        BackgroundRect
-        BorderRect
+        Axes_
+        Bar_
+        BackgroundRect_
+        BorderRect_
 
-        Timer
-        Current (1,1) double = 0
-        AvgIterTime
-        StartTime
-        IsFinal (1,1) logical = false
+        Timer_
+        Current_      (1,1) double  = 0
+        LastIterTime_               % tic token from previous updateIteration call
+        AvgIterTime_                % EMA of per-iteration duration (seconds)
+        StartTime_                  % tic token from start()
+        IsFinal_      (1,1) logical = false
+        LastPct_      (1,1) double  = 0
     end
 
-    % ================= SETUP =================
+    % ================= CONSTRUCTOR =================
+    methods
+        function obj = SmoothProgressBar(parent, varargin)
+            % Supports positional N:  SmoothProgressBar(parent, 10)
+            % as well as name-value:  SmoothProgressBar(parent, 'N', 10)
+            %
+            % ComponentContainer only accepts name-value pairs after parent,
+            % so we detect a bare leading numeric scalar and convert it.
+            if ~isempty(varargin) && isnumeric(varargin{1}) && isscalar(varargin{1})
+                % Shift positional N into a name-value pair
+                varargin = [{'N'}, varargin];
+            end
+            obj@matlab.ui.componentcontainer.ComponentContainer(parent, varargin{:});
+        end
+    end
+
+    % ================= SETUP / UPDATE =================
     methods (Access = protected)
 
         function setup(obj)
-            % UIAxes (no manual parenting; ComponentContainer handles it)
+            obj.Axes_ = uiaxes(obj);
+            obj.Axes_.Units    = 'normalized';
+            obj.Axes_.Position = [0 0 1 1];
 
-            obj.Axes = uiaxes(obj);
-            obj.Axes.Units = 'normalized';
-            obj.Axes.Position = [0 0 1 1];
+            obj.Axes_.XLim = [0 100];
+            obj.Axes_.YLim = [0 1];
 
-            obj.Axes.XLim = [0 100];
-            obj.Axes.YLim = [0 1];
+            obj.Axes_.Color           = 'none';
+            obj.Axes_.XColor          = 'none';
+            obj.Axes_.YColor          = 'none';
+            obj.Axes_.Toolbar.Visible = 'off';
+            obj.Axes_.NextPlot        = 'add';
+            obj.Axes_.LooseInset      = [0 0 0 0];
 
-            obj.Axes.Color = 'none';
-            obj.Axes.XColor = 'none';
-            obj.Axes.YColor = 'none';
-            obj.Axes.Toolbar.Visible = 'off';
-            obj.Axes.NextPlot = 'add';
-            obj.Axes.LooseInset = [0 0 0 0];
+            disableDefaultInteractivity(obj.Axes_)
 
-            disableDefaultInteractivity(obj.Axes)
-
-
-            y0 = (1 - obj.BarHeight)/2;
+            y0 = (1 - obj.BarHeight) / 2;
             h  = obj.BarHeight;
 
-            obj.BackgroundRect = rectangle(obj.Axes,...
-                'Position',[0 y0 100 h],...
-                'FaceColor',[0.94 0.94 0.94],...
-                'EdgeColor',[0.8 0.8 0.8],...
-                'LineWidth',1.5);
+            obj.BackgroundRect_ = rectangle(obj.Axes_, ...
+                'Position',  [0 y0 100 h], ...
+                'FaceColor', [0.94 0.94 0.94], ...
+                'EdgeColor', [0.80 0.80 0.80], ...
+                'LineWidth', 1.5);
 
-            % Progress bar
-            obj.Bar = rectangle(obj.Axes,...
-                'Position',[0 y0 0 h],...
-                'FaceColor',[0 0.4470 0.7410],...
-                'EdgeColor','none');
+            obj.Bar_ = rectangle(obj.Axes_, ...
+                'Position',  [0 y0 0 h], ...
+                'FaceColor', [0 0.4470 0.7410], ...
+                'EdgeColor', 'none');
 
-            % Border
-            obj.BorderRect = rectangle(obj.Axes,...
-                'Position',[0 y0 0 h],...
-                'FaceColor','none',...
-                'EdgeColor',[0.7 0.7 0.7],...
-                'LineWidth',1);
+            % Border spans full width; only the outline edge is visible
+            obj.BorderRect_ = rectangle(obj.Axes_, ...
+                'Position',  [0 y0 100 h], ...
+                'FaceColor', 'none', ...
+                'EdgeColor', [0.7 0.7 0.7], ...
+                'LineWidth', 1);
 
-            obj.preFirst();
+            obj.repositionGeometry_(0);
+            obj.renderStatic_(0, '--:--');
         end
 
+        % Called by ComponentContainer whenever any public property changes.
         function update(obj)
-            obj.updateAppearance();
+            if isempty(obj.Axes_) || ~isvalid(obj.Axes_)
+                return
+            end
+            obj.applyTickVisibility_();
+            obj.repositionGeometry_(obj.LastPct_);
+            obj.renderStatic_(obj.LastPct_, '--:--');
         end
     end
 
@@ -166,127 +170,138 @@ classdef SmoothProgressBar < matlab.ui.componentcontainer.ComponentContainer
     methods
 
         function start(obj)
-            obj.cleanupTimer();
+            obj.cleanupTimer_();
 
-            obj.Current = 0;
-            obj.AvgIterTime = [];
-            obj.StartTime = tic;
-            obj.IsFinal = false;
+            obj.Current_      = 0;
+            obj.AvgIterTime_  = [];
+            obj.LastIterTime_ = [];
+            obj.StartTime_    = tic;
+            obj.IsFinal_      = false;
+            obj.LastPct_      = 0;
 
-            obj.preFirst();
+            obj.repositionGeometry_(0);
+            obj.renderStatic_(0, '--:--');
 
-            obj.Timer = timer( ...
-                'ExecutionMode','fixedRate', ...
-                'Period',obj.TimerPeriod, ...
-                'TimerFcn',@(~,~)obj.updateDisplay());
+            obj.Timer_ = timer( ...
+                'ExecutionMode', 'fixedRate', ...
+                'Period',        obj.TimerPeriod, ...
+                'TimerFcn',      @(~,~)obj.timerCallback_());
 
-            start(obj.Timer);
+            start(obj.Timer_);
         end
 
         function updateIteration(obj, iteration)
             if iteration > obj.N
-                error('Iteration exceeds N');
+                error('SmoothProgressBar:iterationExceedsN', ...
+                      'Iteration (%d) exceeds N (%d).', iteration, obj.N);
             end
 
-            obj.Current = iteration;
+            now_ = tic;
 
-            if ~isempty(obj.StartTime)
-                t_elapsed = toc(obj.StartTime);
-                current_iter_time = t_elapsed / max(iteration,1);
-
-                if iteration == 1
-                    obj.AvgIterTime = current_iter_time;
+            % Measure the wall-clock time since the PREVIOUS updateIteration
+            % call (true per-iteration cost, not a cumulative average).
+            if ~isempty(obj.LastIterTime_)
+                dt = toc(obj.LastIterTime_);
+                if isempty(obj.AvgIterTime_)
+                    obj.AvgIterTime_ = dt;
                 else
-                    alpha = 0.05;
-                    obj.AvgIterTime = alpha * current_iter_time + (1-alpha) * obj.AvgIterTime;
+                    alpha = 0.15;
+                    obj.AvgIterTime_ = alpha * dt + (1 - alpha) * obj.AvgIterTime_;
                 end
             end
+
+            obj.LastIterTime_ = now_;
+            obj.Current_      = iteration;
         end
 
         function complete(obj)
-            obj.cleanupTimer();
-            obj.Current = obj.N;
-            obj.IsFinal = true;
+            obj.IsFinal_ = true;
+            obj.cleanupTimer_();
 
-            cmap = colormap(obj.Axes, obj.Colormap);
-            obj.Bar.FaceColor = cmap(end,:);
+            obj.Current_  = obj.N;
+            obj.LastPct_  = 100;
 
-            obj.updateBar(100);
-            obj.updateTitle(100,'--:--');
+            cmap = colormap(obj.Axes_, obj.Colormap);
+            obj.Bar_.FaceColor = cmap(end, :);
+
+            obj.repositionGeometry_(100);
+            obj.renderStatic_(100, '00:00');
+            drawnow limitrate
         end
 
         function refresh(obj)
-            obj.cleanupTimer();
+            obj.cleanupTimer_();
 
-            obj.Current = 0;
-            obj.AvgIterTime = [];
-            obj.StartTime = [];
-            obj.IsFinal = false;
+            obj.Current_      = 0;
+            obj.AvgIterTime_  = [];
+            obj.LastIterTime_ = [];
+            obj.StartTime_    = [];
+            obj.IsFinal_      = false;
+            obj.LastPct_      = 0;
 
-            obj.Bar.FaceColor = [0 0.4470 0.7410];
-            obj.preFirst();
+            obj.Bar_.FaceColor = [0 0.4470 0.7410];
+
+            obj.repositionGeometry_(0);
+            obj.renderStatic_(0, '--:--');
+            drawnow limitrate
         end
     end
 
     % ================= INTERNAL =================
     methods (Access = private)
 
-        function preFirst(obj)
-            obj.updateBar(0);
-            obj.updateTitle(0,'--:--');
-        end
-
-        function updateDisplay(obj)
-            if isempty(obj.StartTime)
+        function timerCallback_(obj)
+            if ~isvalid(obj)
+                return
+            end
+            if isempty(obj.StartTime_)
                 return
             end
 
-            if isempty(obj.AvgIterTime)
-                pct = 0;
-                t_remain = '--:--';
-            else
-                t_elapsed = toc(obj.StartTime);
+            [pct, t_remain] = obj.computeProgress_();
+            obj.LastPct_    = pct;
 
-                avg = max(obj.AvgIterTime, eps);
-                pct = min(100, (t_elapsed / (avg * obj.N)) * 100);
+            cmap = colormap(obj.Axes_, obj.Colormap);
+            idx  = max(1, round((pct / 100) * size(cmap, 1)));
+            obj.Bar_.FaceColor = cmap(idx, :);
 
-                remaining = max(avg * obj.N - t_elapsed, 0);
-                t_remain = char(duration(0,0,remaining,'Format','mm:ss'));
-            end
-
-            obj.updateTitle(pct,t_remain);
-
-            cmap = colormap(obj.Axes, obj.Colormap);
-            idx = max(1, round((pct/100)*size(cmap,1)));
-            obj.Bar.FaceColor = cmap(idx,:);
-
-            obj.updateBar(pct);
+            obj.repositionGeometry_(pct);
+            obj.renderStatic_(pct, t_remain);
 
             drawnow limitrate
 
-            if obj.Current >= obj.N && ~obj.IsFinal
+            % Trigger completion once all iterations are reported
+            if obj.Current_ >= obj.N && obj.N > 0 && ~obj.IsFinal_
                 obj.complete();
             end
         end
 
-        function updateBar(obj, pct)
+        function [pct, t_remain] = computeProgress_(obj)
+            if isempty(obj.AvgIterTime_) || obj.N == 0
+                pct      = 0;
+                t_remain = '--:--';
+                return
+            end
 
-            y0 = (1 - obj.BarHeight)/2;
-            h  = obj.BarHeight;
+            t_elapsed = toc(obj.StartTime_);
+            totalEst  = obj.AvgIterTime_ * obj.N;
+            pct       = min(100, (t_elapsed / totalEst) * 100);
 
-            % Background
-            obj.BackgroundRect.Position = [0 y0 100 h];
-
-            % Fill
-            obj.Bar.Position = [0 y0 pct h];
-
-            % Border
-            obj.BorderRect.Position = [0 y0 pct h];
-
+            remaining = max(totalEst - t_elapsed, 0);
+            t_remain  = char(duration(0, 0, remaining, 'Format', 'mm:ss'));
         end
 
-        function updateTitle(obj, pct, t_remain)
-            str = sprintf('Progress: %d/%d', obj.Current, obj.N);
+        function repositionGeometry_(obj, pct)
+            y0 = (1 - obj.BarHeight) / 2;
+            h  = obj.BarHeight;
+
+            obj.BackgroundRect_.Position = [0 y0 100 h];
+            obj.Bar_.Position            = [0 y0 pct h];
+            obj.BorderRect_.Position     = [0 y0 100 h];
+        end
+
+        function renderStatic_(obj, pct, t_remain)
+            str = sprintf('Progress: %d/%d', obj.Current_, obj.N);
 
             if obj.ShowPercentage
                 str = sprintf('%s  %.1f%%', str, pct);
@@ -296,28 +311,28 @@ classdef SmoothProgressBar < matlab.ui.componentcontainer.ComponentContainer
                 str = sprintf('%s | Time Remaining: %s', str, t_remain);
             end
 
-            title(obj.Axes, str, ...
-                'FontSize', obj.FontSize, ...
-                'FontWeight','bold', ...
-                'Color', obj.FontColor);
+            title(obj.Axes_, str, ...
+                'FontSize',   obj.FontSize, ...
+                'FontWeight', 'bold', ...
+                'Color',      obj.FontColor);
         end
 
-        function updateAppearance(obj)
+        function applyTickVisibility_(obj)
             if obj.ShowTicks
-                obj.Axes.XColor = [0 0 0];
-                obj.Axes.XTick = 0:10:100;
+                obj.Axes_.XColor = [0 0 0];
+                obj.Axes_.XTick  = 0:10:100;
             else
-                obj.Axes.XColor = 'none';
-                obj.Axes.XTick = [];
+                obj.Axes_.XColor = 'none';
+                obj.Axes_.XTick  = [];
             end
         end
 
-        function cleanupTimer(obj)
-            if ~isempty(obj.Timer) && isvalid(obj.Timer)
-                stop(obj.Timer);
-                delete(obj.Timer);
+        function cleanupTimer_(obj)
+            if ~isempty(obj.Timer_) && isvalid(obj.Timer_)
+                stop(obj.Timer_);
+                delete(obj.Timer_);
             end
-            obj.Timer = [];
+            obj.Timer_ = [];
         end
     end
 end
