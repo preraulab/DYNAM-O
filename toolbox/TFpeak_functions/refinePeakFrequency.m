@@ -118,7 +118,7 @@ parfor ii = 1:N_events
             %performed at a fine level. Moreover, as the grids are
             %non-uniform between peaks (1k points between start and end
             %freqs) this should not produce fix discretization and thus
-            %not corrupt the peaks. This method far more computationally
+            %not corrupt the peaks. This method is far more computationally
             %efficient than the spline optimization.
 
             freq_interp = linspace(start_freq, end_freq, 1000);
