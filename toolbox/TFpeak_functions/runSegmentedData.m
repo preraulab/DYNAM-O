@@ -99,8 +99,7 @@ end
 % Remove baseline *
 %******************
 if ~isempty(baseline)
-    % Remove baseline. Subtraction in dB equivalent to division in non-dB.
-    spect = spect./repmat(baseline,1,size(spect,2));
+    spect = removeBaseline(spect, baseline, [], [], f_verb);
 end
 
 %Variables that should not change unless enabling new functionality

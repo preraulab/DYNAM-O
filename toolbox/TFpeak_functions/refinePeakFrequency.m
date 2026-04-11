@@ -87,15 +87,7 @@ bounding_box_height = stats_table.BoundingBox(event_times_inc,4); % Element 4 of
 
 % If baseline removal is on
 if baseline_opt
-    spect_bl = spect;
-    spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
-
-    baseline_ptile = 2; % using 2nd percentile of spectrogram as baseline
-    baseline = prctile(spect_bl, baseline_ptile, 2); % get baseline
-
-    clear spect_bl % for cleanup
-
-    [spect, ~] = removeBaseline(spect, baseline); % recompute spect with baseline removed
+    spect = removeBaseline(spect); % recompute spect with baseline removed
 end
 
 %% REFINE STATS_TABLE
