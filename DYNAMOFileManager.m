@@ -1340,6 +1340,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Color', '#414c57',...
                 'FontWeight','600'...
                 );
+            app.TextArea.Scroll = true;
             app.TextArea.Row   = 2;
             app.TextArea.Column = 1;
             app.TextArea.Value = {'Add files, select settings, and press ''Run Batch'' to run'};
@@ -2399,8 +2400,10 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             if app.OverwriteExistingFilesCheckBox.Value || ~stats_exists || ~SOPH_exists
 
                 app.anything_run = 1;
-                app.TextArea.Value = strcat('Running DYNAMO on subject ',{' '}, ...
-                    app.input_fbase,', channel ',{' '},app.channel,'.');
+                app.TextArea.Value = ['Running DYNAMO on subject',' ', ...
+                    app.input_fbase,', channel ',' ',app.channel,'....'];
+                app.TextArea.addnl('   Computing TF peak stats table...');
+                drawnow;
                 app.run();
 
                 stats_table = app.stats_table;
@@ -2408,8 +2411,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
                 % ---- Save stats table ----
                 if app.SavePeakStatsCheckBox.Value && ~strcmp(app.PeakStatsTableDropDown.Value,'--')
-                    app.TextArea.Value = strcat('Saving stats table on subject ',{' '}, ...
-                        app.input_fbase,', channel ',{' '},app.channel,'.');
+                    app.TextArea.addnl('   Saving stats table...');
                     switch app.PeakStatsTableDropDown.Value
                         case '.csv'
                             app.output_stats_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
@@ -2432,8 +2434,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
                 % ---- Save SO-Power Histograms ----
                 if app.SaveSOPHsCheckBox.Value && ~strcmp(app.SOPowerHistogramsDropDown.Value,'--')
-                    app.TextArea.Value = strcat('Saving SOPHs on subject ',{' '}, ...
-                        app.input_fbase,', channel ',{' '},app.channel,'.');
+                    app.TextArea.addnl('   Saving SOPHs');
                     switch app.SOPowerHistogramsDropDown.Value
                         case '.tiff'
                             app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
@@ -2511,8 +2512,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % Save figure if missing or overwrite requested
             if app.OverwriteExistingFilesCheckBox.Value || ~exist(app.output_fig_name,'file')
-                app.TextArea.Value = strcat('Saving summary figure on subject ',{' '}, ...
-                    app.input_fbase,', channel ',{' '},app.channel,'.');
+                app.TextArea.addnl('   Saving summary figure...');
                 app.anything_run = 1;
                 fh = app.displaySummaryPlot;
                 switch app.DataSummaryDropDown.Value
@@ -2546,8 +2546,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             if isempty(app.SOPHs) && ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
                     '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
                 app.anything_run = 1;
-                app.TextArea.Value = strcat('Running DYNAMO on subject ',{' '}, ...
-                    app.input_fbase,', channel ',{' '},app.channel,'.');
+                app.TextArea.Value = ['Running DYNAMO on subject ', ...
+                    app.input_fbase,', channel ',app.channel,'....'];
                 runStatsTable(app);
             elseif isempty(app.SOPHs) && exist(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
                     '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
@@ -2557,8 +2557,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % Fit parametric basis model
             % TO-DO: Check if param basis already saved before re-fitting
-            app.TextArea.Value = strcat('Running parameter basis fit on subject ',{' '}, ...
-                app.input_fbase,', channel ',{' '},app.channel,'.');
+            app.TextArea.addnl('   Running parametric basis...');
             app.fitParamBasis();
             fh = gcf;
 
@@ -2568,8 +2567,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 app.output_param_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
                     '/figures/param_basis/',app.input_fbase,'_param_basis_figure_', ...
                     app.channel, app.ParametricFiguresDropDown.Value);
-                app.TextArea.Value = strcat('Saving parameter basis fit summary figure on subject ',{' '}, ...
-                    app.input_fbase,', channel ',{' '},app.channel,'.');
+                app.TextArea.addnl('   Saving parametric basis figure...');
                 switch app.ParametricFiguresDropDown.Value
                     case {'.jpg','.jpeg'}, fig_driver = '-djpeg';
                     otherwise,            fig_driver = '-dpng';
@@ -2588,8 +2586,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                             '/param_basis/',app.input_fbase,'_SOpower_paramfit_',app.channel,'.csv');
                         app.output_paramfit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
                             '/param_basis/',app.input_fbase,'_SOphase_paramfit_',app.channel,'.csv');
-                        app.TextArea.Value = strcat('Updating saved SOPH on subject ',{' '}, ...
-                            app.input_fbase,', channel ',{' '},app.channel,'.');
+                        app.TextArea.addnl(   'Saving parametric basis as .csv...');
                         writematrix(SOpower_params, app.output_paramfit_power_name);
                         writematrix(SOphase_params, app.output_paramfit_phase_name);
                     case '.mat'
@@ -2601,6 +2598,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                             '/param_basis/',app.input_fbase,'_SOphase_paramfit_',app.channel,'.mat');
                         save(app.output_paramfit_power_name,'SOpower_paramfit');
                         save(app.output_paramfit_phase_name,'SOphase_paramfit');
+                        app.TextArea.addnl(   'Saving parametric basis as .mat...');
                     case 'All'
                         % Save both csv params and full mat structs
                         SOpower_params = app.SOPHs.SOpower_paramfit.params;
@@ -2609,8 +2607,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                             '/param_basis/',app.input_fbase,'_SOpower_paramfit_',app.channel,'.csv');
                         app.output_paramfit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
                             '/param_basis/',app.input_fbase,'_SOphase_paramfit_',app.channel,'.csv');
-                        app.TextArea.Value = strcat('Updating saved SOPH on subject ',{' '}, ...
-                            app.input_fbase,', channel ',{' '},app.channel,'.');
+                        app.TextArea.addnl(   'Saving parametric basis as .csv and .mat...');
                         writematrix(SOpower_params, app.output_paramfit_power_name);
                         writematrix(SOphase_params, app.output_paramfit_phase_name);
 
@@ -2648,8 +2645,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             if isempty(app.SOPHs) && ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
                     '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
                 app.anything_run = 1;
-                app.TextArea.Value = strcat('Running DYNAMO on subject ',{' '}, ...
-                    app.input_fbase,', channel ',{' '},app.channel,'.');
+                app.TextArea.Value = ['Running DYNAMO on subject ' ...
+                    app.input_fbase,', channel ',app.channel,'....'];
                 runStatsTable(app);
             elseif isempty(app.SOPHs) && exist(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
                     '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
@@ -2659,24 +2656,19 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % Fit spline basis model
             % TO-DO: Check if spline already saved before re-fitting
-            app.TextArea.Value = strcat('Running spline basis fit on subject ',{' '}, ...
-                app.input_fbase,', channel ',{' '},app.channel,'.');
+            app.TextArea.addnl(   'Running spline basis...');
             app.fitSplineBasis();
             fh = gcf;
 
             % Optionally save the spline basis figure
             if app.SaveSplineImagesCheckBox.Value
                 app.anything_run = 1;
-                app.TextArea.Value = strcat('Saving spline figure for subject ',{' '}, ...
-                    app.input_fbase,', channel ',{' '},app.channel,'.');
+                app.TextArea.addnl('   Saving spline figure...');
                 app.output_spline_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
                     '/figures/spline_basis/',app.input_fbase,'_spline_basis_figure_',app.channel,'.png');
                 print(fh,'-dpng','-r300',app.output_spline_name);
             end
             close all;
-
-            app.TextArea.Value = strcat('Updating saved SOPH for subject ',{' '}, ...
-                app.input_fbase,', channel ',{' '},app.channel,'.');
 
             % Save spline fit data according to chosen format
             if ~strcmp(app.SplineBasisDropDown.Value,'--')
@@ -2691,6 +2683,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                             '/spline_basis/',app.input_fbase,'_SOphase_splinefit_',app.channel,'.tiff');
                         app.writeTiff(app.output_splinefit_power_name, SOpower_splinefit.splinefit);
                         app.writeTiff(app.output_splinefit_phase_name, SOphase_splinefit.splinefit);
+                        app.TextArea.addnl('   Saving spline basis is .tiff...');
                     case '.mat'
                         app.output_splinefit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
                             '/spline_basis/',app.input_fbase,'_SOpower_splinefit_',app.channel,'.mat');
@@ -2698,6 +2691,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                             '/spline_basis/',app.input_fbase,'_SOphase_splinefit_',app.channel,'.mat');
                         save(app.output_splinefit_power_name,'SOpower_splinefit');
                         save(app.output_splinefit_phase_name,'SOphase_splinefit');
+                        app.TextArea.addnl('   Saving spline basis is .mat...');
                     case 'All'
                         % Save both tiff and mat formats
                         app.output_splinefit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
@@ -2712,6 +2706,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                             '/spline_basis/',app.input_fbase,'_SOphase_splinefit_',app.channel,'.mat');
                         save(app.output_splinefit_power_name,'SOpower_splinefit');
                         save(app.output_splinefit_phase_name,'SOphase_splinefit');
+                        app.TextArea.addnl('   Saving spline basis is .tiff and .mat...');
                 end
             end
         end % runSplineBasis
@@ -2743,8 +2738,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             auxiliary_data = app.auxiliary_data; %#ok<ADPROP>
 
-            app.TextArea.Value = strcat('Saving auxiliary data on subject ',{' '}, ...
-                app.input_fbase,', channel ',{' '},app.channel,'.');
+            app.TextArea.addnl(   'Saving auxiliary data...');
 
             app.output_aux_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
                 '/auxiliary_data/',app.input_fbase,'_auxiliary_data_',app.channel,'.mat');
@@ -2907,7 +2901,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %   On completion, all open log file handles are closed and diary is
             %   stopped automatically when consolelog_fid is closed.
 
-            app.TextArea.Value  = {'Beginning run...'};
+            app.TextArea.Value = 'Beginning run...';
+            drawnow;
             app.curr_datetime   = char(datetime('now','Format','yyMMdd_HHmmSS'));
             app.set_running;
 
@@ -2920,20 +2915,20 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             end
 
             % Build DYNAMO options struct from current GUI settings
-            app.TextArea.Value = {'Updating advanced options...'};
+            app.TextArea.Value = 'Updating advanced options...';
             drawnow;
             createOptionsStruct(app)
 
             % Initialise run and console logs
-            app.TextArea.Value = {'Creating run log...'};
+            app.TextArea.Value = 'Creating run log...';
             drawnow;
             createRunLog(app)
-            app.TextArea.Value = {'Creating console log...'};
+            app.TextArea.Value = 'Creating console log...';
             drawnow;
             createConsoleLog(app)
 
             % Parse channel list from edit field
-            app.TextArea.Value = {'Processing channel inputs.'};
+            app.TextArea.Value = 'Processing channel inputs.';
             updateChannelInput(app)
             drawnow;
 
@@ -2967,17 +2962,17 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                     [~, app.input_fbase] = fileparts(app.DataList{jj});
 
                     % Parse stage identifiers from UI fields
-                    app.TextArea.Value = {'Processing stage inputs.'};
+                    app.TextArea.Value = 'Processing stage inputs...';
+                    drawnow;
                     updateStagesInput(app)
 
                     try
                         % Parse delimiter selection
-                        app.TextArea.Value = {'Processing delimeter input.'};
                         updateDelimeterInput(app)
 
                         % ---- Load EDF and staging data ----
-                        app.TextArea.Value = strcat('Loading subject',{' '},app.input_fbase, ...
-                            ', channel',{' '},app.channel,' staging and EDF data.');
+                        app.TextArea.Value = ['Loading subject',' ',app.input_fbase, ...
+                            ', channel',' ',app.channel,' staging and EDF data....'];
                         drawnow;
                         [app.data, app.Fs, app.stage_times, app.stage_vals] = load_data( ...
                             app.DataList{jj}, ...
@@ -3021,8 +3016,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
                         % ---- Log success ----
                         if app.anything_run
-                            app.TextArea.Value = strcat('Successfully run subject ',{' '}, ...
-                                app.input_fbase,', channel ',{' '},app.channel,'.');
+                            app.TextArea.addnl([   'Successfully run subject ', ...
+                                app.input_fbase,', channel ',app.channel,'.']);
                             fprintf(app.runlog_fid, 'Subject %s, channel %s: run successfully.\n', ...
                                 app.input_fbase, app.channel);
                         else
@@ -3035,8 +3030,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
                     catch e
                         % ---- Log error and continue to next iteration ----
-                        app.TextArea.Value = strcat('Error on subject ',{' '},app.input_fbase, ...
-                            ', channel ',{' '},app.channel,'. Check log for details.');
+                        app.TextArea.addnl(['Error on subject ',app.input_fbase, ...
+                            ', channel ',app.channel,'. Check log for details.']);
                         fprintf(app.runlog_fid, 'Subject %s, channel %s: not run. Error: %s\n', ...
                             app.input_fbase, app.channel, e.message);
 
