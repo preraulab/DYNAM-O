@@ -1360,6 +1360,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Shape','circle',...
                 'Text', 'STOP', ...
                 'MaxHeight', '100px',...
+                'BackgroundColor', '#f5e8e9', ...
                 'ButtonPushedFcn', createCallbackFcn(app, @StopBatchButtonPushed, true), ...
                 'Icon', '<rect x="5" y="5" width="14" height="14"/>', ...
                 'IconPosition', 'top', ...
@@ -2903,10 +2904,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %   On completion, all open log file handles are closed and diary is
             %   stopped automatically when consolelog_fid is closed.
 
-            app.set_running;
-
             app.TextArea.Value  = {'Beginning run...'};
             app.curr_datetime   = char(datetime('now','Format','yyMMdd_HHmmSS'));
+            app.set_running;
 
             % Create required output subdirectories
             if ~exist(strcat(app.OutputDirEditField.Value,'/settings/'),'dir')
@@ -2917,22 +2917,27 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             end
 
             % Build DYNAMO options struct from current GUI settings
-            app.TextArea.Value = {'Updating advanced options.'};
+            app.TextArea.Value = {'Updating advanced options...'};
+            drawnow;
             createOptionsStruct(app)
 
             % Initialise run and console logs
-            app.TextArea.Value = {'Creating run log.'};
+            app.TextArea.Value = {'Creating run log...'};
+            drawnow;
             createRunLog(app)
-            app.TextArea.Value = {'Creating console log.'};
+            app.TextArea.Value = {'Creating console log...'};
+            drawnow;
             createConsoleLog(app)
 
             % Parse channel list from edit field
             app.TextArea.Value = {'Processing channel inputs.'};
             updateChannelInput(app)
+            drawnow;
 
             % Initialize the progress bar widget
             app.ProgressBar.N = length(app.DataList);
             app.ProgressBar.refresh;
+            app.ProgressBar.start;
 
             % ---------------------------------------------------------------
             %   MAIN BATCH LOOP
@@ -2945,7 +2950,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 for ii = 1:length(app.ChannelList)
                     app.channel = app.ChannelList{ii};
 
-                    % Honour stop request before starting each new iteration
+                    % Honor stop request before starting each new iteration
                     if app.isStopBatchButtonPushed == true
                         fclose(app.consolelog_fid);
                         diary off;
@@ -2970,6 +2975,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                         % ---- Load EDF and staging data ----
                         app.TextArea.Value = strcat('Loading subject',{' '},app.input_fbase, ...
                             ', channel',{' '},app.channel,' staging and EDF data.');
+                        drawnow;
                         [app.data, app.Fs, app.stage_times, app.stage_vals] = load_data( ...
                             app.DataList{jj}, ...
                             app.StagingList{jj}, ...
@@ -3022,6 +3028,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                                 'Subject %s, channel %s: all files already exist. Subject skipped.\n', ...
                                 app.input_fbase, app.channel);
                         end
+                        drawnow;
 
                     catch e
                         % ---- Log error and continue to next iteration ----
@@ -3031,6 +3038,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                             app.input_fbase, app.channel, e.message);
 
                         app.set_rundefault;
+                        app.ProgressBar.refresh;
+                        drawnow;
                     end
 
                     % Update progress bar (wrapped in try-catch to avoid aborting on UI errors)
@@ -3040,6 +3049,13 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                     catch e
                         disp(e);
                         app.set_rundefault;
+                        fclose(app.consolelog_fid);
+                        diary off;
+                        fclose(app.runlog_fid);
+                        app.RunBatchButton.Enabled  = 'on';
+                        app.StopBatchButton.Enabled = 'off';
+                        app.ProgressBar.refresh();
+                        return;
                     end
 
                 end % channel loop
@@ -3153,11 +3169,13 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         function set_running(app)
             app.RunBatchButton.Icon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 135 140" fill="currentColor"><rect y="10" width="15" height="120" rx="6"><animate attributeName="height" begin="0.5s" dur="1s" values="120;110;100;90;80;70;60;50;40;140;120" calcMode="linear" repeatCount="indefinite"/><animate attributeName="y" begin="0.5s" dur="1s" values="10;15;20;25;30;35;40;45;50;0;10" calcMode="linear" repeatCount="indefinite"/></rect><rect x="30" y="10" width="15" height="120" rx="6"><animate attributeName="height" begin="0.25s" dur="1s" values="120;110;100;90;80;70;60;50;40;140;120" calcMode="linear" repeatCount="indefinite"/><animate attributeName="y" begin="0.25s" dur="1s" values="10;15;20;25;30;35;40;45;50;0;10" calcMode="linear" repeatCount="indefinite"/></rect><rect x="60" width="15" height="140" rx="6"><animate attributeName="height" begin="0s" dur="1s" values="120;110;100;90;80;70;60;50;40;140;120" calcMode="linear" repeatCount="indefinite"/><animate attributeName="y" begin="0s" dur="1s" values="10;15;20;25;30;35;40;45;50;0;10" calcMode="linear" repeatCount="indefinite"/></rect><rect x="90" y="10" width="15" height="120" rx="6"><animate attributeName="height" begin="0.25s" dur="1s" values="120;110;100;90;80;70;60;50;40;140;120" calcMode="linear" repeatCount="indefinite"/><animate attributeName="y" begin="0.25s" dur="1s" values="10;15;20;25;30;35;40;45;50;0;10" calcMode="linear" repeatCount="indefinite"/></rect><rect x="120" y="10" width="15" height="120" rx="6"><animate attributeName="height" begin="0.5s" dur="1s" values="120;110;100;90;80;70;60;50;40;140;120" calcMode="linear" repeatCount="indefinite"/><animate attributeName="y" begin="0.5s" dur="1s" values="10;15;20;25;30;35;40;45;50;0;10" calcMode="linear" repeatCount="indefinite"/></rect></svg>';
             app.RunBatchButton.Text = 'RUNNING';
+            drawnow;
         end
 
         function set_rundefault(app)
             app.RunBatchButton.Icon = '<path d="M8 5v14l11-7z"/>';
             app.RunBatchButton.Text = 'RUN';
+            drawnow;
         end
 
     end% private methods
