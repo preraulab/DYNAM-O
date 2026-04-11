@@ -652,6 +652,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StagingFileInstructionText.Layout.Column = 2;
 
             app.StagingListBox = uilistbox(app.FileInputGrid);
+            app.StagingListBox.DoubleClickedFcn = createCallbackFcn(app, @ShowFile, true);
+            app.StagingListBox.Tooltip          = 'Double-click a file to view/edit';
             app.StagingListBox.Items         = {};
             app.StagingListBox.Multiselect   = 'on';
             app.StagingListBox.Layout.Row    = 3;
@@ -1977,6 +1979,34 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         end
 
         % ------------------------------------------------------------------
+
+        function app = ShowFile(app, varargin)
+            % ShowFile  Open a staging file.
+            %
+            %   Triggered by double-clicking an item in FileListBox.
+
+            if isempty(app.StagingList) || isempty(app.StagingListBox.Value)
+                return
+            end
+
+            curr_file = app.StagingListBox.Value{:};
+            if ~exist(curr_file, 'file')
+                uialert(app.UIFigure, 'File %s does not exist', curr_file, 'Error', 'Icon', 'Error');
+                return
+            end
+
+            if ispc        % Windows
+                % winopen is a MATLAB function, it handles spaces automatically
+                winopen(curr_file);
+            elseif ismac   % macOS
+                % system() calls the terminal; quotes are required for spaces
+                system(['open -e "' curr_file '"']);
+            elseif isunix  % Linux
+                % system() calls the terminal; quotes are required for spaces
+                system(['xdg-open "' curr_file '"']);
+            end
+
+        end
 
         function app = ShowHeader(app, varargin)
             % ShowHeader  Open (or update) a floating window showing the EDF file header.
