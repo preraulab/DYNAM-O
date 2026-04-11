@@ -1125,7 +1125,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.EditFieldLabel.Layout.Row    = 2;
             app.EditFieldLabel.Layout.Column = 1;
 
-            app.OutputDirEditField = CSSuiEditField(app.SavingDirectoryGrid);
+            app.OutputDirEditField = CSSuiEditField(app.SavingDirectoryGrid, 'style','shadow');
             app.OutputDirEditField.Layout.Row    = 2;
             app.OutputDirEditField.Layout.Column = 1;
             app.OutputDirEditField.HTMLComponent.Tooltip = 'Select the root directory from which to generate the output file structure';
