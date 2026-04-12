@@ -62,7 +62,7 @@ dsfreqs = 0.05; % For example, with Fs = 200, this should make the nfft = 2^12
 window_size = 4;
 step_size = 0.05;
 nfft = 2^(nextpow2(Fs/dsfreqs)); % zero pad data to this minimum value for fft
-detrend = 'constant'; % do not detrend
+detrend_opt = 'constant'; % do not detrend
 ploton = false; % do not plot out
 mts_verbose = false; % suppress verbose messages
 
@@ -81,7 +81,7 @@ bounding_box_height = stats_table.BoundingBox(event_times_inc,4); % Element 4 of
 % computing the entire spectrogram, this approach takes a fixed window
 % around each event center to use for the frequency refinement
 [spect, ~, sfreqs] = hann_event_spectra(data, Fs, event_times(event_times_inc),'t',t, ...
-    'frequency_range',freq_range,'data_window_params',[window_size,step_size],'NFFT',nfft,'detrend_opt',detrend, 'plot_on',ploton,'verbose',mts_verbose);
+    'frequency_range',freq_range,'data_window_params',[window_size,step_size],'NFFT',nfft,'detrend_opt',detrend_opt, 'plot_on',ploton,'verbose',mts_verbose);
 
 %% RECOMPUTE BASELINE
 
