@@ -58,6 +58,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         FileMenu                        matlab.ui.container.Menu        % Top-level 'File' menu
         LoadEDFFileListMenu             matlab.ui.container.Menu        % Menu item: load EDF path list
         LoadStagingFileListMenu         matlab.ui.container.Menu        % Menu item: load staging path list
+        ShowRunLogConsoleMenu           matlab.ui.container.Menu        % Menu item: toggle Run Log Console
         HelpMenu                        matlab.ui.container.Menu        % Top-level 'Help' menu
         HelpMenuItem                    matlab.ui.container.Menu        % Menu item: show usage instructions
         AboutMenu                       matlab.ui.container.Menu        % Menu item: show About dialog
@@ -270,6 +271,13 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         consolelog_fid    % File identifier (fopen) for the console log
 
         % -------------------------
+        %   Run Log Console
+        % -------------------------
+        LogConsoleFig         % Handle to the floating Run Log Console window
+        LogConsoleTextArea    % Handle to the uitextarea inside LogConsoleFig
+        LogConsoleTimer       % Timer that polls the consolelog file for live updates
+
+        % -------------------------
         %   Miscellaneous UI
         % -------------------------
         ProgressBar   % SmoothProgressBar handle displayed in TimeEstimateGrid
@@ -453,6 +461,12 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.LoadStagingFileListMenu = uimenu(app.FileMenu);
             app.LoadStagingFileListMenu.MenuSelectedFcn = createCallbackFcn(app, @loadStagingListCallback, true);
             app.LoadStagingFileListMenu.Text = 'Load Staging File List...';
+
+            % Menu item: toggle the floating Run Log Console window
+            app.ShowRunLogConsoleMenu = uimenu(app.FileMenu);
+            app.ShowRunLogConsoleMenu.MenuSelectedFcn = createCallbackFcn(app, @toggleRunLogConsole, true);
+            app.ShowRunLogConsoleMenu.Text = 'Show Run Log Console';
+            app.ShowRunLogConsoleMenu.Separator = 'on';
 
             % ---- Outer Tab Group ----
             % ---- Top-level grid fills the figure automatically ----
@@ -2447,6 +2461,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %   Creates <OutputDir>/logs/file_log_<timestamp>.txt and
             %   <OutputDir>/settings/run_settings_<timestamp>.txt via
             %   generate_run_log. Stores the file handle for subsequent writes.
+            %   Resets LogBuffer so the Run Log Console shows only this run.
 
             generate_run_log(app.options_structs, app.struct_names, ...
                 'run_start', app.curr_datetime, ...
@@ -2456,10 +2471,122 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.runlog_fpath = strcat(app.OutputDirEditField.Value, '/logs/');
             app.runlog_fid   = fopen(fullfile(app.runlog_fpath, app.runlog_fname), 'w');
 
-            fprintf(app.runlog_fid, 'Date and time of run start: %s\n', app.curr_datetime);
-            fprintf(app.runlog_fid, 'Run with settings file: %s\n\n', ...
-                strcat('run_settings_', app.curr_datetime, '.txt'));
-            fprintf(app.runlog_fid, 'Files run: \n\n');
+            app.writeLog(sprintf('Date and time of run start: %s\n', app.curr_datetime));
+            app.writeLog(sprintf('Run with settings file: %s\n\n', ...
+                strcat('run_settings_', app.curr_datetime, '.txt')));
+            app.writeLog(sprintf('Files run: \n\n'));
+        end
+
+        % ------------------------------------------------------------------
+
+        function writeLog(app, msg)
+            % writeLog  Write a structured message to the run log file.
+            %   Console output is captured separately via diary() and
+            %   mirrored by the LogConsoleTimer polling the consolelog file.
+            if ~isempty(app.runlog_fid) && app.runlog_fid > 0
+                fprintf(app.runlog_fid, '%s', msg);
+            end
+        end
+
+        % ------------------------------------------------------------------
+
+        function toggleRunLogConsole(app, ~, ~)
+            % toggleRunLogConsole  Show or hide the floating Run Log Console.
+            %   Mirrors the consolelog (diary) file in real time via a timer.
+
+            if ~isempty(app.LogConsoleFig) && isvalid(app.LogConsoleFig)
+                % Already open — close it (toggle off)
+                app.stopLogConsoleTimer();
+                delete(app.LogConsoleFig);
+                app.LogConsoleFig      = [];
+                app.LogConsoleTextArea = [];
+                app.ShowRunLogConsoleMenu.Text = 'Show Run Log Console';
+                return
+            end
+
+            % Create the console window
+            ss = get(0, 'ScreenSize');
+            cW = 720; cH = 520;
+            fig = uifigure('Name', 'Run Log Console', ...
+                'Position', [(ss(3)-cW)/2, (ss(4)-cH)/2, cW, cH], ...
+                'WindowStyle', 'normal', ...
+                'Resize', 'on', ...
+                'CloseRequestFcn', @(~,~) onConsoleClose());
+
+            g = uigridlayout(fig, ...
+                'RowHeight', {'1x'}, 'ColumnWidth', {'1x'}, ...
+                'Padding', [6 6 6 6]);
+
+            ta = uitextarea(g, ...
+                'Editable', 'off', ...
+                'FontName',  'Courier New', ...
+                'FontSize',  12, ...
+                'WordWrap',  'off', ...
+                'Value',     {''});
+            ta.Layout.Row    = 1;
+            ta.Layout.Column = 1;
+
+            app.LogConsoleFig      = fig;
+            app.LogConsoleTextArea = ta;
+            app.ShowRunLogConsoleMenu.Text = 'Hide Run Log Console';
+
+            % If a run is already in progress, load existing content and
+            % start the polling timer.
+            diaryRunning = ~isempty(app.consolelog_fpath) && ...
+                           ~isempty(app.consolelog_fname);
+            if diaryRunning
+                app.updateLogConsole();
+                app.startLogConsoleTimer();
+            end
+
+            function onConsoleClose()
+                app.stopLogConsoleTimer();
+                delete(fig);
+                app.LogConsoleFig      = [];
+                app.LogConsoleTextArea = [];
+                app.ShowRunLogConsoleMenu.Text = 'Show Run Log Console';
+            end
+        end
+
+        % ------------------------------------------------------------------
+
+        function updateLogConsole(app)
+            % updateLogConsole  Read the consolelog file and refresh the text area.
+            if isempty(app.LogConsoleFig) || ~isvalid(app.LogConsoleFig)
+                return
+            end
+            fpath = fullfile(app.consolelog_fpath, app.consolelog_fname);
+            if ~isfile(fpath), return, end
+            try
+                txt   = fileread(fpath);
+                lines = strsplit(txt, newline);
+                app.LogConsoleTextArea.Value = lines;
+                scroll(app.LogConsoleTextArea, 'bottom');
+            catch
+            end
+        end
+
+        % ------------------------------------------------------------------
+
+        function startLogConsoleTimer(app)
+            % startLogConsoleTimer  Create and start the 0.3 s polling timer.
+            app.stopLogConsoleTimer();  % ensure no duplicate
+            app.LogConsoleTimer = timer( ...
+                'Period',        0.3, ...
+                'ExecutionMode', 'fixedRate', ...
+                'TimerFcn',      @(~,~) app.updateLogConsole());
+            start(app.LogConsoleTimer);
+        end
+
+        % ------------------------------------------------------------------
+
+        function stopLogConsoleTimer(app)
+            % stopLogConsoleTimer  Stop and delete the polling timer if running.
+            if ~isempty(app.LogConsoleTimer) && isvalid(app.LogConsoleTimer)
+                stop(app.LogConsoleTimer);
+                delete(app.LogConsoleTimer);
+            end
+            app.LogConsoleTimer = [];
         end
 
         % ------------------------------------------------------------------
@@ -2476,6 +2603,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             fprintf(app.consolelog_fid, 'Date and time of run start: %s\n\n', app.curr_datetime);
             diary(fullfile(app.consolelog_fpath, app.consolelog_fname))
+
+            % If the Run Log Console is already open, start live polling now.
+            if ~isempty(app.LogConsoleFig) && isvalid(app.LogConsoleFig)
+                app.startLogConsoleTimer();
+            end
         end
 
         % ==================================================================
@@ -3162,6 +3294,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
                     % Honor stop request before starting each new iteration
                     if app.isStopBatchButtonPushed == true
+                        app.stopLogConsoleTimer();
+                        app.updateLogConsole();
                         fclose(app.consolelog_fid);
                         diary off;
                         fclose(app.runlog_fid);
@@ -3230,13 +3364,13 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                         if app.anything_run
                             app.TextArea.addnl([   'Successfully run subject ', ...
                                 app.input_fbase,', channel ',app.channel,'.']);
-                            fprintf(app.runlog_fid, 'Subject %s, channel %s: run successfully.\n', ...
-                                app.input_fbase, app.channel);
+                            app.writeLog(sprintf('Subject %s, channel %s: run successfully.\n', ...
+                                app.input_fbase, app.channel));
                         else
                             % Nothing new to compute: all outputs already existed
-                            fprintf(app.runlog_fid, ...
+                            app.writeLog(sprintf( ...
                                 'Subject %s, channel %s: all files already exist. Subject skipped.\n', ...
-                                app.input_fbase, app.channel);
+                                app.input_fbase, app.channel));
                         end
                         drawnow;
 
@@ -3244,8 +3378,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                         % ---- Log error and continue to next iteration ----
                         app.TextArea.addnl(['Error on subject ',app.input_fbase, ...
                             ', channel ',app.channel,'. Check log for details.']);
-                        fprintf(app.runlog_fid, 'Subject %s, channel %s: not run. Error: %s\n', ...
-                            app.input_fbase, app.channel, e.message);
+                        app.writeLog(sprintf( ...
+                            'Subject %s, channel %s: not run.\n%s\n', ...
+                            app.input_fbase, app.channel, getReport(e, 'extended')));
 
                         app.set_rundefault;
                         app.ProgressBar.refresh;
@@ -3258,6 +3393,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                         app.ProgressBar.updateIteration(app.curr_iteration);
                     catch e
                         disp(e);
+                        app.stopLogConsoleTimer();
+                        app.updateLogConsole();
                         fclose(app.consolelog_fid);
                         diary off;
                         fclose(app.runlog_fid);
@@ -3274,6 +3411,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %   CLEANUP
             % ---------------------------------------------------------------
             app.ProgressBar.complete();
+            app.stopLogConsoleTimer();
+            app.updateLogConsole();  % final capture of any remaining diary output
             fclose(app.consolelog_fid);
             diary off;
             fclose(app.runlog_fid);
