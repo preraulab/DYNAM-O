@@ -186,7 +186,7 @@ end
 
 %Make sure all events are within the correct range
 win_buffer = data_window_params(1)/2;
-assert(all(event_times>=t(1)+win_buffer & event_times<=t(end)-win_buffer),'All events must fall within winsize/2 from the time extents of the data');
+assert(all(event_times>=(t(1)+win_buffer) & event_times<=(t(end)-win_buffer)),'All events must fall within winsize/2 from the time extents of the data');
 
 %Fix error in frequency range
 if isscalar(frequency_range) %Set max frequency to nyquist if only lower bound specified
