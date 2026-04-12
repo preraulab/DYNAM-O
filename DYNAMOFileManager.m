@@ -1853,10 +1853,10 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
         function viewChannelsButtonPushed(app, ~, ~)
             % viewChannelsButtonPushed
-            % Reads EDF files, extracts channel names, and allows user to select
-            % multiple channels via a modal UI list. Outputs comma-separated string.
+            % Reads EDF files, collects channel name, sampling frequency, and
+            % per-file counts. Displays a table for multi-select. Supports
+            % adding A-B rereferenced virtual channels via a sub-dialog.
 
-            % Check data
             if isempty(app.DataList)
                 uialert(app.UIFigure, ...
                     'No EDF files loaded. Load at least one file first.', ...
@@ -1864,116 +1864,286 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 return
             end
 
-            % Progress bar
-            h = waitbar(0,'Processing EDF channels...');
+            nFiles = length(app.DataList);
+            h = waitbar(0, 'Processing EDF channels...');
 
-            % Collect labels
-            signal_labels = cell(1, length(app.DataList));
+            % chan_map: label -> {file_index_array, fs_array}
+            % Tracks which files contain each channel and at what sample rate.
+            chan_map = containers.Map('KeyType','char','ValueType','any');
 
-            for ii = 1:length(app.DataList)
+            for ii = 1:nFiles
                 try
                     [~, signalHeader] = read_EDF(app.DataList{ii});
-                    signal_labels{ii} = {signalHeader.signal_labels};
+                    for jj = 1:length(signalHeader)
+                        lbl = strtrim(signalHeader(jj).signal_labels);
+                        fs  = signalHeader(jj).sampling_frequency;
+                        if isKey(chan_map, lbl)
+                            entry = chan_map(lbl);
+                            entry{1}(end+1) = ii;
+                            entry{2}(end+1) = fs;
+                            chan_map(lbl) = entry;
+                        else
+                            chan_map(lbl) = {ii, fs};
+                        end
+                    end
                 catch ME
-                    warning('Failed to read file: %s\n%s', ...
-                        app.DataList{ii}, ME.message);
-                    signal_labels{ii} = {};
+                    warning('Failed to read file: %s\n%s', app.DataList{ii}, ME.message);
                 end
-
-                waitbar(ii/length(app.DataList), h);
+                waitbar(ii/nFiles, h);
             end
-
             delete(h);
 
-            % Combine + clean
-            all_labels = horzcat(signal_labels{:});
-            if isempty(all_labels)
+            if isempty(chan_map)
                 uialert(app.UIFigure, ...
                     'No channel labels found in loaded EDF files.', ...
                     'Warning', 'Icon', 'warning');
                 return
             end
 
-            signal_labels = sort(unique(all_labels));
+            % Build sorted table data: {channel, fs_string, file_count_string}
+            all_edf_labels = sort(keys(chan_map));
+            nChans = numel(all_edf_labels);
+            tableData = cell(nChans, 3);
+            for ii = 1:nChans
+                lbl   = all_edf_labels{ii};
+                entry = chan_map(lbl);
+                ufreqs  = unique(entry{2});
+                freqStr = [strjoin(arrayfun(@(f) sprintf('%g', f), ufreqs, 'UniformOutput', false), ' / ') ' Hz'];
+                fileStr = sprintf('%d / %d', numel(entry{1}), nFiles);
+                tableData{ii,1} = lbl;
+                tableData{ii,2} = freqStr;
+                tableData{ii,3} = fileStr;
+            end
 
             % ===============================
             % UI SELECTION DIALOG
             % ===============================
+            % Fixed-size dialog: 520 w x 500 h, all positions calculated from
+            % bottom (MATLAB convention).  Layout (bottom→top):
+            %   12 pad | 42 accept/cancel | 8 gap | 40 add-rereference |
+            %   8 gap  | [table fills]    | 6 gap | 24 label | 12 pad
+            dW = 520; dH = 500; pad = 12;
+            btnH  = 42; rerefH = 40; lblH = 24;
 
+            btnY   = pad;
+            rerefY = btnY  + btnH  + 8;
+            tableY = rerefY + rerefH + 8;
+            lblY   = dH - pad - lblH;
+            tableH = lblY - 6 - tableY;
+            tableW = dW - 2*pad;
+
+            ss = get(0, 'ScreenSize');
             d = uifigure('Name', 'Select Channels', ...
-                'Position', [100 100 320 420], ...
+                'Position', [(ss(3)-dW)/2, (ss(4)-dH)/2, dW, dH], ...
                 'WindowStyle', 'modal');
 
-            % Instruction
-            CSSuiLabel(d, ...
-                'Text', 'Select one or more channels:', ...
-                'Position', [20 385 280 20]);
+            CSSuiLabel(d, 'Text', 'Select one or more channels:', ...
+                'Position', [pad, lblY, tableW, lblH]);
 
-            % Listbox
-            lb = uilistbox(d, ...
-                'Items', signal_labels, ...
-                'Multiselect', 'on', ...
-                'Position', [20 80 280 300]);
+            % Channel col gets all remaining width after Fs (110) and Files (80)
+            % columns, minus ~16 px for the vertical scrollbar.
+            chanColW = tableW - 110 - 80 - 16;
+            t = uitable(d, ...
+                'Data', tableData, ...
+                'ColumnName', {'Channel', 'Fs (Hz)', 'Files'}, ...
+                'ColumnWidth', {chanColW, 110, 80}, ...
+                'RowName', {}, ...
+                'Position', [pad, tableY, tableW, tableH], ...
+                'SelectionChangedFcn', @(src,evt) onCellSelect(evt));
+            try, t.SelectionType = 'row'; catch, end
 
-            % Output variable
+            % Add Rereference — centered horizontally
+            rerefW = 175;
+            CSSuiButton(d, 'Style', 'shadow', 'Text', 'Add Rereference', ...
+                'Position', [(dW-rerefW)/2, rerefY, rerefW, rerefH], ...
+                'ButtonPushedFcn', @(btn,evt) addRereferenceCallback());
+
+            % Accept / Cancel — centered as a pair
+            btnW = 105; gap = 10;
+            pairW = 2*btnW + gap;
+            btnX0 = (dW - pairW) / 2;
+            CSSuiButton(d, 'Style', 'shadow', 'Text', 'Accept', ...
+                'Position', [btnX0,          btnY, btnW, btnH], ...
+                'ButtonPushedFcn', @(btn,evt) acceptCallback());
+            CSSuiButton(d, 'Style', 'shadow', 'Text', 'Cancel', ...
+                'Position', [btnX0+btnW+gap, btnY, btnW, btnH], ...
+                'ButtonPushedFcn', @(btn,evt) cancelCallback());
+
+            selectedRows     = [];
             selectedChannels = [];
+            rd_handle        = [];
+            ddA_handle       = [];
+            ddB_handle       = [];
 
-            % Accept button
-            CSSuiButton(d, ...
-                'Text', 'Accept', ...
-                'Position', [40 20 100 35], ...
-                'ButtonPushedFcn', @(btn,event) acceptCallback());
-
-            % Cancel button
-            CSSuiButton(d, ...
-                'Text', 'Cancel', ...
-                'Position', [180 20 100 35], ...
-                'ButtonPushedFcn', @(btn,event) cancelCallback());
-
-            % Wait for user action
             uiwait(d);
 
-            % If user cancelled or closed window
             if isempty(selectedChannels)
-                return;
+                return
             end
 
-            % Convert to comma-separated string
             channelString = strjoin(selectedChannels, ', ');
-
-            % Store in app (optional)
             app.ChannelEditField.Value = channelString;
-
-            % Optional display
             disp(['Selected Channels: ' channelString]);
 
             % ===============================
             % Nested Callbacks
             % ===============================
 
-            function acceptCallback()
-                selectedChannels = lb.Value;
+            function onCellSelect(evt)
+                % Handle both SelectionChangedFcn (uifigure) and CellSelectionCallback
+                try
+                    if isfield(evt, 'Selection') && ~isempty(evt.Selection)
+                        selectedRows = unique(evt.Selection(:,1));
+                    elseif isfield(evt, 'Indices') && ~isempty(evt.Indices)
+                        selectedRows = unique(evt.Indices(:,1));
+                    else
+                        selectedRows = [];
+                    end
+                catch
+                    selectedRows = [];
+                end
+            end
 
-                if isempty(selectedChannels)
+            function addRereferenceCallback()
+                if numel(all_edf_labels) < 2
+                    uialert(d, ...
+                        'Need at least two EDF channels to create a rereference.', ...
+                        'Not Enough Channels', 'Icon', 'warning');
+                    return
+                end
+
+                % Sub-dialog: 420 w x 170 h, position-based layout
+                rdW = 420; rdH = 170; rdPad = 12;
+                rdBtnH = 40; rdDdH = 36; rdLblH = 24;
+                rdBtnY = rdPad;
+                rdDdY  = rdBtnY + rdBtnH + 10;
+                rdLblY = rdDdY  + rdDdH  + 8;
+
+                % Two equal dropdowns with dash in between
+                dashW = 28;
+                ddW   = (rdW - 2*rdPad - dashW - 8) / 2;  % 8 = 2x4px gaps
+
+                rd_handle = uifigure('Name', 'Add Rereference Channel', ...
+                    'Position', [(ss(3)-rdW)/2, (ss(4)-rdH)/2, rdW, rdH], ...
+                    'WindowStyle', 'modal');
+
+                CSSuiLabel(rd_handle, 'Text', 'Select channels to rereference:', ...
+                    'Position', [rdPad, rdLblY, rdW-2*rdPad, rdLblH]);
+
+                ddA_handle = CSSuiDropdown(rd_handle, 'Style', 'shadow', ...
+                    'Items', all_edf_labels, ...
+                    'Position', [rdPad, rdDdY, ddW, rdDdH]);
+
+                CSSuiLabel(rd_handle, 'Text', '-', ...
+                    'FontSize', '18px', 'FontWeight', '700', 'HorizontalAlignment', 'center', ...
+                    'Position', [rdPad+ddW+4, rdDdY, dashW, rdDdH]);
+
+                ddB_handle = CSSuiDropdown(rd_handle, 'Style', 'shadow', ...
+                    'Items', all_edf_labels, ...
+                    'Position', [rdPad+ddW+4+dashW+4, rdDdY, ddW, rdDdH]);
+
+                % OK / Cancel centered as a pair
+                rdBtnW = 90; rdBtnGap = 10;
+                rdPairW = 2*rdBtnW + rdBtnGap;
+                rdBtnX0 = (rdW - rdPairW) / 2;
+                CSSuiButton(rd_handle, 'Style', 'shadow', 'Text', 'OK', ...
+                    'Position', [rdBtnX0,                  rdBtnY, rdBtnW, rdBtnH], ...
+                    'ButtonPushedFcn', @(btn,evt) doOkReref());
+                CSSuiButton(rd_handle, 'Style', 'shadow', 'Text', 'Cancel', ...
+                    'Position', [rdBtnX0+rdBtnW+rdBtnGap,  rdBtnY, rdBtnW, rdBtnH], ...
+                    'ButtonPushedFcn', @(btn,evt) doCancelReref());
+
+                uiwait(rd_handle);
+            end
+
+            function doOkReref()
+                chA = ddA_handle.Value;
+                chB = ddB_handle.Value;
+
+                if strcmp(chA, chB)
+                    msgbox('Cannot rereference a channel with itself.', 'Invalid Selection', 'error');
+                    return
+                end
+
+                rerefLabel = [chA '-' chB];
+
+                if any(strcmp(tableData(:,1), rerefLabel))
+                    msgbox(sprintf('"%s" is already in the channel list.', rerefLabel), 'Duplicate', 'warn');
+                    return
+                end
+
+                entryA = chan_map(chA);
+                entryB = chan_map(chB);
+                [both_files, iA, iB] = intersect(entryA{1}, entryB{1});
+
+                if isempty(both_files)
+                    msgbox(sprintf('No files contain both "%s" and "%s".', chA, chB), 'No Overlap', 'warn');
+                    return
+                end
+
+                fsA_both     = entryA{2}(iA);
+                fsB_both     = entryB{2}(iB);
+                mismatch_idx = find(fsA_both ~= fsB_both);
+
+                if ~isempty(mismatch_idx)
+                    msgLines = cell(1, numel(mismatch_idx));
+                    for mm = 1:numel(mismatch_idx)
+                        fi = both_files(mismatch_idx(mm));
+                        [~, fname] = fileparts(app.DataList{fi});
+                        msgLines{mm} = sprintf('  %s: %g Hz vs %g Hz', ...
+                            fname, fsA_both(mismatch_idx(mm)), fsB_both(mismatch_idx(mm)));
+                    end
+                    msgbox(['Sampling rate mismatch between channels:' newline strjoin(msgLines, newline)], ...
+                        'Sampling Rate Mismatch', 'error');
+                    return
+                end
+
+                ufreqs  = unique(fsA_both);
+                freqStr = [strjoin(arrayfun(@(f) sprintf('%g', f), ufreqs, 'UniformOutput', false), ' / ') ' Hz'];
+                fileStr = sprintf('%d / %d', numel(both_files), nFiles);
+
+                tableData(end+1,:) = {rerefLabel, freqStr, fileStr};
+                t.Data = tableData;
+
+                if isvalid(rd_handle)
+                    uiresume(rd_handle);
+                    delete(rd_handle);
+                end
+            end
+
+            function doCancelReref()
+                if isvalid(rd_handle)
+                    uiresume(rd_handle);
+                    delete(rd_handle);
+                end
+            end
+
+            function acceptCallback()
+                % Read selection directly from the table at click time (most
+                % reliable in uifigure — SelectionChangedFcn can lag).
+                rows = [];
+                try
+                    sel = t.Selection;
+                    if ~isempty(sel)
+                        rows = unique(sel(:,1));
+                    end
+                catch
+                    rows = selectedRows;
+                end
+
+                if isempty(rows)
                     uialert(d, ...
                         'Please select at least one channel or press Cancel.', ...
                         'No Selection', 'Icon', 'warning');
-                    return;
+                    return
                 end
-
-                if isvalid(d)
-                    uiresume(d);
-                    delete(d);
-                end
+                selectedChannels = tableData(rows, 1);
+                delete(d);  % deleting the uifigure auto-resumes uiwait
             end
 
             function cancelCallback()
                 selectedChannels = [];
-
-                if isvalid(d)
-                    uiresume(d);
-                    delete(d);
-                end
+                delete(d);
             end
 
         end
