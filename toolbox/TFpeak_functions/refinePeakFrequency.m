@@ -58,9 +58,9 @@ end
 
 %% SPECTROGRAM PARAMS
 dsfreqs = 0.05; % For example, with Fs = 200, this should make the nfft = 2^12
+nfft = 2^(nextpow2(Fs/dsfreqs)); % zero pad data to this minimum value for fft
 window_size = 4;
 step_size = 0.05;
-nfft = 2^(nextpow2(Fs/dsfreqs)); % zero pad data to this minimum value for fft
 detrend_opt = 'constant'; % do not detrend
 ploton = false; % do not plot out
 mts_verbose = false; % suppress verbose messages
