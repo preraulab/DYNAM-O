@@ -78,16 +78,40 @@ end
 
 %% LOAD EDF
 [~, signalHeader] = read_EDF(edf_fpath);
-idx = ismember(channels,{signalHeader.signal_labels});
-if ~all(idx)
-    error(char(strcat('Invalid channels:',{' '},channels(~idx),' | Valid channels: ',{' '},sprintf('%s ',signalHeader.signal_labels))))
+all_labels       = {signalHeader.signal_labels};
+all_labels_lower = lower(cellfun(@strtrim, all_labels, 'UniformOutput', false));
+
+% Validate channels — accept plain labels and valid A-B rereferences.
+% Uses the same leftmost-dash split logic as read_EDF's parse_channel_plan.
+valid = false(size(channels));
+for k = 1:numel(channels)
+    ch = strtrim(channels{k});
+    if ismember(lower(ch), all_labels_lower)
+        valid(k) = true;
+    else
+        dashes = strfind(ch, '-');
+        for di = dashes
+            chA = strtrim(ch(1:di-1));
+            chB = strtrim(ch(di+1:end));
+            if ~isempty(chA) && ~isempty(chB) && ...
+                    ismember(lower(chA), all_labels_lower) && ...
+                    ismember(lower(chB), all_labels_lower)
+                valid(k) = true;
+                break
+            end
+        end
+    end
+end
+if ~all(valid)
+    error(char(strcat('Invalid channels:',{' '},channels(~valid),' | Valid channels: ',{' '},sprintf('%s ',signalHeader.signal_labels))))
 end
 
-[header, signalHeader,data] = read_EDF(edf_fpath,'channels',channels,'forceMATLAB',true);
+[header, signalHeader, data] = read_EDF(edf_fpath, 'channels', channels, 'forceMATLAB', true);
 data = cell2mat(data);
 
+% signalHeader is now ordered to match channels (including any rereferenced
+% virtual channels), so sampling frequencies are already in the right order.
 Fs = [signalHeader.sampling_frequency];
-Fs = Fs(idx);
 
 % Test to see whether start time is valid
 time_str = header.recording_starttime;
