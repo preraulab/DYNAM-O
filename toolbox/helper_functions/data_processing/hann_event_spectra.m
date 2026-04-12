@@ -101,7 +101,6 @@ parfor n = 1:num_windows % REMOVE PARFOR TO TEST
     hann_spectrogram(:,n) = h_spectrum(freq_inds);
 end
 
-
 %Compute one-sided PSD spectrum
 DC_select = find(sfreqs==0);
 Nyquist_select = find(sfreqs==Fs/2);
@@ -110,7 +109,6 @@ hann_spectrogram = [hann_spectrogram(DC_select,:); 2*hann_spectrogram(select,:);
 
 %Flip if requested
 if xyflip; hann_spectrogram = hann_spectrogram'; end
-
 
 %% PLOT THE SPECTROGRAM
 
