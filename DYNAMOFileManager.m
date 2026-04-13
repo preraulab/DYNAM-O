@@ -2798,8 +2798,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             if app.OverwriteExistingFilesCheckBox.Value || ~stats_exists || ~SOPH_exists
 
                 app.anything_run = 1;
-                app.TextArea.Value = ['Running DYNAMO on subject',' ', ...
-                    app.input_fbase,', channel ',' ',app.channel,'....'];
+                app.TextArea.addnl('   Running DYNAMO...');
                 app.TextArea.addnl('   Computing TF peak stats table...');
                 drawnow;
                 app.run();
@@ -2950,8 +2949,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             if isempty(app.SOPHs) && ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
                     '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
                 app.anything_run = 1;
-                app.TextArea.Value = ['Running DYNAMO on subject ', ...
-                    app.input_fbase,', channel ',app.channel,'....'];
+                app.TextArea.addnl('   Running DYNAMO (computing SOPHs)...');
                 runStatsTable(app);
             elseif isempty(app.SOPHs) && exist(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
                     '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
@@ -3052,8 +3050,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             if isempty(app.SOPHs) && ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
                     '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
                 app.anything_run = 1;
-                app.TextArea.Value = ['Running DYNAMO on subject ' ...
-                    app.input_fbase,', channel ',app.channel,'....'];
+                app.TextArea.addnl('   Running DYNAMO (computing SOPHs)...');
                 runStatsTable(app);
             elseif isempty(app.SOPHs) && exist(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
                     '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
@@ -3372,8 +3369,15 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                     app.anything_run = 0;
                     [~, app.input_fbase] = fileparts(app.DataList{jj});
 
+                    % Log per-iteration header so subject/channel is always visible
+                    % (fprintf goes to MATLAB console → diary → consolelog file → LogConsoleTextArea)
+                    fprintf('\n--- Subject: %s | Channel: %s ---\n', app.input_fbase, app.channel);
+                    app.TextArea.addnl(sprintf('--- Subject: %s | Channel: %s ---', ...
+                        app.input_fbase, app.channel));
+                    drawnow;
+
                     % Parse stage identifiers from UI fields
-                    app.TextArea.Value = 'Processing stage inputs...';
+                    app.TextArea.addnl('Processing stage inputs...');
                     drawnow;
                     updateStagesInput(app)
 
@@ -3382,8 +3386,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                         updateDelimeterInput(app)
 
                         % ---- Load EDF and staging data ----
-                        app.TextArea.Value = ['Loading subject',' ',app.input_fbase, ...
-                            ', channel',' ',app.channel,' staging and EDF data....'];
+                        app.TextArea.addnl(['Loading staging and EDF data...']);
                         drawnow;
                         [app.data, app.Fs, app.stage_times, app.stage_vals] = load_data( ...
                             app.DataList{jj}, ...
