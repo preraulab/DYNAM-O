@@ -1524,6 +1524,26 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.HeaderRowsEditField.HTMLComponent.Tooltip        = 'Number of header rows in the stage file';
             app.HeaderRowsEditFieldLabel.HTMLComponent.Tooltip   = 'Number of header rows in the stage file';
 
+            % Wire ValueChangedFcn on all validated fields so errors clear
+            % immediately when the user corrects the value.
+            clearFields = { ...
+                app.OutputDirEditField, ...
+                app.ChannelEditField, ...
+                app.StagesColumnEditField, ...
+                app.TimesColumnEditField, ...
+                app.HeaderRowsEditField ...
+            };
+            for ii = 1:numel(clearFields)
+                c = clearFields{ii};
+                c.ValueChangedFcn = @(~,~) clearIsError(app, c);
+            end
+
+            stage_label_fields = {'Artifact','Wake','REM','N1','N2','N3'};
+            for ii = 1:numel(stage_label_fields)
+                c = app.([stage_label_fields{ii} 'EditField']);
+                c.ValueChangedFcn = @(~,~) clearIsError(app, c);
+            end
+
         end % createComponents
 
         % ------------------------------------------------------------------
@@ -2006,7 +2026,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             newChannels = selectedChannels(~ismember(selectedChannels, existingChannels));
             allChannels = [existingChannels(:); newChannels(:)];
             channelString = strjoin(allChannels, ', ');
-            app.ChannelEditField.Value = channelString;
+            app.ChannelEditField.IsError = false;
+            app.ChannelEditField.Value   = channelString;
             disp(['Selected Channels: ' channelString]);
 
             % ===============================
@@ -2184,8 +2205,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 % winopen is a MATLAB function, it handles spaces automatically
                 winopen(curr_file);
             elseif ismac   % macOS
-                % system() calls the terminal; quotes are required for spaces
-                system(['open -e "' curr_file '"']);
+                system(['open -a TextEdit "' curr_file '"']);
             elseif isunix  % Linux
                 % system() calls the terminal; quotes are required for spaces
                 system(['xdg-open "' curr_file '"']);
@@ -2327,6 +2347,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         function updateDataListBox(app)
             % updateDataListBox  Refresh the DataListBox items and update the file-count label.
 
+            app.DataListBox.IsError = false;
             app.DataListBox.Items = app.DataList;
             if length(app.DataList) == 1 %#ok<*ISCL>
                 app.DataLabel.Text = 'DATA (1 File)';
@@ -2340,6 +2361,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         function updateStagingListBox(app)
             % updateStagingListBox  Refresh the StagingListBox items and update the file-count label.
 
+            app.StagingListBox.IsError = false;
             app.StagingListBox.Items = app.StagingList;
             if length(app.StagingList) == 1
                 app.StagingLabel.Text = 'STAGING (1 File)';
@@ -2352,6 +2374,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
         function updateRunErrorList(app)
             % updateRunErrorList  Populate run_error_list with any blocking validation issues.
+            %   Also sets IsError on related CSSui components to highlight problems visually.
             %
             %   Checks the following conditions and appends a descriptive message
             %   to app.run_error_list for each failure:
@@ -2362,20 +2385,39 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %     - Stages column not specified
             %     - Times column not specified
             %     - Header rows not specified
+            %     - No channels selected
             %     - Any listed file does not exist on disk
 
             app.run_error_list = {};  % Clear before re-validating
 
+            % Clear all component error states before re-evaluating
+            app.DataListBox.IsError           = false;
+            app.StagingListBox.IsError        = false;
+            app.OutputDirEditField.IsError    = false;
+            app.StagesColumnEditField.IsError = false;
+            app.TimesColumnEditField.IsError  = false;
+            app.HeaderRowsEditField.IsError   = false;
+            app.ChannelEditField.IsError      = false;
+            app.ArtifactEditField.IsError     = false;
+            app.WakeEditField.IsError         = false;
+            app.REMEditField.IsError          = false;
+            app.N1EditField.IsError           = false;
+            app.N2EditField.IsError           = false;
+            app.N3EditField.IsError           = false;
+
             if isempty(app.DataList)
                 app.run_error_list(end+1) = {'- Data list empty. Need edf files to run.'};
+                app.DataListBox.IsError = true;
             end
 
             if isempty(app.StagingList)
                 app.run_error_list(end+1) = {'- Staging list empty. Need staging files to run.'};
+                app.StagingListBox.IsError = true;
             end
 
             if isempty(app.OutputDirEditField.Value)
                 app.run_error_list(end+1) = {'- No output directory given. Need somewhere to save files.'};
+                app.OutputDirEditField.IsError = true;
             end
 
             if length(app.DataList) ~= length(app.StagingList)
@@ -2383,22 +2425,39 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                     num2str(length(app.DataList)), ...
                     ') does not match staging files (', ...
                     num2str(length(app.StagingList)), ').')};
+                app.DataListBox.IsError    = true;
+                app.StagingListBox.IsError = true;
             end
 
             if isempty(app.StagesColumnEditField.Value)
                 app.run_error_list(end+1) = {'- No staging column given in the staging file.'};
+                app.StagesColumnEditField.IsError = true;
             end
 
             if isempty(app.TimesColumnEditField.Value)
                 app.run_error_list(end+1) = {'- No times column given in the staging file.'};
+                app.TimesColumnEditField.IsError = true;
             end
 
             if isempty(app.HeaderRowsEditField.Value)
                 app.run_error_list(end+1) = {'- No header rows given in the staging file.'};
+                app.HeaderRowsEditField.IsError = true;
             end
 
-            if strcmpi(app.ChannelEditField.Value, 'Enter comma-separated channel labels') | isempty(app.ChannelEditField.Value)
+            if strcmpi(app.ChannelEditField.Value, 'Enter comma-separated channel labels') || isempty(app.ChannelEditField.Value)
                 app.run_error_list(end+1) = {'- No channels selected.'};
+                app.ChannelEditField.IsError = true;
+            end
+
+            % Check that required stage label fields are not empty
+            stage_label_fields = {'Artifact','Wake','REM','N1','N2','N3'};
+            for ii = 1:numel(stage_label_fields)
+                name = stage_label_fields{ii};
+                c = app.([name 'EditField']);
+                if isempty(strtrim(c.Value))
+                    app.run_error_list(end+1) = {['- ' name ' stage label is empty.']};
+                    c.IsError = true;
+                end
             end
 
             % Check that every file in both lists actually exists on disk
@@ -2410,6 +2469,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             if ~isempty(missing)
                 app.run_error_list{end+1} = sprintf('Missing files:\n%s', strjoin(missing, '\n'));
+                app.DataListBox.IsError    = true;
+                app.StagingListBox.IsError = true;
             end
         end
 
@@ -2425,7 +2486,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             folder = uigetdir;
             if folder ~= 0
-                app.OutputDirEditField.Value = folder;
+                app.OutputDirEditField.IsError = false;
+                app.OutputDirEditField.Value   = folder;
                 outputDirChanged(app);
             end
         end
@@ -3603,4 +3665,16 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             filename = [name ext];
         end
     end % static methods
+
+    methods (Access = private)
+
+        function clearIsError(~, component)
+            % clearIsError  Clear the IsError flag on a CSSui component.
+            %   Used as a ValueChangedFcn to auto-clear validation highlights
+            %   the moment a user corrects a field.
+            component.IsError = false;
+        end
+
+    end % private methods
+
 end % classdef
