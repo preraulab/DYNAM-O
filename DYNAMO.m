@@ -727,16 +727,12 @@ classdef DYNAMO < handle
             end
 
 
-            if showButtons
-                tabs_position = [0 .1 1 .9];
-            else
-                tabs_position = [0 0 1 1];
-            end
-
             % Create Parametric Fit main tab with subtabs
-            param_tab = uitab(tabGroup, 'Title', 'Parametric Fit');
-            param_subtab_group = uitabgroup(param_tab, 'units', 'normalized', 'Position', tabs_position);
-            %param_subtab_group = uitabgroup(param_tab);
+            param_tab  = uitab(tabGroup, 'Title', 'Parametric Fit');
+            param_grid = uigridlayout(param_tab, 'RowHeight', {'1x'}, 'ColumnWidth', {'1x'}, 'Padding', [0 0 0 0]);
+            param_subtab_group = uitabgroup(param_grid);
+            param_subtab_group.Layout.Row    = 1;
+            param_subtab_group.Layout.Column = 1;
 
             % Parametric subtab configurations
             param_configs = {
@@ -751,8 +747,11 @@ classdef DYNAMO < handle
             end
 
             % Create Spline Fit main tab with subtabs
-            spline_tab = uitab(tabGroup, 'Title', 'Spline Fit');
-            spline_subtab_group = uitabgroup(spline_tab, 'units', 'normalized', 'Position', tabs_position);
+            spline_tab  = uitab(tabGroup, 'Title', 'Spline Fit');
+            spline_grid = uigridlayout(spline_tab, 'RowHeight', {'1x'}, 'ColumnWidth', {'1x'}, 'Padding', [0 0 0 0]);
+            spline_subtab_group = uitabgroup(spline_grid);
+            spline_subtab_group.Layout.Row    = 1;
+            spline_subtab_group.Layout.Column = 1;
 
             % Spline subtab configurations
             spline_configs = {
@@ -784,7 +783,8 @@ classdef DYNAMO < handle
 
                 for jj = 1:nButtons
                     xpos = startX + (jj-1)*(buttonWidth+spacing);
-                    uibutton(fig, 'Text', buttonLabels{jj}, ...
+                    CSSuiButton(fig, 'Style', 'shadow', ...
+                        'Text', buttonLabels{jj}, ...
                         'Position', [xpos 10 buttonWidth buttonHeight], ...
                         'ButtonPushedFcn', buttonCallbacks{jj});
                 end
@@ -797,14 +797,14 @@ classdef DYNAMO < handle
                 if verbose, disp('Resetting all options...'); end
                 for k = 1:length(all_configs)
                     obj.(all_configs{k}.field) = all_configs{k}.constructor();
-                    all_tables{k}.Data = createTableData(obj.(all_configs{k}.field), all_configs{k});
+                    all_tables{k}.Data = tableData2cell(createTableData(obj.(all_configs{k}.field), all_configs{k}));
                 end
             end
 
             function updateAll(~,~)
                 if verbose, disp('Updating all options...'); end
                 for k = 1:length(all_configs)
-                    all_tables{k}.Data = createTableData(obj.(all_configs{k}.field), all_configs{k});
+                    all_tables{k}.Data = tableData2cell(createTableData(obj.(all_configs{k}.field), all_configs{k}));
                 end
             end
 
@@ -854,105 +854,107 @@ classdef DYNAMO < handle
             end
 
             function tbl = createTable(parent, opts, config)
-                %CREATETABLE  Build an editable uitable for a given options struct
-                %
-                %   tbl = createTable(parent, opts, config)
-                %
-                %   This function constructs the Data and callbacks for an uitable
-                %   representing fields in the options struct.
-                %
+                %CREATETABLE  CSS-styled options table with inline edit strip.
+                %   Builds a CSSuiTable showing Parameter/Description/Value and
+                %   an edit strip below. Click a row to load its value into the
+                %   edit field, then press Apply (or Select... for the features
+                %   special case) to commit the change.
 
-                tableData = createTableData(opts, config);
+                % Outer grid: table on top, edit strip on bottom
+                g = uigridlayout(parent);
+                g.RowHeight    = {'1x', 38};
+                g.ColumnWidth  = {'1x'};
+                g.RowSpacing   = 4;
+                g.Padding      = [4 4 4 4];
 
-                table_gap = 30;
-                table_pos = parent.Position;
-                table_pos(4) = table_pos(4) - table_gap;
+                tbl = CSSuiTable(g, ...
+                    'ColumnName',  {'Parameter', 'Description', 'Value'}, ...
+                    'ColumnWidth', [180, 470, 150], ...
+                    'Data',        tableData2cell(createTableData(opts, config)), ...
+                    'Style',       'shadow_light', ...
+                    'SelectionType', 'row');
+                tbl.Layout.Row    = 1;
+                tbl.Layout.Column = 1;
 
-                tbl = uitable(parent, 'Data', tableData, ...
-                    'ColumnName', {'Parameter', 'Description', 'Value'}, ...
-                    'ColumnWidth', {180, 500, 'auto'}, ...
-                    'ColumnEditable', [false false true], ...
-                    'Units', 'normalized',...
-                    'Position', [0 0 1 1], ...
-                    'CellEditCallback', @(src,ev) editCell(src, ev, config), ...
-                    'CellSelectionCallback', @(src,ev) selectCell(src, ev, config));
+                % Edit strip — always enabled; Apply guards against empty selection
+                editGrid = uigridlayout(g);
+                editGrid.ColumnWidth  = {'fit', '1x', 80};
+                editGrid.RowHeight    = {'1x'};
+                editGrid.Padding      = [0 0 0 0];
+                editGrid.ColumnSpacing = 6;
+                editGrid.Layout.Row    = 2;
+                editGrid.Layout.Column = 1;
+
+                selLabel = CSSuiLabel(editGrid, 'Style', 'shadow', ...
+                    'Text', 'Select a row to edit', 'HorizontalAlignment', 'left');
+                selLabel.Layout.Row = 1; selLabel.Layout.Column = 1;
+
+                valField = CSSuiEditField(editGrid, 'Style', 'shadow_light', ...
+                    'Placeholder', 'Select a row above');
+                valField.Layout.Row = 1; valField.Layout.Column = 2;
+
+                applyBtn = CSSuiButton(editGrid, 'Style', 'shadow', 'Text', 'Apply');
+                applyBtn.Layout.Row = 1; applyBtn.Layout.Column = 3;
+
+                curRow   = [];
+                curParam = '';
+
+                tbl.SelectionChangedFcn  = @onRowSelected;
+                applyBtn.ButtonPushedFcn = @onApply;
+
+                function onRowSelected(~, evt)
+                    rows = evt.Selection;
+                    if isempty(rows), return; end
+                    curRow   = rows(1);
+                    curParam = tbl.Data{curRow, 1};
+                    selLabel.Text  = curParam;
+                    valField.Value = tbl.Data{curRow, 3};
+                end
+
+                function onApply(~, ~)
+                    if isempty(curRow), return; end
+                    % Features param uses the picker dialog instead of the text field
+                    if strcmp(curParam,'features') && isequal(config.constructor, @detection_opts)
+                        new = featuresDialog(obj.(config.field).features);
+                        if isempty(new), return; end
+                        newVal = new;
+                    else
+                        newVal = valField.Value;
+                    end
+                    try
+                        newOpts = updateOption(obj.(config.field), curParam, newVal, config.constructor);
+                        obj.(config.field) = newOpts;
+                        tbl.Data = tableData2cell(createTableData(obj.(config.field), config));
+                        if verbose
+                            fprintf('Updated %s.%s\n', config.field, curParam);
+                        end
+                    catch ME
+                        uialert(fig, ME.message, 'Validation Error');
+                    end
+                end
             end
 
             %------------------------------------------------------------------
             function tbl = createSubTable(parent, opts, config)
-                %CREATESUBTABLE  Build an editable uitable for subtab (smaller size)
-                %
-                %   tbl = createSubTable(parent, opts, config)
-                %
-                %   Similar to createTable but with adjusted positioning for subtabs.
-                %   'ColumnWidth', {180, 480, 'auto'} instead of {180, 500, 'auto'}.
-                %
-
-                tableData = createTableData(opts, config);
-
-
-                tbl = uitable(parent, 'Data', tableData, ...
-                    'ColumnName', {'Parameter', 'Description', 'Value'}, ...
-                    'ColumnWidth', {180, 480, 'auto'}, ...
-                    'ColumnEditable', [false false true], ...
-                    'Units', 'Normalized',...
-                    'Position', [0 0 1 1], ...
-                    'CellEditCallback', @(src,ev) editCell(src, ev, config), ...
-                    'CellSelectionCallback', @(src,ev) selectCell(src, ev, config));
+                %CREATESUBTABLE  Delegates to createTable (same layout, subtab context).
+                tbl = createTable(parent, opts, config);
             end
 
             %------------------------------------------------------------------
-            function editCell(src, event, config)
-                %EDITCELL  Callback to handle edits in the options table
-                if event.Indices(2) ~= 3
-                    return
-                end
-                row = event.Indices(1);
-                param = src.Data.Parameter{row};
-                value = event.NewData;
-
-                % Handle categorical values (dropdowns)
-                if iscategorical(value)
-                    value = char(value);
-                end
-
-                % Update DYNAMO object safely
-                try
-                    newOpts = updateOption(obj.(config.field), param, value, config.constructor);
-                    obj.(config.field) = newOpts; % Direct assignment to object property
-                    if verbose
-                        fprintf('✅ Updated %s.%s = %s\n', config.field, param, mat2str(value));
-                    end
-                catch ME
-                    uialert(fig, ME.message, 'Validation Error');
-                    src.Data.Value{row} = event.PreviousData; % Revert on error
-                end
-            end
-
-            %------------------------------------------------------------------
-            function selectCell(src, event, config)
-                %SELECTCELL  Callback for cell selection (used for special editors)
-                if isempty(event.Indices) || event.Indices(2) ~= 3
-                    return
-                end
-                row = event.Indices(1);
-                param = src.Data.Parameter{row};
-
-                % Handle special features selection dialog
-                if strcmp(param, 'features') && isequal(config.constructor, @detection_opts)
-                    current = src.Data.Value{row};
-                    new = featuresDialog(current);
-                    if ~isempty(new)
-                        try
-                            newOpts = updateOption(obj.(config.field), param, new, config.constructor);
-                            obj.(config.field) = newOpts; % Direct assignment to object property
-                            src.Data.Value{row} = formatValue(param, new, config.constructor);
-                            if verbose
-                                fprintf('✅ Updated %s.%s = %s\n', config.field, param, mat2str(new));
-                            end
-                        catch ME
-                            uialert(fig, ME.message, 'Validation Error');
-                        end
+            function c = tableData2cell(tableData)
+                %TABLEDATA2CELL  Convert options MATLAB table to N×3 char cell for CSSuiTable.
+                n = height(tableData);
+                c = cell(n, 3);
+                for ii = 1:n
+                    c{ii,1} = tableData.Parameter{ii};
+                    c{ii,2} = tableData.Description{ii};
+                    v = tableData.Value{ii};
+                    if iscategorical(v)
+                        c{ii,3} = char(v);
+                    elseif ischar(v) || isstring(v)
+                        c{ii,3} = char(v);
+                    else
+                        c{ii,3} = mat2str(v);
                     end
                 end
             end
@@ -1096,15 +1098,14 @@ classdef DYNAMO < handle
                 %   for pi-related values.
                 %
 
-                % Categorical dropdowns for a few known options
+                % Known enum options — return plain string (valid values shown in description)
                 if isequal(constructor, @detection_opts) && strcmp(param, 'quality_setting')
-                    % Create categorical with proper categories for dropdown
-                    str = categorical(string(value), {'default', 'precision', 'stokes_2023'});
+                    str = char(value);
                     return;
                 end
 
                 if (strcmp(func2str(constructor), '@(x)param_basis_opts(''power'')') || strcmp(func2str(constructor), '@(x)param_basis_opts(''phase'')')) && strcmp(param, 'criterion')
-                    str = categorical(string(value), {'minpctr2', 'max', 'mindr2', 'kneedle'});
+                    str = char(value);
                     return;
                 end
 
@@ -1120,8 +1121,7 @@ classdef DYNAMO < handle
                 end
 
                 if islogical(value) && isscalar(value)
-                    % str = value; % Keep as logical for checkbox display
-                    str = categorical(string(value), {'true', 'false'});
+                    str = char(string(value));   % 'true' or 'false'
                     return;
                 end
 
@@ -1310,13 +1310,14 @@ classdef DYNAMO < handle
 
                 % Build dialog
                 dlg = uifigure('Name', 'Select Features', 'Position', [300 300 300 400], 'WindowStyle', 'modal');
-                listbox = uilistbox(dlg, 'Items', features, 'Value', selected, 'Multiselect', 'on', ...
+                listbox = CSSuiListBox(dlg, 'Items', features, 'Value', selected, 'Multiselect', true, ...
+                    'Style', 'shadow_light', ...
                     'Position', [20 80 260 280]);
 
                 result = [];
-                uibutton(dlg, 'Text', 'OK', 'Position', [150 20 50 30], ...
+                CSSuiButton(dlg, 'Style', 'shadow', 'Text', 'OK', 'Position', [150 20 50 30], ...
                     'ButtonPushedFcn', @(~,~) setResult());
-                uibutton(dlg, 'Text', 'Cancel', 'Position', [210 20 60 30], ...
+                CSSuiButton(dlg, 'Style', 'shadow', 'Text', 'Cancel', 'Position', [210 20 60 30], ...
                     'ButtonPushedFcn', @(~,~) delete(dlg));
 
                 uiwait(dlg);
