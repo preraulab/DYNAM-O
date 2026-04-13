@@ -1973,7 +1973,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'ButtonPushedFcn', @(btn,evt) addRereferenceCallback());
 
             % Accept / Cancel — centered as a pair
-            btnW = 140; gap = 10;
+            btnW = 165; gap = 10;
             pairW = 2*btnW + gap;
             btnX0 = (dW - pairW) / 2;
             CSSuiButton(d, 'Style', 'shadow', 'Text', 'Add to Batch Run', ...
@@ -1995,7 +1995,17 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 return
             end
 
-            channelString = strjoin(selectedChannels, ', ');
+            % Append to existing channels, avoiding duplicates
+            existingStr = strtrim(app.ChannelEditField.Value);
+            if isempty(existingStr) || strcmpi(existingStr, 'Enter comma-separated channel labels')
+                existingChannels = {};
+            else
+                existingChannels = strtrim(strsplit(existingStr, ','));
+                existingChannels = existingChannels(~cellfun(@isempty, existingChannels));
+            end
+            newChannels = selectedChannels(~ismember(selectedChannels, existingChannels));
+            allChannels = [existingChannels(:); newChannels(:)];
+            channelString = strjoin(allChannels, ', ');
             app.ChannelEditField.Value = channelString;
             disp(['Selected Channels: ' channelString]);
 
@@ -2007,7 +2017,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 % Handle both SelectionChangedFcn (uifigure) and CellSelectionCallback
                 try
                     if isfield(evt, 'Selection') && ~isempty(evt.Selection)
-                        selectedRows = unique(evt.Selection(:,1));
+                        selectedRows = unique(evt.Selection(:));
                     elseif isfield(evt, 'Indices') && ~isempty(evt.Indices)
                         selectedRows = unique(evt.Indices(:,1));
                     else
@@ -2133,18 +2143,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             end
 
             function acceptCallback()
-                % Read selection directly from the table at click time (most
-                % reliable in uifigure — SelectionChangedFcn can lag).
-                rows = [];
-                try
-                    sel = t.Selection;
-                    if ~isempty(sel)
-                        rows = unique(sel(:,1));
-                    end
-                catch
-                    rows = selectedRows;
-                end
-
+                % Use selectedRows tracked by onCellSelect (most reliable —
+                % t.Selection may be stale after button click shifts focus).
+                rows = selectedRows;
                 if isempty(rows)
                     uialert(d, ...
                         'Please select at least one channel or press Cancel.', ...
