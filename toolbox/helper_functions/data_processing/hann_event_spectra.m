@@ -89,7 +89,7 @@ parfor n = 1:num_windows % REMOVE PARFOR TO TEST
     end
 
     %Multiply the data by the hann taper
-    tapered_data = data_segment.* hann_taper;
+    tapered_data = data_segment .* hann_taper;
 
     %Compute the FFT
     fft_data = fft(tapered_data, nfft);
