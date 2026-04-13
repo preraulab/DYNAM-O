@@ -273,7 +273,7 @@ classdef DYNAMO < handle
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % run
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function obj = run(obj)
+        function obj = runDYNAMO(obj)
             %run  Re-execute the DYNAM-O pipeline and compute TF
             %peaks and SOPH
             %
