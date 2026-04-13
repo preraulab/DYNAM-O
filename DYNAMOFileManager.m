@@ -143,6 +143,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         TimesColumnEditFieldLabel       % CSSuiLabel
         StagesColumnEditField           % CSSuiNumericField             % Column index for stage labels
         StagesColumnEditFieldLabel      % CSSuiLabel
+        ResampleSwitch                  % CSSuiSwitch                   % Toggle resampling on/off
+        ResampleFsEditField             % CSSuiNumericField             % Target sampling frequency for resampling
+        ResampleFsEditFieldLabel        % CSSuiLabel
 
         % --- Stage Label Inputs (Left Panel) ---
         UnknownEditField                % CSSuiEditField                % Identifiers for 'Unknown' stage
@@ -935,14 +938,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Style', 'shadow', ...
                 'Text', 'Stages Column' ...
                 );
-            app.StagesColumnEditFieldLabel.Layout.Row    = 3;
+            app.StagesColumnEditFieldLabel.Layout.Row    = 2;
             app.StagesColumnEditFieldLabel.Layout.Column = 3;
 
             app.StagesColumnEditField = CSSuiNumericField(app.StagingOptionsPanelGrid, ...
                 'Style', 'shadow_light', ...
                 'Min', 0 ...
                 );
-            app.StagesColumnEditField.Layout.Row    = 3;
+            app.StagesColumnEditField.Layout.Row    = 2;
             app.StagesColumnEditField.Layout.Column = 4;
 
             % Times column index
@@ -950,14 +953,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Style', 'shadow', ...
                 'Text', 'Times Column' ...
                 );
-            app.TimesColumnEditFieldLabel.Row    = 4;
+            app.TimesColumnEditFieldLabel.Row    = 3;
             app.TimesColumnEditFieldLabel.Column = 3;
 
             app.TimesColumnEditField = CSSuiNumericField(app.StagingOptionsPanelGrid, ...
                 'Style', 'shadow_light', ...
                 'Min', 0 ...
                 );
-            app.TimesColumnEditField.Row    = 4;
+            app.TimesColumnEditField.Row    = 3;
             app.TimesColumnEditField.Column = 4;
 
             % Header rows count
@@ -965,15 +968,43 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Style', 'shadow', ...
                 'Text', 'Header Rows' ...
                 );
-            app.HeaderRowsEditFieldLabel.Row    = 5;
+            app.HeaderRowsEditFieldLabel.Row    = 4;
             app.HeaderRowsEditFieldLabel.Column = 3;
 
             app.HeaderRowsEditField = CSSuiNumericField(app.StagingOptionsPanelGrid, ...
                 'Style', 'shadow_light', ...
                 'Min', 0 ...
                 );
-            app.HeaderRowsEditField.Row    = 5;
+            app.HeaderRowsEditField.Row    = 4;
             app.HeaderRowsEditField.Column = 4;
+
+            % Resample Data switch (row 6, row 5 left as a visual spacer)
+            app.ResampleSwitch = CSSuiSwitch(app.StagingOptionsPanelGrid, ...
+                'Style', 'shadow', ...
+                'Text', 'Resample Data', ...
+                'Value', 0 ...
+                );
+            app.ResampleSwitch.Layout.Row    = 6;
+            app.ResampleSwitch.Layout.Column = [3 4];
+            app.ResampleSwitch.ValueChangedFcn = @(~,~) app.onResampleSwitchChanged();
+
+            % Sampling frequency field (row 7, disabled until switch is on)
+            app.ResampleFsEditFieldLabel = CSSuiLabel(app.StagingOptionsPanelGrid, ...
+                'Style', 'shadow', ...
+                'Text', 'New Fs (Hz)', ...
+                'Enabled', false ...
+                );
+            app.ResampleFsEditFieldLabel.Layout.Row    = 7;
+            app.ResampleFsEditFieldLabel.Layout.Column = 3;
+
+            app.ResampleFsEditField = CSSuiNumericField(app.StagingOptionsPanelGrid, ...
+                'Style', 'shadow_light', ...
+                'Min', 0, ...
+                'Value', 200, ...
+                'Enabled', false ...
+                );
+            app.ResampleFsEditField.Layout.Row    = 7;
+            app.ResampleFsEditField.Layout.Column = 4;
 
             % File delimiter dropdown
             app.DelimeterOptionField = CSSuiDropdown(app.StagingOptionsPanelGrid, ...
@@ -1523,6 +1554,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.TimesColumnEditFieldLabel.HTMLComponent.Tooltip  = 'Column of the staging CSV containing time of each stage';
             app.HeaderRowsEditField.HTMLComponent.Tooltip        = 'Number of header rows in the stage file';
             app.HeaderRowsEditFieldLabel.HTMLComponent.Tooltip   = 'Number of header rows in the stage file';
+            app.ResampleSwitch.HTMLComponent.Tooltip             = 'Resample the EEG data to the specified frequency before processing';
+            app.ResampleFsEditField.HTMLComponent.Tooltip        = 'Target sampling frequency in Hz for resampling';
+            app.ResampleFsEditFieldLabel.HTMLComponent.Tooltip   = 'Target sampling frequency in Hz for resampling';
 
             % Wire ValueChangedFcn on all validated fields so errors clear
             % immediately when the user corrects the value.
@@ -2801,7 +2835,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 app.TextArea.addnl('   Running DYNAMO...');
                 app.TextArea.addnl('   Computing TF peak stats table...');
                 drawnow;
-                app.run();
+                app.runDYNAMO();
 
                 stats_table = app.stats_table;
                 SOPHs       = app.SOPHs;
@@ -3401,6 +3435,20 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                             app.N2UserInput,       app.N3UserInput, ...
                             app.UnknownUserInput });
 
+                        % ---- Resample if requested and Fs differs ----
+                        if app.ResampleSwitch.Value
+                            target_fs = app.ResampleFsEditField.Value;
+                            if app.Fs ~= target_fs
+                                msg = sprintf('Resampling from %g Hz to %g Hz...', app.Fs, target_fs);
+                                fprintf('%s\n', msg);
+                                app.TextArea.addnl(['   ' msg]);
+                                drawnow;
+                                [p, q]   = rat(target_fs / app.Fs);
+                                app.data = resample(app.data, p, q);
+                                app.Fs   = target_fs;
+                            end
+                        end
+
                         % ---- Run selected analysis steps ----
 
                         % TF-peak stats table and/or SO-Power Histograms
@@ -3676,6 +3724,13 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %   Used as a ValueChangedFcn to auto-clear validation highlights
             %   the moment a user corrects a field.
             component.IsError = false;
+        end
+
+        function onResampleSwitchChanged(app)
+            % onResampleSwitchChanged  Enable/disable the Sampling Freq field
+            %   to match the Resample Data switch state.
+            app.ResampleFsEditField.Enabled          = logical(app.ResampleSwitch.Value);
+            app.ResampleFsEditFieldLabel.Enabled     = logical(app.ResampleSwitch.Value);
         end
 
     end % private methods
