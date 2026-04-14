@@ -2073,6 +2073,10 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 return
             end
 
+            % Warn if any selected channel's sampling rate is far above or
+            % below the frequency ranges DYNAMO actually analyzes.
+            checkChannelSamplingRates(app, selectedChannels, tableData);
+
             % Append to existing channels, avoiding duplicates
             existingStr = strtrim(app.ChannelEditField.Value);
             if isempty(existingStr) || strcmpi(existingStr, 'Enter comma-separated channel labels')
@@ -2785,6 +2789,66 @@ return;
 
             app.ChannelList = textscan(app.ChannelEditField.Value, '%s', 'Delimiter', ',');
             app.ChannelList = app.ChannelList{1,1};
+        end
+
+        % ------------------------------------------------------------------
+
+        function checkChannelSamplingRates(app, selectedChannels, tableData)
+            % checkChannelSamplingRates  Warn if any selected channel's Fs is
+            %   far above or below the frequency range DYNAMO analyzes.
+            %
+            %   Upper bound: max of SOPH_options.freq_range(2) and
+            %   detection_options.mtm_freq_range(2). A channel is flagged as
+            %   too high if any of its Fs values exceed 10x that bound
+            %   (suggest the Resample option to downsample), and too low if
+            %   any Fs value falls below 2x that bound, since Nyquist
+            %   requires Fs >= 2*upper for the analysis to run.
+
+            soph_upper  = app.SOPH_options.freq_range(2);
+            mtm_upper   = app.detection_options.mtm_freq_range(2);
+            max_upper   = max(soph_upper, mtm_upper);
+            high_thresh = 10 * max_upper;
+            low_thresh  = 2  * max_upper;
+
+            tooHigh = {};
+            tooLow  = {};
+            for ii = 1:numel(selectedChannels)
+                lbl = selectedChannels{ii};
+                idx = find(strcmp(tableData(:,1), lbl), 1);
+                if isempty(idx)
+                    continue
+                end
+                fs_vals = sscanf(tableData{idx,2}, '%g');
+                if isempty(fs_vals)
+                    continue
+                end
+                entry = sprintf('  %s (%s)', lbl, tableData{idx,2});
+                if max(fs_vals) > high_thresh
+                    tooHigh{end+1} = entry; %#ok<AGROW>
+                end
+                if min(fs_vals) < low_thresh
+                    tooLow{end+1}  = entry; %#ok<AGROW>
+                end
+            end
+
+            if ~isempty(tooHigh)
+                msg = sprintf(['The following selected channel(s) have a sampling frequency ' ...
+                    'far exceeding what DYNAMO uses (> %g Hz, i.e. 10x the upper analysis bound ' ...
+                    'of %g Hz):\n\n%s\n\n' ...
+                    'Consider enabling the "Resample Data" option to downsample before processing.'], ...
+                    high_thresh, max_upper, strjoin(tooHigh, newline));
+                uialert(app.UIFigure, msg, 'High Sampling Rate', 'Icon', 'warning');
+            end
+
+            if ~isempty(tooLow)
+                msg = sprintf(['The following selected channel(s) have a sampling frequency ' ...
+                    'below the minimum required by DYNAMO (< %g Hz, i.e. 2x the upper analysis ' ...
+                    'bound of %g Hz by Nyquist):\n\n%s\n\n' ...
+                    'You must enable the "Resample Data" option to upsample these channels ' ...
+                    'before processing, otherwise the run will fail.'], ...
+                    low_thresh, max_upper, strjoin(tooLow, newline));
+                uialert(app.UIFigure, msg, 'Low Sampling Rate', 'Icon', 'warning');
+            end
         end
 
         % ------------------------------------------------------------------
