@@ -2959,11 +2959,7 @@ return;
                 app.TextArea.addnl('   Saving summary figure...');
                 app.anything_run = 1;
                 fh = app.displaySummaryPlot;
-                switch app.DataSummaryDropDown.Value
-                    case {'.jpg','.jpeg'}, fig_driver = '-djpeg';
-                    otherwise,            fig_driver = '-dpng';
-                end
-                print(fh, fig_driver, '-r300', app.output_fig_name);
+                exportgraphics(fh, app.output_fig_name, 'Resolution', 300);
                 close all;
             end
         end % runDataSummaryFigure
@@ -3014,11 +3010,7 @@ return;
                     '/figures/param_basis/',app.input_fbase,'_param_basis_figure_', ...
                     app.channel, app.ParametricFiguresDropDown.Value);
                 app.TextArea.addnl('   Saving parametric basis figure...');
-                switch app.ParametricFiguresDropDown.Value
-                    case {'.jpg','.jpeg'}, fig_driver = '-djpeg';
-                    otherwise,            fig_driver = '-dpng';
-                end
-                print(fh, fig_driver, '-r300', app.output_param_name);
+                exportgraphics(fh, app.output_param_name, 'Resolution', 300);
             end
             close all;
 
@@ -3115,11 +3107,7 @@ return;
                 app.output_spline_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
                     '/figures/spline_basis/',app.input_fbase,'_spline_basis_figure_', ...
                     app.channel, app.SplineFiguresDropDown.Value);
-                switch app.SplineFiguresDropDown.Value
-                    case {'.jpg','.jpeg'}, spline_fig_driver = '-djpeg';
-                    otherwise,            spline_fig_driver = '-dpng';
-                end
-                print(fh, spline_fig_driver, '-r300', app.output_spline_name);
+                exportgraphics(fh, app.output_spline_name, 'Resolution', 300);
             end
             close all;
 
