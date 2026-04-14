@@ -142,7 +142,8 @@ if plot_on
 
     axes(ax(2))
 
-    surface(pow_bins, freq_bins, feval(fitresult,X,Y),'edgecolor','none')
+    [Xg, Yg] = meshgrid(pow_bins, freq_bins);
+    surface(pow_bins, freq_bins, feval(fitresult,Xg,Yg),'edgecolor','none')
     axis xy;
     caxis(cx);
     title('Model Fit');
