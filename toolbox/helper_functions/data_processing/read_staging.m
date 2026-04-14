@@ -133,6 +133,9 @@ times_seconds = convert_time_to_seconds(time_data, start_time, epoch_dur);
 
 % ---------------- Stage processing ----------------
 [stage_values, unmatched_idx] = process_stage_data(stage_data, stage_vals);
+times_seconds = times_seconds(~unmatched_idx);
+stage_values = stage_values(~unmatched_idx);
+assert(length(unique(times_seconds))==length(times_seconds),'Multiple stages identified at the exact same time stamp.');
 
 % ---------------- Outputs ----------------
 staging.times = times_seconds(:);
@@ -143,7 +146,7 @@ if ~isnan(start_time)&staging.times~=0
     staging.vals = [0; staging.vals];
 end
 
-if isempty(unmatched_idx)
+if any(unmatched_idx)
     annotations = struct([]); % return empty
 else
     annotations.times = times_seconds(unmatched_idx);
@@ -201,15 +204,13 @@ stage_numbers = [6, 5, 4, 3, 2, 1, 0]; % Artifact → Unknown
 stage_values = nan(size(stage_data));   % start unassigned
 
 for stage_idx = 1:length(stage_vals)
-    strs = lower(string(stage_vals{stage_idx}));
-    for i = 1:length(stage_data)
-        cur = lower(string(stage_data(i)));
-        if any(contains(cur, strs))
-            stage_values(i) = stage_numbers(stage_idx);
-        end
+    strs = string(stage_vals{stage_idx});
+    idx = ismember(lower(stage_data),lower(strs));
+    if any(idx)
+        stage_values(idx) = stage_numbers(stage_idx);
     end
 end
 
-unmatched_idx = find(isnan(stage_values));
-stage_values(unmatched_idx) = 0; % default unmatched to Artifact
+unmatched_idx = isnan(stage_values);
+
 end
