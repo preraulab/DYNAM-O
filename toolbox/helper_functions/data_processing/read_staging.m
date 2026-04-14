@@ -113,6 +113,11 @@ end
 raw_data = readcell(file_name, 'Delimiter', delimiter, 'NumHeaderLines', header_lines);
 
 num_cols = size(raw_data, 2);
+if num_cols == 1
+    error(['Only 1 column found in "%s". ' ...
+        'Check that the File Delimiter matches the file format ' ...
+        'and that Header Rows is set correctly.'], file_name);
+end
 if time_col > num_cols
     error('time_col (%d) exceeds number of columns (%d).', time_col, num_cols);
 end
@@ -159,7 +164,7 @@ numeric_data = str2double(time_data);
 if all(~isnan(numeric_data)) && all(mod(numeric_data,1)==0) && issorted(numeric_data) && median(diff(numeric_data))==1
     assert(epoch_dur>0,'Epoch duration must be greater than zero.');
     vals = numeric_data(:);
-    times_seconds = start_sec + vals * epoch_dur;
+    times_seconds = vals * epoch_dur;
     return;
 end
 

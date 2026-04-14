@@ -2231,7 +2231,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             curr_file = app.StagingListBox.Value{:};
             if ~exist(curr_file, 'file')
-                uialert(app.UIFigure, 'File %s does not exist', curr_file, 'Error', 'Icon', 'Error');
+                uialert(app.UIFigure, sprintf('File does not exist: %s', curr_file), 'Error', 'Icon', 'error');
                 return
             end
 
@@ -2260,7 +2260,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             curr_file = app.DataListBox.Value{:};
             if ~exist(curr_file, 'file')
-                uialert(app.UIFigure, 'File %s does not exist', curr_file, 'Error', 'Icon', 'Error');
+                uialert(app.UIFigure, sprintf('File does not exist: %s', curr_file), 'Error', 'Icon', 'error');
                 return
             end
 
@@ -3103,8 +3103,13 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 app.anything_run = 1;
                 app.TextArea.addnl('   Saving spline figure...');
                 app.output_spline_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/figures/spline_basis/',app.input_fbase,'_spline_basis_figure_',app.channel,'.png');
-                print(fh,'-dpng','-r300',app.output_spline_name);
+                    '/figures/spline_basis/',app.input_fbase,'_spline_basis_figure_', ...
+                    app.channel, app.SplineFiguresDropDown.Value);
+                switch app.SplineFiguresDropDown.Value
+                    case {'.jpg','.jpeg'}, spline_fig_driver = '-djpeg';
+                    otherwise,            spline_fig_driver = '-dpng';
+                end
+                print(fh, spline_fig_driver, '-r300', app.output_spline_name);
             end
             close all;
 
@@ -3165,6 +3170,19 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/auxiliary_data/'))
             end
 
+            % Ensure SOPHs are available (needed for SOpower_norm field)
+            if isempty(app.SOPHs)
+                SOPHmat = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
+                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat');
+                if exist(SOPHmat,'file')
+                    app.SOPHs = load(SOPHmat).SOPHs;
+                else
+                    app.anything_run = 1;
+                    app.TextArea.addnl('   Computing SOPHs for auxiliary data...');
+                    runStatsTable(app);
+                end
+            end
+
             % Package auxiliary data fields
             % TO-DO: Add additional fields (e.g. normalised power, spindle indices)
             app.auxiliary_data.artifacts             = app.artifacts;
@@ -3212,10 +3230,13 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 return;
             end
 
-            % Optionally reverse file processing order
+            % Optionally reverse file processing order (use local copies so the
+            % GUI list boxes and app.DataList/StagingList are never mutated)
+            dataList    = app.DataList;
+            stagingList = app.StagingList;
             if app.RunInReverse.Value
-                app.DataList    = app.DataList(end:-1:1);
-                app.StagingList = app.StagingList(end:-1:1);
+                dataList    = dataList(end:-1:1);
+                stagingList = stagingList(end:-1:1);
             end
 
             % Invoke external batch callback if registered (passes file lists + options)
@@ -3227,10 +3248,10 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 opts.SaveParamImages  = app.SaveParamImagesCheckBox.Value;
                 opts.SaveSplineBasis  = app.SaveSplineBasisCheckBox.Value;
                 opts.SaveSplineImages = app.SaveSplineImagesCheckBox.Value;
-                app.BatchProcessCallback(app.DataList, app.StagingList, opts);
+                app.BatchProcessCallback(dataList, stagingList, opts);
             end
 
-            runBatch(app)
+            runBatch(app, dataList, stagingList)
         end
 
         % ------------------------------------------------------------------
@@ -3244,7 +3265,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.isStopBatchButtonPushed = true;
             uialert(app.UIFigure, ...
                 'Stop button pushed. Completing current subject then stopping.', ...
-                'Stopping', 'Icon', 'Error');
+                'Stopping', 'Icon', 'warning');
         end
 
         % ------------------------------------------------------------------
@@ -3324,8 +3345,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
         % ------------------------------------------------------------------
 
-        function runBatch(app, ~)
+        function runBatch(app, dataList, stagingList)
             % runBatch  Main batch processing loop: iterates over all files and channels.
+            %
+            %   runBatch(app, dataList, stagingList)
+            %
+            %   dataList/stagingList are the ordered file lists to process. They are
+            %   passed in (rather than read from app.DataList/StagingList) so that
+            %   reverse-order runs do not permanently mutate the GUI state.
             %
             %   Execution order per iteration:
             %     1. Load EDF and staging data via load_data.
@@ -3371,7 +3398,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             drawnow;
 
             % Initialize the progress bar widget
-            app.ProgressBar.N = length(app.DataList);
+            app.ProgressBar.N = length(dataList);
             app.ProgressBar.refresh;
             app.ProgressBar.start;
 
@@ -3382,7 +3409,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             warnState = warning('off','all');  % suppress all warnings during run
             app.curr_iteration = 0;
 
-            for jj = 1:length(app.DataList)
+            for jj = 1:length(dataList)
 
                 for ii = 1:length(app.ChannelList)
                     app.channel = app.ChannelList{ii};
@@ -3401,7 +3428,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                     end
 
                     app.anything_run = 0;
-                    [~, app.input_fbase] = fileparts(app.DataList{jj});
+                    [~, app.input_fbase] = fileparts(dataList{jj});
 
                     % Log per-iteration header so subject/channel is always visible
                     % (fprintf goes to MATLAB console → diary → consolelog file → LogConsoleTextArea)
@@ -3423,8 +3450,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                         app.TextArea.addnl(['Loading staging and EDF data...']);
                         drawnow;
                         [app.data, app.Fs, app.stage_times, app.stage_vals] = load_data( ...
-                            app.DataList{jj}, ...
-                            app.StagingList{jj}, ...
+                            dataList{jj}, ...
+                            stagingList{jj}, ...
                             app.StagesColumnEditField.Value, ...
                             app.TimesColumnEditField.Value, ...
                             app.channel, ...
@@ -3494,6 +3521,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                         % ---- Log error and continue to next iteration ----
                         app.TextArea.addnl(['Error on subject ',app.input_fbase, ...
                             ', channel ',app.channel,'. Check log for details.']);
+                        errMsg = getReport(e, 'basic');
+                        fprintf('\nERROR — Subject %s, channel %s: not run.\n%s\n', ...
+                            app.input_fbase, app.channel, errMsg);
                         app.writeLog(sprintf( ...
                             'Subject %s, channel %s: not run.\n%s\n', ...
                             app.input_fbase, app.channel, getReport(e, 'extended')));
@@ -3535,6 +3565,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             diary off;
             fclose(app.runlog_fid);
             app.RunBatchButton.Enabled  = 'on';
+            app.StopBatchButton.Enabled = 'off';
             app.set_rundefault;
         end % runBatch
 
