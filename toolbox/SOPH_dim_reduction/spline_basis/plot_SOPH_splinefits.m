@@ -32,7 +32,8 @@ function plot_SOPH_splinefits(SOpower_mat, SOpower_bins, fit_pow, coefs_pow, kno
 %
 % =========================================================================
 
-f = figure;
+% Create invisible; visibility restored at end for interactive callers.
+f = figure('Visible','off');
 ax = figdesign(f, 2, 3, ...
     'type', 'usletter', ...
     'orient', 'landscape', ...
@@ -108,4 +109,10 @@ plot_splinefit(ax(4:6), SOphase_mat, SOphase_bins, fit_phase, coefs_phase, knots
     struct('x', 'SO-Phase (rad)', 'name','SO-Phase', 'fitLabel', {{'Proportion'}}));
 
 set(ax, 'fontsize', 10);
+
+% Restore visibility for interactive callers (batch runs set root
+% DefaultFigureVisible='off' so the figure stays hidden there).
+if strcmp(get(groot, 'DefaultFigureVisible'), 'on')
+    set(f, 'Visible', 'on');
+end
 end

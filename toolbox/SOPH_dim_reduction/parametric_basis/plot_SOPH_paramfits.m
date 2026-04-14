@@ -35,7 +35,8 @@ function plot_SOPH_paramfits(power_bins, power_wshed_img, SOPH_pow, model_SOPH_p
 % Hover distance threshold (fraction of axis diagonal). Tweak this value as desired.
 hover_dist_threshold = 0.05;  % 0.05 = 5% of axis diagonal
 
-f = figure;
+% Create invisible; visibility restored at end for interactive callers.
+f = figure('Visible','off');
 ax = figdesign(f, 2, 3, ...
     'type', 'usletter', ...
     'orient', 'landscape', ...
@@ -276,4 +277,10 @@ set(f, 'WindowButtonMotionFcn', @(src,evt) hoverModeContour(src));
 
 % Clean up on figure close
 set(f, 'DeleteFcn', @(src,evt) delete(findobj(f, 'Tag', 'mode_contour')));
+
+% Restore visibility for interactive callers (batch runs set root
+% DefaultFigureVisible='off' so the figure stays hidden there).
+if strcmp(get(groot, 'DefaultFigureVisible'), 'on')
+    set(f, 'Visible', 'on');
+end
 end

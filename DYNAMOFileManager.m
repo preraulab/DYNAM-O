@@ -2939,9 +2939,10 @@ return;
 
             % Save figure if missing or overwrite requested
             if app.OverwriteExistingFilesCheckBox.Value || ~isfile(app.output_fig_name)
-                app.TextArea.addnl('   Saving summary figure...');
                 app.anything_run = 1;
+                app.TextArea.addnl('   Generating summary figure...');
                 fh = app.displaySummaryPlot;
+                app.TextArea.addnl('   Saving summary figure...');
                 exportgraphics(fh, app.output_fig_name, 'Resolution', 300);
                 close all;
             end
@@ -2979,6 +2980,7 @@ return;
             % Fit parametric basis model
             % TO-DO: Check if param basis already saved before re-fitting
             app.TextArea.addnl('   Running parametric basis...');
+            app.TextArea.addnl('   Generating parametric basis figure...');
             app.fitParamBasis();
             fh = gcf;
 
@@ -3063,6 +3065,7 @@ return;
             % Fit spline basis model
             % TO-DO: Check if spline already saved before re-fitting
             app.TextArea.addnl(   'Running spline basis...');
+            app.TextArea.addnl('   Generating spline basis figure...');
             app.fitSplineBasis();
             fh = gcf;
 
