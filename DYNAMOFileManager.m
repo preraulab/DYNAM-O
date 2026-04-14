@@ -1501,12 +1501,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.HelpButton.Row    = 1;
             app.HelpButton.Column = 2;
 
-            app.ProgressBar = SmoothProgressBar(app.TimeEstimateGrid);
-            app.ProgressBar.N = 0;
-            app.ProgressBar.BarHeight = .4;
-            app.ProgressBar.refresh
-
-            app.ProgressBar.Layout.Row = 1;
+            app.ProgressBar = SmoothProgressBar(app.TimeEstimateGrid, ...
+                'BarHeight',       0.4, ...
+                'BarBorderRadius', '999px', ...
+                'BorderRadius',    '999px', ...
+                'TextPosition',    'above', ...
+                'Text',            'Batch Progress', ...
+                'Enabled',         false);
+            app.ProgressBar.Layout.Row    = 1;
             app.ProgressBar.Layout.Column = 1;
 
             % ============================================================
@@ -3224,6 +3226,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             if isempty(app.run_error_list)
                 app.RunBatchButton.Enabled  = 'off';
                 app.StopBatchButton.Enabled = 'on';
+                app.ProgressBar.Enabled     = true;
             else
                 uialert(app.UIFigure, sprintf('%s\n', app.run_error_list{:}), ...
                     'Run Error', 'Icon', 'error');
@@ -3399,7 +3402,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % Initialize the progress bar widget
             app.ProgressBar.N = length(dataList);
-            app.ProgressBar.refresh;
+            app.ProgressBar.reset;
             app.ProgressBar.start;
 
             % ---------------------------------------------------------------
@@ -3424,6 +3427,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                         fclose(app.runlog_fid);
                         app.RunBatchButton.Enabled  = 'on';
                         app.StopBatchButton.Enabled = 'off';
+                        app.ProgressBar.reset();
+                        app.ProgressBar.Enabled = false;
                         return
                     end
 
@@ -3529,7 +3534,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                             app.input_fbase, app.channel, getReport(e, 'extended')));
 
                         app.set_rundefault;
-                        app.ProgressBar.refresh;
+                        app.ProgressBar.reset;
+                        app.ProgressBar.Enabled = false;
                         drawnow;
                     end
 
@@ -3546,7 +3552,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                         diary off;
                         fclose(app.runlog_fid);
                         app.set_rundefault;
-                        app.ProgressBar.refresh();
+                        app.ProgressBar.reset();
+                        app.ProgressBar.Enabled = false;
                         return;
                     end
 
@@ -3559,6 +3566,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % ---------------------------------------------------------------
             warning(warnState);
             app.ProgressBar.complete();
+            app.ProgressBar.Enabled = false;
             app.stopLogConsoleTimer();
             app.updateLogConsole();  % final capture of any remaining diary output
             fclose(app.consolelog_fid);
