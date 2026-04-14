@@ -111,6 +111,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         SaveParamImagesCheckBox         % CSSuiSwitch                   % Save parametric basis figures
         SaveDataSummaryCheckBox         % CSSuiSwitch                   % Save data summary figures
         SaveAuxDataCheckBox             % CSSuiSwitch                   % Save auxiliary data (.mat)
+        SaveLogsSwitch                  % CSSuiSwitch                   % Toggle saving of run/settings log files
         SaveSplineBasisCheckBox         % CSSuiSwitch                   % Save spline basis data
         SaveParamBasisCheckBox          % CSSuiSwitch                   % Save parametric basis data
         SaveSOPHsCheckBox               % CSSuiSwitch                   % Save SO-Power Histograms
@@ -331,7 +332,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             if ~isempty(p.Results.ValidationCallback)
                 app.FileValidationCallback = p.Results.ValidationCallback;
             end
-
+            
+            gcp;
+            
             sc = get(0, 'ScreenSize');
             app.WindowWidth             = min(app.WindowWidth, sc(3));   % Default figure width in pixels
             app.WindowHeight            = min(app.WindowHeight, sc(4));
@@ -1114,6 +1117,15 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.SaveAuxDataCheckBox.Row    = 6;
             app.SaveAuxDataCheckBox.Column = 1;
             app.SaveAuxDataCheckBox.HTMLComponent.Tooltip       = 'Save auxiliary data helpful for rapid recomputation and figure generation without accessing the raw data';
+
+            app.SaveLogsSwitch = CSSuiSwitch(app.SavingOptionsCheckBoxGrid, ...
+                'Style', 'shadow', ...
+                'Text', 'Save Logs', ...
+                'Value', 1 ...
+                );
+            app.SaveLogsSwitch.Row    = 6;
+            app.SaveLogsSwitch.Column = 2;
+            app.SaveLogsSwitch.HTMLComponent.Tooltip = 'Save run log and settings files to the output logs/ and settings/ directories';
 
             % --- Figure Save Checkboxes (Right Column) ---
             app.SaveDataSummaryCheckBox = CSSuiSwitch(app.SavingOptionsCheckBoxGrid, ...
@@ -3394,26 +3406,26 @@ return;
             app.curr_datetime   = char(datetime('now','Format','yyMMdd_HHmmSS'));
             app.set_running;
 
-            % Create required output subdirectories
-            if ~exist(strcat(app.OutputDirEditField.Value,'/settings/'),'dir')
-                mkdir(strcat(app.OutputDirEditField.Value,'/settings/'))
-            end
-            if ~exist(strcat(app.OutputDirEditField.Value,'/logs/'),'dir')
-                mkdir(strcat(app.OutputDirEditField.Value,'/logs/'))
-            end
-
             % Build DYNAMO options struct from current GUI settings
             app.TextArea.Value = 'Updating advanced options...';
             drawnow;
             createOptionsStruct(app)
 
-            % Initialise run and console logs
-            app.TextArea.Value = 'Creating run log...';
-            drawnow;
-            createRunLog(app)
-            app.TextArea.Value = 'Creating console log...';
-            drawnow;
-            createConsoleLog(app)
+            % Create required output subdirectories and initialise logs (if enabled)
+            if app.SaveLogsSwitch.Value
+                if ~exist(strcat(app.OutputDirEditField.Value,'/settings/'),'dir')
+                    mkdir(strcat(app.OutputDirEditField.Value,'/settings/'))
+                end
+                if ~exist(strcat(app.OutputDirEditField.Value,'/logs/'),'dir')
+                    mkdir(strcat(app.OutputDirEditField.Value,'/logs/'))
+                end
+                app.TextArea.Value = 'Creating run log...';
+                drawnow;
+                createRunLog(app)
+                app.TextArea.Value = 'Creating console log...';
+                drawnow;
+                createConsoleLog(app)
+            end
 
             % Parse channel list from edit field
             app.TextArea.Value = 'Processing channel inputs.';
@@ -3442,9 +3454,9 @@ return;
                         warning(warnState);
                         app.stopLogConsoleTimer();
                         app.updateLogConsole();
-                        fclose(app.consolelog_fid);
+                        if ~isempty(app.consolelog_fid) && app.consolelog_fid > 0, fclose(app.consolelog_fid); end
                         diary off;
-                        fclose(app.runlog_fid);
+                        if ~isempty(app.runlog_fid) && app.runlog_fid > 0, fclose(app.runlog_fid); end
                         app.RunBatchButton.Enabled  = 'on';
                         app.StopBatchButton.Enabled = 'off';
                         app.ProgressBar.reset();
@@ -3576,9 +3588,9 @@ return;
                         disp(e);
                         app.stopLogConsoleTimer();
                         app.updateLogConsole();
-                        fclose(app.consolelog_fid);
+                        if ~isempty(app.consolelog_fid) && app.consolelog_fid > 0, fclose(app.consolelog_fid); end
                         diary off;
-                        fclose(app.runlog_fid);
+                        if ~isempty(app.runlog_fid) && app.runlog_fid > 0, fclose(app.runlog_fid); end
                         app.set_rundefault;
                         app.ProgressBar.reset();
                         app.ProgressBar.Enabled = false;
@@ -3595,11 +3607,13 @@ return;
             warning(warnState);
             app.ProgressBar.complete();
             app.ProgressBar.Enabled = false;
+            app.TextArea.addnl('Batch run complete.');
+            drawnow;
             app.stopLogConsoleTimer();
             app.updateLogConsole();  % final capture of any remaining diary output
-            fclose(app.consolelog_fid);
+            if ~isempty(app.consolelog_fid) && app.consolelog_fid > 0, fclose(app.consolelog_fid); end
             diary off;
-            fclose(app.runlog_fid);
+            if ~isempty(app.runlog_fid) && app.runlog_fid > 0, fclose(app.runlog_fid); end
             app.RunBatchButton.Enabled  = 'on';
             app.StopBatchButton.Enabled = 'off';
             app.set_rundefault;
