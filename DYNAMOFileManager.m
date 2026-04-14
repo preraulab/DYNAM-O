@@ -3442,6 +3442,7 @@ return;
             %   Outer: EDF files | Inner: channels
             % ---------------------------------------------------------------
             warnState = warning('off','all');  % suppress all warnings during run
+            set(0, 'DefaultFigureVisible', 'off');  % suppress figure windows during batch
             app.curr_iteration = 0;
 
             for jj = 1:length(dataList)
@@ -3452,6 +3453,7 @@ return;
                     % Honor stop request before starting each new iteration
                     if app.isStopBatchButtonPushed == true
                         warning(warnState);
+                        set(0, 'DefaultFigureVisible', 'on');
                         app.stopLogConsoleTimer();
                         app.updateLogConsole();
                         if ~isempty(app.consolelog_fid) && app.consolelog_fid > 0, fclose(app.consolelog_fid); end
@@ -3585,6 +3587,7 @@ return;
                         app.ProgressBar.updateIteration(app.curr_iteration);
                     catch e
                         warning(warnState);
+                        set(0, 'DefaultFigureVisible', 'on');
                         disp(e);
                         app.stopLogConsoleTimer();
                         app.updateLogConsole();
@@ -3605,6 +3608,7 @@ return;
             %   CLEANUP
             % ---------------------------------------------------------------
             warning(warnState);
+            set(0, 'DefaultFigureVisible', 'on');
             app.ProgressBar.complete();
             app.ProgressBar.Enabled = false;
             app.TextArea.addnl('Batch run complete.');
