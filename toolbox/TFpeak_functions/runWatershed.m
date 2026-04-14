@@ -80,7 +80,7 @@ end
 if isempty(conn)
     conn = 8;
 end
-if isempty(data) && ~any(isfinite(data),"all")
+if isempty(data) || ~any(isfinite(data),"all")
     error('Data must be non-empty/nan/inf')
 end
 
