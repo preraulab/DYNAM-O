@@ -193,16 +193,15 @@ end
 
 %% Plot hypnogram
 if isgraphics(hypn_spect_ax(1))
-    axes(hypn_spect_ax(1));
-    hypnoplot(stage_times/3600, stage_vals, 'Artifacts', artifacts, 'ArtifactTimes', t_time_range/3600, 'TimesUnit', 'hours');
+    hypnoplot(hypn_spect_ax(1), stage_times/3600, stage_vals, 'Artifacts', artifacts, 'ArtifactTimes', t_time_range/3600, 'TimesUnit', 'hours');
 
     if isgraphics(hypn_spect_ax(2))
-        th(1) = title('EEG Spectrogram');
+        th(1) = title(hypn_spect_ax(1), 'EEG Spectrogram');
     else
-        th(1) = title('Sleep Hypnogram');
+        th(1) = title(hypn_spect_ax(1), 'Sleep Hypnogram');
     end
 
-    th(1) = title('EEG Spectrogram');
+    th(1) = title(hypn_spect_ax(1), 'EEG Spectrogram');
     set(hypn_spect_ax(1), 'XTick', []);
 end
 
@@ -210,26 +209,25 @@ end
 if isgraphics(hypn_spect_ax(2))
     [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(data, Fs, mtm_freq_range, [15 29], [30 15], [],'linear',[],false,false);
 
-    axes(hypn_spect_ax(2))
     stimes_inds = stimes_disp >= time_range(1) & stimes_disp <= time_range(2);
-    imagesc(stimes_disp(stimes_inds)/3600, sfreqs_disp, pow2db(spect_disp(:, stimes_inds)));
-    axis xy
+    imagesc(hypn_spect_ax(2), stimes_disp(stimes_inds)/3600, sfreqs_disp, pow2db(spect_disp(:, stimes_inds)));
+    axis(hypn_spect_ax(2),'xy')
     colormap(hypn_spect_ax(2), rainbow4);
-    climscale;
+    climscale(hypn_spect_ax(2));
 
-    c = colorbar_noresize; % set colobar
+    c = colorbar_noresize(hypn_spect_ax(2)); % set colobar
     c.Label.String = 'PSD (dB)'; % colobar label
     c.Label.Rotation = -90; % rotate colorbar label
     c.Label.VerticalAlignment = "bottom";
 
-    ylabel('Frequency (Hz)');
+    ylabel(hypn_spect_ax(2),'Frequency (Hz)');
 
     if ~isgraphics(hypn_spect_ax(3))
-        xlabel('Time (hr)')
+        xlabel(hypn_spect_ax(2),'Time (hr)')
     end
 
     if ~isgraphics(hypn_spect_ax(1))
-        th(1) = title('EEG Spectrogram');
+        th(1) = title(hypn_spect_ax(2),'EEG Spectrogram');
     end
 
     if isgraphics(hypn_spect_ax(3))
@@ -239,11 +237,10 @@ end
 
 %% Plot SO-Power trace
 if isgraphics(hypn_spect_ax(3))
-    axes(hypn_spect_ax(3))
-    plot(SOpower_times/3600, SOpower_norm, 'linewidth', 2)
+    plot(hypn_spect_ax(3), SOpower_times/3600, SOpower_norm, 'linewidth', 2)
     min_SOP = min(SOpower_norm);
     max_SOP = max(SOpower_norm);
-    ylim([min_SOP-(0.1*abs(min_SOP)), max_SOP+(0.1*abs(max_SOP))])
+    ylim(hypn_spect_ax(3), [min_SOP-(0.1*abs(min_SOP)), max_SOP+(0.1*abs(max_SOP))])
     set(hypn_spect_ax(3), 'YTick', [round(min_SOP, 2, 'significant') round((max_SOP+min_SOP)/2, 2, 'significant') round(max_SOP, 2, 'significant')]);
     set(hypn_spect_ax(3), 'YTickLabel', num2str(get(hypn_spect_ax(3),'ytick')','%.1f'));
 
@@ -255,14 +252,14 @@ if isgraphics(hypn_spect_ax(3))
         otherwise
             ylab = 'SOP (dB)';
     end
-    ylabel(ylab);
+    ylabel(hypn_spect_ax(3), ylab);
 
     if ~isgraphics(ax(1))
-        xlabel('Time (hr)')
+        xlabel(hypn_spect_ax(3), 'Time (hr)')
     end
 
     if ~isgraphics(hypn_spect_ax(2))
-        th(2) = title('Slow Oscillation Power');
+        th(2) = title(hypn_spect_ax(3), 'Slow Oscillation Power');
     end
 end
 
@@ -271,7 +268,6 @@ if isgraphics(ax(1))
     % Plot only TF peaks that contribute to SO-power/phase histograms
     stats_table_SOPH = stats_table(hist_peakidx, :);
 
-    axes(ax(1))
     %Compute peak dot size
     pmin = prctile(stats_table_SOPH.Volume, peak_size_prctiles(1)); % get 5th ptile of volumes
     peak_size = stats_table_SOPH.Volume / pmin * 0.5;  % 5th ptile fixed at size 0.5
@@ -281,28 +277,27 @@ if isgraphics(ax(1))
     pmax_inds = stats_table_SOPH.Volume> pmax;
     peak_size(pmax_inds) = nan;
 
-    scatter(stats_table_SOPH.PeakTime/3600, stats_table_SOPH.PeakFrequency, peak_size, stats_table_SOPH.SOphase, 'filled'); % scatter plot all peaks
+    scatter(ax(1), stats_table_SOPH.PeakTime/3600, stats_table_SOPH.PeakFrequency, peak_size, stats_table_SOPH.SOphase, 'filled'); % scatter plot all peaks
 
     %Make circular colormap
     colormap(ax(1),circshift(hsv(2^12),-650))
 
-    c = colorbar_noresize;
+    c = colorbar_noresize(ax(1));
     c.Label.String = 'Phase (radians)';
     c.Label.Rotation = -90;
     c.Label.VerticalAlignment = "bottom";
     c.XTick = [-pi -pi/2 0 pi/2 pi];
     c.XTickLabel = {'-\pi', '-\pi/2', '0', '\pi/2', '\pi'};
 
-    ylabel('Frequency (Hz)');
-    xlabel('Time (hr)')
-    th(3) = title('Extracted Time-Frequency Peaks');
+    ylabel(ax(1), 'Frequency (Hz)');
+    xlabel(ax(1), 'Time (hr)')
+    th(3) = title(ax(1), 'Extracted Time-Frequency Peaks');
 end
 
 %% Plot SO-power histogram
 if isgraphics(ax(2))
-    axes(ax(2))
-    imagesc(SOpower_bins, freq_bins, SOpower_mat'); %#ok<*USENS>
-    axis xy;
+    imagesc(ax(2), SOpower_bins, freq_bins, SOpower_mat'); %#ok<*USENS>
+    axis(ax(2),'xy');
     colormap(ax(2), gouldian);
 
     %Set colorscale
@@ -310,16 +305,16 @@ if isgraphics(ax(2))
         tmp_freq_idx = freq_bins >= freq_limits(1) & freq_bins <= freq_limits(2);
         tmp_mat = SOpower_mat(:, tmp_freq_idx);
         c_ptiles = prctile(tmp_mat(:), SOPH_clim_prctiles);
-        clim(gca,[c_ptiles(1) c_ptiles(2)]);
+        clim(ax(2),[c_ptiles(1) c_ptiles(2)]);
 
-        c = colorbar_noresize;
+        c = colorbar_noresize(ax(2));
         c.Label.String = {'Density', '(peaks/min in bin)'};
         c.Label.Rotation = -90;
         c.Label.VerticalAlignment = "bottom";
     end
 
-    ylim(freq_limits);
-    ylabel('Frequency (Hz)');
+    ylim(ax(2), freq_limits);
+    ylabel(ax(2), 'Frequency (Hz)');
 
     switch SOpower_norm_method
         case 'percent'
@@ -329,16 +324,15 @@ if isgraphics(ax(2))
         otherwise
             xlab = 'SO-Power (dB)';
     end
-    xlabel(xlab);
+    xlabel(ax(2), xlab);
 
-    th(4) = title('SO-Power Histogram');
+    th(4) = title(ax(2), 'SO-Power Histogram');
 end
 
 %% Plot SO-phase histogram
 if isgraphics(ax(3))
-    axes(ax(3))
-    imagesc(SOphase_bins, freq_bins, SOphase_mat');
-    axis xy;
+    imagesc(ax(3), SOphase_bins, freq_bins, SOphase_mat');
+    axis(ax(3),'xy');
     colormap(ax(3), 'magma');
 
     %Scale color limits
@@ -346,25 +340,25 @@ if isgraphics(ax(3))
         tmp_freq_idx = freq_bins >= freq_limits(1) & freq_bins <= freq_limits(2);
         tmp_mat = SOphase_mat(:, tmp_freq_idx);
         c_ptiles = prctile(tmp_mat(tmp_mat(:)~=0), SOPH_clim_prctiles);
-        clim([c_ptiles(1) c_ptiles(2)]);
+        clim(ax(3),[c_ptiles(1) c_ptiles(2)]);
 
-        c = colorbar_noresize;
+        c = colorbar_noresize(ax(3));
         c.Label.String = {'Proportion'};
         c.Label.Rotation = -90;
         c.Label.VerticalAlignment = "bottom";
     end
 
-    ylim(freq_limits);
+    ylim(ax(3), freq_limits);
 
     if ~isgraphics(ax(2))
-        ylabel('Frequency (Hz)');
+        ylabel(ax(3), 'Frequency (Hz)');
     end
 
-    xlabel('SO-Phase (rad)');
-    xticks([-pi -pi/2 0 pi/2 pi])
-    xticklabels({'-\pi', '-\pi/2', '0', '\pi/2', '\pi'});
+    xlabel(ax(3), 'SO-Phase (rad)');
+    xticks(ax(3), [-pi -pi/2 0 pi/2 pi])
+    xticklabels(ax(3), {'-\pi', '-\pi/2', '0', '\pi/2', '\pi'});
 
-    th(5) = title('SO-Phase Histogram');
+    th(5) = title(ax(3), 'SO-Phase Histogram');
 end
 
 %% Additional axes adjustments
@@ -380,14 +374,13 @@ temp_axes = [hypn_spect_ax, ax(1)];
 temp_axes = temp_axes(isgraphics(temp_axes));
 if ~isempty(temp_axes)
     linkaxes(temp_axes, 'x');
-    axes(temp_axes(1))
-    xlimits = xlim;
+    xlimits = xlim(temp_axes(1));
     if all(isfinite(time_range))
-        xlim(time_range/3600)
+        xlim(temp_axes(1), time_range/3600)
     elseif isfinite(time_range(1))
-        xlim([time_range(1), xlimits(2)])
+        xlim(temp_axes(1), [time_range(1), xlimits(2)])
     elseif isfinite(time_range(2))
-        xlim([xlimits(1), time_range(2)])
+        xlim(temp_axes(1), [xlimits(1), time_range(2)])
     end
 end
 

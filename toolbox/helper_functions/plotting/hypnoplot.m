@@ -1,8 +1,9 @@
-function sh = hypnoplot(stage_times,stage_vals,varargin)
+function sh = hypnoplot(varargin)
 % HYPNOPLOT Make a pretty plot of a hypnogram
 %
 %   Usage:
 %       hyp_handle = hypnoplot(stage_times, stage_vals, <optional arguments>)
+%       hyp_handle = hypnoplot(ax, stage_times, stage_vals, <optional arguments>)
 %
 %   Input:
 %       stage_times: 1xN vector of stage times
@@ -70,13 +71,28 @@ function sh = hypnoplot(stage_times,stage_vals,varargin)
 
 %% ********************************************************************
 
+%% Parse optional leading axes handle
+if ~isempty(varargin) && isscalar(varargin{1}) && ...
+        (isa(varargin{1},'matlab.graphics.axis.Axes') || ...
+         (ishghandle(varargin{1}) && strcmp(get(varargin{1},'Type'),'axes')))
+    ax = varargin{1};
+    varargin(1) = [];
+else
+    ax = gca;
+end
+
 %% Parse input
 %Check for old input
-if isstruct(stage_times)
-    hypnoplot(stage_times.time, stage_times.stage, varargin{2:end});
+if ~isempty(varargin) && isstruct(varargin{1})
+    stage_struct = varargin{1};
+    sh = hypnoplot(ax, stage_struct.time, stage_struct.stage, varargin{3:end});
     warning('Avoid using stage structure for input. Use separate time and stage variables')
     return;
 end
+
+stage_times = varargin{1};
+stage_vals  = varargin{2};
+varargin    = varargin(3:end);
 
 %Default colors for plot
 default_colors = [    0.9000    0.9000    0.9000; ...
@@ -172,7 +188,7 @@ stage_vals(stage_vals<0 | isnan(stage_vals)) = 0;
 stage_vals(stage_vals>6) = 6;
 
 %Plot the hypnogram
-sh = stairs(stage_times,stage_vals,'k','linewidth',2);
+sh = stairs(ax,stage_times,stage_vals,'k','linewidth',2);
 
 %Adjust plot to include no stage and artifacts
 val_min = min([stage_vals,1]); %Always go down to at least N3
@@ -182,15 +198,15 @@ val_max = max(stage_vals);
 min_y = val_min - PlotBuffer;
 max_y = val_max + PlotBuffer;
 
-hold on;
+hold(ax,'on');
 
 if strcmpi(LabelPos,'left')
     if ~isempty(artifacts)
         labels = HypnogramLabels(val_min+1:val_max+1);
         labels = [{'Art'} labels(:)'];
-        set(gca,'ytick',[val_min-1 val_min:val_max],'yticklabel',labels,'xticklabel','');
+        set(ax,'ytick',[val_min-1 val_min:val_max],'yticklabel',labels,'xticklabel','');
     else
-        set(gca,'ytick',val_min:val_max,'yticklabel',HypnogramLabels(val_min+1:val_max+1),'xticklabel','');
+        set(ax,'ytick',val_min:val_max,'yticklabel',HypnogramLabels(val_min+1:val_max+1),'xticklabel','');
     end
 else
     %Get just the stages that exist
@@ -201,15 +217,14 @@ else
         stg = stage_list(ss);
         first_stage = find(stage_vals==stg,1,"first");
 
-        text(stage_times(first_stage),max_y,HypnogramLabels{stg+1},'VerticalAlignment','baseline','HorizontalAlignment','center');
+        text(ax,stage_times(first_stage),max_y,HypnogramLabels{stg+1},'VerticalAlignment','baseline','HorizontalAlignment','center');
     end
     if isempty(artifacts)
-        set(gca,'yticklabel','')
+        set(ax,'yticklabel','')
     else
-        set(gca,'YTick',val_min-1,'YTickLabel','Art')
+        set(ax,'YTick',val_min-1,'YTickLabel','Art')
     end
 end
-ax = gca;
 ax.YAxis.TickLength = [0 0];
 
 if GroupNREMColors %Merge all NREM
@@ -226,7 +241,7 @@ for stage_num = 0:6 %Loop through all stages
     d = ones(1,length(a))*max_y;
 
     %Plot shaded rectangle
-    fill([a;b;b;a],[c;c;d;d], StageColors(stage_num + 1,:),'edgecolor','none')
+    fill(ax,[a;b;b;a],[c;c;d;d], StageColors(stage_num + 1,:),'edgecolor','none')
 end
 %Keep hypnogram trace on top
 uistack(sh,'top');
@@ -259,9 +274,9 @@ if ~isempty(artifacts)
     d = ones(1,length(a))*min_y;
 
     %Plot shaded rectangle
-    fill([a;b;b;a],[c;c;d;d], StageColors(6 + 1,:),'edgecolor','k')
+    fill(ax,[a;b;b;a],[c;c;d;d], StageColors(6 + 1,:),'edgecolor','k')
 end
 
 %%
 %Set limits
-axis tight
+axis(ax,'tight')
