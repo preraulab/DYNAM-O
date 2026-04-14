@@ -333,8 +333,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 app.FileValidationCallback = p.Results.ValidationCallback;
             end
             
-            gcp;
-            
+            v = ver;
+            if any(strcmp({v.Name}, 'Parallel Computing Toolbox')) && isempty(gcp('nocreate'))
+                gcp;
+            end
+
             sc = get(0, 'ScreenSize');
             app.WindowWidth             = min(app.WindowWidth, sc(3));   % Default figure width in pixels
             app.WindowHeight            = min(app.WindowHeight, sc(4));
@@ -355,6 +358,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %     filePaths – char or cell array of char, full file path(s) to add
 
             if ~iscell(filePaths), filePaths = {filePaths}; end
+            filePaths = setdiff(filePaths, app.DataList, 'stable');
             app.DataList = [app.DataList, filePaths];
             updateDataListBox(app);
         end
@@ -370,6 +374,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %     filePaths – char or cell array of char, full file path(s) to add
 
             if ~iscell(filePaths), filePaths = {filePaths}; end
+            filePaths = setdiff(filePaths, app.StagingList, 'stable');
             app.StagingList = [app.StagingList, filePaths];
             updateStagingListBox(app);
         end
@@ -1824,6 +1829,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % DataAddFileButtonPushed  Open file picker to add one or more EDF files.
 
             files = selectFiles(app, 'Select Data Files', 'data');
+            files = setdiff(files, app.DataList, 'stable');
             if ~isempty(files)
                 app.DataList = [app.DataList, files];
                 updateDataListBox(app);
@@ -1838,8 +1844,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             folder = uigetdir(pwd, 'Select Data Folder');
             if folder == 0, return; end  % User cancelled
 
-            S     = dir(strcat(folder, '/*.edf'));
-            files = strcat({S.folder}, '/', {S.name});
+            S     = dir(fullfile(folder, '*.edf'));
+            files = fullfile({S.folder}, {S.name});
+            files = setdiff(files, app.DataList, 'stable');
             if ~isempty(files)
                 app.DataList = [app.DataList, files];
                 updateDataListBox(app);
@@ -1879,6 +1886,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % StagingAddFileButtonPushed  Open file picker to add one or more staging files.
 
             files = selectFiles(app, 'Select Staging Files', 'staging');
+            files = setdiff(files, app.StagingList, 'stable');
             if ~isempty(files)
                 app.StagingList = [app.StagingList, files];
                 updateStagingListBox(app);
@@ -1895,11 +1903,12 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             folder = uigetdir(pwd, 'Select Staging Folder');
             if folder == 0, return; end  % User cancelled
 
-            S = dir(strcat(folder, '/*.csv'));
-            if size(S, 1) == 0
-                S = dir(strcat(folder, '/*.txt'));  % Fallback to .txt
+            S = dir(fullfile(folder, '*.csv'));
+            if isempty(S)
+                S = dir(fullfile(folder, '*.txt'));  % Fallback to .txt
             end
-            files = strcat({S.folder}, '/', {S.name});
+            files = fullfile({S.folder}, {S.name});
+            files = setdiff(files, app.StagingList, 'stable');
             if ~isempty(files)
                 app.StagingList = [app.StagingList, files];
                 updateStagingListBox(app);
@@ -2379,13 +2388,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % Run optional validation callback; keep only files that pass
             if ~isempty(app.FileValidationCallback)
-                validFiles = {};
-                for i = 1:length(files)
-                    if app.FileValidationCallback(files{i})
-                        validFiles{end+1} = files{i}; %#ok<AGROW>
-                    end
+                keep = false(1, numel(files));
+                for i = 1:numel(files)
+                    keep(i) = app.FileValidationCallback(files{i});
                 end
-                files = validFiles;
+                files = files(keep);
             end
         end
 
@@ -2505,11 +2512,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             end
 
             % Check that every file in both lists actually exists on disk
-            missing = {};
             allFiles = [app.DataList(:); app.StagingList(:)];
-            for f = allFiles'
-                if ~isfile(f{1}), missing{end+1} = f{1}; end %#ok<AGROW>
-            end
+            missing  = allFiles(~isfile(allFiles));
 
             if ~isempty(missing)
                 app.run_error_list{end+1} = sprintf('Missing files:\n%s', strjoin(missing, '\n'));
@@ -2815,28 +2819,21 @@ return;
             %   Skips execution if all output files already exist and
             %   OverwriteExistingFilesCheckBox is unchecked.
 
-            %Make sure that channel name can be saved as a file
-            app.channel = app.fixFilename(app.channel,'');
+            % Channel/output dirs prepared once in runBatch; reuse cached paths
+            chanDir     = fullfile(app.OutputDirEditField.Value, app.channel);
+            tfpeaksDir  = fullfile(chanDir, 'TFpeaks');
+            sophsDir    = fullfile(chanDir, 'SOPHs');
+            statsBase   = fullfile(tfpeaksDir, [app.input_fbase '_stats_table_' app.channel]);
+            sophBase    = fullfile(sophsDir,   [app.input_fbase '_SOPHs_' app.channel]);
+            sophPowBase = fullfile(sophsDir,   [app.input_fbase '_SOPHs_power_' app.channel]);
+            sophPhaBase = fullfile(sophsDir,   [app.input_fbase '_SOPHs_phase_' app.channel]);
 
-            % Ensure output directories exist
-            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/TFpeaks/'),'dir')
-                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/TFpeaks/'))
-            end
-            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/SOPHs/'),'dir')
-                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/SOPHs/'))
-            end
-
-            % Build existence-check paths covering all possible saved formats
-            stats_csv    = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                '/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.csv');
-            stats_mat    = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                '/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.mat');
-            SOPH_mat     = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat');
-            SOPH_tiff    = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                '/SOPHs/',app.input_fbase,'_SOPHs_power_',app.channel,'.tiff');
-            stats_exists = exist(stats_csv,'file') || exist(stats_mat,'file');
-            SOPH_exists  = exist(SOPH_mat,'file')  || exist(SOPH_tiff,'file');
+            stats_csv    = [statsBase '.csv'];
+            stats_mat    = [statsBase '.mat'];
+            SOPH_mat     = [sophBase  '.mat'];
+            SOPH_tiff    = [sophPowBase '.tiff'];
+            stats_exists = isfile(stats_csv) || isfile(stats_mat);
+            SOPH_exists  = isfile(SOPH_mat)  || isfile(SOPH_tiff);
 
             % Run DYNAMO only if outputs are missing or overwrite is requested
             if app.OverwriteExistingFilesCheckBox.Value || ~stats_exists || ~SOPH_exists
@@ -2855,20 +2852,16 @@ return;
                     app.TextArea.addnl('   Saving stats table...');
                     switch app.PeakStatsTableDropDown.Value
                         case '.csv'
-                            app.output_stats_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.csv');
+                            app.output_stats_name = stats_csv;
                             table2csv(stats_table, app.output_stats_name);
                         case '.mat'
-                            app.output_stats_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.mat');
+                            app.output_stats_name = stats_mat;
                             save(app.output_stats_name,'stats_table');
                         case 'All'
                             % Save both formats
-                            app.output_stats_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.mat');
+                            app.output_stats_name = stats_mat;
                             save(app.output_stats_name,'stats_table');
-                            app.output_stats_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.csv');
+                            app.output_stats_name = stats_csv;
                             table2csv(stats_table, app.output_stats_name);
                     end
                 end
@@ -2878,26 +2871,20 @@ return;
                     app.TextArea.addnl('   Saving SOPHs');
                     switch app.SOPowerHistogramsDropDown.Value
                         case '.tiff'
-                            app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/SOPHs/',app.input_fbase,'_SOPHs_power_',app.channel,'.tiff');
+                            app.output_SOPH_name = [sophPowBase '.tiff'];
                             app.writeTiff(app.output_SOPH_name, SOPHs.SOpower_mat);
-                            app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/SOPHs/',app.input_fbase,'_SOPHs_phase_',app.channel,'.tiff');
+                            app.output_SOPH_name = [sophPhaBase '.tiff'];
                             app.writeTiff(app.output_SOPH_name, SOPHs.SOphase_mat);
                         case '.mat'
-                            app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat');
+                            app.output_SOPH_name = SOPH_mat;
                             save(app.output_SOPH_name,'SOPHs');
                         case 'All'
                             % Save both tiff and mat
-                            app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/SOPHs/',app.input_fbase,'_SOPHs_power_',app.channel,'.tiff');
+                            app.output_SOPH_name = [sophPowBase '.tiff'];
                             app.writeTiff(app.output_SOPH_name, SOPHs.SOpower_mat);
-                            app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/SOPHs/',app.input_fbase,'_SOPHs_phase_',app.channel,'.tiff');
+                            app.output_SOPH_name = [sophPhaBase '.tiff'];
                             app.writeTiff(app.output_SOPH_name, SOPHs.SOphase_mat);
-                            app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat');
+                            app.output_SOPH_name = SOPH_mat;
                             save(app.output_SOPH_name,'SOPHs');
                     end
                 end
@@ -2913,49 +2900,45 @@ return;
             %   calls displaySummaryPlot and saves the result using the format
             %   specified by DataSummaryDropDown.
 
-            %Make sure that channel name can be saved as a file
-            app.channel = app.fixFilename(app.channel,'');
-
-            % Ensure output directory exists
-            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/summary/'),'dir')
-                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/summary/'))
-            end
+            % Channel/output dirs prepared once in runBatch; reuse cached paths
+            chanDir    = fullfile(app.OutputDirEditField.Value, app.channel);
+            summaryDir = fullfile(chanDir, 'figures', 'summary');
+            sophMat    = fullfile(chanDir, 'SOPHs', [app.input_fbase '_SOPHs_' app.channel '.mat']);
 
             % ---- Ensure SOPHs are available ----
-            if isempty(app.SOPHs) && ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
-                runStatsTable(app);   % Compute from scratch
-            elseif isempty(app.SOPHs) && exist(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
-                app.SOPHs = load(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat')).SOPHs;
+            if isempty(app.SOPHs)
+                if isfile(sophMat)
+                    app.SOPHs = load(sophMat).SOPHs;
+                else
+                    runStatsTable(app);   % Compute from scratch
+                end
             end
 
             % ---- Ensure stats_table is available ----
             if isempty(app.stats_table)
-                csvPath = strcat(app.OutputDirEditField.Value,'/',app.channel,'/TFpeaks/', ...
-                    app.input_fbase,'_stats_table_',app.channel,'.csv');
-                matPath = strcat(app.OutputDirEditField.Value,'/',app.channel,'/TFpeaks/', ...
-                    app.input_fbase,'_stats_table_',app.channel,'.mat');
+                statsBase = fullfile(chanDir, 'TFpeaks', [app.input_fbase '_stats_table_' app.channel]);
+                csvPath = [statsBase '.csv'];
+                matPath = [statsBase '.mat'];
+                matExists = isfile(matPath);
+                csvExists = isfile(csvPath);
 
-                if ~exist(csvPath,'file') && ~exist(matPath,'file')
-                    runStatsTable(app);      % Compute from scratch
-                elseif exist(matPath,'file')
+                if matExists
                     app.stats_table = load(matPath,'stats_table').stats_table;
-                else
+                elseif csvExists
                     app.stats_table = csv2table(csvPath);
+                else
+                    runStatsTable(app);      % Compute from scratch
                 end
             end
 
             % Build output file path (format comes from DataSummaryDropDown)
             if ~strcmp(app.DataSummaryDropDown.Value,'--')
-                app.output_fig_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/figures/summary/',app.input_fbase,'_summary_figure_', ...
-                    app.channel, app.DataSummaryDropDown.Value);
+                app.output_fig_name = fullfile(summaryDir, ...
+                    [app.input_fbase '_summary_figure_' app.channel app.DataSummaryDropDown.Value]);
             end
 
             % Save figure if missing or overwrite requested
-            if app.OverwriteExistingFilesCheckBox.Value || ~exist(app.output_fig_name,'file')
+            if app.OverwriteExistingFilesCheckBox.Value || ~isfile(app.output_fig_name)
                 app.TextArea.addnl('   Saving summary figure...');
                 app.anything_run = 1;
                 fh = app.displaySummaryPlot;
@@ -2974,27 +2957,23 @@ return;
             %     - SOpower/SOphase parametric fit data (.csv, .mat, or both)
             %       according to ParametricBasisDropDown selection.
 
-            %Make sure that channel name can be saved as a file
-            app.channel = app.fixFilename(app.channel,'');
-
-            % Ensure output directories exist
-            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/param_basis/'),'dir')
-                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/param_basis/'))
-            end
-            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/param_basis/'),'dir')
-                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/param_basis/'))
-            end
+            % Channel/output dirs prepared once in runBatch; reuse cached paths
+            chanDir        = fullfile(app.OutputDirEditField.Value, app.channel);
+            paramDir       = fullfile(chanDir, 'param_basis');
+            paramFigDir    = fullfile(chanDir, 'figures', 'param_basis');
+            sophMat        = fullfile(chanDir, 'SOPHs', [app.input_fbase '_SOPHs_' app.channel '.mat']);
+            paramPowerBase = fullfile(paramDir, [app.input_fbase '_SOpower_paramfit_' app.channel]);
+            paramPhaseBase = fullfile(paramDir, [app.input_fbase '_SOphase_paramfit_' app.channel]);
 
             % ---- Ensure SOPHs are available ----
-            if isempty(app.SOPHs) && ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
-                app.anything_run = 1;
-                app.TextArea.addnl('   Running DYNAMO (computing SOPHs)...');
-                runStatsTable(app);
-            elseif isempty(app.SOPHs) && exist(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
-                app.SOPHs = load(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat')).SOPHs;
+            if isempty(app.SOPHs)
+                if isfile(sophMat)
+                    app.SOPHs = load(sophMat).SOPHs;
+                else
+                    app.anything_run = 1;
+                    app.TextArea.addnl('   Running DYNAMO (computing SOPHs)...');
+                    runStatsTable(app);
+                end
             end
 
             % Fit parametric basis model
@@ -3006,9 +2985,8 @@ return;
             % Optionally save the parametric basis figure
             if app.SaveParamImagesCheckBox.Value
                 app.anything_run = 1;
-                app.output_param_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/figures/param_basis/',app.input_fbase,'_param_basis_figure_', ...
-                    app.channel, app.ParametricFiguresDropDown.Value);
+                app.output_param_name = fullfile(paramFigDir, ...
+                    [app.input_fbase '_param_basis_figure_' app.channel app.ParametricFiguresDropDown.Value]);
                 app.TextArea.addnl('   Saving parametric basis figure...');
                 exportgraphics(fh, app.output_param_name, 'Resolution', 300);
             end
@@ -3020,20 +2998,16 @@ return;
                     case '.csv'
                         SOpower_params = app.SOPHs.SOpower_paramfit.params;
                         SOphase_params = app.SOPHs.SOphase_paramfit.params;
-                        app.output_paramfit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/param_basis/',app.input_fbase,'_SOpower_paramfit_',app.channel,'.csv');
-                        app.output_paramfit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/param_basis/',app.input_fbase,'_SOphase_paramfit_',app.channel,'.csv');
+                        app.output_paramfit_power_name = [paramPowerBase '.csv'];
+                        app.output_paramfit_phase_name = [paramPhaseBase '.csv'];
                         app.TextArea.addnl(   'Saving parametric basis as .csv...');
                         writematrix(SOpower_params, app.output_paramfit_power_name);
                         writematrix(SOphase_params, app.output_paramfit_phase_name);
                     case '.mat'
                         SOpower_paramfit = app.SOPHs.SOpower_paramfit;
                         SOphase_paramfit = app.SOPHs.SOphase_paramfit;
-                        app.output_paramfit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/param_basis/',app.input_fbase,'_SOpower_paramfit_',app.channel,'.mat');
-                        app.output_paramfit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/param_basis/',app.input_fbase,'_SOphase_paramfit_',app.channel,'.mat');
+                        app.output_paramfit_power_name = [paramPowerBase '.mat'];
+                        app.output_paramfit_phase_name = [paramPhaseBase '.mat'];
                         save(app.output_paramfit_power_name,'SOpower_paramfit');
                         save(app.output_paramfit_phase_name,'SOphase_paramfit');
                         app.TextArea.addnl(   'Saving parametric basis as .mat...');
@@ -3041,20 +3015,16 @@ return;
                         % Save both csv params and full mat structs
                         SOpower_params = app.SOPHs.SOpower_paramfit.params;
                         SOphase_params = app.SOPHs.SOphase_paramfit.params;
-                        app.output_paramfit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/param_basis/',app.input_fbase,'_SOpower_paramfit_',app.channel,'.csv');
-                        app.output_paramfit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/param_basis/',app.input_fbase,'_SOphase_paramfit_',app.channel,'.csv');
+                        app.output_paramfit_power_name = [paramPowerBase '.csv'];
+                        app.output_paramfit_phase_name = [paramPhaseBase '.csv'];
                         app.TextArea.addnl(   'Saving parametric basis as .csv and .mat...');
                         writematrix(SOpower_params, app.output_paramfit_power_name);
                         writematrix(SOphase_params, app.output_paramfit_phase_name);
 
                         SOpower_paramfit = app.SOPHs.SOpower_paramfit;
                         SOphase_paramfit = app.SOPHs.SOphase_paramfit;
-                        app.output_paramfit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/param_basis/',app.input_fbase,'_SOpower_paramfit_',app.channel,'.mat');
-                        app.output_paramfit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/param_basis/',app.input_fbase,'_SOphase_paramfit_',app.channel,'.mat');
+                        app.output_paramfit_power_name = [paramPowerBase '.mat'];
+                        app.output_paramfit_phase_name = [paramPhaseBase '.mat'];
                         save(app.output_paramfit_power_name,'SOpower_paramfit');
                         save(app.output_paramfit_phase_name,'SOphase_paramfit');
                 end
@@ -3071,27 +3041,23 @@ return;
             %     - SOpower/SOphase spline fit data (.tiff, .mat, or both)
             %       according to SplineBasisDropDown selection.
 
-            %Make sure that channel name can be saved as a file
-            app.channel = app.fixFilename(app.channel,'');
-
-            % Ensure output directories exist
-            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/spline_basis/'),'dir')
-                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/spline_basis/'))
-            end
-            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/spline_basis/'),'dir')
-                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/spline_basis/'))
-            end
+            % Channel/output dirs prepared once in runBatch; reuse cached paths
+            chanDir         = fullfile(app.OutputDirEditField.Value, app.channel);
+            splineDir       = fullfile(chanDir, 'spline_basis');
+            splineFigDir    = fullfile(chanDir, 'figures', 'spline_basis');
+            sophMat         = fullfile(chanDir, 'SOPHs', [app.input_fbase '_SOPHs_' app.channel '.mat']);
+            splinePowerBase = fullfile(splineDir, [app.input_fbase '_SOpower_splinefit_' app.channel]);
+            splinePhaseBase = fullfile(splineDir, [app.input_fbase '_SOphase_splinefit_' app.channel]);
 
             % ---- Ensure SOPHs are available ----
-            if isempty(app.SOPHs) && ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
-                app.anything_run = 1;
-                app.TextArea.addnl('   Running DYNAMO (computing SOPHs)...');
-                runStatsTable(app);
-            elseif isempty(app.SOPHs) && exist(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
-                app.SOPHs = load(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat')).SOPHs;
+            if isempty(app.SOPHs)
+                if isfile(sophMat)
+                    app.SOPHs = load(sophMat).SOPHs;
+                else
+                    app.anything_run = 1;
+                    app.TextArea.addnl('   Running DYNAMO (computing SOPHs)...');
+                    runStatsTable(app);
+                end
             end
 
             % Fit spline basis model
@@ -3104,9 +3070,8 @@ return;
             if app.SaveSplineImagesCheckBox.Value
                 app.anything_run = 1;
                 app.TextArea.addnl('   Saving spline figure...');
-                app.output_spline_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/figures/spline_basis/',app.input_fbase,'_spline_basis_figure_', ...
-                    app.channel, app.SplineFiguresDropDown.Value);
+                app.output_spline_name = fullfile(splineFigDir, ...
+                    [app.input_fbase '_spline_basis_figure_' app.channel app.SplineFiguresDropDown.Value]);
                 exportgraphics(fh, app.output_spline_name, 'Resolution', 300);
             end
             close all;
@@ -3118,33 +3083,25 @@ return;
 
                 switch app.SplineBasisDropDown.Value
                     case '.tiff'
-                        app.output_splinefit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/spline_basis/',app.input_fbase,'_SOpower_splinefit_',app.channel,'.tiff');
-                        app.output_splinefit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/spline_basis/',app.input_fbase,'_SOphase_splinefit_',app.channel,'.tiff');
+                        app.output_splinefit_power_name = [splinePowerBase '.tiff'];
+                        app.output_splinefit_phase_name = [splinePhaseBase '.tiff'];
                         app.writeTiff(app.output_splinefit_power_name, SOpower_splinefit.splinefit);
                         app.writeTiff(app.output_splinefit_phase_name, SOphase_splinefit.splinefit);
                         app.TextArea.addnl('   Saving spline basis is .tiff...');
                     case '.mat'
-                        app.output_splinefit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/spline_basis/',app.input_fbase,'_SOpower_splinefit_',app.channel,'.mat');
-                        app.output_splinefit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/spline_basis/',app.input_fbase,'_SOphase_splinefit_',app.channel,'.mat');
+                        app.output_splinefit_power_name = [splinePowerBase '.mat'];
+                        app.output_splinefit_phase_name = [splinePhaseBase '.mat'];
                         save(app.output_splinefit_power_name,'SOpower_splinefit');
                         save(app.output_splinefit_phase_name,'SOphase_splinefit');
                         app.TextArea.addnl('   Saving spline basis is .mat...');
                     case 'All'
                         % Save both tiff and mat formats
-                        app.output_splinefit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/spline_basis/',app.input_fbase,'_SOpower_splinefit_',app.channel,'.tiff');
-                        app.output_splinefit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/spline_basis/',app.input_fbase,'_SOphase_splinefit_',app.channel,'.tiff');
+                        app.output_splinefit_power_name = [splinePowerBase '.tiff'];
+                        app.output_splinefit_phase_name = [splinePhaseBase '.tiff'];
                         app.writeTiff(app.output_splinefit_power_name, SOpower_splinefit.splinefit);
                         app.writeTiff(app.output_splinefit_phase_name, SOphase_splinefit.splinefit);
-                        app.output_splinefit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/spline_basis/',app.input_fbase,'_SOpower_splinefit_',app.channel,'.mat');
-                        app.output_splinefit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/spline_basis/',app.input_fbase,'_SOphase_splinefit_',app.channel,'.mat');
+                        app.output_splinefit_power_name = [splinePowerBase '.mat'];
+                        app.output_splinefit_phase_name = [splinePhaseBase '.mat'];
                         save(app.output_splinefit_power_name,'SOpower_splinefit');
                         save(app.output_splinefit_phase_name,'SOphase_splinefit');
                         app.TextArea.addnl('   Saving spline basis is .tiff and .mat...');
@@ -3163,16 +3120,14 @@ return;
             %
             %   TO-DO: Expand to include additional auxiliary fields.
 
-            % Ensure output directory exists
-            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/auxiliary_data/'),'dir')
-                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/auxiliary_data/'))
-            end
+            % Channel/output dirs prepared once in runBatch; reuse cached paths
+            chanDir = fullfile(app.OutputDirEditField.Value, app.channel);
+            auxDir  = fullfile(chanDir, 'auxiliary_data');
 
             % Ensure SOPHs are available (needed for SOpower_norm field)
             if isempty(app.SOPHs)
-                SOPHmat = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat');
-                if exist(SOPHmat,'file')
+                SOPHmat = fullfile(chanDir, 'SOPHs', [app.input_fbase '_SOPHs_' app.channel '.mat']);
+                if isfile(SOPHmat)
                     app.SOPHs = load(SOPHmat).SOPHs;
                 else
                     app.anything_run = 1;
@@ -3194,8 +3149,8 @@ return;
 
             app.TextArea.addnl(   'Saving auxiliary data...');
 
-            app.output_aux_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                '/auxiliary_data/',app.input_fbase,'_auxiliary_data_',app.channel,'.mat');
+            app.output_aux_name = fullfile(auxDir, ...
+                [app.input_fbase '_auxiliary_data_' app.channel '.mat']);
             save(app.output_aux_name,'auxiliary_data');
         end
 
@@ -3415,9 +3370,11 @@ return;
                 createConsoleLog(app)
             end
 
-            % Parse channel list from edit field
+            % Parse channel list, stage identifiers, and delimiter once before the loop
             app.TextArea.Value = 'Processing channel inputs.';
             updateChannelInput(app)
+            updateStagesInput(app)
+            updateDelimeterInput(app)
             drawnow;
 
             % Initialize the progress bar widget
@@ -3433,10 +3390,47 @@ return;
             set(0, 'DefaultFigureVisible', 'off');  % suppress figure windows during batch
             app.curr_iteration = 0;
 
+            % Cache the channel list (raw names for load_data) and a parallel
+            % list of filesystem-safe names (used by analysis runners for paths).
+            % Sanitising once up front avoids O(N_channels x N_runners)
+            % redundant fixFilename calls during the loop.
+            channelList      = app.ChannelList;
+            channelListSafe  = cell(size(channelList));
+            for ii = 1:numel(channelList)
+                channelListSafe{ii} = app.fixFilename(channelList{ii},'');
+            end
+
+            % Pre-create every output subdirectory that enabled analysis steps
+            % will write to. mkdir is idempotent but each call costs a syscall,
+            % so doing this once per (channel) rather than per (channel x runner)
+            % saves O(N_channels * N_runners) mkdir calls per batch.
+            outDir = app.OutputDirEditField.Value;
+            for ii = 1:numel(channelListSafe)
+                chanDir = fullfile(outDir, channelListSafe{ii});
+                if app.SavePeakStatsCheckBox.Value || app.SaveSOPHsCheckBox.Value
+                    mkdir(fullfile(chanDir, 'TFpeaks'));
+                    mkdir(fullfile(chanDir, 'SOPHs'));
+                end
+                if app.SaveDataSummaryCheckBox.Value
+                    mkdir(fullfile(chanDir, 'figures', 'summary'));
+                end
+                if app.SaveParamBasisCheckBox.Value
+                    mkdir(fullfile(chanDir, 'param_basis'));
+                    mkdir(fullfile(chanDir, 'figures', 'param_basis'));
+                end
+                if app.SaveSplineBasisCheckBox.Value
+                    mkdir(fullfile(chanDir, 'spline_basis'));
+                    mkdir(fullfile(chanDir, 'figures', 'spline_basis'));
+                end
+                if app.SaveAuxDataCheckBox.Value
+                    mkdir(fullfile(chanDir, 'auxiliary_data'));
+                end
+            end
+
             for jj = 1:length(dataList)
 
-                for ii = 1:length(app.ChannelList)
-                    app.channel = app.ChannelList{ii};
+                for ii = 1:length(channelList)
+                    app.channel = channelList{ii};
 
                     % Honor stop request before starting each new iteration
                     if app.isStopBatchButtonPushed == true
@@ -3464,15 +3458,7 @@ return;
                         app.input_fbase, app.channel));
                     drawnow;
 
-                    % Parse stage identifiers from UI fields
-                    app.TextArea.addnl('Processing stage inputs...');
-                    drawnow;
-                    updateStagesInput(app)
-
                     try
-                        % Parse delimiter selection
-                        updateDelimeterInput(app)
-
                         % ---- Load EDF and staging data ----
                         app.TextArea.addnl('Loading staging and EDF data...');
                         drawnow;
@@ -3488,6 +3474,11 @@ return;
                             app.REMUserInput,      app.N1UserInput, ...
                             app.N2UserInput,       app.N3UserInput, ...
                             app.UnknownUserInput });
+
+                        % Switch to filesystem-safe channel name now that
+                        % load_data has consumed the raw EDF label. Analysis
+                        % runners use app.channel strictly for output paths.
+                        app.channel = channelListSafe{ii};
 
                         % ---- Resample if requested and Fs differs ----
                         if app.ResampleSwitch.Value

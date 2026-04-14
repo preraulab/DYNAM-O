@@ -92,12 +92,14 @@ function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, art
 % purposes on how to use various functions in DYNAM-O in tandem.
 
 %% SYSTEM SETTINGS
-% Add necessary functions to path
-addpath(genpath(fullfile(fileparts(which('runDYNAMO')), 'toolbox')))
+% Add necessary functions to path (only if not already on path)
+if isempty(which('computeTFPeaks'))
+    addpath(genpath(fullfile(fileparts(which('runDYNAMO')), 'toolbox')))
+end
 
-%Check for parallel toolbox
+%Check for parallel toolbox and only start pool if none is running
 v = ver;
-if any(strcmp({v.Name}, 'Parallel Computing Toolbox'))
+if any(strcmp({v.Name}, 'Parallel Computing Toolbox')) && isempty(gcp('nocreate'))
     gcp;
 end
 
