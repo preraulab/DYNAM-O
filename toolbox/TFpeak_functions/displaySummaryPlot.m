@@ -157,7 +157,10 @@ if ~isempty(SOpower_mat) || ~isempty(SOphase_mat)
 end
 
 %% Create figure
-fh = figure('Color',[1 1 1],'units','inches');
+% Create invisible; final visibility is restored at end of function
+% based on the root DefaultFigureVisible. This prevents flicker/pop-up
+% during rendering in batch runs (exportgraphics doesn't need visibility).
+fh = figure('Color',[1 1 1],'units','inches','Visible','off');
 set(fh, 'position', [0 0 8.5 11])
 orient portrait;
 
@@ -398,3 +401,9 @@ temp_axes = [hypn_spect_ax, ax];
 temp_axes = temp_axes(isgraphics(temp_axes));
 set(temp_axes, 'FontSize', 10)
 set(th(isgraphics(th)), 'Fontsize', 15)
+
+% Restore visibility for interactive callers (batch runs leave root
+% DefaultFigureVisible='off', so the figure stays hidden there).
+if strcmp(get(groot, 'DefaultFigureVisible'), 'on')
+    set(fh, 'Visible', 'on');
+end
