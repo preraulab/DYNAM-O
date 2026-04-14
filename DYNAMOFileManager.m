@@ -259,6 +259,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % -------------------------
         run_error_list          = {}    % Accumulated pre-run validation error messages
         isStopBatchButtonPushed = false % Flag set true when user clicks Stop; halts after current subject
+        use_no_stages  logical  = false % Flag set true when user confirms running with no stage files
         anything_run                    % Flag indicating at least one analysis was executed this iteration
         curr_datetime                   % Timestamp string for the current run (format: yyMMdd_HHmmSS)
         curr_iteration                  % Counter for total channel-subject iterations completed
@@ -2446,17 +2447,12 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 app.DataListBox.IsError = true;
             end
 
-            if isempty(app.StagingList)
-                app.run_error_list(end+1) = {'- Staging list empty. Need staging files to run.'};
-                app.StagingListBox.IsError = true;
-            end
-
             if isempty(app.OutputDirEditField.Value)
                 app.run_error_list(end+1) = {'- No output directory given. Need somewhere to save files.'};
                 app.OutputDirEditField.IsError = true;
             end
 
-            if length(app.DataList) ~= length(app.StagingList)
+            if ~isempty(app.StagingList) && length(app.DataList) ~= length(app.StagingList)
                 app.run_error_list(end+1) = {strcat('- Number of data files (', ...
                     num2str(length(app.DataList)), ...
                     ') does not match staging files (', ...
@@ -2695,18 +2691,18 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %
             %   Creates <OutputDir>/logs/console_log_<timestamp>.txt and activates
             %   MATLAB's diary function to capture all subsequent console output.
-
-            app.consolelog_fname = strcat('console_log_', app.curr_datetime, '.txt');
-            app.consolelog_fpath = strcat(app.OutputDirEditField.Value, '/logs/');
-            app.consolelog_fid   = fopen(fullfile(app.consolelog_fpath, app.consolelog_fname), 'w');
-
-            fprintf(app.consolelog_fid, 'Date and time of run start: %s\n\n', app.curr_datetime);
-            diary(fullfile(app.consolelog_fpath, app.consolelog_fname))
-
-            % If the Run Log Console is already open, start live polling now.
-            if ~isempty(app.LogConsoleFig) && isvalid(app.LogConsoleFig)
-                app.startLogConsoleTimer();
-            end
+return;
+            % app.consolelog_fname = strcat('console_log_', app.curr_datetime, '.txt');
+            % app.consolelog_fpath = strcat(app.OutputDirEditField.Value, '/logs/');
+            % app.consolelog_fid   = fopen(fullfile(app.consolelog_fpath, app.consolelog_fname), 'w');
+            % 
+            % fprintf(app.consolelog_fid, 'Date and time of run start: %s\n\n', app.curr_datetime);
+            % diary(fullfile(app.consolelog_fpath, app.consolelog_fname))
+            % 
+            % % If the Run Log Console is already open, start live polling now.
+            % if ~isempty(app.LogConsoleFig) && isvalid(app.LogConsoleFig)
+            %     app.startLogConsoleTimer();
+            % end
         end
 
         % ==================================================================
@@ -3224,6 +3220,24 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             updateRunErrorList(app)
 
             if isempty(app.run_error_list)
+
+                if isempty(app.StagingList)
+                    % All other checks passed but no stage files — ask user to confirm
+                    selection = uiconfirm(app.UIFigure, ...
+                        ['No stage files selected. Are you sure you want to run with no stages? ' ...
+                         'All non-artifact times will be incorporated into TF-peak and SOPH analyses.'], ...
+                        'No Stage Files', ...
+                        'Options', {'Yes', 'No'}, ...
+                        'DefaultOption', 2, ...
+                        'CancelOption', 2);
+                    if strcmp(selection, 'No')
+                        return;
+                    end
+                    app.use_no_stages = true;
+                else
+                    app.use_no_stages = false;
+                end
+
                 app.RunBatchButton.Enabled  = 'off';
                 app.StopBatchButton.Enabled = 'on';
                 app.ProgressBar.Enabled     = true;
@@ -3237,6 +3251,12 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % GUI list boxes and app.DataList/StagingList are never mutated)
             dataList    = app.DataList;
             stagingList = app.StagingList;
+
+            if app.use_no_stages
+                % Build a same-length list of empty strings as placeholder staging paths
+                stagingList = repmat({''}, size(dataList));
+            end
+
             if app.RunInReverse.Value
                 dataList    = dataList(end:-1:1);
                 stagingList = stagingList(end:-1:1);
@@ -3452,7 +3472,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                         updateDelimeterInput(app)
 
                         % ---- Load EDF and staging data ----
-                        app.TextArea.addnl(['Loading staging and EDF data...']);
+                        app.TextArea.addnl('Loading staging and EDF data...');
                         drawnow;
                         [app.data, app.Fs, app.stage_times, app.stage_vals] = load_data( ...
                             dataList{jj}, ...
@@ -3479,6 +3499,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                                 app.data = resample(app.data, p, q);
                                 app.Fs   = target_fs;
                             end
+                        end
+
+                        % When running with no stages, treat entire recording as N2
+                        % (must be after resampling so data length reflects final Fs)
+                        % Use length() rather than size(...,1) so row and column vectors both work
+                        if app.use_no_stages
+                            app.stage_times = [0, length(app.data) / app.Fs(1)];
+                            app.stage_vals  = [2, 2];
                         end
 
                         % ---- Run selected analysis steps ----
