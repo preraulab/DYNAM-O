@@ -3470,8 +3470,7 @@ return;
             drawnow;
 
             % Initialize the progress bar widget
-            app.ProgressBar.N = length(dataList);
-            % app.ProgressBar.reset;
+            app.ProgressBar.N = length(dataList) * numel(app.ChannelList);
             app.ProgressBar.start;
 
             % ---------------------------------------------------------------
@@ -3646,9 +3645,6 @@ return;
                             'Subject %s, channel %s: not run.\n%s\n', ...
                             app.input_fbase, app.channel, getReport(e, 'extended')));
 
-                        app.set_rundefault;
-                        app.ProgressBar.reset;
-                        app.ProgressBar.Enabled = false;
                         drawnow;
                     end
 
