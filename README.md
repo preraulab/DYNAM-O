@@ -701,8 +701,8 @@ The outputs from the DYNAM-O Toolbox are naturally suited for statistical tests 
 
 **Whole-histogram analysis.** Given feature histograms from multiple subjects or recording sessions, DYNAM-O supports "whole-histogram" group comparisons (analogous to whole-brain voxel-wise fMRI analyses). Two approaches are implemented:
 
-- **Pixel-wise FDR testing** (`FDR_2D`): Two-sample or paired-sample statistical tests at each histogram bin, with false discovery rate correction using the Benjamini–Yekutieli procedure.
-- **Global permutation testing** (`gpermtest`): Tests on the linearized feature histograms based on the number of bins exceeding acceptance bounds, providing greater sensitivity to detect small but consistent differences across the entire histogram.
+- **Pixel-wise FDR testing** (`FDR_2D`): Two-sample or paired-sample statistical tests at each histogram bin, with false discovery rate correction using the [Benjamini–Yekutieli procedure](https://en.wikipedia.org/wiki/False_discovery_rate#Benjamini%E2%80%93Yekutieli_procedure).
+- **Global permutation testing** (`gpermtest`): Tests on the linearized feature histograms based on the number of bins exceeding acceptance bounds, providing greater sensitivity to detect small but consistent differences across the entire histogram. Based on the method described in [Harrison et al. (2009)](https://www.nature.com/articles/nn.2501).
 
 These methods enable detection of group differences (e.g., between clinical populations or across experimental conditions) that may be distributed across multiple frequency ranges and sleep depths simultaneously.
 
