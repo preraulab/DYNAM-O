@@ -573,11 +573,19 @@ Parametric fitting identifies prominent clusters (modes) in the histogram and fi
 4. Modes that fall below a minimum amplitude or exceed a maximum spatial overlap with existing modes are rejected
 5. The optimal number of modes is selected based on the adjusted R² curve — either by minimum percentage change in R² or by the kneedle (elbow) algorithm
 
-**SO-power histograms** (`param_basis_power`): The parameterized SO-power histogram is modeled as a sum of *N* rotated 2D Gaussian modes on a baseline plane:
+**SO-power histograms** (`param_basis_power`): The SO-power histogram is modeled as a sum of *N* rotated 2D Gaussian modes on a linear baseline plane, where *p* is SO-power and *f* is frequency:
 
-$$H(p, f) = \underbrace{a \cdot p + b \cdot f + c}_{\text{baseline plane}} + \sum_{n=1}^{N} A_n \exp\!\Bigl(-\bigl(\tfrac{(f - \mu_f)\cos\theta + (p - \mu_p)\sin\theta}{\sigma_f}\bigr)^2 - \bigl(\tfrac{-(f - \mu_f)\sin\theta + (p - \mu_p)\cos\theta}{\sigma_p}\bigr)^2\Bigr)$$
+$$H(p, f) = \text{baseline}(p, f) \;+\; \sum_{n=1}^{N} \text{mode}_n(p, f)$$
 
-where *p* is SO-power and *f* is frequency. The baseline plane captures any residual linear trend in the histogram. The fitted parameters for each mode are:
+The baseline is a linear plane capturing any residual trend in the histogram:
+
+$$\text{baseline}(p, f) = a\,p + b\,f + c$$
+
+Each mode is a rotated 2D Gaussian:
+
+$$\text{mode}_n(p, f) = A \exp\left(-\left(\frac{(f - \mu_f)\cos\theta + (p - \mu_p)\sin\theta}{\sigma_f}\right)^2 - \left(\frac{-(f - \mu_f)\sin\theta + (p - \mu_p)\cos\theta}{\sigma_p}\right)^2\right)$$
+
+The fitted parameters for each mode are:
 
 | Parameter | Description |
 |---|---|
@@ -588,11 +596,19 @@ where *p* is SO-power and *f* is frequency. The baseline plane captures any resi
 | `SOpower_std` (*σ_p*) | Spread in SO-power |
 | `rotation` (*θ*) | Rotation angle of the Gaussian |
 
-**SO-phase histograms** (`param_basis_phase`): The parameterized SO-phase histogram is modeled as a sum of *N* hybrid von Mises × Gaussian modes on a sinusoidal baseline:
+**SO-phase histograms** (`param_basis_phase`): The SO-phase histogram is modeled as a sum of *N* von Mises × Gaussian modes on a sinusoidal baseline, where *ϕ* is SO-phase and *f* is frequency:
 
-$$H(\phi, f) = \underbrace{a \cdot \sin(\phi + b) + c}_{\text{baseline sinusoid}} + \sum_{n=1}^{N} A_n \exp\!\bigl(-(f - \mu_f)^2 / \sigma_f\bigr) \cdot \exp\!\bigl(\kappa \cos(\phi - \mu_\phi + (f - \mu_f)\sin\theta) - \kappa\bigr)$$
+$$H(\phi, f) = \text{baseline}(\phi, f) \;+\; \sum_{n=1}^{N} \text{mode}_n(\phi, f)$$
 
-where *ϕ* is SO-phase and *f* is frequency. The von Mises component (circular) handles the periodicity of phase naturally, while the Gaussian component models the frequency spread. The sinusoidal baseline captures any overall phase preference present across all frequencies. The subtraction of *κ* in the exponent normalizes the von Mises peak to a maximum of 1, so that *A* directly represents the mode amplitude. To manage modes that span the ±π boundary, three concatenated copies of the histogram are used during the watershed seeding step. After fitting, each frequency row is optionally normalized to sum to 1 to produce a probability distribution. The fitted parameters for each mode are:
+The baseline is sinusoidal, capturing any overall phase preference across all frequencies:
+
+$$\text{baseline}(\phi, f) = a \sin(\phi + b) + c$$
+
+Each mode is a von Mises (circular) × Gaussian (frequency) product:
+
+$$\text{mode}_n(\phi, f) = A \exp\left(-(f - \mu_f)^2 / \sigma_f\right) \exp\left(\kappa \cos(\phi - \mu_\phi + (f - \mu_f)\sin\theta) - \kappa\right)$$
+
+The von Mises component handles the periodicity of phase naturally, while the Gaussian component models the frequency spread. The subtraction of *κ* in the exponent normalizes the von Mises peak to 1, so *A* directly represents mode amplitude. To handle modes spanning the ±π boundary, three concatenated copies of the histogram are used during watershed seeding. After fitting, each frequency row is optionally normalized to sum to 1. The fitted parameters for each mode are:
 
 | Parameter | Description |
 |---|---|
