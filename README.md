@@ -63,6 +63,7 @@ This repository contains the updated and optimized MATLAB toolbox for extracting
   - [SO-Power Computation and Normalization](#so-power-computation-and-normalization)
   - [SO-Phase Computation](#so-phase-computation)
 - [Repository Structure](#repository-structure)
+- [Included Submodules](#included-submodules)
 - [Required Toolboxes](#required-toolboxes)
 
 ---
@@ -793,6 +794,26 @@ DYNAMO_dev/
         ├── statistical_tests/       permtest, gpermtest, FDR_1D, FDR_2D
         ├── data_processing/         nanzscore, nanpow2db, get_chunks, create_bins
         └── conversion/              csv2table, read_staging, struct2nvp, hmstext2seconds
+```
+
+---
+
+## Included Submodules
+
+DYNAM-O depends on several standalone libraries included as Git submodules under `toolbox/helper_functions/`. These are cloned automatically with `--recursive` (see [Installation](#installation)).
+
+| Submodule | Repository | Description |
+|---|---|---|
+| **Multitaper Spectrogram** | [preraulab/multitaper](https://github.com/preraulab/multitaper) | Multitaper spectral estimation (MATLAB, Python, R). Provides the time-frequency decomposition underlying TF-peak detection and SO-power computation. Includes an optimized C MEX implementation. |
+| **Artifact Detection** | [preraulab/artifact_detection](https://github.com/preraulab/artifact_detection) | Detects and removes artifacts in EEG time series using high-frequency and broadband filtering with adaptive z-score thresholding. Includes Hjorth feature-based detection. |
+| **Read EDF** | [preraulab/read_EDF](https://github.com/preraulab/read_EDF) | Reads European Data Format (EDF/EDF+) files with full metadata extraction, per-signal scaling, and optional MEX acceleration. Includes a GUI for exploring EDF headers. |
+| **Statistical Tests** | [preraulab/multicomp_test](https://github.com/preraulab/multicomp_test) | Permutation-based statistical tests and false discovery rate (FDR) correction for multi-dimensional data. Provides `permtest`, `gpermtest`, `FDR_1D`, and `FDR_2D`. |
+| **CSSuicontrols** | [preraulab/CSSuicontrols](https://github.com/preraulab/CSSuicontrols) | CSS-styled HTML-backed UI controls for MATLAB App Designer. Powers the progress bar, text areas, buttons, and other custom widgets in DYNAMOFileManager. |
+
+To update all submodules to their latest versions:
+
+```bash
+git submodule update --remote
 ```
 
 ---
