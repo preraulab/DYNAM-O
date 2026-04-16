@@ -56,6 +56,9 @@ This repository contains the updated and optimized MATLAB toolbox for extracting
   - [Part 1: TF-Peak Detection](#part-1-tf-peak-detection)
   - [Part 2: Feature Computation](#part-2-feature-computation)
   - [Part 3: Feature Histograms](#part-3-feature-histograms)
+  - [Dimensionality Reduction of Feature Histograms](#dimensionality-reduction-of-feature-histograms)
+    - [Parametric Basis Fitting](#parametric-basis-fitting)
+    - [Spline Basis Fitting](#spline-basis-fitting)
   - [Part 4: Statistical Testing](#part-4-statistical-testing)
   - [SO-Power Computation and Normalization](#so-power-computation-and-normalization)
   - [SO-Phase Computation](#so-phase-computation)
@@ -550,11 +553,127 @@ The first two parts of the DYNAM-O pipeline yield a table of identified TF-peaks
 <figcaption><b>Example SO-power (left) and SO-phase (right) histograms from an overnight sleep EEG recording.</b></figcaption></figure>
 <br/>
 
-**Dimensionality reduction.** Feature histograms contain thousands of bins, making direct statistical comparison challenging. DYNAM-O provides two complementary approaches:
+Visualizing the SO feature histograms already provides substantial insight into overnight sleep dynamics. For subsequent statistical comparisons across subjects or conditions, DYNAM-O provides two complementary dimensionality reduction approaches — [parametric basis fitting](#parametric-basis-fitting) and [spline basis fitting](#spline-basis-fitting) — described in detail below.
 
-- **Parametric fitting** (`param_basis_power`, `param_basis_phase`): Identifies prominent clusters (modes) in the histogram and fits interpretable basis functions to each — rotated 2D Gaussians for SO-power histograms, and von Mises × Gaussian hybrids for SO-phase histograms (to handle circular periodicity). Initial conditions are seeded automatically by running the watershed algorithm on the histogram itself. The result is a compact set of mode parameters (center frequency, center SO-power/phase, amplitude, spread, rotation) that can be directly compared across subjects or conditions.
+---
 
-- **Spline fitting** (`spline_basis` / `SOPH2spline`): Fits two-dimensional B-spline surfaces to the histogram, reducing thousands of bins to approximately 100 spline coefficients. This approach captures complex mode patterns that may not be well represented as Gaussian peaks and produces smoother fits with fewer edge artifacts.
+### Dimensionality Reduction of Feature Histograms
+
+Feature histograms contain thousands of bins, making direct statistical comparison challenging. DYNAM-O provides two complementary approaches to reduce dimensionality while preserving the key structures in the histograms.
+
+#### Parametric Basis Fitting
+
+Parametric fitting identifies prominent clusters (modes) in the histogram and fits interpretable basis functions to each. The objective is to construct a low-dimensional representation where each mode corresponds to a distinct type of transient oscillation activity (e.g., sleep spindles, theta bursts), described by a small set of meaningful parameters that can be directly compared across subjects or conditions.
+
+**How it works:**
+
+1. The watershed algorithm is first run on the histogram itself to identify potential peaks as initial conditions for fitting
+2. A sequence of models with increasing numbers of modes is fit via nonlinear least squares (MATLAB `fit()`)
+3. At each iteration, a new mode is added from the next watershed region and the full model is refit
+4. Modes that fall below a minimum amplitude or exceed a maximum spatial overlap with existing modes are rejected
+5. The optimal number of modes is selected based on the adjusted R² curve — either by minimum percentage change in R² or by the kneedle (elbow) algorithm
+
+**SO-power histograms** (`param_basis_power`): The parameterized SO-power histogram is modeled as a sum of *N* rotated 2D Gaussian modes on a baseline plane:
+
+$$H(p, f) = \underbrace{a \cdot p + b \cdot f + c}_{\text{baseline plane}} + \sum_{n=1}^{N} A_n \exp\!\Bigl(-\bigl(\tfrac{(f - \mu_f)\cos\theta + (p - \mu_p)\sin\theta}{\sigma_f}\bigr)^2 - \bigl(\tfrac{-(f - \mu_f)\sin\theta + (p - \mu_p)\cos\theta}{\sigma_p}\bigr)^2\Bigr)$$
+
+where *p* is SO-power and *f* is frequency. The baseline plane captures any residual linear trend in the histogram. The fitted parameters for each mode are:
+
+| Parameter | Description |
+|---|---|
+| `amplitude` (*A*) | Peak density of the mode |
+| `center_frequency` (*μ_f*) | Center frequency (Hz) |
+| `center_SOpower` (*μ_p*) | Center SO-power (dB) |
+| `frequency_std` (*σ_f*) | Spread in frequency |
+| `SOpower_std` (*σ_p*) | Spread in SO-power |
+| `rotation` (*θ*) | Rotation angle of the Gaussian |
+
+**SO-phase histograms** (`param_basis_phase`): The parameterized SO-phase histogram is modeled as a sum of *N* hybrid von Mises × Gaussian modes on a sinusoidal baseline:
+
+$$H(\phi, f) = \underbrace{a \cdot \sin(\phi + b) + c}_{\text{baseline sinusoid}} + \sum_{n=1}^{N} A_n \exp\!\bigl(-(f - \mu_f)^2 / \sigma_f\bigr) \cdot \exp\!\bigl(\kappa \cos(\phi - \mu_\phi + (f - \mu_f)\sin\theta) - \kappa\bigr)$$
+
+where *ϕ* is SO-phase and *f* is frequency. The von Mises component (circular) handles the periodicity of phase naturally, while the Gaussian component models the frequency spread. The sinusoidal baseline captures any overall phase preference present across all frequencies. The subtraction of *κ* in the exponent normalizes the von Mises peak to a maximum of 1, so that *A* directly represents the mode amplitude. To manage modes that span the ±π boundary, three concatenated copies of the histogram are used during the watershed seeding step. After fitting, each frequency row is optionally normalized to sum to 1 to produce a probability distribution. The fitted parameters for each mode are:
+
+| Parameter | Description |
+|---|---|
+| `amplitude` (*A*) | Peak density of the mode |
+| `center_frequency` (*μ_f*) | Center frequency (Hz) |
+| `center_SOphase` (*μ_ϕ*) | Preferred SO-phase (rad) |
+| `frequency_std` (*σ_f*) | Spread in frequency |
+| `von_Mises_kappa` (*κ*) | Concentration parameter (higher = more phase-locked) |
+| `rotation` (*θ*) | Phase–frequency coupling angle |
+
+**Usage:**
+
+```matlab
+% Fit SO-power histogram
+params = param_basis_power(SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins);
+
+% Fit SO-phase histogram
+params = param_basis_phase(SOPHs.SOphase_mat, SOPHs.SOphase_bins, SOPHs.freq_bins);
+```
+
+Both functions return a parameter matrix with one row per identified mode and have built-in plotting functionality.
+
+**Parametric Basis Options** (`param_basis_opts`):
+
+```matlab
+opts = param_basis_opts('power');   % or 'phase'
+```
+
+| Parameter | Default (power / phase) | Description |
+|---|---|---|
+| `freq_limits` | `[2, 16]` | Frequency range for fitting (Hz) |
+| `power_limits` / `phase_limits` | `[-2, 20]` / `[-π, π]` | SO-power or SO-phase range for fitting |
+| `max_peaks` | `6` | Maximum number of modes to fit (`-1` for unlimited) |
+| `max_overlap` | `0.2` / `0.15` | Maximum allowed spatial overlap between modes |
+| `criterion` | `'minpctr2'` | Model selection criterion: `'minpctr2'` (minimum % change in R²), `'mindr2'` (minimum absolute change), `'kneedle'` (elbow detection), `'max'` (fit all modes) |
+| `min_pctr2` | `0.01` / `0.025` | Minimum percentage change in R² to accept a new mode |
+| `min_dr2` | `0.01` | Minimum absolute change in R² |
+| `watershed_params` | *(see below)* | `[merge_thresh, dur_min, bw_min, height_min, trim_vol]` for initial peak finding |
+| `prefix_modes` | `[]` | Preset mode parameters to include before watershed-seeded modes |
+| `prefix_modes_order` | `-1` | `-1` = append after, `0` = use only prefix, `1` = prepend before watershed modes |
+| `plot_on` | `1` | `0` = none, `1` = final result, `2` = each iteration, `3` = both |
+| `verbose` | `true` | Print progress information |
+
+---
+
+#### Spline Basis Fitting
+
+While parametric fitting yields interpretable modes, some histograms have complex patterns that are not easily represented as Gaussian peaks. Spline basis fitting provides a nonparametric alternative by fitting a smooth two-dimensional surface to the histogram, capturing all structure regardless of shape.
+
+**How it works:**
+
+A two-dimensional tensor-product B-spline surface is fit to the histogram values across the SO-power (or SO-phase) and frequency axes using least-squares approximation. The spline is defined by a grid of internal knots along each axis, with the knot density controlling the tradeoff between smoothness and fidelity. The fitted spline coefficients provide a compact representation of the histogram that can be used for statistical comparisons.
+
+**Usage:**
+
+```matlab
+% Fit SO-power histogram
+[splinefit, coefs] = spline_basis('power', SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins);
+
+% Fit SO-phase histogram
+[splinefit, coefs] = spline_basis('phase', SOPHs.SOphase_mat, SOPHs.SOphase_bins, SOPHs.freq_bins);
+```
+
+`splinefit` is the smoothed histogram surface (same dimensions as the input), and `coefs` is the matrix of spline coefficients used for dimensionality-reduced comparisons.
+
+**Spline Basis Options** (`spline_basis_opts`):
+
+```matlab
+opts = spline_basis_opts('power');   % or 'phase'
+```
+
+| Parameter | Default (power / phase) | Description |
+|---|---|---|
+| `freq_limits` | `[2, 16]` | Frequency range for fitting (Hz) |
+| `power_limits` / `phase_limits` | `[-2, 20]` / `[-π, π]` | SO-power or SO-phase range for fitting |
+| `num_knots_x` | `5` | Number of internal knots along the SO-power/phase axis |
+| `num_knots_y` | `18` / `9` | Number of internal knots along the frequency axis |
+| `plot_on` | `true` | Plot fitted surface |
+| `SOPH_clim_prctiles` | `[5, 98]` | Percentiles for heatmap color scaling |
+
+The difference in frequency knots (18 for power, 9 for phase) reflects the typically smoother structure of SO-phase histograms, which require fewer knots to capture their variation.
 
 ---
 
