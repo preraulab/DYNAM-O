@@ -575,11 +575,11 @@ Parametric fitting identifies prominent clusters (modes) in the histogram and fi
 
 **SO-power histograms** (`param_basis_power`): The SO-power histogram is modeled as a sum of *N* rotated 2D Gaussian modes on a linear baseline plane, where *p* is SO-power and *f* is frequency:
 
-$$H(p, f) = \text{baseline}(p, f) \;+\; \sum_{n=1}^{N} \text{mode}_n(p, f)$$
+$$H(p, f) = \text{baseline}(p, f) + \sum_{n=1}^{N} \text{mode}_n(p, f)$$
 
 The baseline is a linear plane capturing any residual trend in the histogram:
 
-$$\text{baseline}(p, f) = a\,p + b\,f + c$$
+$$\text{baseline}(p, f) = \beta_{0} + \beta_{p} p + \beta_{f} f$$
 
 Each mode is a rotated 2D Gaussian:
 
@@ -598,11 +598,11 @@ The fitted parameters for each mode are:
 
 **SO-phase histograms** (`param_basis_phase`): The SO-phase histogram is modeled as a sum of *N* von Mises × Gaussian modes on a sinusoidal baseline, where *ϕ* is SO-phase and *f* is frequency:
 
-$$H(\phi, f) = \text{baseline}(\phi, f) \;+\; \sum_{n=1}^{N} \text{mode}_n(\phi, f)$$
+$$H(\phi, f) = \text{baseline}(\phi, f) + \sum_{n=1}^{N} \text{mode}_n(\phi, f)$$
 
 The baseline is sinusoidal, capturing any overall phase preference across all frequencies:
 
-$$\text{baseline}(\phi, f) = a \sin(\phi + b) + c$$
+$$\text{baseline}(\phi, f) = \beta_{0} + \beta_{1} \sin(\phi + \beta_{2})$$
 
 Each mode is a von Mises (circular) × Gaussian (frequency) product:
 
