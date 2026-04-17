@@ -114,15 +114,13 @@ function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, art
 % purposes on how to use various functions in DYNAM-O in tandem.
 
 %% SYSTEM SETTINGS
-% Add necessary functions to path (only if not already on path)
+% Add necessary functions to path (only if not already on path).
+% genpath recurses into every subfolder under toolbox/, which picks up
+% toolbox/TFpeak_functions/mex/ automatically — that's where
+% trim_region_mex and build_all_mex live.
 if isempty(which('computeTFPeaks'))
     repo_root = fileparts(which('runDYNAMO'));
     addpath(genpath(fullfile(repo_root, 'toolbox')))
-    % MEX accelerator lives outside toolbox/ under optimization/mex/.
-    % On the path so trimWshedRegions can find and auto-compile
-    % trim_region_mex when running in a ProcessPool.
-    mex_dir = fullfile(repo_root, 'optimization', 'mex');
-    if exist(mex_dir, 'dir'), addpath(mex_dir); end
 end
 
 % default verbose setting for all processing steps
