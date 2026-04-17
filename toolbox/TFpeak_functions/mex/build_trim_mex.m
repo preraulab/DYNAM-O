@@ -1,11 +1,11 @@
-function build_all_mex(varargin)
-%BUILD_ALL_MEX  Compile every DYNAM-O MEX target for the current platform.
+function build_trim_mex(varargin)
+%BUILD_TRIM_MEX  Compile trim_region_mex for the current platform.
 %
 %   Usage:
-%       build_all_mex              % build any missing/stale targets
-%       build_all_mex('force')     % rebuild every target even if up to date
-%       build_all_mex('verbose')   % show mex command lines
-%       build_all_mex('force','verbose')
+%       build_trim_mex              % build if missing or source is newer
+%       build_trim_mex('force')     % rebuild even if up to date
+%       build_trim_mex('verbose')   % show the mex command line
+%       build_trim_mex('force','verbose')
 %
 %   Platforms:
 %       macOS   -> .mexmaca64 / .mexmaci64   (Xcode + clang)
@@ -20,13 +20,14 @@ function build_all_mex(varargin)
 %           Windows: MSVC Build Tools OR MinGW-w64 via Add-Ons
 %           macOS:   xcode-select --install
 %
-%   Targets compiled:
-%       trim_region_mex - per-region morphology for trimWshedRegions
+%   Target: trim_region_mex — per-region morphology for trimWshedRegions
+%   (consolidates imfill + bwconncomp + pick-largest + boundary into one
+%   C++ call per region).
 %
 %   Output:
-%       <mex/>.<mexext> files dropped next to this .m so addpath() picks
-%       them up. Skips targets whose binary is newer than the source
-%       unless 'force' is passed.
+%       trim_region_mex.<mexext> dropped next to this .m so addpath picks
+%       it up. Skips if the binary is newer than the source unless
+%       'force' is passed.
 
 force   = any(strcmpi(varargin, 'force'));
 verbose = any(strcmpi(varargin, 'verbose'));
@@ -53,7 +54,7 @@ catch
     error(['No C++ compiler configured for MATLAB. Run:\n' ...
            '    >> mex -setup cpp\n' ...
            'and install one of the supported toolchains ' ...
-           '(see "help build_all_mex" for platform hints).']);
+           '(see "help build_trim_mex" for platform hints).']);
 end
 
 results = struct('name', {}, 'status', {}, 'detail', {});
@@ -102,7 +103,7 @@ end
 
 if any_failed
     fprintf(2, '\nOne or more targets failed to build.\n');
-    fprintf(2, 'Try:  mex -setup cpp   then rerun: build_all_mex force\n');
+    fprintf(2, 'Try:  mex -setup cpp   then rerun: build_trim_mex force\n');
 else
     fprintf('\nAll MEX targets are in place. Make sure %s is on the path.\n', here);
 end

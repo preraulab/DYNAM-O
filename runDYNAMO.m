@@ -117,7 +117,7 @@ function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, art
 % Add necessary functions to path (only if not already on path).
 % genpath recurses into every subfolder under toolbox/, which picks up
 % toolbox/TFpeak_functions/mex/ automatically — that's where
-% trim_region_mex and build_all_mex live.
+% trim_region_mex and build_trim_mex live.
 if isempty(which('computeTFPeaks'))
     repo_root = fileparts(which('runDYNAMO'));
     addpath(genpath(fullfile(repo_root, 'toolbox')))
@@ -194,15 +194,15 @@ timings.pool_setup = toc(t_stage);
 
 %Pre-build trim MEX on the client, ONCE, before any parfor. This avoids
 %every worker racing to compile the same file simultaneously (N workers
-%= N concurrent build_all_mex calls writing to the same output).
+%= N concurrent build_trim_mex calls writing to the same output).
 t_stage = tic;
 mex_name_ = ['trim_region_mex.' mexext];
 is_apple_silicon_ = ismac && strcmp(computer('arch'), 'maca64');
-if ~is_apple_silicon_ && exist(mex_name_, 'file') ~= 3 && exist('build_all_mex', 'file') == 2
+if ~is_apple_silicon_ && exist(mex_name_, 'file') ~= 3 && exist('build_trim_mex', 'file') == 2
     try
         fprintf('  Compiling trim_region_mex for this platform (first-time only)...\n');
-        build_all_mex();
-        mex_dir_ = fileparts(which('build_all_mex'));
+        build_trim_mex();
+        mex_dir_ = fileparts(which('build_trim_mex'));
         if ~isempty(mex_dir_) && exist(fullfile(mex_dir_, mex_name_), 'file') == 3
             addpath(mex_dir_);
         end
