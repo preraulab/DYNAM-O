@@ -138,8 +138,8 @@ min_bnds_ii = min(data(bnds_ii));
 min_bnds_jj = min(data(bnds_jj));
 
 %Get the max data values
-max_rgn_ii = max(data(rgn_jj));
-max_rgn_jj = max(data(rgn_ii));
+max_rgn_ii = max(data(rgn_ii));
+max_rgn_jj = max(data(rgn_jj));
 
 %Compute the weights for each
 eii = 2*max_adj - min_bnds_ii - max_rgn_jj;
