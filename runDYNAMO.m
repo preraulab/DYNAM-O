@@ -7,7 +7,10 @@
 %   parametric and spline fits are also computed.
 %
 %   Usage:
-%       [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, ...)
+%       [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs, timings] = runDYNAMO(data, Fs, stage_times, stage_vals, ...)
+%
+%   The 9th output `timings` is optional; 7- and 8-output callers work
+%   unchanged.
 %
 %   Required Inputs:
 %       data:               [N x 1] double - time-domain EEG signal
@@ -25,7 +28,7 @@
 %       spline_basis_power_options:   struct - parameters for spline fitting of SO-power histograms (default: spline_basis_opts('power'))
 %       spline_basis_phase_options:   struct - parameters for spline fitting of SO-phase histograms (default: spline_basis_opts('phase'))
 %       stats_table:                  table/double - precomputed TF-peak table to bypass detection (default: [])
-%       verbose:                      logical - print progress info (default: true)
+%       verbose:                      logical - print progress info + timing summary table (default: true)
 %       plot_on:                      logical - generate summary figure (default: true)
 %       save_output_image:            logical - save summary figure to disk (default: false)
 %       output_fname:                 string/char - output filename for image (default: 'DYNAM-O_output')
@@ -41,6 +44,18 @@
 %       t_time_range:       [1 x T] double - time axis vector for data within time range
 %       artifacts:          [1 x T] logical - artifact mask for data within time range
 %       SOPHs:              struct - SO-power and SO-phase histograms (and fits if fit_param_basis or fit_spline_basis is true)
+%       timings:            struct (optional) - per-stage wallclock seconds
+%                           Fields: pool_setup, mex_build, spect_pass1,
+%                                   artifact, baseline_pass1, extract_pass1,
+%                                   spect_pass2, baseline_pass2, extract_pass2,
+%                                   refine, peak_stage, peak_sopower,
+%                                   peak_sophase, soph_sopower_compute,
+%                                   soph_sophase_compute, soph_sopower_hist,
+%                                   soph_sophase_hist, plot_summary,
+%                                   fit_param_basis, fit_spline_basis, total.
+%                           Stages that didn't run are absent or zero.
+%                           A sorted summary table with these timings also
+%                           prints at the end of verbose runs.
 %
 %   Notes:
 %       - If no inputs are provided, the function runs an internal example using bundled data.
@@ -50,7 +65,14 @@
 %
 %   Example:
 %       load('example_data/example_data.mat');  % should include data, Fs, stage_times, stage_vals
-%       [stats_table, spect, stimes, sfreqs, artifacts, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals);
+%       [stats_table, spect, stimes, sfreqs, ~, ~, artifacts, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals);
+%
+%       % With per-stage timing capture:
+%       [~, ~, ~, ~, ~, ~, ~, SOPHs, timings] = runDYNAMO(data, Fs, stage_times, stage_vals);
+%       disp(timings)
+%
+%       % Fast iteration with precomputed stats_table (skips TF-peak extraction):
+%       [~, ~, ~, ~, ~, ~, ~, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, 'stats_table', stats_table);
 %
 % =========================================================================
 %    ██████╗ ██╗   ██╗███╗   ██╗ █████╗ ███╗   ███╗        ██████╗
