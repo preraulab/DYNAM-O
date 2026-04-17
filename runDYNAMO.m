@@ -267,11 +267,18 @@ else
         disp('TF peaks stats table provided. Computing SOPH only.');
     end
 
-    data_time_range = data;
-    t_time_range = (0:length(data)-1)/Fs;
+    % Truncate to time_range — same as computeTFPeaks does when building
+    % fresh. Without this, SOpower_times would span the full recording
+    % and interp1(stage_times, stage_vals, SOpower_times, 'previous')
+    % would return NaN stages for samples before the first / after the
+    % last scored stage, which the histogram validator rejects.
+    t_full = (0:length(data)-1)/Fs;
+    time_range_inds = t_full >= time_range(1) & t_full <= time_range(2);
+    data_time_range = data(time_range_inds);
+    t_time_range = t_full(time_range_inds);
     [spect, stimes, sfreqs] = deal([]);
     t_stage = tic;
-    artifacts = detect_artifacts(data, Fs);
+    artifacts = detect_artifacts(data_time_range, Fs);
     timings.artifact = toc(t_stage);
 end
 
