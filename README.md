@@ -115,7 +115,7 @@ git submodule update --remote
 
 ### 2. MATLAB path
 
-No separate installation step is needed. The first time you call `runDYNAMO`, it adds the toolbox to the MATLAB path via `addpath(genpath(...))`, including the optimization MEX directory at `optimization/mex/`.
+No separate installation step is needed. The first time you call `runDYNAMO`, it adds the toolbox to the MATLAB path via `addpath(genpath('toolbox'))`, which also covers the MEX directory at `toolbox/TFpeak_functions/mex/`.
 
 ### 3. (Optional) Set up a C++ compiler for the MEX accelerator
 
