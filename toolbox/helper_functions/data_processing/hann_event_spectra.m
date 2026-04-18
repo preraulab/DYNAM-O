@@ -58,7 +58,7 @@ addOptional(p, 't', [], @(x) validateattributes(x,{'numeric'},{'real','finite','
 addOptional(p, 'frequency_range', [], @(x) isempty(x) || (isnumeric(x) && isvector(x) && numel(x) == 2));
 addOptional(p, 'data_window_params', [5, 1], @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
 addOptional(p, 'NFFT', 0, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
-addOptional(p, 'detrend_opt', 'linear', @(x) any(validatestring(x, {'linear', 'constant', 'off'})));
+addOptional(p, 'detrend_opt', 'linear', @(x) any(validatestring(lower(x), {'linear', 'constant', 'off'})));
 addOptional(p, 'plot_on', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'xyflip', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
@@ -192,14 +192,14 @@ if NFFT ==0
 end
 
 %Set either linear or constant detrending
-if detrend_opt ~= false
+if detrend_opt
     switch lower(detrend_opt)
-        case {'const','constant'}
-            detrend_opt = 'constant';
-        case {'none', 'off'}
-            detrend_opt = false;
-        otherwise
+        case 'linear'
             detrend_opt = 'linear';
+        case 'constant'
+            detrend_opt = 'constant';
+        case 'off'
+            detrend_opt = false;
     end
 end
 
@@ -275,7 +275,7 @@ function display_spectrogram_props(data_window_params, frequency_range, detrend_
 data_window_params = data_window_params/Fs;
 %my_pool = gcp;
 if detrend_opt
-    det_string=lower(detrend_opt);
+    det_string = lower(detrend_opt);
     det_string(1) = upper(det_string(1));
 else
     det_string='Off';
