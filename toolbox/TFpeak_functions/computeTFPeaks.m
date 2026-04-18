@@ -164,7 +164,7 @@ addOptional(p, 'mtm_window_stepsize', detection_options.mtm_window_stepsize, @(x
 addOptional(p, 'downsample_spect', detection_options.downsample_spect, @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
 addOptional(p, 'seg_time', detection_options.seg_time, @(x) isa(x,'numeric') && (isempty(x) || isscalar(x)));
 addOptional(p, 'merge_thresh', detection_options.merge_thresh, @(x) isa(x,'numeric') && (isempty(x) || isscalar(x)));
-addOptional(p, 'quality_setting', detection_options.quality_setting, @(x) any(validatestring(x, {'stokes_2023', 'precision', 'default'})));
+addOptional(p, 'quality_setting', detection_options.quality_setting, @(x) (ischar(x) || isstring(x)) && (isempty(x) || any(validatestring(x, {'stokes_2023', 'precision', 'default'}))));
 addOptional(p, 'max_merges', detection_options.max_merges, @(x) validateattributes(x,{'numeric'},{'real','positive','scalar'}));
 addOptional(p, 'trim_vol', detection_options.trim_vol, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 addOptional(p, 'dur_max', detection_options.dur_max, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
