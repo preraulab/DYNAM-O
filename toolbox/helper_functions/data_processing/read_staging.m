@@ -79,8 +79,8 @@ addRequired(p, 'stage_col', @(x) isnumeric(x) && isscalar(x) && x>0 && mod(x,1)=
 
 addOptional(p, 'stage_vals', default_stage_vals, @(x) isempty(x) || (iscell(x) && numel(x)==7));
 addOptional(p, 'header_lines', 0, @(x) isnumeric(x) && isscalar(x) && x>=0);
-addOptional(p, 'start_time', NaN, @(x) ischar(x) || isstring(x) || isnan(x));
-addOptional(p, 'delimiter', ',', @(x) ischar(x) || isstring(x) || isnan(x));
+addOptional(p, 'start_time', NaN, @(x) ischar(x) || isstring(x) || (isnumeric(x) && isscalar(x) && isnan(x)));
+addOptional(p, 'delimiter', ',', @(x) ischar(x) || isstring(x));
 addOptional(p, 'epoch_dur', 30, @(x) isnumeric(x) && isscalar(x) && x>0);
 addOptional(p, 'plot_on', true, @(x) islogical(x) && isscalar(x));
 
@@ -141,7 +141,8 @@ assert(length(unique(times_seconds))==length(times_seconds),'Multiple stages ide
 staging.times = times_seconds(:);
 staging.vals  = stage_values(:);
 
-if ~isnan(start_time)&staging.times~=0
+start_time_provided = (ischar(start_time) || isstring(start_time)) && ~isempty(start_time);
+if start_time_provided && ~isempty(staging.times) && staging.times(1) ~= 0
     staging.times = [0; staging.times];
     staging.vals = [0; staging.vals];
 end
@@ -187,7 +188,7 @@ dayOffset = cumsum(wrap) * 86400;         % add 24h when needed
 times_seconds = secs + dayOffset;
 
 %Check to see if there is a starting time and compute the offset
-if ~isnan(start_time) | isempty(start_time)
+if (ischar(start_time) || isstring(start_time)) && ~isempty(start_time)
     start_offset = times_seconds(1) - seconds(timeofday(datetime(start_time)));
     assert(start_offset>=0,'Start time is later than first time point.')
 else

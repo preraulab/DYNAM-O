@@ -15,7 +15,8 @@ function [zscored, mu, sigma] = nanzscore(data, varargin)
 %
 %   Note:
 %       Only non-NaN elements of data are used to compute the z-score.
-%       The resulting zscored array is the same size as the non-NaN subset.
+%       The resulting zscored array matches the size of data, with NaN
+%       preserved at every position where data was NaN.
 %
 % =========================================================================
 %                  DYNAM-O Toolbox  |  Prerau Laboratory
@@ -41,7 +42,8 @@ function [zscored, mu, sigma] = nanzscore(data, varargin)
 %
 % =========================================================================
 inds = ~isnan(data);
-[zscored, mu, sigma] = zscore(data(inds),varargin{:});
+zscored = nan(size(data));
+[zscored(inds), mu, sigma] = zscore(data(inds),varargin{:});
 
 % %NANZSCORE compute zscores ignoring nans
 % if any(isnan(data))
