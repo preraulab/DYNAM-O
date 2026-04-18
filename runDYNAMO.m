@@ -283,7 +283,6 @@ if isempty(time_range)
     time_range = stage_times(valid_stage_inds([1, end]));
 end
 
-
 %Cast stage_vals to single for interpolations
 stage_vals = single(stage_vals);
 
