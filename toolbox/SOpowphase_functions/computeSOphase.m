@@ -1,10 +1,58 @@
 function [SOphase, SOphase_times, SOphase_stages, filtdata] = computeSOphase(varargin)
-% COMPUTESOPHASE computes slow-oscillation phase
-
+%COMPUTESOPHASE  Compute slow-oscillation phase from EEG using bandpass filtering and Hilbert transform
+%
+%   Usage:
+%       [SOphase, SOphase_times, SOphase_stages, filtdata] = computeSOphase(EEG, Fs, ...)
+%
+%   Required Inputs:
+%       EEG:    [1xN] double - timeseries EEG data -- required
+%       Fs:     double - sampling frequency of data (Hz) -- required
+%
+%   Optional Inputs:
+%       stage_times:    [1xS] double - stage onset times (s) (default: [])
+%       stage_vals:     [1xS] double - sleep stage values 5=W,4=R,3=N1,2=N2,1=N3 (default: [])
+%       EEG_times:      [1xN] double - timestamps for each EEG sample (default: 0:1/Fs:...)
+%       isexcluded:     [1xN] logical - mask for excluded time points (default: all false)
+%       SO_freqrange:   [1x2] double - SO frequency band in Hz (default: [0.3, 1.5])
+%       SOphase_filter: digitalFilter - custom bandpass filter for SO phase estimation (default: [])
+%
+%   Outputs:
+%       SOphase:        [1xN] double - unwrapped SO phase timeseries (radians)
+%       SOphase_times:  [1xN] double - timestamps for SOphase samples (s)
+%       SOphase_stages: [1xN] double - sleep stage at each SOphase time point
+%       filtdata:       [1xN] double - bandpass-filtered EEG data used for phase estimation
+%
+%   Notes:
+%       To use a custom precomputed SO phase filter, pass via the 'SOphase_filter' argument:
+%           custom_SOphase_filter = designfilt('bandpassfir', ...);
+%
 % To use a custom precomputed SO phase filter, use the 'SOphase_filter' argument
 % custom_SOphase_filter = designfilt('bandpassfir', 'StopbandFrequency1', 0.1, 'PassbandFrequency1', 0.4, ...
 %                        'PassbandFrequency2', 1.75, 'StopbandFrequency2', 2.05, 'StopbandAttenuation1', 60, ...
 %                        'PassbandRipple', 1, 'StopbandAttenuation2', 60, 'SampleRate', 256);
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
+%
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
+%   GITHUB     https://github.com
+%
+%   ATTRIBUTION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%   in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%   for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
 
 %% Parse input
 %Input Error handling

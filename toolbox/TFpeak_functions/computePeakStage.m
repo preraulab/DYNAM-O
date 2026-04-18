@@ -1,35 +1,48 @@
 function [ stats_table ] = computePeakStage(varargin)
-% COMPUTEPEAKSTAGE: Compute the sleep stage for each TF peak in stats_table
+%COMPUTEPEAKSTAGE  Compute the sleep stage for each TF peak in stats_table
 %
 %   Usage:
-%       [ stats_table ] = computePeakStage(stats_table, stage_times, stage_vals, t_time_range, artifacts)
+%       stats_table = computePeakStage(stats_table, stage_times, stage_vals, t_time_range, artifacts)
 %
-% INPUTS:
-%   stats_table  --  a table of TFpeaks and their features. PeakTime is a
-%                    required feature in this table.
-%   stage_times  --  double or single - timestamps of stage_vals
-%   stage_vals   --  double or single - sleep stage values at eaach time in
-%                    stage_times. Note the staging convention:
-%                    0=unidentified, 1=N3, 2=N2, 3=N1, 4=REM, 5=WAKE
-%   t_artifacts  --  time for each EEG data sample used to compute the
-%                    input stats_table and artifacts. If `time_range` is
-%                    used during computeTFPeaks(), then must pass in the
-%                    t_time_range output from computeTFPeaks().
-%   artifacts    --  boolean vector indicating whether EEG data at each
-%                    time point is an artifact, used to interpolate
-%                    artifact stages (6=ARTIFACT) for TFpeaks.
+%   Required Inputs:
+%       stats_table: table - TFpeak stats table from computeTFPeaks(); must contain PeakTime -- required
+%       stage_times: [1xS] double or single - timestamps of stage_vals -- required
+%       stage_vals:  [1xS] double or single - sleep stage values at each time in stage_times.
+%                    Staging convention: 0=unidentified, 1=N3, 2=N2, 3=N1, 4=REM, 5=WAKE -- required
 %
-% OUTPUTS:
-%   stats_table: a table of TFpeaks with the PeakStage column added
+%   Optional Inputs:
+%       t_artifacts: [1xT] double - time vector for EEG data used to compute input stats_table.
+%                    If time_range was used in computeTFPeaks(), pass in t_time_range. (default: [])
+%       artifacts:   [1xT] logical - boolean vector marking artifact time points; used to assign
+%                    artifact stage (6=ARTIFACT) to TF peaks. (default: [])
+%
+%   Outputs:
+%       stats_table: table - input table with PeakStage column added
 %
 %
-%   Please provide the following citation for all use:
-%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-%       for Electroencephalographic Phenotyping and Biomarker Identification,
-%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
-%**********************************************************************
-
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
+%
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
+%   GITHUB     https://github.com
+%
+%   ATTRIBUTION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%   in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%   for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
 %% Parse inputs
 p = inputParser;
 

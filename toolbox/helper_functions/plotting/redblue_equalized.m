@@ -19,10 +19,29 @@ function map = redblue_equalized(N_raw, min_L, white_prct)
 %     colormap(redblue_equalized);
 %     caxis([-8 8]); %Must set +- caxes to be equal magnitude to center on zero
 %
-%   Copyright 2024 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
 %
-%   Last modified 02/19/2022
-%********************************************************************
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
+%   GITHUB     https://github.com
+%
+%   ATTRIBUTION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%   in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%   for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
 
 %Set default N
 if nargin<1

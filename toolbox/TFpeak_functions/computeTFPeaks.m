@@ -1,20 +1,19 @@
 function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts] = computeTFPeaks(varargin)
-%COMPUTETFPKEAKS: Run watershed algorithm to extract time-frequency peaks
-%                 from spectrogram of data
+%COMPUTETFPEAKS  Run watershed algorithm to extract time-frequency peaks from a spectrogram
 %
 %   Usage:
 %       [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts] = ...
 %               computeTFPeaks(data, Fs, stage_times, stage_vals, <options>)
 %
-%   Inputs:
-%       data (req):                [nx1] double - timeseries data to be analyzed
-%       Fs (req):                  double - sampling frequency of data (Hz)
-%       stage_times (req):         [1xm] double or single - timestamps of stage_vals
-%       stage_vals (req):          [1xm] double or single - sleep stage values at eaach time in
-%                                  stage_times. Note the staging convention: 0=unidentified, 1=N3,
-%                                  2=N2, 3=N1, 4=REM, 5=WAKE
+%   Required Inputs:
+%       data:                      [1xN] double - timeseries data to be analyzed -- required
+%       Fs:                        double - sampling frequency of data (Hz) -- required
+%       stage_times:               [1xM] double or single - timestamps of stage_vals -- required
+%       stage_vals:                [1xM] double or single - sleep stage values at each time in
+%                                  stage_times. Staging convention: 0=unidentified, 1=N3,
+%                                  2=N2, 3=N1, 4=REM, 5=WAKE -- required
 %
-%   Optional inputs:
+%   Optional Inputs:
 %       t_data (opt):              [1xn] double - timestamps for data. Default = (0:length(data)-1)/Fs
 %       time_range (opt):          [1x2] double - section of EEG to use in analysis (seconds).
 %                                  Default = [min(t_data), max(t_data)]
@@ -86,13 +85,29 @@ function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, art
 %       artifacts:          1xT logical of times flagged as artifacts (logical OR of hf and bb artifacts)
 %
 %
-%   Please provide the following citation for all use:
-%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-%       for Electroencephalographic Phenotyping and Biomarker Identification,
-%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
-%**********************************************************************
-
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
+%
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
+%   GITHUB     https://github.com
+%
+%   ATTRIBUTION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%   in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%   for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
 %%
 % If a struct is input with settings/params, detect and reformat it to work with the input parser below.
 struct_ind = cellfun(@isstruct,varargin); % Get index of the struct
@@ -392,18 +407,18 @@ baseline_exclude_stimes = logical(interp1(t_time_range, single(baseline_exclude)
 % Applying time period trimming for baseline computation
 baseline_range_inds = stimes >= baseline_range(1) & stimes <= baseline_range(2);
 
-% Exclude segments with artifact/not in baseline include or not within baseline_range for baseline computation
-spect_bl = spect;
-spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
-
 % Find valid time points to compute baseline
 valid_baseline_inds = ~baseline_exclude_stimes & baseline_range_inds;
 if ~any(valid_baseline_inds)
     error('No valid baseline time bins remain after applying artifacts, stage filtering, and baseline_range.');
 end
 
+% Copy only valid columns and NaN zeros for percentile computation
+spect_bl = spect(:, valid_baseline_inds);
+spect_bl(spect_bl==0) = NaN;
+
 % Compute baseline
-baseline = prctile(spect_bl(:, valid_baseline_inds), baseline_ptile, 2); % 2 here indicates along second dimension
+baseline = prctile(spect_bl, baseline_ptile, 2); % 2 here indicates along second dimension
 end
 
 

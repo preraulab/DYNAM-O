@@ -23,10 +23,29 @@ function [hann_spectrogram,stimes,sfreqs] = hann_event_spectra(varargin)
 %       stimes: 1xT vector of times for the center of the spectral bins
 %       sfreqs: 1xF vector of frequency bins for the spectrogram
 %
-%    Copyright 2024 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
-%    Authors: Michael J. Prerau, Ph.D., Mingjian He
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
 %
-%% ********************************************************************
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
+%   GITHUB     https://github.com
+%
+%   ATTRIBUTION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%   in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%   for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
 
 %% PROCESS DATA AND PARAMETERS
 %Process user input
@@ -286,7 +305,6 @@ function ydB = nanpow2db(y)
 %
 %   y1 = pow2db(2000/2)     % Answer in db
 
-%   Copyright 2006-2014 The MathWorks, Inc.
 % EDITED BY MJP 2/7/2020
 
 %#codegenr

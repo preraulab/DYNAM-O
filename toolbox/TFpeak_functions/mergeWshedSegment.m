@@ -7,7 +7,7 @@ function [regions, borders] = mergeWshedSegment(data,regions,region_lbls,borders
 % Usage:
 %   [regions, borders] = mergeWshedSegment(data,regions,region_lbls,borders,adj_list,merge_thresh,max_merges,merge_rule,f_verb,verb_pref,f_disp)
 %
-% INPUTS:
+%   Inputs:
 %   data         -- 2D matrix of image data. defaults to peaks(100).
 %   regions          -- 1D cell array of vector lists of linear idx of all pixels for each region.
 %   region_lbls     -- vector of region labels.
@@ -24,21 +24,36 @@ function [regions, borders] = mergeWshedSegment(data,regions,region_lbls,borders
 %   f_disp       -- flag indicator of whether to plot.
 %                   defaults to 0, unless using default data.
 %
-% OUTPUTS:
+%   Outputs:
 %   region, borders -- versions of inputs after merger
 %
 %
-%   Please provide the following citation for all use:
-%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-%       for Electroencephalographic Phenotyping and Biomarker Identification,
-%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
-%
-%**********************************************************************
-
 %*************************
 % Handle variable inputs *
 %*************************
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
+%
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
+%   GITHUB     https://github.com
+%
+%   ATTRIBUTION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%   in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%   for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
 if nargin < 1 || isempty(data)
     error('Data must be specified')
 end
@@ -153,6 +168,9 @@ num_regions = length(regions);
 if num_regions == 1
     return
 end
+
+% Precompute label-to-index map for O(1) lookups in mergeRegions
+lbl_map = containers.Map(region_lbls, 1:length(region_lbls));
 [max_wt,max_idx] = max(ematr(:,3));
 
 % Set dynamic merge_thresh if merge_thresh is nan
@@ -179,7 +197,7 @@ while ~isempty(ematr) && max_wt > merge_thresh && num_merges < max_merges && num
     mrg_from = ematr(max_idx(1),2);
 
     % Merge regions
-    [regions, borders, ematr, pick_update] = mergeRegions(regions,mrg_to,mrg_from,region_lbls,borders,ematr);
+    [regions, borders, ematr, pick_update] = mergeRegions(regions,mrg_to,mrg_from,region_lbls,borders,ematr,lbl_map);
 
     % Update edge weights
     if ~isempty(find(pick_update,1))

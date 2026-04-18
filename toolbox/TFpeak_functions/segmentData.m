@@ -4,7 +4,7 @@ function  [data_segs, x_segs, x_inds] = segmentData(spect, stimes, sfreqs, seg_t
 %   Usage:
 %       [data_segs, x_segs, x_inds] = segmentData(spect, stimes, sfreqs, seg_time, f_verb, verb_pref)
 %
-% INPUTS:
+%   Inputs:
 %   spect         -- 2D matrix of image data. defaults to peaks(100).
 %   stimes        -- x axis of image data. default 1:size(data,2).
 %   sfreqs        -- y axis of image data. default 1:size(data,1).
@@ -14,22 +14,38 @@ function  [data_segs, x_segs, x_inds] = segmentData(spect, stimes, sfreqs, seg_t
 %                   1 - output current function level.
 %   verb_pref    -- prefix string for verbose output. defaults to ''.
 %
-% OUTPUTS:
+%   Outputs:
 %   data_segs: segmented spectrogram data
 %   x_segs: x-values for segmented spectrogram data
 %   x_inds: x-value indices for segmented spectrogram data
 %
 %
-%   Please provide the following citation for all use:
-%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-%       for Electroencephalographic Phenotyping and Biomarker Identification,
-%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
-%**********************************************************************
-
 %*************************
 % Handle variable inputs *
 %*************************
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
+%
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
+%   GITHUB     https://github.com
+%
+%   ATTRIBUTION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%   in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%   for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
 if nargin < 1 || isempty(spect)
     % The 2d matrix to be analyzed
     error('Spectrogram must be specified')
@@ -50,12 +66,12 @@ if nargin < 4 || isempty(seg_time)
     seg_time = 30;
 end
 
-if nargin < 17 || isempty(f_verb)
+if nargin < 5 || isempty(f_verb)
     % indicator for level of output verbosity
     f_verb = 0;
 end
 
-if nargin < 18 || isempty(verb_pref)
+if nargin < 6 || isempty(verb_pref)
     % prefix string for verbose outputs
     verb_pref = '';
 end

@@ -1,19 +1,42 @@
-function plot_SOPH_paramfits( ...
-    power_bins, power_wshed_img, SOPH_pow, model_SOPH_pow, params_pow, SOPH_clim_prctiles_pow, power_limits, freq_limits_pow, ...
+function plot_SOPH_paramfits(power_bins, power_wshed_img, SOPH_pow, model_SOPH_pow, params_pow, SOPH_clim_prctiles_pow, power_limits, freq_limits_pow, ...
     phase_bins, phase_wshed_img, SOPhH_phase, model_SOPhH_phase, params_phase, SOPH_clim_prctiles_phase, phase_limits, freq_limits_phase, ...
     freq_bins, power_fitobj, phase_fitobj)
-
 %PLOT_SOPH_PARAMFITS  Plot SOPH histograms and parametric Gaussian peak reconstructions in one figure.
 %
 %   Plots SO-Power (top row) and SO-Phase (bottom row) histograms,
 %   watershed segmentations, and their parametric reconstructions in a 2x3 layout.
 %
 %   See also: PARAM_BASIS_POWER and PARAM_BSIS_PHASE
+%
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
+%
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
+%   GITHUB     https://github.com
+%
+%   ATTRIBUTION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%   in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%   for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
 
 % Hover distance threshold (fraction of axis diagonal). Tweak this value as desired.
 hover_dist_threshold = 0.05;  % 0.05 = 5% of axis diagonal
 
-f = figure;
+% Create invisible; visibility restored at end for interactive callers.
+f = figure('Visible','off');
 ax = figdesign(f, 2, 3, ...
     'type', 'usletter', ...
     'orient', 'landscape', ...
@@ -33,33 +56,30 @@ setappdata(f, 'phase_ax', ax(6));
 % Helper function for one row
     function plot_paramfit(ax_handles, x_bins, freq_bins, wshed_img, hist_mat, model_mat, params, cmap, type_str, xlabel_str, fitLabel, clim_prctiles, x_limits, freq_limits, plot_type)
         % --- Watershed segmentation
-        axes(ax_handles(1))
-        hImg1 = imagesc(x_bins, freq_bins, wshed_img);
+        hImg1 = imagesc(ax_handles(1), x_bins, freq_bins, wshed_img);
         set(hImg1, 'HitTest', 'off', 'PickableParts', 'none'); % images shouldn't capture datatips
-        axis xy
-        ylabel('Frequency (Hz)');
-        title('Watershed Segmentation')
+        axis(ax_handles(1),'xy')
+        ylabel(ax_handles(1), 'Frequency (Hz)');
+        title(ax_handles(1), 'Watershed Segmentation')
 
         % --- Original histogram
-        axes(ax_handles(2))
-        hImg2 = imagesc(x_bins, freq_bins, hist_mat');
+        hImg2 = imagesc(ax_handles(2), x_bins, freq_bins, hist_mat');
         set(hImg2, 'HitTest', 'off', 'PickableParts', 'none');
-        axis xy
-        colorbar_noresize;
-        colormap(gca, cmap);
-        xlabel(xlabel_str);
-        title(['Original ' type_str ' Histogram'])
+        axis(ax_handles(2),'xy')
+        colorbar_noresize(ax_handles(2));
+        colormap(ax_handles(2), cmap);
+        xlabel(ax_handles(2), xlabel_str);
+        title(ax_handles(2), ['Original ' type_str ' Histogram'])
 
         % --- Fitted modes
-        axes(ax_handles(3))
-        hImg3 = imagesc(x_bins, freq_bins, model_mat);
+        hImg3 = imagesc(ax_handles(3), x_bins, freq_bins, model_mat);
         set(hImg3, 'HitTest', 'off', 'PickableParts', 'none'); % disable datatips for image
-        axis xy
-        hold on
+        axis(ax_handles(3),'xy')
+        hold(ax_handles(3),'on')
 
         if ~isempty(params)
             % --- Plot the mode points (single line object with multiple markers)
-            hPts = plot(params(:, 4), params(:, 2), 'o', ...
+            hPts = plot(ax_handles(3), params(:, 4), params(:, 2), 'o', ...
                 'markersize', 8, 'MarkerEdgeColor', 'k', 'MarkerFaceColor', 'r', 'LineStyle', 'none');
 
             % Clear default data tip rows - most compatible method (old-style approach)
@@ -131,26 +151,25 @@ setappdata(f, 'phase_ax', ax(6));
             end
 
             % Colorbar, colormap and titles
-            c = colorbar_noresize;
+            c = colorbar_noresize(ax_handles(3));
             c.Label.String = fitLabel;
             c.Label.Rotation = -90;
             c.Label.VerticalAlignment = "bottom";
-            colormap(gca, cmap);
-            title(['Model ' type_str ' Histogram and Modes'])
+            colormap(ax_handles(3), cmap);
+            title(ax_handles(3), ['Model ' type_str ' Histogram and Modes'])
 
             % Additional layout / scaling adjustments
             linkcaxes(ax_handles(2:3));
-            axes(ax_handles(2))
             if any(hist_mat(:) ~= 0)
                 c_ptiles = prctile(hist_mat(hist_mat(:)~=0), clim_prctiles);
             else
                 c_ptiles = prctile(hist_mat(:), clim_prctiles);
             end
-            clim([c_ptiles(1) c_ptiles(2)]);
+            clim(ax_handles(2), [c_ptiles(1) c_ptiles(2)]);
             linkaxes(ax_handles)
-            axis tight
-            xlim(x_limits)
-            ylim(freq_limits)
+            axis(ax_handles(2),'tight')
+            xlim(ax_handles(2), x_limits)
+            ylim(ax_handles(2), freq_limits)
             set(ax_handles, 'fontsize', 10)
         end
     end
@@ -254,4 +273,10 @@ set(f, 'WindowButtonMotionFcn', @(src,evt) hoverModeContour(src));
 
 % Clean up on figure close
 set(f, 'DeleteFcn', @(src,evt) delete(findobj(f, 'Tag', 'mode_contour')));
+
+% Restore visibility for interactive callers (batch runs set root
+% DefaultFigureVisible='off' so the figure stays hidden there).
+if strcmp(get(groot, 'DefaultFigureVisible'), 'on')
+    set(f, 'Visible', 'on');
+end
 end

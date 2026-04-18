@@ -6,7 +6,7 @@ function e_wts = computeMergeWeights(rgn,data,rgn_lbls,rgn_bnds,amatr,merge_rule
 % Usage:
 %    e_wts = computeMergeWeights(rgn,data,rgn_lbls,rgn_bnds,amatr,merge_rule,f_verb,verb_pref)
 %
-% INPUTS:
+%   Inputs:
 %   rgn      -- a 1D cell array with each cell containing a vector of linear
 %               indices of the pixels in the region.
 %   data     -- the 2D image matrix from which the regions were identified.
@@ -19,15 +19,37 @@ function e_wts = computeMergeWeights(rgn,data,rgn_lbls,rgn_bnds,amatr,merge_rule
 %               each row contains region lables of two adjacent regions.
 %               the first column are "to regions", and the second column
 %               are "from regions.
-%   merge_rule --
+%   merge_rule  - char   - merge weight formula to use; currently only
+%                          'default' is implemented (reserved for future
+%                          alternative merge rules). Pass [] to use default.
 %
-% OUTPUTS:
+%   Outputs:
 %   e_wts -- a vector storing the edge weights, one for each row of directed
 %            adjacency in amatr.
 %
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
 %
-%   Authors: Patrick Stokes, Thomas Possidente, Michael Prerau
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
+%   GITHUB     https://github.com
 %
+%   ATTRIBUTION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%   in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%   for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
 
 if nargin < 8
     verb_pref = [];

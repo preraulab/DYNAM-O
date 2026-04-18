@@ -8,7 +8,7 @@ function [stats_table, regions, borders] = extractTFPeaks(img,x,y,features,num_s
 %       merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,...
 %       bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
 %
-% INPUTS:
+%   Inputs:
 %   img          -- 2D matrix of image data. defaults to peaks(100).
 %   x            -- x axis of image data. default 1:size(data,2).
 %   y            -- y axis of image data. default 1:size(data,1).
@@ -39,23 +39,38 @@ function [stats_table, regions, borders] = extractTFPeaks(img,x,y,features,num_s
 %   verb_pref    -- prefix string for verbose output. defaults to ''.
 %   f_disp       -- flag indicator of whether to plot.
 %                   defaults to 0, unless using default data.
-% OUTPUTS:
+%   Outputs:
 %   stats_table  -- Table of peak statistics. Each row is a peak.
 %   regions      -- A cell array of linear indices of peak regions in the current image.
 %   borders      -- A cell array of linear indices of peak borders in the current image.
 %
 %
-%   Please provide the following citation for all use:
-%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-%       for Electroencephalographic Phenotyping and Biomarker Identification,
-%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
-%
-%**********************************************************************
-
 %*************************
 % Handle variable inputs *
 %*************************
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
+%
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
+%   GITHUB     https://github.com
+%
+%   ATTRIBUTION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%   in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%   for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
 if nargin < 1
     img = [];
 end

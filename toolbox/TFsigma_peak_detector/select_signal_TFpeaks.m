@@ -1,7 +1,48 @@
 function [ signal_idx, fig_compare ] = select_signal_TFpeaks(tpeak_properties, plot_on)
-% A new way of identifying TF peak signals using Kmeans clustering on
-% bandwith and duration dimensions and then joining booleans
-
+%SELECT_SIGNAL_TFPEAKS  Identify TF peak signals using K-means clustering on prominence and morphological features
+%
+%   Usage:
+%       [signal_idx, fig_compare] = select_signal_TFpeaks(tpeak_properties, plot_on)
+%
+%   Inputs:
+%       tpeak_properties: struct - TF peak properties with fields:
+%                           .proms:                [1xP] double - peak prominences
+%                           .durations:            [1xP] double - peak durations (s)
+%                           .central_frequencies:  [1xP] double - peak center frequencies (Hz)
+%                           .bandwidths:           [1xP] double - peak bandwidths (Hz)
+%       plot_on:          logical - display clustering histograms (default: false)
+%
+%   Outputs:
+%       signal_idx:  [1xP] logical - true for peaks classified as signal TF peaks
+%       fig_compare: figure handle - histogram comparison figure ([] if plot_on is false)
+%
+%   Notes:
+%       Uses K-means clustering (3 clusters) independently on 5 feature dimensions and then
+%       combines the boolean cluster memberships to separate signal from noise peaks.
+%
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
+%
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
+%   GITHUB     https://github.com
+%
+%   ATTRIBUTION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%   in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%   for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
 if nargin < 2
     plot_on = false;
 end
