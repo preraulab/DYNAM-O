@@ -196,11 +196,14 @@ timings.pool_setup = toc(t_stage);
 
 %Pre-build trim MEX on the client, ONCE, before any parfor. This avoids
 %every worker racing to compile the same file simultaneously (N workers
-%= N concurrent build_trim_mex calls writing to the same output).
+%= N concurrent build_trim_mex calls writing to the same output). The
+%build is attempted on every platform that has a .mex* file missing;
+%trim_region_mex runs on every pool context except ThreadPool workers
+%(see trimWshedRegions.m for the runtime gate), so the build is
+%worthwhile on every host including Apple Silicon.
 t_stage = tic;
 mex_name_ = ['trim_region_mex.' mexext];
-is_apple_silicon_ = ismac && strcmp(computer('arch'), 'maca64');
-if ~is_apple_silicon_ && exist(mex_name_, 'file') ~= 3 && exist('build_trim_mex', 'file') == 2
+if exist(mex_name_, 'file') ~= 3 && exist('build_trim_mex', 'file') == 2
     try
         fprintf('  Compiling trim_region_mex for this platform (first-time only)...\n');
         build_trim_mex();
@@ -213,7 +216,7 @@ if ~is_apple_silicon_ && exist(mex_name_, 'file') ~= 3 && exist('build_trim_mex'
         fprintf('  MEX compilation failed; using stock MATLAB path.\n');
     end
 end
-clear mex_name_ is_apple_silicon_ mex_dir_
+clear mex_name_ mex_dir_
 timings.mex_build = toc(t_stage);
 
 %Report configuration
