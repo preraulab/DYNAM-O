@@ -247,38 +247,45 @@ DYNAMOFileManager();
 
 ### What runs where
 
-The pipeline auto-detects the best parallel-pool type and MEX availability on first run. You don't need to configure anything unless you want to override the defaults.
+The pipeline uses a single default on every platform: **ProcessPool + MEX**. ThreadPool is supported as an explicit opt-in for users who want it (primarily on 8-core Apple Silicon, where it can still edge out ProcessPool on full-night runs).
 
 | Platform | Default pool | Trim MEX | Notes |
 |---|---|---|---|
-| **Apple Silicon macOS** (M1/M2/M3) | **ThreadPool** | Auto-disabled (MATLAB forbids MEX in thread workers) | Unified memory + low Mach IPC makes ThreadPool the winning choice |
-| **Intel macOS** | ProcessPool or ThreadPool (similar) | Enabled if compiler set up (may be unavailable on older Macs) | |
-| **Linux** | **ProcessPool** | Enabled | NUMA locality + MEX win; scales to 20+ cores |
-| **Windows** | **ProcessPool** | Enabled | ThreadPool scales poorly; ProcessPool is clearly faster |
+| **Apple Silicon macOS** (M1/M2/M3/M4) | **ProcessPool** | Enabled | MEX runs inside ProcessPool workers on every host; the `'Threads'` override below still wins by ~8% on 8-core M2/M3 for full-night recordings |
+| **Intel macOS** | **ProcessPool** | Enabled if a C++ compiler is configured, else MATLAB fallback | |
+| **Linux** | **ProcessPool** | Enabled (GCC MEX) | NUMA locality + MEX; scales cleanly to 20+ cores |
+| **Windows** | **ProcessPool** | Enabled (MSVC MEX) | ProcessPool is clearly faster than ThreadPool on Windows regardless of core count |
 
-The auto-detection is in `setup_parallel_pool` (platform → pool type) and `trimWshedRegions` (platform → MEX on/off). Both live under `toolbox/` and are on the MATLAB path after the first `runDYNAMO` call.
+Both defaults are in `setup_parallel_pool.m` (pool type → ProcessPool) and `trimWshedRegions.m` (MEX on/off → runtime ThreadPool detection with a safe-disable fallback). Both live under `toolbox/` and are on the MATLAB path after the first `runDYNAMO` call. The MEX gate is not machine-specific: it inspects the current pool at runtime and auto-disables inside a ThreadPool worker (where MATLAB hard-blocks MEX execution), otherwise enables.
 
 ### Override parallel mode
 
-If you need to force a specific pool:
-
 ```matlab
 det = detection_opts();
-det.parallel_mode = 'Processes';   % force ProcessPool (e.g., to use MEX on Apple Silicon in serial mode)
-det.parallel_mode = 'Threads';     % force ThreadPool
-det.parallel_mode = '';            % auto-detect (default)
-[stats_table, ~, ~, ~, ~, ~, ~, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, 'detection_options', det);
+det.parallel_mode = 'Processes';   % default (ProcessPool + MEX)
+det.parallel_mode = 'Threads';     % force ThreadPool; trim_region_mex auto-disables, MATLAB fallback is bit-identical
+det.parallel_mode = '';            % same as 'Processes'
+[stats_table, ~, ~, ~, ~, ~, ~, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, ...
+    baseline_opts(), det);
 ```
+
+- **`'Processes'`** — the default. Creates a ProcessPool; `trim_region_mex` runs inside each worker. This is the fastest path on every platform we've characterized except 8-core Apple Silicon at full-night scale.
+- **`'Threads'`** — forces a ThreadPool. `trim_region_mex` detects the ThreadPool context at runtime and falls back to the pure-MATLAB trim path, which is bit-identical. The override is useful on 8-core Apple Silicon, where Mach-IPC cost makes ProcessPool slower than ThreadPool despite the MEX win. On 16+-core Apple Silicon (M4 Max and up) and on all Linux/Windows hosts, the override will run slower and should only be used for debugging or reproduction.
+- **`''`** (empty) — treated identically to `'Processes'`.
+
+The `DYNAMO` class exposes the same knob via `d.detection_options.parallel_mode`.
 
 ### Expected runtimes on bundled `'night'` example
 
 | Platform | Wallclock |
 |---|---|
-| Mac M3 (Apple Silicon, 8 threads) | ~125-140 s |
-| Linux 20-worker ProcessPool | ~50 s |
-| Windows 6-core ProcessPool | ~150-220 s (depends on CPU generation) |
+| Apple M3 Mac (8 cores, ProcessPool) | ~55-65 s |
+| Apple M4 Max (16 cores, ProcessPool) | ~55 s |
+| Linux 24-core Threadripper (ProcessPool) | ~60-65 s |
+| Linux 32-core Threadripper (ProcessPool) | ~35-40 s |
+| Windows 6-core Ryzen (ProcessPool) | ~210-230 s |
 
-Single-run variance on Mac is ±10-15 s due to thermal / OS scheduling. For benchmarking, run 3-5 times and take the median.
+Single-run variance is typically ±5-15% depending on thermal / OS scheduling. For benchmarking, run 3-5 times and take the median.
 
 > If a run on the bundled `'segment'` example takes more than ~5 minutes without producing any output in the Command Window, something is wrong — most often a stalled parallel pool startup, a missing submodule, or antivirus scanning the MEX compile. Check the Troubleshooting section below.
 
