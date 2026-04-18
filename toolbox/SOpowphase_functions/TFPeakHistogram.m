@@ -1,7 +1,66 @@
 function [C_mat, freq_cbins, C_cbins, time_in_bin, prop_in_bin, peak_at_freq] = TFPeakHistogram(varargin)
-% TFPEAKHISTOGRAM computes 2D histogram values for TFpeaks frequency
-% (y-axis) against an arbitrary C metric (x-axis)
-
+%TFPEAKHISTOGRAM  Compute 2D histogram of TF peak frequency against an arbitrary C metric
+%
+%   Usage:
+%       [C_mat, freq_cbins, C_cbins, time_in_bin, prop_in_bin, peak_at_freq] = TFPeakHistogram(Cmetric, Cmetric_stages, ...)
+%
+%   Required Inputs:
+%       Cmetric:                [1xM] double - C-metric timeseries values -- required
+%       Cmetric_stages:         [1xM] double/logical - sleep stage or mask for each C-metric sample -- required
+%       Cmetric_times_step:     double - time step between C-metric samples (s) -- required
+%       Cmetric_valid:          [1xM] logical - valid (non-artifact) mask for C-metric -- required
+%       Cmetric_valid_allstages:[1xM] logical - valid mask across all stages -- required
+%       TFpeak_freqs:           [1xP] double - frequency of each TF peak (Hz) -- required
+%       peak_Cmetric:           [1xP] double - C-metric value at each TF peak -- required
+%
+%   Optional Inputs (see SOpowerphasehist_opts() for SOPH parameter defaults):
+%       circular_Cmetric:  logical - treat C-metric as circular (default: false)
+%       circular_bounds:   [1x2] double - bounds for circular C-metric (default: [-pi, pi])
+%       Cmetric_label:     char - label for C-metric axis (default: 'C-metric')
+%       xlabel_text:       char - x-axis label string (default: 'C metric')
+%       C_range:           [1x2] double - min/max C-metric range (default: [])
+%       C_binsizestep:     [1x2] double - [bin size, step] for C-metric axis (default: [])
+%       freq_range:        [1x2] double - frequency range in Hz (default: from SOpowerphasehist_opts)
+%       freq_binsizestep:  [1x2] double - [size, step] for frequency axis (default: from opts)
+%       norm_dim:          integer - normalization dimension (0=none, 1=normalize by row) (default: 0)
+%       compute_rate:      logical - compute histogram as rate (peaks/min) (default: true)
+%       norm_method:       char - additional normalization method (default: '')
+%       min_time_in_bin:   double - minimum time in bin (minutes) to include (default: 0)
+%       min_peak_at_freq:  double - minimum peaks at frequency to include (default: 0)
+%       plot_on:           logical - plot histogram (default: false)
+%       verbose:           logical - verbose output (default: true)
+%
+%   Outputs:
+%       C_mat:          [BxF] double - 2D histogram matrix (C-bins x frequency bins)
+%       freq_cbins:     [1xF] double - frequency bin centers (Hz)
+%       C_cbins:        [1xB] double - C-metric bin centers
+%       time_in_bin:    [1xB] double - time (minutes) in each C-metric bin
+%       prop_in_bin:    [1xB] double - proportion of total time in each bin
+%       peak_at_freq:   [1xF] double - number of TF peaks in each frequency bin
+%
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
+%
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
+%   GITHUB     https://github.com
+%
+%   ATTRIBUTION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%   in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%   for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
 %% Parse input
 p = inputParser;
 

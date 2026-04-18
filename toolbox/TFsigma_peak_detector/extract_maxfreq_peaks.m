@@ -1,6 +1,44 @@
 function [ freq_TFpeaks, y, cutoffs ] = extract_maxfreq_peaks(max_curve, bin_centers, MinPeakProm, smoothing_samples, plot_on)
-%Identify the peaks on max frequency distribution density curve
-
+%EXTRACT_MAXFREQ_PEAKS  Identify peaks on the maximum frequency distribution density curve
+%
+%   Usage:
+%       [freq_TFpeaks, y, cutoffs] = extract_maxfreq_peaks(max_curve, bin_centers, MinPeakProm, smoothing_samples, plot_on)
+%
+%   Inputs:
+%       max_curve:         [1xB] double - maximum frequency density curve -- required
+%       bin_centers:       [1xB] double - center of each frequency bin (Hz) -- required
+%       MinPeakProm:       double - minimum peak prominence for detection (default: 0.05)
+%       smoothing_samples: integer - number of samples for Savitzky-Golay smoothing (default: 100)
+%       plot_on:           logical or axes handle - plot results if nonzero (default: false)
+%
+%   Outputs:
+%       freq_TFpeaks: table - detected frequency peaks with properties
+%       y:            [1xB] double - smoothed density curve
+%       cutoffs:      [1xK] double - frequency cutoff values between adjacent peaks
+%
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
+%
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
+%   GITHUB     https://github.com
+%
+%   ATTRIBUTION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%   in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%   for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
 if nargin < 3
     MinPeakProm = 0.05;
     smoothing_samples = 100;

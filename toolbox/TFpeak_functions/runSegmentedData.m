@@ -1,4 +1,27 @@
 function [stats_table, regions, borders] = runSegmentedData(spect, stimes, sfreqs, varargin)
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
+%
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
+%   GITHUB     https://github.com
+%
+%   ATTRIBUTION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%   in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%   for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
 
 %RUNSEGMENTEDDATA  Segment, extract, and compile time-frequency peaks from a spectrogram
 %
@@ -36,13 +59,6 @@ function [stats_table, regions, borders] = runSegmentedData(spect, stimes, sfreq
 %   Notes:
 %       All optional inputs must be passed in exact order when using this version with addOptional.
 %
-%   Copyright 2024 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
-%   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
-%   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
-%
-%   Please cite:
-%       Stokes et al., Sleep, 2022, zsac223. https://doi.org/10.1093/sleep/zsac223
-% **********************************************************************
 
 % --------------------
 % Input validation

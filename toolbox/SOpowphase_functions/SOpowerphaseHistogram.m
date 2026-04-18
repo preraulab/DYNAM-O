@@ -1,19 +1,18 @@
 function [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, num_peaks_at_freq, SOpower_TIB, SOphase_TIB, peak_SOpower, peak_SOphase, peak_selection_inds, ...
     SOpower, SOpower_times, SOphase, SOphase_times, SOdata] = SOpowerphaseHistogram(varargin)
-% SOPOWERPHASEHISTOGRAM: Computes slow-oscillation power and phase histogram matrices
+%SOPOWERPHASEHISTOGRAM  Compute slow-oscillation power and phase histogram matrices
 %
 %   Usage:
 %       [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, num_peaks_at_freq, SOpower_TIB, SOphase_TIB, peak_SOpower, peak_SOphase, peak_selection_inds] = ...
 %                                 SOpowerphaseHistogram(data, Fs, TFpeak_freqs, TFpeak_times, <options>)
 %
-%   Inputs:
-%    REQUIRED:
-%       data: Nx1 double - timeseries EEG data --required
-%       Fs: numerical - sampling frequency of data (Hz) --required
-%       TFpeak_freqs: Px1 - frequency each TF peak occurs (Hz) --required
-%       TFpeak_times: Px1 - times each TF peak occurs (s) --required
+%   Required Inputs:
+%       data:           [Nx1] double - timeseries EEG data -- required
+%       Fs:             double - sampling frequency of data (Hz) -- required
+%       TFpeak_freqs:   [Px1] double - frequency each TF peak occurs (Hz) -- required
+%       TFpeak_times:   [Px1] double - times each TF peak occurs (s) -- required
 %
-%    OPTIONAL:
+%   Optional Inputs:
 %       TFpeak_stages: Px1 - sleep stage each TF peak occurs 5=W,4=R,3=N1,2=N2,1=N3
 %       stage_times: 1xS double or single - stage times
 %       stage_vals: 1xS double or single - numeric stage values 5=W,4=R,3=N1,2=N2,1=N3
@@ -57,13 +56,29 @@ function [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, num_p
 %       SOdata:                 1xN double - SO filtered timeseries data
 %
 %
-%   Please provide the following citation for all use:
-%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-%       for Electroencephalographic Phenotyping and Biomarker Identification,
-%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
-%**********************************************************************
-
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
+%
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
+%   GITHUB     https://github.com
+%
+%   ATTRIBUTION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%   in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%   for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
 %%
 % If a struct is input with settings/params, detect and reformat it to work with the input parser below.
 struct_ind = cellfun(@isstruct,varargin); % Get index of the struct

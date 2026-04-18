@@ -13,7 +13,39 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
     %   Usage:
     %       app = DYNAMOFileManager()
     %
-    %   See also: DYNAMO, matlab.apps.AppBase
+    %   See also: DYNAMO, runDYNAMO, matlab.apps.AppBase
+    %
+    % =========================================================================
+    %    ██████╗ ██╗   ██╗███╗   ██╗ █████╗ ███╗   ███╗        ██████╗
+    %    ██╔══██╗╚██╗ ██╔╝████╗  ██║██╔══██╗████╗ ████║       ██╔═══██╗
+    %    ██║  ██║ ╚████╔╝ ██╔██╗ ██║███████║██╔████╔██║  ███╗ ██║   ██║
+    %    ██║  ██║  ╚██╔╝  ██║╚██╗██║██╔══██║██║╚██╔╝██║  ╚══╝ ██║   ██║
+    %    ██████╔╝   ██║   ██║ ╚████║██║  ██║██║ ╚═╝ ██║       ╚██████╔╝
+    %    ╚═════╝    ╚═╝   ╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝     ╚═╝        ╚═════╝
+    %
+    % -------------------------------------------------------------------------
+    %    Characterizing Individualized Neural Dynamics in Sleep EEG
+    % -------------------------------------------------------------------------
+    %
+    %    Developed by the Prerau Laboratory
+    %    WEB:       https://sleepeeg.org
+    %    TUTORIALS: https://prerau.bwh.harvard.edu/dynam-o/
+    %    GITHUB:    https://github.com
+    %
+    %    ATTRIBUTION
+    %    If you use this toolbox in publications or derived work, please cite:
+    %
+    %    He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
+    %    "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+    %    in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+    %
+    %    Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+    %    Manoach, D. S., Stickgold, R., Prerau, M. J.
+    %    "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+    %   for Electroencephalographic Phenotyping and Biomarker Identification"
+    %    Sleep, 2022; zsac223. https://doi.org
+    %
+    % =========================================================================
 
     % ======================================================================
     %   PROPERTIES
@@ -26,6 +58,10 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         FileMenu                        matlab.ui.container.Menu        % Top-level 'File' menu
         LoadEDFFileListMenu             matlab.ui.container.Menu        % Menu item: load EDF path list
         LoadStagingFileListMenu         matlab.ui.container.Menu        % Menu item: load staging path list
+        ShowRunLogConsoleMenu           matlab.ui.container.Menu        % Menu item: toggle Run Log Console
+        HelpMenu                        matlab.ui.container.Menu        % Top-level 'Help' menu
+        HelpMenuItem                    matlab.ui.container.Menu        % Menu item: open README documentation in browser
+        AboutMenu                       matlab.ui.container.Menu        % Menu item: show About dialog
 
         % --- Top-Level Tab Group ---
         ProjectTabGroup                 matlab.ui.container.TabGroup    % Outer tab group (Setup / Analysis)
@@ -33,7 +69,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
         % --- Top-Level Layout Grids ---
         FullDYNAMOSetupGrid             matlab.ui.container.GridLayout  % Root grid inside DYNAMOSetupTab
-        HelpButton                      % CSSuiButton                   % Opens help dialog
+        HelpButton                      % CSSuiButton                   % Opens README documentation in browser
         BottomGrid                      matlab.ui.container.GridLayout  % Grid containing status, run buttons, time estimate
 
         % --- Time Estimate & Run Controls ---
@@ -75,6 +111,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         SaveParamImagesCheckBox         % CSSuiSwitch                   % Save parametric basis figures
         SaveDataSummaryCheckBox         % CSSuiSwitch                   % Save data summary figures
         SaveAuxDataCheckBox             % CSSuiSwitch                   % Save auxiliary data (.mat)
+        SaveLogsSwitch                  % CSSuiSwitch                   % Toggle saving of run/settings log files
         SaveSplineBasisCheckBox         % CSSuiSwitch                   % Save spline basis data
         SaveParamBasisCheckBox          % CSSuiSwitch                   % Save parametric basis data
         SaveSOPHsCheckBox               % CSSuiSwitch                   % Save SO-Power Histograms
@@ -107,6 +144,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         TimesColumnEditFieldLabel       % CSSuiLabel
         StagesColumnEditField           % CSSuiNumericField             % Column index for stage labels
         StagesColumnEditFieldLabel      % CSSuiLabel
+        ResampleSwitch                  % CSSuiSwitch                   % Toggle resampling on/off
+        ResampleFsEditField             % CSSuiNumericField             % Target sampling frequency for resampling
+        ResampleFsEditFieldLabel        % CSSuiLabel
 
         % --- Stage Label Inputs (Left Panel) ---
         UnknownEditField                % CSSuiEditField                % Identifiers for 'Unknown' stage
@@ -137,8 +177,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         StagingFileInstructionText      % CSSuiLabel                    % Instruction text for staging files
         DataLabel                       % CSSuiLabel                    % Displays 'Data (N Files)'
         DataFileInstructionText         % CSSuiLabel                    % Instruction text for data files
-        StagingListBox                  matlab.ui.control.ListBox       % Scrollable list of staging file paths
-        DataListBox                     matlab.ui.control.ListBox       % Scrollable list of EDF file paths
+        StagingListBox                  % CSSuiListBox                  % Scrollable list of staging file paths
+        DataListBox                     % CSSuiListBox                  % Scrollable list of EDF file paths
 
         % --- File List Action Buttons ---
         StagingFileButtonGrid           matlab.ui.container.GridLayout  % Grid for staging list action buttons
@@ -220,6 +260,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % -------------------------
         run_error_list          = {}    % Accumulated pre-run validation error messages
         isStopBatchButtonPushed = false % Flag set true when user clicks Stop; halts after current subject
+        use_no_stages  logical  = false % Flag set true when user confirms running with no stage files
         anything_run                    % Flag indicating at least one analysis was executed this iteration
         curr_datetime                   % Timestamp string for the current run (format: yyMMdd_HHmmSS)
         curr_iteration                  % Counter for total channel-subject iterations completed
@@ -235,9 +276,16 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         consolelog_fid    % File identifier (fopen) for the console log
 
         % -------------------------
+        %   Run Log Console
+        % -------------------------
+        LogConsoleFig         % Handle to the floating Run Log Console window
+        LogConsoleTextArea    % CSSuiTextArea inside the Run Log Console window
+        LogConsoleTimer       % Timer that polls the consolelog file for live updates
+
+        % -------------------------
         %   Miscellaneous UI
         % -------------------------
-        progress_bar   % SmoothProgressBar handle displayed in TimeEstimateGrid
+        ProgressBar   % SmoothProgressBar handle displayed in TimeEstimateGrid
 
         % -------------------------
         %   UI Dimension Constants
@@ -284,6 +332,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             if ~isempty(p.Results.ValidationCallback)
                 app.FileValidationCallback = p.Results.ValidationCallback;
             end
+            
+            v = ver;
+            if any(strcmp({v.Name}, 'Parallel Computing Toolbox')) && isempty(gcp('nocreate'))
+                gcp;
+            end
 
             sc = get(0, 'ScreenSize');
             app.WindowWidth             = min(app.WindowWidth, sc(3));   % Default figure width in pixels
@@ -305,6 +358,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %     filePaths – char or cell array of char, full file path(s) to add
 
             if ~iscell(filePaths), filePaths = {filePaths}; end
+            filePaths = setdiff(filePaths, app.DataList, 'stable');
             app.DataList = [app.DataList, filePaths];
             updateDataListBox(app);
         end
@@ -320,6 +374,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %     filePaths – char or cell array of char, full file path(s) to add
 
             if ~iscell(filePaths), filePaths = {filePaths}; end
+            filePaths = setdiff(filePaths, app.StagingList, 'stable');
             app.StagingList = [app.StagingList, filePaths];
             updateStagingListBox(app);
         end
@@ -419,6 +474,12 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.LoadStagingFileListMenu.MenuSelectedFcn = createCallbackFcn(app, @loadStagingListCallback, true);
             app.LoadStagingFileListMenu.Text = 'Load Staging File List...';
 
+            % Menu item: toggle the floating Run Log Console window
+            app.ShowRunLogConsoleMenu = uimenu(app.FileMenu);
+            app.ShowRunLogConsoleMenu.MenuSelectedFcn = createCallbackFcn(app, @toggleRunLogConsole, true);
+            app.ShowRunLogConsoleMenu.Text = 'Show Run Log Console';
+            app.ShowRunLogConsoleMenu.Separator = 'on';
+
             % ---- Outer Tab Group ----
             % ---- Top-level grid fills the figure automatically ----
             rootGrid = uigridlayout(app.UIFigure, [1 1]);
@@ -498,14 +559,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DataFileInstructionText.Column = 1;
 
             % Double-click opens the EDF header viewer
-            app.DataListBox = uilistbox(app.FileInputGrid);
-            app.DataListBox.Items            = {};
-            app.DataListBox.Multiselect      = 'on';
-            app.DataListBox.Layout.Row       = 3;
-            app.DataListBox.Layout.Column    = 1;
-            app.DataListBox.DoubleClickedFcn = createCallbackFcn(app, @ShowHeader, true);
-            app.DataListBox.Value            = {};
-            app.DataListBox.Tooltip          = 'Double-click a file to view the header';
+            app.DataListBox = CSSuiListBox(app.FileInputGrid, ...
+                'Style', 'shadow_light', ...
+                'Multiselect', true, ...
+                'BackgroundColor', '#ffffff', ...
+                'DoubleClickFcn', createCallbackFcn(app, @ShowHeader, true));
+            app.DataListBox.Layout.Row    = 3;
+            app.DataListBox.Layout.Column = 1;
+            app.DataListBox.HTMLComponent.Tooltip = 'Double-click a file to view the header';
 
             % ---- Data File Action Buttons ----
             app.DataFileButtonGrid                  = uigridlayout(app.FileInputGrid);
@@ -616,12 +677,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StagingFileInstructionText.Layout.Row    = 2;
             app.StagingFileInstructionText.Layout.Column = 2;
 
-            app.StagingListBox = uilistbox(app.FileInputGrid);
-            app.StagingListBox.Items         = {};
-            app.StagingListBox.Multiselect   = 'on';
+            app.StagingListBox = CSSuiListBox(app.FileInputGrid, ...
+                'Style', 'shadow_light', ...
+                'Multiselect', true, ...
+                'BackgroundColor', '#ffffff', ...
+                'DoubleClickFcn', createCallbackFcn(app, @ShowFile, true));
             app.StagingListBox.Layout.Row    = 3;
             app.StagingListBox.Layout.Column = 2;
-            app.StagingListBox.Value         = {};
+            app.StagingListBox.HTMLComponent.Tooltip = 'Double-click a file to view/edit';
 
             % ---- Staging File Action Buttons ----
             app.StagingFileButtonGrid             = uigridlayout(app.FileInputGrid);
@@ -726,7 +789,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Style', 'shadow', ...
                 'FontWeight', '700', ...
                 'FontSize', app.FontSizeTitle, ...
-                'Text', 'RUNTIME OPTIONS', ...
+                'Text', 'INPUT SETTINGS', ...
                 'VerticalAlignment','top'...
                 );
             app.RuntimeOptionsLabel.Layout.Row    = 1;
@@ -742,13 +805,13 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             app.ChannelEditFieldLabel = CSSuiLabel(app.ChannelInputGrid, ...
                 'Style', 'shadow', ...
-                'Text', 'Channel(s):' ...
+                'Text', 'Channel(s)' ...
                 );
             app.ChannelEditFieldLabel.Layout.Row    = 1;
             app.ChannelEditFieldLabel.Layout.Column = 1;
 
             app.ChannelEditField               = CSSuiEditField(app.ChannelInputGrid, ...
-                'Style','shadow', ...
+                'Style','shadow_light', ...
                 'Value', 'Enter comma-separated channel labels' ...
                 );
             app.ChannelEditField.Layout.Row    = 1;
@@ -783,7 +846,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.ArtifactEditFieldLabel.Layout.Column = 1;
 
             app.ArtifactEditField = CSSuiEditField(app.StagingOptionsPanelGrid, ...
-                'Style', 'shadow', ...
+                'Style', 'shadow_light', ...
                 'Value', 'artifact, A, 6' ...
                 );
             app.ArtifactEditField.Layout.Row    = 1;
@@ -798,7 +861,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.WakeEditFieldLabel.Layout.Column = 1;
 
             app.WakeEditField = CSSuiEditField(app.StagingOptionsPanelGrid, ...
-                'Style', 'shadow', ...
+                'Style', 'shadow_light', ...
                 'Value', 'wake, W, 5' ...
                 );
             app.WakeEditField.Layout.Row    = 2;
@@ -813,7 +876,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.REMEditFieldLabel.Layout.Column = 1;
 
             app.REMEditField = CSSuiEditField(app.StagingOptionsPanelGrid, ...
-                'Style', 'shadow', ...
+                'Style', 'shadow_light', ...
                 'Value', 'REM, R, 4' ...
                 );
             app.REMEditField.Layout.Row    = 3;
@@ -828,7 +891,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.N1EditFieldLabel.Layout.Column = 1;
 
             app.N1EditField = CSSuiEditField(app.StagingOptionsPanelGrid, ...
-                'Style', 'shadow', ...
+                'Style', 'shadow_light', ...
                 'Value', 'N1, Stage 1, 1' ...
                 );
             app.N1EditField.Layout.Row    = 4;
@@ -843,7 +906,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.N2EditFieldLabel.Layout.Column = 1;
 
             app.N2EditField = CSSuiEditField(app.StagingOptionsPanelGrid, ...
-                'Style', 'shadow', ...
+                'Style', 'shadow_light', ...
                 'Value', 'N2, Stage 2, 2' ...
                 );
             app.N2EditField.Layout.Row    = 5;
@@ -858,7 +921,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.N3EditFieldLabel.Layout.Column = 1;
 
             app.N3EditField = CSSuiEditField(app.StagingOptionsPanelGrid, ...
-                'Style', 'shadow', ...
+                'Style', 'shadow_light', ...
                 'Value', 'N3, Stage 3, 3' ...
                 );
             app.N3EditField.Layout.Row    = 6;
@@ -873,7 +936,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.UnknownEditFieldLabel.Layout.Column = 1;
 
             app.UnknownEditField = CSSuiEditField(app.StagingOptionsPanelGrid, ...
-                'Style', 'shadow', ...
+                'Style', 'shadow_light', ...
                 'Value', 'Unk, U, Unknown' ...
                 );
             app.UnknownEditField.Layout.Row    = 7;
@@ -884,14 +947,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Style', 'shadow', ...
                 'Text', 'Stages Column' ...
                 );
-            app.StagesColumnEditFieldLabel.Layout.Row    = 3;
+            app.StagesColumnEditFieldLabel.Layout.Row    = 2;
             app.StagesColumnEditFieldLabel.Layout.Column = 3;
 
             app.StagesColumnEditField = CSSuiNumericField(app.StagingOptionsPanelGrid, ...
-                'Style', 'shadow', ...
+                'Style', 'shadow_light', ...
                 'Min', 0 ...
                 );
-            app.StagesColumnEditField.Layout.Row    = 3;
+            app.StagesColumnEditField.Layout.Row    = 2;
             app.StagesColumnEditField.Layout.Column = 4;
 
             % Times column index
@@ -899,14 +962,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Style', 'shadow', ...
                 'Text', 'Times Column' ...
                 );
-            app.TimesColumnEditFieldLabel.Row    = 4;
+            app.TimesColumnEditFieldLabel.Row    = 3;
             app.TimesColumnEditFieldLabel.Column = 3;
 
             app.TimesColumnEditField = CSSuiNumericField(app.StagingOptionsPanelGrid, ...
-                'Style', 'shadow', ...
+                'Style', 'shadow_light', ...
                 'Min', 0 ...
                 );
-            app.TimesColumnEditField.Row    = 4;
+            app.TimesColumnEditField.Row    = 3;
             app.TimesColumnEditField.Column = 4;
 
             % Header rows count
@@ -914,19 +977,47 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Style', 'shadow', ...
                 'Text', 'Header Rows' ...
                 );
-            app.HeaderRowsEditFieldLabel.Row    = 5;
+            app.HeaderRowsEditFieldLabel.Row    = 4;
             app.HeaderRowsEditFieldLabel.Column = 3;
 
             app.HeaderRowsEditField = CSSuiNumericField(app.StagingOptionsPanelGrid, ...
-                'Style', 'shadow', ...
+                'Style', 'shadow_light', ...
                 'Min', 0 ...
                 );
-            app.HeaderRowsEditField.Row    = 5;
+            app.HeaderRowsEditField.Row    = 4;
             app.HeaderRowsEditField.Column = 4;
+
+            % Resample Data switch (row 6, row 5 left as a visual spacer)
+            app.ResampleSwitch = CSSuiSwitch(app.StagingOptionsPanelGrid, ...
+                'Style', 'shadow', ...
+                'Text', 'Resample Data', ...
+                'Value', 0 ...
+                );
+            app.ResampleSwitch.Layout.Row    = 6;
+            app.ResampleSwitch.Layout.Column = [3 4];
+            app.ResampleSwitch.ValueChangedFcn = @(~,~) app.onResampleSwitchChanged();
+
+            % Sampling frequency field (row 7, disabled until switch is on)
+            app.ResampleFsEditFieldLabel = CSSuiLabel(app.StagingOptionsPanelGrid, ...
+                'Style', 'shadow', ...
+                'Text', 'New Fs (Hz)', ...
+                'Enabled', false ...
+                );
+            app.ResampleFsEditFieldLabel.Layout.Row    = 7;
+            app.ResampleFsEditFieldLabel.Layout.Column = 3;
+
+            app.ResampleFsEditField = CSSuiNumericField(app.StagingOptionsPanelGrid, ...
+                'Style', 'shadow_light', ...
+                'Min', 0, ...
+                'Value', 200, ...
+                'Enabled', false ...
+                );
+            app.ResampleFsEditField.Layout.Row    = 7;
+            app.ResampleFsEditField.Layout.Column = 4;
 
             % File delimiter dropdown
             app.DelimeterOptionField = CSSuiDropdown(app.StagingOptionsPanelGrid, ...
-                'Style', 'shadow', ...
+                'Style', 'shadow_light', ...
                 'Label', 'File Delimiter', ...
                 'Items', {'Comma', 'Tab', 'Space', 'Semicolon'}, ...
                 'Value', 'Comma', ...
@@ -1032,6 +1123,15 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.SaveAuxDataCheckBox.Column = 1;
             app.SaveAuxDataCheckBox.HTMLComponent.Tooltip       = 'Save auxiliary data helpful for rapid recomputation and figure generation without accessing the raw data';
 
+            app.SaveLogsSwitch = CSSuiSwitch(app.SavingOptionsCheckBoxGrid, ...
+                'Style', 'shadow', ...
+                'Text', 'Save Logs', ...
+                'Value', 1 ...
+                );
+            app.SaveLogsSwitch.Row    = 6;
+            app.SaveLogsSwitch.Column = 2;
+            app.SaveLogsSwitch.HTMLComponent.Tooltip = 'Save run log and settings files to the output logs/ and settings/ directories';
+
             % --- Figure Save Checkboxes (Right Column) ---
             app.SaveDataSummaryCheckBox = CSSuiSwitch(app.SavingOptionsCheckBoxGrid, ...
                 'Style', 'shadow', ...
@@ -1090,7 +1190,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.EditFieldLabel.Layout.Row    = 2;
             app.EditFieldLabel.Layout.Column = 1;
 
-            app.OutputDirEditField = CSSuiEditField(app.SavingDirectoryGrid);
+            app.OutputDirEditField = CSSuiEditField(app.SavingDirectoryGrid, 'style','shadow_light');
             app.OutputDirEditField.Layout.Row    = 2;
             app.OutputDirEditField.Layout.Column = 1;
             app.OutputDirEditField.HTMLComponent.Tooltip = 'Select the root directory from which to generate the output file structure';
@@ -1134,7 +1234,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             lab.Column = 1;
 
             app.PeakStatsTableDropDown = CSSuiDropdown(app.FileFormatCheckBoxGrid, ...
-                'Style','shadow', ...
+                'Style','shadow_light', ...
                 'DropdownWidth', '4.25em', ...
                 'Items',         {'--', '.csv', '.mat', 'All'}, ...
                 'Value',         '.csv' ...
@@ -1150,7 +1250,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             lab.Column = 1;
 
             app.SOPowerHistogramsDropDown = CSSuiDropdown(app.FileFormatCheckBoxGrid, ...
-                'Style','shadow', ...
+                'Style','shadow_light', ...
                 'DropdownWidth', '4.25em', ...
                 'Items',         {'--', '.tiff', '.mat', 'All'}, ...
                 'Value',         '.tiff' ...
@@ -1166,7 +1266,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             lab.Column = 1;
 
             app.ParametricBasisDropDown = CSSuiDropdown(app.FileFormatCheckBoxGrid, ...
-                'Style','shadow', ...
+                'Style','shadow_light', ...
                 'DropdownWidth', '4.25em', ...
                 'Items',         {'--', '.csv', '.mat', 'All'}, ...
                 'Value',         '.csv' ...
@@ -1182,7 +1282,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             lab.Column = 1;
 
             app.SplineBasisDropDown = CSSuiDropdown(app.FileFormatCheckBoxGrid, ...
-                'Style','shadow', ...
+                'Style','shadow_light', ...
                 'DropdownWidth', '4.25em', ...
                 'Items',         {'--', '.tiff', '.mat', 'All'}, ...
                 'Value',         '.mat' ...
@@ -1198,7 +1298,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             lab.Column = 1;
 
             app.AuxiliaryDataDropDown = CSSuiDropdown(app.FileFormatCheckBoxGrid, ...
-                'Style','shadow', ...
+                'Style','shadow_light', ...
                 'DropdownWidth', '4.25em', ...
                 'Items',         {'.mat', '--'}, ...
                 'Value',         '.mat' ...
@@ -1215,7 +1315,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             lab.Column = 3;
 
             app.DataSummaryDropDown = CSSuiDropdown(app.FileFormatCheckBoxGrid, ...
-                'Style','shadow', ...
+                'Style','shadow_light', ...
                 'DropdownWidth', '4.25em', ...
                 'Items',         {'--', '.png', '.jpg', '.jpeg'}, ...
                 'Value',         '.png' ...
@@ -1231,7 +1331,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             lab.Column = 3;
 
             app.ParametricFiguresDropDown = CSSuiDropdown(app.FileFormatCheckBoxGrid, ...
-                'Style','shadow', ...
+                'Style','shadow_light', ...
                 'DropdownWidth', '4.25em', ...
                 'Items',         {'--', '.png', '.jpg', '.jpeg'}, ...
                 'Value',         '.png' ...
@@ -1247,7 +1347,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             lab.Column = 3;
 
             app.SplineFiguresDropDown = CSSuiDropdown(app.FileFormatCheckBoxGrid, ...
-                'Style','shadow', ...
+                'Style','shadow_light', ...
                 'DropdownWidth', '4.25em', ...
                 'Items',         {'--', '.png', '.jpg', '.jpeg'}, ...
                 'Value',         '.png' ...
@@ -1300,11 +1400,13 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StatusLabel.Layout.Column = 1;
 
             app.TextArea = CSSuiTextArea(app.StatusTextGrid, ...
-                'Style', 'shadow', ...
+                'Style', 'shadow_light', ...
                 'Editable', false, ...
                 'Color', '#414c57',...
-                'FontWeight','600'...
+                'FontWeight','600',...
+                'BackgroundColor','#ffffff'...
                 );
+            app.TextArea.Scroll = true;
             app.TextArea.Row   = 2;
             app.TextArea.Column = 1;
             app.TextArea.Value = {'Add files, select settings, and press ''Run Batch'' to run'};
@@ -1325,6 +1427,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Shape','circle',...
                 'Text', 'STOP', ...
                 'MaxHeight', '100px',...
+                'BackgroundColor', '#f5e8e9', ...
                 'ButtonPushedFcn', createCallbackFcn(app, @StopBatchButtonPushed, true), ...
                 'Icon', '<rect x="5" y="5" width="14" height="14"/>', ...
                 'IconPosition', 'top', ...
@@ -1395,6 +1498,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.TimeEstimateGrid             = uigridlayout(app.BottomGrid);
             app.TimeEstimateGrid.ColumnWidth = {'1x',100};
             app.TimeEstimateGrid.RowHeight   = {'1x'};
+            app.TimeEstimateGrid.ColumnSpacing = 30;
             app.TimeEstimateGrid.Padding     = [5 5 5 5];
             app.TimeEstimateGrid.Layout.Row  = 1;
             app.TimeEstimateGrid.Layout.Column = 3;
@@ -1415,11 +1519,34 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.HelpButton.Row    = 1;
             app.HelpButton.Column = 2;
 
+            app.ProgressBar = SmoothProgressBar(app.TimeEstimateGrid, ...
+                'BarHeight',       0.2, ...
+                'BarBorderRadius', '999px', ...
+                'BorderRadius',    '999px', ...
+                'TextPosition',    'above', ...
+                'Text',            'Batch Progress', ...
+                'Enabled',         false);
+            app.ProgressBar.Layout.Row    = 1;
+            app.ProgressBar.Layout.Column = 1;
+
             % ============================================================
             %   DYNAM-O SETTINGS (sub-app embedded in its tab)
             % ============================================================
 
             createDYNAMOSettingsTab(app);
+
+            % ---- Help Menu (created last so it appears rightmost) ----
+            app.HelpMenu      = uimenu(app.UIFigure);
+            app.HelpMenu.Text = 'Help';
+
+            app.HelpMenuItem = uimenu(app.HelpMenu);
+            app.HelpMenuItem.MenuSelectedFcn = @(~,~) showHelpButtonPushed(app);
+            app.HelpMenuItem.Text = 'Help';
+
+            app.AboutMenu = uimenu(app.HelpMenu);
+            app.AboutMenu.MenuSelectedFcn = createCallbackFcn(app, @AboutMenuSelected, true);
+            app.AboutMenu.Text = 'About DYNAM-O...';
+            app.AboutMenu.Separator = 'on';
 
             % Make figure visible now that all components exist
             app.UIFigure.Visible = 'on';
@@ -1447,6 +1574,29 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.TimesColumnEditFieldLabel.HTMLComponent.Tooltip  = 'Column of the staging CSV containing time of each stage';
             app.HeaderRowsEditField.HTMLComponent.Tooltip        = 'Number of header rows in the stage file';
             app.HeaderRowsEditFieldLabel.HTMLComponent.Tooltip   = 'Number of header rows in the stage file';
+            app.ResampleSwitch.HTMLComponent.Tooltip             = 'Resample the EEG data to the specified frequency before processing';
+            app.ResampleFsEditField.HTMLComponent.Tooltip        = 'Target sampling frequency in Hz for resampling';
+            app.ResampleFsEditFieldLabel.HTMLComponent.Tooltip   = 'Target sampling frequency in Hz for resampling';
+
+            % Wire ValueChangedFcn on all validated fields so errors clear
+            % immediately when the user corrects the value.
+            clearFields = { ...
+                app.OutputDirEditField, ...
+                app.ChannelEditField, ...
+                app.StagesColumnEditField, ...
+                app.TimesColumnEditField, ...
+                app.HeaderRowsEditField ...
+            };
+            for ii = 1:numel(clearFields)
+                c = clearFields{ii};
+                c.ValueChangedFcn = @(~,~) clearIsError(app, c);
+            end
+
+            stage_label_fields = {'Artifact','Wake','REM','N1','N2','N3'};
+            for ii = 1:numel(stage_label_fields)
+                c = app.([stage_label_fields{ii} 'EditField']);
+                c.ValueChangedFcn = @(~,~) clearIsError(app, c);
+            end
 
         end % createComponents
 
@@ -1467,15 +1617,40 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ==================================================================
 
         function showHelpButtonPushed(app)
-            % showHelpButtonPushed  Display a modal help dialog with usage instructions.
+            % showHelpButtonPushed  Open the File Manager README in the system web browser.
+            %
+            %   If an internet connection is available, opens the GitHub README.
+            %   Otherwise, falls back to a local HTML help file.
 
-            uialert(app.UIFigure, ...
-                sprintf(['Instructions:\n' ...
-                '1. In File Selection tab: Add Data files (EDF) and Staging files (CSV/TXT).\n' ...
-                '2. Make sure the file counts match and order corresponds.\n' ...
-                '3. In Output Options tab: Choose an output directory and select save options.\n' ...
-                '4. Click Run Batch to process files.']), ...
-                'Help', 'Icon', 'info');
+            githubURL = 'https://github.com/preraulab/DYNAM-O_dev/blob/comment-unification-and-checks/DYNAMOFileManager_README.md';
+
+            % Check for internet connectivity
+            hasInternet = false;
+            try
+                java.net.URL('https://github.com').openConnection().connect();
+                hasInternet = true;
+            catch
+            end
+
+            if hasInternet
+                web(githubURL, '-browser');
+            else
+                % Fall back to local HTML help file
+                helpPath = fullfile(fileparts(mfilename('fullpath')), 'DYNAMOFileManager_README.html');
+                if ~isfile(helpPath)
+                    uialert(app.UIFigure, ...
+                        sprintf('Help file not found:\n%s', helpPath), ...
+                        'Help', 'Icon', 'warning');
+                    return
+                end
+                if ispc
+                    fileURI = ['file:///' strrep(helpPath, '\', '/')];
+                else
+                    fileURI = ['file://' helpPath];
+                end
+                fileURI = strrep(fileURI, ' ', '%20');
+                web(fileURI, '-browser');
+            end
         end
 
         % ------------------------------------------------------------------
@@ -1523,11 +1698,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % Skipped files listbox
             lblSkipped = CSSuiLabel(win,'Text','Skipped (missing) files:','Position',[20 360 200 20]); %#ok<*NASGU>
-            listSkipped = uilistbox(win,'Items',cellstr(invalidLines),'Position',[20 180 360 180],'Multiselect','off');
+            listSkipped = CSSuiListBox(win,'Items',cellstr(invalidLines),'Position',[20 180 360 180],'Multiselect',false,'Style','shadow_light'); %#ok<NASGU>
 
             % Duplicate files listbox
             lblDup = CSSuiLabel(win,'Text','Duplicate files removed:','Position',[400 360 200 20]);
-            listDup = uilistbox(win,'Items',cellstr(duplicateLines),'Position',[400 180 360 180],'Multiselect','off');
+            listDup = CSSuiListBox(win,'Items',cellstr(duplicateLines),'Position',[400 180 360 180],'Multiselect',false,'Style','shadow_light'); %#ok<NASGU>
 
             % Button to save logfile
             btnSave = CSSuiButton(win,'Text','Save Logfile','Position',[350 50 100 30], ...
@@ -1620,11 +1795,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % Skipped files listbox
             lblSkipped = CSSuiLabel(win,'Text','Skipped (missing) files:','Position',[20 360 200 20]);
-            listSkipped = uilistbox(win,'Items',cellstr(invalidLines),'Position',[20 180 360 180],'Multiselect','off');
+            listSkipped = CSSuiListBox(win,'Items',cellstr(invalidLines),'Position',[20 180 360 180],'Multiselect',false,'Style','shadow_light'); %#ok<NASGU>
 
             % Duplicate files listbox
             lblDup = CSSuiLabel(win,'Text','Duplicate files removed:','Position',[400 360 200 20]);
-            listDup = uilistbox(win,'Items',cellstr(duplicateLines),'Position',[400 180 360 180],'Multiselect','off');
+            listDup = CSSuiListBox(win,'Items',cellstr(duplicateLines),'Position',[400 180 360 180],'Multiselect',false,'Style','shadow_light'); %#ok<NASGU>
 
             % Button to save logfile
             btnSave = CSSuiButton(win,'Text','Save Logfile','Position',[350 50 100 30], ...
@@ -1679,6 +1854,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % DataAddFileButtonPushed  Open file picker to add one or more EDF files.
 
             files = selectFiles(app, 'Select Data Files', 'data');
+            files = setdiff(files, app.DataList, 'stable');
             if ~isempty(files)
                 app.DataList = [app.DataList, files];
                 updateDataListBox(app);
@@ -1693,8 +1869,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             folder = uigetdir(pwd, 'Select Data Folder');
             if folder == 0, return; end  % User cancelled
 
-            S     = dir(strcat(folder, '/*.edf'));
-            files = strcat({S.folder}, '/', {S.name});
+            S     = dir(fullfile(folder, '*.edf'));
+            files = fullfile({S.folder}, {S.name});
+            files = setdiff(files, app.DataList, 'stable');
             if ~isempty(files)
                 app.DataList = [app.DataList, files];
                 updateDataListBox(app);
@@ -1734,6 +1911,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % StagingAddFileButtonPushed  Open file picker to add one or more staging files.
 
             files = selectFiles(app, 'Select Staging Files', 'staging');
+            files = setdiff(files, app.StagingList, 'stable');
             if ~isempty(files)
                 app.StagingList = [app.StagingList, files];
                 updateStagingListBox(app);
@@ -1750,11 +1928,12 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             folder = uigetdir(pwd, 'Select Staging Folder');
             if folder == 0, return; end  % User cancelled
 
-            S = dir(strcat(folder, '/*.csv'));
-            if size(S, 1) == 0
-                S = dir(strcat(folder, '/*.txt'));  % Fallback to .txt
+            S = dir(fullfile(folder, '*.csv'));
+            if isempty(S)
+                S = dir(fullfile(folder, '*.txt'));  % Fallback to .txt
             end
-            files = strcat({S.folder}, '/', {S.name});
+            files = fullfile({S.folder}, {S.name});
+            files = setdiff(files, app.StagingList, 'stable');
             if ~isempty(files)
                 app.StagingList = [app.StagingList, files];
                 updateStagingListBox(app);
@@ -1792,10 +1971,10 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
         function viewChannelsButtonPushed(app, ~, ~)
             % viewChannelsButtonPushed
-            % Reads EDF files, extracts channel names, and allows user to select
-            % multiple channels via a modal UI list. Outputs comma-separated string.
+            % Reads EDF files, collects channel name, sampling frequency, and
+            % per-file counts. Displays a table for multi-select. Supports
+            % adding A-B rereferenced virtual channels via a sub-dialog.
 
-            % Check data
             if isempty(app.DataList)
                 uialert(app.UIFigure, ...
                     'No EDF files loaded. Load at least one file first.', ...
@@ -1803,121 +1982,323 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 return
             end
 
-            % Progress bar
-            h = waitbar(0,'Processing EDF channels...');
+            nFiles = length(app.DataList);
+            h = waitbar(0, 'Processing EDF channels...');
 
-            % Collect labels
-            signal_labels = cell(1, length(app.DataList));
+            % chan_map: label -> {file_index_array, fs_array}
+            % Tracks which files contain each channel and at what sample rate.
+            chan_map = containers.Map('KeyType','char','ValueType','any');
 
-            for ii = 1:length(app.DataList)
+            for ii = 1:nFiles
                 try
                     [~, signalHeader] = read_EDF(app.DataList{ii});
-                    signal_labels{ii} = {signalHeader.signal_labels};
+                    for jj = 1:length(signalHeader)
+                        lbl = strtrim(signalHeader(jj).signal_labels);
+                        fs  = signalHeader(jj).sampling_frequency;
+                        if isKey(chan_map, lbl)
+                            entry = chan_map(lbl);
+                            entry{1}(end+1) = ii;
+                            entry{2}(end+1) = fs;
+                            chan_map(lbl) = entry;
+                        else
+                            chan_map(lbl) = {ii, fs};
+                        end
+                    end
                 catch ME
-                    warning('Failed to read file: %s\n%s', ...
-                        app.DataList{ii}, ME.message);
-                    signal_labels{ii} = {};
+                    warning('Failed to read file: %s\n%s', app.DataList{ii}, ME.message);
                 end
-
-                waitbar(ii/length(app.DataList), h);
+                waitbar(ii/nFiles, h);
             end
-
             delete(h);
 
-            % Combine + clean
-            all_labels = horzcat(signal_labels{:});
-            if isempty(all_labels)
+            if isempty(chan_map)
                 uialert(app.UIFigure, ...
                     'No channel labels found in loaded EDF files.', ...
                     'Warning', 'Icon', 'warning');
                 return
             end
 
-            signal_labels = sort(unique(all_labels));
+            % Build sorted table data: {channel, fs_string, file_count_string}
+            all_edf_labels = sort(keys(chan_map));
+            nChans = numel(all_edf_labels);
+            tableData = cell(nChans, 3);
+            for ii = 1:nChans
+                lbl   = all_edf_labels{ii};
+                entry = chan_map(lbl);
+                ufreqs  = unique(entry{2});
+                freqStr = [strjoin(arrayfun(@(f) sprintf('%g', f), ufreqs, 'UniformOutput', false), ' / ') ' Hz'];
+                fileStr = sprintf('%d / %d', numel(entry{1}), nFiles);
+                tableData{ii,1} = lbl;
+                tableData{ii,2} = freqStr;
+                tableData{ii,3} = fileStr;
+            end
 
             % ===============================
             % UI SELECTION DIALOG
             % ===============================
+            % Fixed-size dialog: 520 w x 500 h, all positions calculated from
+            % bottom (MATLAB convention).  Layout (bottom→top):
+            %   12 pad | 42 accept/cancel | 8 gap | 40 add-rereference |
+            %   8 gap  | [table fills]    | 6 gap | 24 label | 12 pad
+            dW = 520; dH = 500; pad = 12;
+            btnH  = 42; rerefH = 40; lblH = 24;
 
+            btnY   = pad;
+            rerefY = btnY  + btnH  + 8;
+            tableY = rerefY + rerefH + 8;
+            lblY   = dH - pad - lblH;
+            tableH = lblY - 6 - tableY;
+            tableW = dW - 2*pad;
+
+            ss = get(0, 'ScreenSize');
             d = uifigure('Name', 'Select Channels', ...
-                'Position', [100 100 320 420], ...
+                'Position', [(ss(3)-dW)/2, (ss(4)-dH)/2, dW, dH], ...
                 'WindowStyle', 'modal');
 
-            % Instruction
-            CSSuiLabel(d, ...
-                'Text', 'Select one or more channels:', ...
-                'Position', [20 385 280 20]);
+            CSSuiLabel(d, 'Text', 'Select one or more channels:', ...
+                'Position', [pad, lblY, tableW, lblH]);
 
-            % Listbox
-            lb = uilistbox(d, ...
-                'Items', signal_labels, ...
-                'Multiselect', 'on', ...
-                'Position', [20 80 280 300]);
+            % Channel col gets all remaining width after Fs (110) and Files (80)
+            % columns, minus ~16 px for the vertical scrollbar.
+            chanColW = tableW - 110 - 80 - 16;
+            t = CSSuiTable(d, ...
+                'Data', tableData, ...
+                'ColumnName', {'Channel', 'Fs (Hz)', 'Files'}, ...
+                'ColumnWidth', [chanColW, 110, 80], ...
+                'Position', [pad, tableY, tableW, tableH], ...
+                'SelectionType', 'row', ...
+                'SelectionChangedFcn', @(src,evt) onCellSelect(evt));
 
-            % Output variable
+            % Add Rereference — centered horizontally
+            rerefW = 175;
+            CSSuiButton(d, 'Style', 'shadow', 'Text', 'Add Rereference', ...
+                'Position', [(dW-rerefW)/2, rerefY, rerefW, rerefH], ...
+                'ButtonPushedFcn', @(btn,evt) addRereferenceCallback());
+
+            % Accept / Cancel — centered as a pair
+            btnW = 165; gap = 10;
+            pairW = 2*btnW + gap;
+            btnX0 = (dW - pairW) / 2;
+            CSSuiButton(d, 'Style', 'shadow', 'Text', 'Add to Batch Run', ...
+                'Position', [btnX0,          btnY, btnW, btnH], ...
+                'ButtonPushedFcn', @(btn,evt) acceptCallback());
+            CSSuiButton(d, 'Style', 'shadow', 'Text', 'Cancel', ...
+                'Position', [btnX0+btnW+gap, btnY, btnW, btnH], ...
+                'ButtonPushedFcn', @(btn,evt) cancelCallback());
+
+            selectedRows     = [];
             selectedChannels = [];
+            rd_handle        = [];
+            ddA_handle       = [];
+            ddB_handle       = [];
 
-            % Accept button
-            CSSuiButton(d, ...
-                'Text', 'Accept', ...
-                'Position', [40 20 100 35], ...
-                'ButtonPushedFcn', @(btn,event) acceptCallback());
-
-            % Cancel button
-            CSSuiButton(d, ...
-                'Text', 'Cancel', ...
-                'Position', [180 20 100 35], ...
-                'ButtonPushedFcn', @(btn,event) cancelCallback());
-
-            % Wait for user action
             uiwait(d);
 
-            % If user cancelled or closed window
             if isempty(selectedChannels)
-                return;
+                return
             end
 
-            % Convert to comma-separated string
-            channelString = strjoin(selectedChannels, ', ');
+            % Warn if any selected channel's sampling rate is far above or
+            % below the frequency ranges DYNAMO actually analyzes.
+            checkChannelSamplingRates(app, selectedChannels, tableData);
 
-            % Store in app (optional)
-            app.ChannelEditField.Value = channelString;
-
-            % Optional display
+            % Append to existing channels, avoiding duplicates
+            existingStr = strtrim(app.ChannelEditField.Value);
+            if isempty(existingStr) || strcmpi(existingStr, 'Enter comma-separated channel labels')
+                existingChannels = {};
+            else
+                existingChannels = strtrim(strsplit(existingStr, ','));
+                existingChannels = existingChannels(~cellfun(@isempty, existingChannels));
+            end
+            newChannels = selectedChannels(~ismember(selectedChannels, existingChannels));
+            allChannels = [existingChannels(:); newChannels(:)];
+            channelString = strjoin(allChannels, ', ');
+            app.ChannelEditField.IsError = false;
+            app.ChannelEditField.Value   = channelString;
             disp(['Selected Channels: ' channelString]);
 
             % ===============================
             % Nested Callbacks
             % ===============================
 
-            function acceptCallback()
-                selectedChannels = lb.Value;
+            function onCellSelect(evt)
+                % Handle both SelectionChangedFcn (uifigure) and CellSelectionCallback
+                try
+                    if isfield(evt, 'Selection') && ~isempty(evt.Selection)
+                        selectedRows = unique(evt.Selection(:));
+                    elseif isfield(evt, 'Indices') && ~isempty(evt.Indices)
+                        selectedRows = unique(evt.Indices(:,1));
+                    else
+                        selectedRows = [];
+                    end
+                catch
+                    selectedRows = [];
+                end
+            end
 
-                if isempty(selectedChannels)
+            function addRereferenceCallback()
+                if numel(all_edf_labels) < 2
+                    uialert(d, ...
+                        'Need at least two EDF channels to create a rereference.', ...
+                        'Not Enough Channels', 'Icon', 'warning');
+                    return
+                end
+
+                % Sub-dialog: 420 w x 170 h, position-based layout
+                rdW = 420; rdH = 170; rdPad = 12;
+                rdBtnH = 40; rdDdH = 36; rdLblH = 24;
+                rdBtnY = rdPad;
+                rdDdY  = rdBtnY + rdBtnH + 10;
+                rdLblY = rdDdY  + rdDdH  + 8;
+
+                % Two equal dropdowns with dash in between
+                dashW = 28;
+                ddW   = (rdW - 2*rdPad - dashW - 8) / 2;  % 8 = 2x4px gaps
+
+                rd_handle = uifigure('Name', 'Add Rereference Channel', ...
+                    'Position', [(ss(3)-rdW)/2, (ss(4)-rdH)/2, rdW, rdH], ...
+                    'WindowStyle', 'modal');
+
+                CSSuiLabel(rd_handle, 'Text', 'Select channels to rereference:', ...
+                    'Position', [rdPad, rdLblY, rdW-2*rdPad, rdLblH]);
+
+                ddA_handle = CSSuiDropdown(rd_handle, 'Style', 'shadow_light', ...
+                    'Items', all_edf_labels, ...
+                    'Position', [rdPad, rdDdY, ddW, rdDdH]);
+
+                CSSuiLabel(rd_handle, 'Text', '-', ...
+                    'FontSize', '18px', 'FontWeight', '700', 'HorizontalAlignment', 'center', ...
+                    'Position', [rdPad+ddW+4, rdDdY, dashW, rdDdH]);
+
+                ddB_handle = CSSuiDropdown(rd_handle, 'Style', 'shadow_light', ...
+                    'Items', all_edf_labels, ...
+                    'Position', [rdPad+ddW+4+dashW+4, rdDdY, ddW, rdDdH]);
+
+                % OK / Cancel centered as a pair
+                rdBtnW = 90; rdBtnGap = 10;
+                rdPairW = 2*rdBtnW + rdBtnGap;
+                rdBtnX0 = (rdW - rdPairW) / 2;
+                CSSuiButton(rd_handle, 'Style', 'shadow', 'Text', 'OK', ...
+                    'Position', [rdBtnX0,                  rdBtnY, rdBtnW, rdBtnH], ...
+                    'ButtonPushedFcn', @(btn,evt) doOkReref());
+                CSSuiButton(rd_handle, 'Style', 'shadow', 'Text', 'Cancel', ...
+                    'Position', [rdBtnX0+rdBtnW+rdBtnGap,  rdBtnY, rdBtnW, rdBtnH], ...
+                    'ButtonPushedFcn', @(btn,evt) doCancelReref());
+
+                uiwait(rd_handle);
+            end
+
+            function doOkReref()
+                chA = ddA_handle.Value;
+                chB = ddB_handle.Value;
+
+                if strcmp(chA, chB)
+                    msgbox('Cannot rereference a channel with itself.', 'Invalid Selection', 'error');
+                    return
+                end
+
+                rerefLabel = [chA '-' chB];
+
+                if any(strcmp(tableData(:,1), rerefLabel))
+                    msgbox(sprintf('"%s" is already in the channel list.', rerefLabel), 'Duplicate', 'warn');
+                    return
+                end
+
+                entryA = chan_map(chA);
+                entryB = chan_map(chB);
+                [both_files, iA, iB] = intersect(entryA{1}, entryB{1});
+
+                if isempty(both_files)
+                    msgbox(sprintf('No files contain both "%s" and "%s".', chA, chB), 'No Overlap', 'warn');
+                    return
+                end
+
+                fsA_both     = entryA{2}(iA);
+                fsB_both     = entryB{2}(iB);
+                mismatch_idx = find(fsA_both ~= fsB_both);
+
+                if ~isempty(mismatch_idx)
+                    msgLines = cell(1, numel(mismatch_idx));
+                    for mm = 1:numel(mismatch_idx)
+                        fi = both_files(mismatch_idx(mm));
+                        [~, fname] = fileparts(app.DataList{fi});
+                        msgLines{mm} = sprintf('  %s: %g Hz vs %g Hz', ...
+                            fname, fsA_both(mismatch_idx(mm)), fsB_both(mismatch_idx(mm)));
+                    end
+                    msgbox(['Sampling rate mismatch between channels:' newline strjoin(msgLines, newline)], ...
+                        'Sampling Rate Mismatch', 'error');
+                    return
+                end
+
+                ufreqs  = unique(fsA_both);
+                freqStr = [strjoin(arrayfun(@(f) sprintf('%g', f), ufreqs, 'UniformOutput', false), ' / ') ' Hz'];
+                fileStr = sprintf('%d / %d', numel(both_files), nFiles);
+
+                tableData(end+1,:) = {rerefLabel, freqStr, fileStr};
+                t.Data = tableData;
+
+                if isvalid(rd_handle)
+                    uiresume(rd_handle);
+                    delete(rd_handle);
+                end
+            end
+
+            function doCancelReref()
+                if isvalid(rd_handle)
+                    uiresume(rd_handle);
+                    delete(rd_handle);
+                end
+            end
+
+            function acceptCallback()
+                % Use selectedRows tracked by onCellSelect (most reliable —
+                % t.Selection may be stale after button click shifts focus).
+                rows = selectedRows;
+                if isempty(rows)
                     uialert(d, ...
                         'Please select at least one channel or press Cancel.', ...
                         'No Selection', 'Icon', 'warning');
-                    return;
+                    return
                 end
-
-                if isvalid(d)
-                    uiresume(d);
-                    delete(d);
-                end
+                selectedChannels = tableData(rows, 1);
+                delete(d);  % deleting the uifigure auto-resumes uiwait
             end
 
             function cancelCallback()
                 selectedChannels = [];
-
-                if isvalid(d)
-                    uiresume(d);
-                    delete(d);
-                end
+                delete(d);
             end
 
         end
 
         % ------------------------------------------------------------------
+
+        function app = ShowFile(app, varargin)
+            % ShowFile  Open a staging file.
+            %
+            %   Triggered by double-clicking an item in FileListBox.
+
+            if isempty(app.StagingList) || isempty(app.StagingListBox.Value)
+                return
+            end
+
+            curr_file = app.StagingListBox.Value{:};
+            if ~exist(curr_file, 'file')
+                uialert(app.UIFigure, sprintf('File does not exist: %s', curr_file), 'Error', 'Icon', 'error');
+                return
+            end
+
+            if ispc        % Windows
+                % winopen is a MATLAB function, it handles spaces automatically
+                winopen(curr_file);
+            elseif ismac   % macOS
+                system(['open -a TextEdit "' curr_file '"']);
+            elseif isunix  % Linux
+                % system() calls the terminal; quotes are required for spaces
+                system(['xdg-open "' curr_file '"']);
+            end
+
+        end
 
         function app = ShowHeader(app, varargin)
             % ShowHeader  Open (or update) a floating window showing the EDF file header.
@@ -1932,7 +2313,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             curr_file = app.DataListBox.Value{:};
             if ~exist(curr_file, 'file')
-                uialert(app.UIFigure, 'File %s does not exist', curr_file, 'Error', 'Icon', 'Error');
+                uialert(app.UIFigure, sprintf('File does not exist: %s', curr_file), 'Error', 'Icon', 'error');
                 return
             end
 
@@ -2036,13 +2417,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             % Run optional validation callback; keep only files that pass
             if ~isempty(app.FileValidationCallback)
-                validFiles = {};
-                for i = 1:length(files)
-                    if app.FileValidationCallback(files{i})
-                        validFiles{end+1} = files{i}; %#ok<AGROW>
-                    end
+                keep = false(1, numel(files));
+                for i = 1:numel(files)
+                    keep(i) = app.FileValidationCallback(files{i});
                 end
-                files = validFiles;
+                files = files(keep);
             end
         end
 
@@ -2053,6 +2432,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         function updateDataListBox(app)
             % updateDataListBox  Refresh the DataListBox items and update the file-count label.
 
+            app.DataListBox.IsError = false;
             app.DataListBox.Items = app.DataList;
             if length(app.DataList) == 1 %#ok<*ISCL>
                 app.DataLabel.Text = 'DATA (1 File)';
@@ -2066,6 +2446,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         function updateStagingListBox(app)
             % updateStagingListBox  Refresh the StagingListBox items and update the file-count label.
 
+            app.StagingListBox.IsError = false;
             app.StagingListBox.Items = app.StagingList;
             if length(app.StagingList) == 1
                 app.StagingLabel.Text = 'STAGING (1 File)';
@@ -2078,6 +2459,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
         function updateRunErrorList(app)
             % updateRunErrorList  Populate run_error_list with any blocking validation issues.
+            %   Also sets IsError on related CSSui components to highlight problems visually.
             %
             %   Checks the following conditions and appends a descriptive message
             %   to app.run_error_list for each failure:
@@ -2088,54 +2470,84 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %     - Stages column not specified
             %     - Times column not specified
             %     - Header rows not specified
+            %     - No channels selected
             %     - Any listed file does not exist on disk
+
+            app.run_error_list = {};  % Clear before re-validating
+
+            % Clear all component error states before re-evaluating
+            app.DataListBox.IsError           = false;
+            app.StagingListBox.IsError        = false;
+            app.OutputDirEditField.IsError    = false;
+            app.StagesColumnEditField.IsError = false;
+            app.TimesColumnEditField.IsError  = false;
+            app.HeaderRowsEditField.IsError   = false;
+            app.ChannelEditField.IsError      = false;
+            app.ArtifactEditField.IsError     = false;
+            app.WakeEditField.IsError         = false;
+            app.REMEditField.IsError          = false;
+            app.N1EditField.IsError           = false;
+            app.N2EditField.IsError           = false;
+            app.N3EditField.IsError           = false;
 
             if isempty(app.DataList)
                 app.run_error_list(end+1) = {'- Data list empty. Need edf files to run.'};
-            end
-
-            if isempty(app.StagingList)
-                app.run_error_list(end+1) = {'- Staging list empty. Need staging files to run.'};
+                app.DataListBox.IsError = true;
             end
 
             if isempty(app.OutputDirEditField.Value)
                 app.run_error_list(end+1) = {'- No output directory given. Need somewhere to save files.'};
+                app.OutputDirEditField.IsError = true;
             end
 
-            if length(app.DataList) ~= length(app.StagingList)
+            if ~isempty(app.StagingList) && length(app.DataList) ~= length(app.StagingList)
                 app.run_error_list(end+1) = {strcat('- Number of data files (', ...
                     num2str(length(app.DataList)), ...
                     ') does not match staging files (', ...
                     num2str(length(app.StagingList)), ').')};
+                app.DataListBox.IsError    = true;
+                app.StagingListBox.IsError = true;
             end
 
             if isempty(app.StagesColumnEditField.Value)
                 app.run_error_list(end+1) = {'- No staging column given in the staging file.'};
+                app.StagesColumnEditField.IsError = true;
             end
 
             if isempty(app.TimesColumnEditField.Value)
                 app.run_error_list(end+1) = {'- No times column given in the staging file.'};
+                app.TimesColumnEditField.IsError = true;
             end
 
             if isempty(app.HeaderRowsEditField.Value)
                 app.run_error_list(end+1) = {'- No header rows given in the staging file.'};
+                app.HeaderRowsEditField.IsError = true;
+            end
+
+            if strcmpi(app.ChannelEditField.Value, 'Enter comma-separated channel labels') || isempty(app.ChannelEditField.Value)
+                app.run_error_list(end+1) = {'- No channels selected.'};
+                app.ChannelEditField.IsError = true;
+            end
+
+            % Check that required stage label fields are not empty
+            stage_label_fields = {'Artifact','Wake','REM','N1','N2','N3'};
+            for ii = 1:numel(stage_label_fields)
+                name = stage_label_fields{ii};
+                c = app.([name 'EditField']);
+                if isempty(strtrim(c.Value))
+                    app.run_error_list(end+1) = {['- ' name ' stage label is empty.']};
+                    c.IsError = true;
+                end
             end
 
             % Check that every file in both lists actually exists on disk
-            missing = {};
-            if size(app.DataList,1) < size(app.DataList,2)
-                app.DataList = app.DataList';
-            end
-            if size(app.StagingList,1) < size(app.StagingList,2)
-                app.StagingList = app.StagingList';
-            end
-            for f = [app.DataList, app.StagingList]
-                if ~isfile(f{1}), missing{end+1} = f{1}; end %#ok<AGROW>
-            end
+            allFiles = [app.DataList(:); app.StagingList(:)];
+            missing  = allFiles(~isfile(allFiles));
 
-            % TO-DO: Test missing-file error formatting
             if ~isempty(missing)
-                app.run_error_list{end} = strcat('Missing files:\n%s', strjoin(missing, '\n'));
+                app.run_error_list{end+1} = sprintf('Missing files:\n%s', strjoin(missing, '\n'));
+                app.DataListBox.IsError    = true;
+                app.StagingListBox.IsError = true;
             end
         end
 
@@ -2151,7 +2563,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             folder = uigetdir;
             if folder ~= 0
-                app.OutputDirEditField.Value = folder;
+                app.OutputDirEditField.IsError = false;
+                app.OutputDirEditField.Value   = folder;
                 outputDirChanged(app);
             end
         end
@@ -2188,19 +2601,132 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %   Creates <OutputDir>/logs/file_log_<timestamp>.txt and
             %   <OutputDir>/settings/run_settings_<timestamp>.txt via
             %   generate_run_log. Stores the file handle for subsequent writes.
+            %   Resets LogBuffer so the Run Log Console shows only this run.
 
             generate_run_log(app.options_structs, app.struct_names, ...
                 'run_start', app.curr_datetime, ...
                 'file_path', strcat(app.OutputDirEditField.Value, '/settings/'));
 
-            app.runlog_fname = strcat('file_log_', app.curr_datetime, '.txt');
+            app.runlog_fname = matlab.lang.makeValidName(strcat('file_log_', app.curr_datetime, '.txt'));
             app.runlog_fpath = strcat(app.OutputDirEditField.Value, '/logs/');
             app.runlog_fid   = fopen(fullfile(app.runlog_fpath, app.runlog_fname), 'w');
 
-            fprintf(app.runlog_fid, 'Date and time of run start: %s\n', app.curr_datetime);
-            fprintf(app.runlog_fid, 'Run with settings file: %s\n\n', ...
-                strcat('run_settings_', app.curr_datetime, '.txt'));
-            fprintf(app.runlog_fid, 'Files run: \n\n');
+            app.writeLog(sprintf('Date and time of run start: %s\n', app.curr_datetime));
+            app.writeLog(sprintf('Run with settings file: %s\n\n', ...
+                strcat('run_settings_', app.curr_datetime, '.txt')));
+            app.writeLog(sprintf('Files run: \n\n'));
+        end
+
+        % ------------------------------------------------------------------
+
+        function writeLog(app, msg)
+            % writeLog  Write a structured message to the run log file.
+            %   Console output is captured separately via diary() and
+            %   mirrored by the LogConsoleTimer polling the consolelog file.
+            if ~isempty(app.runlog_fid) && app.runlog_fid > 0
+                fprintf(app.runlog_fid, '%s', msg);
+            end
+        end
+
+        % ------------------------------------------------------------------
+
+        function toggleRunLogConsole(app, ~, ~)
+            % toggleRunLogConsole  Show or hide the floating Run Log Console.
+            %   Mirrors the consolelog (diary) file in real time via a timer.
+
+            if ~isempty(app.LogConsoleFig) && isvalid(app.LogConsoleFig)
+                % Already open — close it (toggle off)
+                app.stopLogConsoleTimer();
+                delete(app.LogConsoleFig);
+                app.LogConsoleFig      = [];
+                app.LogConsoleTextArea = [];
+                app.ShowRunLogConsoleMenu.Text = 'Show Run Log Console';
+                return
+            end
+
+            % Create the console window
+            ss = get(0, 'ScreenSize');
+            cW = 720; cH = 520;
+            fig = uifigure('Name', 'Run Log Console', ...
+                'Position', [(ss(3)-cW)/2, (ss(4)-cH)/2, cW, cH], ...
+                'WindowStyle', 'normal', ...
+                'Resize', 'on', ...
+                'CloseRequestFcn', @(~,~) onConsoleClose());
+
+            g = uigridlayout(fig, ...
+                'RowHeight', {'1x'}, 'ColumnWidth', {'1x'}, ...
+                'Padding', [6 6 6 6]);
+
+            ta = CSSuiTextArea(g, ...
+                'Editable',         false, ...
+                'Scroll',           true, ...
+                'WordWrap',         false, ...
+                'Style',            'shadow_light', ...
+                'BackgroundColor',  '#ffffff', ...
+                'FontSize',         '12px', ...
+                'Color',            '#5f7080', ...
+                'FontWeight',       '500');
+            ta.Layout.Row    = 1;
+            ta.Layout.Column = 1;
+
+            app.LogConsoleFig      = fig;
+            app.LogConsoleTextArea = ta;
+            app.ShowRunLogConsoleMenu.Text = 'Hide Run Log Console';
+
+            % If a run is already in progress, load existing content and
+            % start the polling timer.
+            diaryRunning = ~isempty(app.consolelog_fpath) && ...
+                           ~isempty(app.consolelog_fname);
+            if diaryRunning
+                app.updateLogConsole();
+                app.startLogConsoleTimer();
+            end
+
+            function onConsoleClose()
+                app.stopLogConsoleTimer();
+                delete(fig);
+                app.LogConsoleFig      = [];
+                app.LogConsoleTextArea = [];
+                app.ShowRunLogConsoleMenu.Text = 'Show Run Log Console';
+            end
+        end
+
+        % ------------------------------------------------------------------
+
+        function updateLogConsole(app)
+            % updateLogConsole  Read the consolelog file and refresh the text area.
+            if isempty(app.LogConsoleFig) || ~isvalid(app.LogConsoleFig)
+                return
+            end
+            fpath = fullfile(app.consolelog_fpath, app.consolelog_fname);
+            if ~isfile(fpath), return, end
+            try
+                app.LogConsoleTextArea.Value = fileread(fpath);
+            catch
+            end
+        end
+
+        % ------------------------------------------------------------------
+
+        function startLogConsoleTimer(app)
+            % startLogConsoleTimer  Create and start the 0.3 s polling timer.
+            app.stopLogConsoleTimer();  % ensure no duplicate
+            app.LogConsoleTimer = timer( ...
+                'Period',        0.3, ...
+                'ExecutionMode', 'fixedRate', ...
+                'TimerFcn',      @(~,~) app.updateLogConsole());
+            start(app.LogConsoleTimer);
+        end
+
+        % ------------------------------------------------------------------
+
+        function stopLogConsoleTimer(app)
+            % stopLogConsoleTimer  Stop and delete the polling timer if running.
+            if ~isempty(app.LogConsoleTimer) && isvalid(app.LogConsoleTimer)
+                stop(app.LogConsoleTimer);
+                delete(app.LogConsoleTimer);
+            end
+            app.LogConsoleTimer = [];
         end
 
         % ------------------------------------------------------------------
@@ -2210,13 +2736,18 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %
             %   Creates <OutputDir>/logs/console_log_<timestamp>.txt and activates
             %   MATLAB's diary function to capture all subsequent console output.
-
-            app.consolelog_fname = strcat('console_log_', app.curr_datetime, '.txt');
-            app.consolelog_fpath = strcat(app.OutputDirEditField.Value, '/logs/');
-            app.consolelog_fid   = fopen(fullfile(app.consolelog_fpath, app.consolelog_fname), 'w');
-
-            fprintf(app.consolelog_fid, 'Date and time of run start: %s\n\n', app.curr_datetime);
-            diary(fullfile(app.consolelog_fpath, app.consolelog_fname))
+return;
+            % app.consolelog_fname = strcat('console_log_', app.curr_datetime, '.txt');
+            % app.consolelog_fpath = strcat(app.OutputDirEditField.Value, '/logs/');
+            % app.consolelog_fid   = fopen(fullfile(app.consolelog_fpath, app.consolelog_fname), 'w');
+            % 
+            % fprintf(app.consolelog_fid, 'Date and time of run start: %s\n\n', app.curr_datetime);
+            % diary(fullfile(app.consolelog_fpath, app.consolelog_fname))
+            % 
+            % % If the Run Log Console is already open, start live polling now.
+            % if ~isempty(app.LogConsoleFig) && isvalid(app.LogConsoleFig)
+            %     app.startLogConsoleTimer();
+            % end
         end
 
         % ==================================================================
@@ -2287,6 +2818,66 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
         % ------------------------------------------------------------------
 
+        function checkChannelSamplingRates(app, selectedChannels, tableData)
+            % checkChannelSamplingRates  Warn if any selected channel's Fs is
+            %   far above or below the frequency range DYNAMO analyzes.
+            %
+            %   Upper bound: max of SOPH_options.freq_range(2) and
+            %   detection_options.mtm_freq_range(2). A channel is flagged as
+            %   too high if any of its Fs values exceed 10x that bound
+            %   (suggest the Resample option to downsample), and too low if
+            %   any Fs value falls below 2x that bound, since Nyquist
+            %   requires Fs >= 2*upper for the analysis to run.
+
+            soph_upper  = app.SOPH_options.freq_range(2);
+            mtm_upper   = app.detection_options.mtm_freq_range(2);
+            max_upper   = max(soph_upper, mtm_upper);
+            high_thresh = 10 * max_upper;
+            low_thresh  = 2  * max_upper;
+
+            tooHigh = {};
+            tooLow  = {};
+            for ii = 1:numel(selectedChannels)
+                lbl = selectedChannels{ii};
+                idx = find(strcmp(tableData(:,1), lbl), 1);
+                if isempty(idx)
+                    continue
+                end
+                fs_vals = sscanf(tableData{idx,2}, '%g');
+                if isempty(fs_vals)
+                    continue
+                end
+                entry = sprintf('  %s (%s)', lbl, tableData{idx,2});
+                if max(fs_vals) > high_thresh
+                    tooHigh{end+1} = entry; %#ok<AGROW>
+                end
+                if min(fs_vals) < low_thresh
+                    tooLow{end+1}  = entry; %#ok<AGROW>
+                end
+            end
+
+            if ~isempty(tooHigh)
+                msg = sprintf(['The following selected channel(s) have a sampling frequency ' ...
+                    'far exceeding what DYNAMO uses (> %g Hz, i.e. 10x the upper analysis bound ' ...
+                    'of %g Hz):\n\n%s\n\n' ...
+                    'Consider enabling the "Resample Data" option to downsample before processing.'], ...
+                    high_thresh, max_upper, strjoin(tooHigh, newline));
+                uialert(app.UIFigure, msg, 'High Sampling Rate', 'Icon', 'warning');
+            end
+
+            if ~isempty(tooLow)
+                msg = sprintf(['The following selected channel(s) have a sampling frequency ' ...
+                    'below the minimum required by DYNAMO (< %g Hz, i.e. 2x the upper analysis ' ...
+                    'bound of %g Hz by Nyquist):\n\n%s\n\n' ...
+                    'You must enable the "Resample Data" option to upsample these channels ' ...
+                    'before processing, otherwise the run will fail.'], ...
+                    low_thresh, max_upper, strjoin(tooLow, newline));
+                uialert(app.UIFigure, msg, 'Low Sampling Rate', 'Icon', 'warning');
+            end
+        end
+
+        % ------------------------------------------------------------------
+
         function updateDelimeterInput(app)
             % updateDelimeterInput  Convert the delimiter dropdown selection to a format character.
             %
@@ -2317,82 +2908,72 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %   Skips execution if all output files already exist and
             %   OverwriteExistingFilesCheckBox is unchecked.
 
-            % Ensure output directories exist
-            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/TFpeaks/'),'dir')
-                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/TFpeaks/'))
-            end
-            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/SOPHs/'),'dir')
-                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/SOPHs/'))
-            end
+            % Channel/output dirs prepared once in runBatch; reuse cached paths
+            chanDir     = fullfile(app.OutputDirEditField.Value, app.channel);
+            tfpeaksDir  = fullfile(chanDir, 'TFpeaks');
+            sophsDir    = fullfile(chanDir, 'SOPHs');
+            statsBase   = fullfile(tfpeaksDir, [app.input_fbase '_stats_table_' app.channel]);
+            sophBase    = fullfile(sophsDir,   [app.input_fbase '_SOPHs_' app.channel]);
+            sophPowBase = fullfile(sophsDir,   [app.input_fbase '_SOPHs_power_' app.channel]);
+            sophPhaBase = fullfile(sophsDir,   [app.input_fbase '_SOPHs_phase_' app.channel]);
 
-            % Build output file paths for existence checks
-            app.output_stats_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                '/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.mat');
-            app.output_SOPH_name  = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat');
+            stats_csv    = [statsBase '.csv'];
+            stats_mat    = [statsBase '.mat'];
+            SOPH_mat     = [sophBase  '.mat'];
+            SOPH_tiff    = [sophPowBase '.tiff'];
+            stats_exists = isfile(stats_csv) || isfile(stats_mat);
+            SOPH_exists  = isfile(SOPH_mat)  || isfile(SOPH_tiff);
 
             % Run DYNAMO only if outputs are missing or overwrite is requested
-            if app.OverwriteExistingFilesCheckBox.Value || ...
-                    (~exist(app.output_stats_name,'file') || ~exist(app.output_SOPH_name,'file'))
+            if app.OverwriteExistingFilesCheckBox.Value || ~stats_exists || ~SOPH_exists
 
                 app.anything_run = 1;
-                app.TextArea.Value = strcat('Running DYNAMO on subject ',{' '}, ...
-                    app.input_fbase,', channel ',{' '},app.channel,'.');
-                app.run();
+                app.TextArea.addnl('   Running DYNAMO...');
+                app.TextArea.addnl('   Computing TF peak stats table...');
+                drawnow;
+                app.runDYNAMO();
 
                 stats_table = app.stats_table;
                 SOPHs       = app.SOPHs;
 
                 % ---- Save stats table ----
                 if app.SavePeakStatsCheckBox.Value && ~strcmp(app.PeakStatsTableDropDown.Value,'--')
-                    app.TextArea.Value = strcat('Saving stats table on subject ',{' '}, ...
-                        app.input_fbase,', channel ',{' '},app.channel,'.');
+                    app.TextArea.addnl('   Saving stats table...');
                     switch app.PeakStatsTableDropDown.Value
                         case '.csv'
-                            app.output_stats_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.csv');
+                            app.output_stats_name = stats_csv;
                             table2csv(stats_table, app.output_stats_name);
                         case '.mat'
-                            app.output_stats_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.mat');
+                            app.output_stats_name = stats_mat;
                             save(app.output_stats_name,'stats_table');
                         case 'All'
                             % Save both formats
-                            app.output_stats_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.mat');
+                            app.output_stats_name = stats_mat;
                             save(app.output_stats_name,'stats_table');
-                            app.output_stats_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/TFpeaks/',app.input_fbase,'_stats_table_',app.channel,'.csv');
+                            app.output_stats_name = stats_csv;
                             table2csv(stats_table, app.output_stats_name);
                     end
                 end
 
                 % ---- Save SO-Power Histograms ----
                 if app.SaveSOPHsCheckBox.Value && ~strcmp(app.SOPowerHistogramsDropDown.Value,'--')
-                    app.TextArea.Value = strcat('Saving SOPHs on subject ',{' '}, ...
-                        app.input_fbase,', channel ',{' '},app.channel,'.');
+                    app.TextArea.addnl('   Saving SOPHs');
                     switch app.SOPowerHistogramsDropDown.Value
                         case '.tiff'
-                            app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/SOPHs/',app.input_fbase,'_SOPHs_power_',app.channel,'.tiff');
+                            app.output_SOPH_name = [sophPowBase '.tiff'];
                             app.writeTiff(app.output_SOPH_name, SOPHs.SOpower_mat);
-                            app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/SOPHs/',app.input_fbase,'_SOPHs_phase_',app.channel,'.tiff');
+                            app.output_SOPH_name = [sophPhaBase '.tiff'];
                             app.writeTiff(app.output_SOPH_name, SOPHs.SOphase_mat);
                         case '.mat'
-                            app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat');
+                            app.output_SOPH_name = SOPH_mat;
                             save(app.output_SOPH_name,'SOPHs');
                         case 'All'
                             % Save both tiff and mat
-                            app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/SOPHs/',app.input_fbase,'_SOPHs_power',app.channel,'.tiff');
+                            app.output_SOPH_name = [sophPowBase '.tiff'];
                             app.writeTiff(app.output_SOPH_name, SOPHs.SOpower_mat);
-                            app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/SOPHs/',app.input_fbase,'_SOPHs_phase_',app.channel,'.tiff');
+                            app.output_SOPH_name = [sophPhaBase '.tiff'];
                             app.writeTiff(app.output_SOPH_name, SOPHs.SOphase_mat);
-                            app.output_SOPH_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                                '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat');
+                            app.output_SOPH_name = SOPH_mat;
                             save(app.output_SOPH_name,'SOPHs');
                     end
                 end
@@ -2408,51 +2989,50 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %   calls displaySummaryPlot and saves the result using the format
             %   specified by DataSummaryDropDown.
 
-            % Ensure output directory exists
-            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/summary/'),'dir')
-                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/summary/'))
-            end
+            % Channel/output dirs prepared once in runBatch; reuse cached paths
+            chanDir    = fullfile(app.OutputDirEditField.Value, app.channel);
+            summaryDir = fullfile(chanDir, 'figures', 'summary');
+            sophMat    = fullfile(chanDir, 'SOPHs', [app.input_fbase '_SOPHs_' app.channel '.mat']);
 
             % ---- Ensure SOPHs are available ----
-            if isempty(app.SOPHs) && ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
-                runStatsTable(app);   % Compute from scratch
-            elseif isempty(app.SOPHs) && exist(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
-                app.SOPHs = load(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat')).SOPHs;
+            if isempty(app.SOPHs)
+                if isfile(sophMat)
+                    app.SOPHs = load(sophMat).SOPHs;
+                else
+                    runStatsTable(app);   % Compute from scratch
+                end
             end
 
             % ---- Ensure stats_table is available ----
             if isempty(app.stats_table)
-                csvPath = strcat(app.OutputDirEditField.Value,'/',app.channel,'/TFpeaks/', ...
-                    app.input_fbase,'_stats_table_',app.channel,'.csv');
-                matPath = strcat(app.OutputDirEditField.Value,'/',app.channel,'/TFpeaks/', ...
-                    app.input_fbase,'_stats_table_',app.channel,'.mat');
+                statsBase = fullfile(chanDir, 'TFpeaks', [app.input_fbase '_stats_table_' app.channel]);
+                csvPath = [statsBase '.csv'];
+                matPath = [statsBase '.mat'];
+                matExists = isfile(matPath);
+                csvExists = isfile(csvPath);
 
-                if ~exist(csvPath,'file') && ~exist(matPath,'file')
-                    runStatsTable(app);      % Compute from scratch
-                elseif exist(matPath,'file')
-                    app.stats_table = load(matPath,'stats_table');
-                else
+                if matExists
+                    app.stats_table = load(matPath,'stats_table').stats_table;
+                elseif csvExists
                     app.stats_table = csv2table(csvPath);
+                else
+                    runStatsTable(app);      % Compute from scratch
                 end
             end
 
             % Build output file path (format comes from DataSummaryDropDown)
             if ~strcmp(app.DataSummaryDropDown.Value,'--')
-                app.output_fig_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/figures/summary/',app.input_fbase,'_summary_figure_', ...
-                    app.channel, app.DataSummaryDropDown.Value);
+                app.output_fig_name = fullfile(summaryDir, ...
+                    [app.input_fbase '_summary_figure_' app.channel app.DataSummaryDropDown.Value]);
             end
 
             % Save figure if missing or overwrite requested
-            if app.OverwriteExistingFilesCheckBox.Value || ~exist(app.output_fig_name,'file')
-                app.TextArea.Value = strcat('Saving summary figure on subject ',{' '}, ...
-                    app.input_fbase,', channel ',{' '},app.channel,'.');
+            if app.OverwriteExistingFilesCheckBox.Value || ~isfile(app.output_fig_name)
                 app.anything_run = 1;
+                app.TextArea.addnl('   Generating summary figure...');
                 fh = app.displaySummaryPlot;
-                print(fh,'-dpng','-r300',app.output_fig_name);
+                app.TextArea.addnl('   Saving summary figure...');
+                exportgraphics(fh, app.output_fig_name, 'Resolution', 300);
                 close all;
             end
         end % runDataSummaryFigure
@@ -2467,43 +3047,39 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %     - SOpower/SOphase parametric fit data (.csv, .mat, or both)
             %       according to ParametricBasisDropDown selection.
 
-            % Ensure output directories exist
-            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/param_basis/'),'dir')
-                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/param_basis/'))
-            end
-            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/param_basis/'),'dir')
-                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/param_basis/'))
-            end
+            % Channel/output dirs prepared once in runBatch; reuse cached paths
+            chanDir        = fullfile(app.OutputDirEditField.Value, app.channel);
+            paramDir       = fullfile(chanDir, 'param_basis');
+            paramFigDir    = fullfile(chanDir, 'figures', 'param_basis');
+            sophMat        = fullfile(chanDir, 'SOPHs', [app.input_fbase '_SOPHs_' app.channel '.mat']);
+            paramPowerBase = fullfile(paramDir, [app.input_fbase '_SOpower_paramfit_' app.channel]);
+            paramPhaseBase = fullfile(paramDir, [app.input_fbase '_SOphase_paramfit_' app.channel]);
 
             % ---- Ensure SOPHs are available ----
-            if isempty(app.SOPHs) && ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
-                app.anything_run = 1;
-                app.TextArea.Value = strcat('Running DYNAMO on subject ',{' '}, ...
-                    app.input_fbase,', channel ',{' '},app.channel,'.');
-                runStatsTable(app);
-            elseif isempty(app.SOPHs) && exist(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
-                app.SOPHs = load(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat')).SOPHs;
+            if isempty(app.SOPHs)
+                if isfile(sophMat)
+                    app.SOPHs = load(sophMat).SOPHs;
+                else
+                    app.anything_run = 1;
+                    app.TextArea.addnl('   Running DYNAMO (computing SOPHs)...');
+                    runStatsTable(app);
+                end
             end
 
             % Fit parametric basis model
             % TO-DO: Check if param basis already saved before re-fitting
-            app.TextArea.Value = strcat('Running parameter basis fit on subject ',{' '}, ...
-                app.input_fbase,', channel ',{' '},app.channel,'.');
+            app.TextArea.addnl('   Running parametric basis...');
+            app.TextArea.addnl('   Generating parametric basis figure...');
             app.fitParamBasis();
             fh = gcf;
 
             % Optionally save the parametric basis figure
             if app.SaveParamImagesCheckBox.Value
                 app.anything_run = 1;
-                app.output_param_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/figures/param_basis/',app.input_fbase,'_param_basis_figure_', ...
-                    app.channel, app.DataSummaryDropDown.Value);
-                app.TextArea.Value = strcat('Saving parameter basis fit summary figure on subject ',{' '}, ...
-                    app.input_fbase,', channel ',{' '},app.channel,'.');
-                print(fh,'-dpng','-r300',app.output_param_name);
+                app.output_param_name = fullfile(paramFigDir, ...
+                    [app.input_fbase '_param_basis_figure_' app.channel app.ParametricFiguresDropDown.Value]);
+                app.TextArea.addnl('   Saving parametric basis figure...');
+                exportgraphics(fh, app.output_param_name, 'Resolution', 300);
             end
             close all;
 
@@ -2512,43 +3088,34 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 switch app.ParametricBasisDropDown.Value
                     case '.csv'
                         SOpower_params = app.SOPHs.SOpower_paramfit.params;
-                        SOphase_params = app.SOPHs.SOpower_paramfit.params;  % Note: currently uses SOpower source
-                        app.output_paramfit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/param_basis/',app.input_fbase,'_SOpower_paramfit_',app.channel,'.csv');
-                        app.output_paramfit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/param_basis/',app.input_fbase,'_SOphase_paramfit_',app.channel,'.csv');
-                        app.TextArea.Value = strcat('Updating saved SOPH on subject ',{' '}, ...
-                            app.input_fbase,', channel ',{' '},app.channel,'.');
+                        SOphase_params = app.SOPHs.SOphase_paramfit.params;
+                        app.output_paramfit_power_name = [paramPowerBase '.csv'];
+                        app.output_paramfit_phase_name = [paramPhaseBase '.csv'];
+                        app.TextArea.addnl(   'Saving parametric basis as .csv...');
                         writematrix(SOpower_params, app.output_paramfit_power_name);
                         writematrix(SOphase_params, app.output_paramfit_phase_name);
                     case '.mat'
                         SOpower_paramfit = app.SOPHs.SOpower_paramfit;
-                        SOphase_paramfit = app.SOPHs.SOpower_paramfit;  % Note: currently uses SOpower source
-                        app.output_paramfit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/param_basis/',app.input_fbase,'_SOpower_paramfit_',app.channel,'.mat');
-                        app.output_paramfit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/param_basis/',app.input_fbase,'_SOphase_paramfit_',app.channel,'.mat');
+                        SOphase_paramfit = app.SOPHs.SOphase_paramfit;
+                        app.output_paramfit_power_name = [paramPowerBase '.mat'];
+                        app.output_paramfit_phase_name = [paramPhaseBase '.mat'];
                         save(app.output_paramfit_power_name,'SOpower_paramfit');
                         save(app.output_paramfit_phase_name,'SOphase_paramfit');
+                        app.TextArea.addnl(   'Saving parametric basis as .mat...');
                     case 'All'
                         % Save both csv params and full mat structs
                         SOpower_params = app.SOPHs.SOpower_paramfit.params;
-                        SOphase_params = app.SOPHs.SOpower_paramfit.params;
-                        app.output_paramfit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/param_basis/',app.input_fbase,'_SOpower_paramfit_',app.channel,'.csv');
-                        app.output_paramfit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/param_basis/',app.input_fbase,'_SOphase_paramfit_',app.channel,'.csv');
-                        app.TextArea.Value = strcat('Updating saved SOPH on subject ',{' '}, ...
-                            app.input_fbase,', channel ',{' '},app.channel,'.');
+                        SOphase_params = app.SOPHs.SOphase_paramfit.params;
+                        app.output_paramfit_power_name = [paramPowerBase '.csv'];
+                        app.output_paramfit_phase_name = [paramPhaseBase '.csv'];
+                        app.TextArea.addnl(   'Saving parametric basis as .csv and .mat...');
                         writematrix(SOpower_params, app.output_paramfit_power_name);
                         writematrix(SOphase_params, app.output_paramfit_phase_name);
 
                         SOpower_paramfit = app.SOPHs.SOpower_paramfit;
-                        SOphase_paramfit = app.SOPHs.SOpower_paramfit;
-                        app.output_paramfit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/param_basis/',app.input_fbase,'_SOpower_paramfit_',app.channel,'.mat');
-                        app.output_paramfit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/param_basis/',app.input_fbase,'_SOphase_paramfit_',app.channel,'.mat');
+                        SOphase_paramfit = app.SOPHs.SOphase_paramfit;
+                        app.output_paramfit_power_name = [paramPowerBase '.mat'];
+                        app.output_paramfit_phase_name = [paramPhaseBase '.mat'];
                         save(app.output_paramfit_power_name,'SOpower_paramfit');
                         save(app.output_paramfit_phase_name,'SOphase_paramfit');
                 end
@@ -2565,47 +3132,41 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %     - SOpower/SOphase spline fit data (.tiff, .mat, or both)
             %       according to SplineBasisDropDown selection.
 
-            % Ensure output directories exist
-            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/spline_basis/'),'dir')
-                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/spline_basis/'))
-            end
-            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/spline_basis/'),'dir')
-                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/figures/spline_basis/'))
-            end
+            % Channel/output dirs prepared once in runBatch; reuse cached paths
+            chanDir         = fullfile(app.OutputDirEditField.Value, app.channel);
+            splineDir       = fullfile(chanDir, 'spline_basis');
+            splineFigDir    = fullfile(chanDir, 'figures', 'spline_basis');
+            sophMat         = fullfile(chanDir, 'SOPHs', [app.input_fbase '_SOPHs_' app.channel '.mat']);
+            splinePowerBase = fullfile(splineDir, [app.input_fbase '_SOpower_splinefit_' app.channel]);
+            splinePhaseBase = fullfile(splineDir, [app.input_fbase '_SOphase_splinefit_' app.channel]);
 
             % ---- Ensure SOPHs are available ----
-            if isempty(app.SOPHs) && ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
-                app.anything_run = 1;
-                app.TextArea.Value = strcat('Running DYNAMO on subject ',{' '}, ...
-                    app.input_fbase,', channel ',{' '},app.channel,'.');
-                runStatsTable(app);
-            elseif isempty(app.SOPHs) && exist(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat'),'file')
-                app.SOPHs = load(strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/SOPHs/',app.input_fbase,'_SOPHs_',app.channel,'.mat')).SOPHs;
+            if isempty(app.SOPHs)
+                if isfile(sophMat)
+                    app.SOPHs = load(sophMat).SOPHs;
+                else
+                    app.anything_run = 1;
+                    app.TextArea.addnl('   Running DYNAMO (computing SOPHs)...');
+                    runStatsTable(app);
+                end
             end
 
             % Fit spline basis model
             % TO-DO: Check if spline already saved before re-fitting
-            app.TextArea.Value = strcat('Running spline basis fit on subject ',{' '}, ...
-                app.input_fbase,', channel ',{' '},app.channel,'.');
+            app.TextArea.addnl(   'Running spline basis...');
+            app.TextArea.addnl('   Generating spline basis figure...');
             app.fitSplineBasis();
             fh = gcf;
 
             % Optionally save the spline basis figure
             if app.SaveSplineImagesCheckBox.Value
                 app.anything_run = 1;
-                app.TextArea.Value = strcat('Saving spline figure for subject ',{' '}, ...
-                    app.input_fbase,', channel ',{' '},app.channel,'.');
-                app.output_spline_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                    '/figures/spline_basis/',app.input_fbase,'_spline_basis_figure_',app.channel,'.png');
-                print(fh,'-dpng','-r300',app.output_spline_name);
+                app.TextArea.addnl('   Saving spline figure...');
+                app.output_spline_name = fullfile(splineFigDir, ...
+                    [app.input_fbase '_spline_basis_figure_' app.channel app.SplineFiguresDropDown.Value]);
+                exportgraphics(fh, app.output_spline_name, 'Resolution', 300);
             end
             close all;
-
-            app.TextArea.Value = strcat('Updating saved SOPH for subject ',{' '}, ...
-                app.input_fbase,', channel ',{' '},app.channel,'.');
 
             % Save spline fit data according to chosen format
             if ~strcmp(app.SplineBasisDropDown.Value,'--')
@@ -2614,33 +3175,28 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
                 switch app.SplineBasisDropDown.Value
                     case '.tiff'
-                        app.output_splinefit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/spline_basis/',app.input_fbase,'_SOpower_splinefit_',app.channel,'.tiff');
-                        app.output_splinefit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/spline_basis/',app.input_fbase,'_SOphase_splinefit_',app.channel,'.tiff');
+                        app.output_splinefit_power_name = [splinePowerBase '.tiff'];
+                        app.output_splinefit_phase_name = [splinePhaseBase '.tiff'];
                         app.writeTiff(app.output_splinefit_power_name, SOpower_splinefit.splinefit);
                         app.writeTiff(app.output_splinefit_phase_name, SOphase_splinefit.splinefit);
+                        app.TextArea.addnl('   Saving spline basis is .tiff...');
                     case '.mat'
-                        app.output_splinefit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/spline_basis/',app.input_fbase,'_SOpower_splinefit_',app.channel,'.mat');
-                        app.output_splinefit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/spline_basis/',app.input_fbase,'_SOphase_splinefit_',app.channel,'.mat');
+                        app.output_splinefit_power_name = [splinePowerBase '.mat'];
+                        app.output_splinefit_phase_name = [splinePhaseBase '.mat'];
                         save(app.output_splinefit_power_name,'SOpower_splinefit');
                         save(app.output_splinefit_phase_name,'SOphase_splinefit');
+                        app.TextArea.addnl('   Saving spline basis is .mat...');
                     case 'All'
                         % Save both tiff and mat formats
-                        app.output_splinefit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/spline_basis/',app.input_fbase,'_SOpower_splinefit_',app.channel,'.tiff');
-                        app.output_splinefit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/spline_basis/',app.input_fbase,'_SOphase_splinefit_',app.channel,'.tiff');
+                        app.output_splinefit_power_name = [splinePowerBase '.tiff'];
+                        app.output_splinefit_phase_name = [splinePhaseBase '.tiff'];
                         app.writeTiff(app.output_splinefit_power_name, SOpower_splinefit.splinefit);
                         app.writeTiff(app.output_splinefit_phase_name, SOphase_splinefit.splinefit);
-                        app.output_splinefit_power_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/spline_basis/',app.input_fbase,'_SOpower_splinefit_',app.channel,'.mat');
-                        app.output_splinefit_phase_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                            '/spline_basis/',app.input_fbase,'_SOphase_splinefit_',app.channel,'.mat');
+                        app.output_splinefit_power_name = [splinePowerBase '.mat'];
+                        app.output_splinefit_phase_name = [splinePhaseBase '.mat'];
                         save(app.output_splinefit_power_name,'SOpower_splinefit');
                         save(app.output_splinefit_phase_name,'SOphase_splinefit');
+                        app.TextArea.addnl('   Saving spline basis is .tiff and .mat...');
                 end
             end
         end % runSplineBasis
@@ -2656,9 +3212,20 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %
             %   TO-DO: Expand to include additional auxiliary fields.
 
-            % Ensure output directory exists
-            if ~exist(strcat(app.OutputDirEditField.Value,'/',app.channel,'/auxiliary_data/'),'dir')
-                mkdir(strcat(app.OutputDirEditField.Value,'/',app.channel,'/auxiliary_data/'))
+            % Channel/output dirs prepared once in runBatch; reuse cached paths
+            chanDir = fullfile(app.OutputDirEditField.Value, app.channel);
+            auxDir  = fullfile(chanDir, 'auxiliary_data');
+
+            % Ensure SOPHs are available (needed for SOpower_norm field)
+            if isempty(app.SOPHs)
+                SOPHmat = fullfile(chanDir, 'SOPHs', [app.input_fbase '_SOPHs_' app.channel '.mat']);
+                if isfile(SOPHmat)
+                    app.SOPHs = load(SOPHmat).SOPHs;
+                else
+                    app.anything_run = 1;
+                    app.TextArea.addnl('   Computing SOPHs for auxiliary data...');
+                    runStatsTable(app);
+                end
             end
 
             % Package auxiliary data fields
@@ -2672,11 +3239,10 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             auxiliary_data = app.auxiliary_data; %#ok<ADPROP>
 
-            app.TextArea.Value = strcat('Saving auxiliary data on subject ',{' '}, ...
-                app.input_fbase,', channel ',{' '},app.channel,'.');
+            app.TextArea.addnl(   'Saving auxiliary data...');
 
-            app.output_aux_name = strcat(app.OutputDirEditField.Value,'/',app.channel, ...
-                '/auxiliary_data/',app.input_fbase,'_auxiliary_data_',app.channel,'.mat');
+            app.output_aux_name = fullfile(auxDir, ...
+                [app.input_fbase '_auxiliary_data_' app.channel '.mat']);
             save(app.output_aux_name,'auxiliary_data');
         end
 
@@ -2701,21 +3267,46 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             updateRunErrorList(app)
 
             if isempty(app.run_error_list)
-                uialert(app.UIFigure, ...
-                    'All files exist and counts match. Ready to process.', ...
-                    'Success', 'Icon', 'success');
+
+                if isempty(app.StagingList)
+                    % All other checks passed but no stage files — ask user to confirm
+                    selection = uiconfirm(app.UIFigure, ...
+                        ['No stage files selected. Are you sure you want to run with no stages? ' ...
+                         'All non-artifact times will be incorporated into TF-peak and SOPH analyses.'], ...
+                        'No Stage Files', ...
+                        'Options', {'Yes', 'No'}, ...
+                        'DefaultOption', 2, ...
+                        'CancelOption', 2);
+                    if strcmp(selection, 'No')
+                        return;
+                    end
+                    app.use_no_stages = true;
+                else
+                    app.use_no_stages = false;
+                end
+
+                app.RunBatchButton.Enabled  = 'off';
                 app.StopBatchButton.Enabled = 'on';
+                app.ProgressBar.Enabled     = true;
             else
                 uialert(app.UIFigure, sprintf('%s\n', app.run_error_list{:}), ...
                     'Run Error', 'Icon', 'error');
-                app.run_error_list = {};  % Reset for next validation attempt
                 return;
             end
 
-            % Optionally reverse file processing order
+            % Optionally reverse file processing order (use local copies so the
+            % GUI list boxes and app.DataList/StagingList are never mutated)
+            dataList    = app.DataList;
+            stagingList = app.StagingList;
+
+            if app.use_no_stages
+                % Build a same-length list of empty strings as placeholder staging paths
+                stagingList = repmat({''}, size(dataList));
+            end
+
             if app.RunInReverse.Value
-                app.DataList    = app.DataList(end:-1:1);
-                app.StagingList = app.StagingList(end:-1:1);
+                dataList    = dataList(end:-1:1);
+                stagingList = stagingList(end:-1:1);
             end
 
             % Invoke external batch callback if registered (passes file lists + options)
@@ -2727,11 +3318,10 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 opts.SaveParamImages  = app.SaveParamImagesCheckBox.Value;
                 opts.SaveSplineBasis  = app.SaveSplineBasisCheckBox.Value;
                 opts.SaveSplineImages = app.SaveSplineImagesCheckBox.Value;
-                app.BatchProcessCallback(app.DataList, app.StagingList, opts);
+                app.BatchProcessCallback(dataList, stagingList, opts);
             end
 
-            runBatch(app)
-            app.StopBatchButton.Enabled = 'on';
+            runBatch(app, dataList, stagingList)
         end
 
         % ------------------------------------------------------------------
@@ -2745,13 +3335,94 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.isStopBatchButtonPushed = true;
             uialert(app.UIFigure, ...
                 'Stop button pushed. Completing current subject then stopping.', ...
-                'Stopping', 'Icon', 'Error');
+                'Stopping', 'Icon', 'warning');
         end
 
         % ------------------------------------------------------------------
 
-        function runBatch(app, ~)
+        function AboutMenuSelected(app, ~, ~)
+            fig = uifigure('Name', 'About DYNAM-O', ...
+                'Position', [0 0 600 600]);
+            movegui(fig, 'center');
+
+            g = uigridlayout(fig, [1 1]);
+            g.Padding = [0 0 0 0];
+            g.RowHeight = {'1x'};
+            g.ColumnWidth = {'1x'};
+
+            htmlContent = [...
+                '<html>' ...
+                '<head>' ...
+                '<style>' ...
+                '  html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; box-sizing: border-box; }' ...
+                '  body { font-family: "Segoe UI", Tahoma, sans-serif; line-height: 1.5; color: #333; ' ...
+                '         background-color: #fdfdfd; padding: 20px 30px; box-sizing: border-box; }' ...
+                '  .section-header { font-weight: bold; text-transform: uppercase; font-size: 12px; color: #7f8c8d; margin-top: 20px; margin-bottom: 8px; letter-spacing: 1px; }' ...
+                '  .lab-info { margin-bottom: 10px; font-size: 14px; }' ...
+                '  .citation-card { background: #f4f7f6; border-left: 5px solid #2e86c1; padding: 12px 15px; margin-bottom: 12px; font-size: 13.5px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }' ...
+                '  a { color: #2980b9; text-decoration: none; font-weight: 600; cursor: pointer; }' ...
+                '  a:hover { text-decoration: underline; }' ...
+                '</style>' ...
+                '</head>' ...
+                '<body>' ...
+                ['  <div style="text-align: center; margin-bottom: 15px;">' app.make_logo_svg('width',250) '</div>'] ...
+                '  <div class="section-header">Developed by the Prerau Laboratory</div>' ...
+                '  <div class="lab-info">' ...
+                '    <b>Web:</b> <a onclick="sendLink(''http://sleepeeg.org'')">sleepeeg.org</a><br>' ...
+                '    <b>Tutorials:</b> <a onclick="sendLink(''http://prerau.bwh.harvard.edu/dynam-o/'')">sleepeeg.org/dynam-o/</a><br>' ...
+                '    <b>GitHub:</b> <a onclick="sendLink(''http://github.com/preraulab/DYNAM-O'')">Source Code</a>' ...
+                '  </div>' ...
+                '  <div class="section-header">Attribution</div>' ...
+                '  <p style="font-size: 13px; margin-bottom: 10px;">If you use this toolbox in publications or derived work, please cite:</p>' ...
+                '  <div class="citation-card">' ...
+                '    He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.<br>' ...
+                '    <b>DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics in Sleep EEG</b><br>' ...
+                '    <i>bioRxiv</i>, 2026 &ndash; Pending Journal Publication' ...
+                '  </div>' ...
+                '  <div class="citation-card">' ...
+                '    Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S., Manoach, D. S., Stickgold, R., Prerau, M. J.<br>' ...
+                '    <b>Transient Oscillation Dynamics During Sleep Provide a Robust Basis for Electroencephalographic Phenotyping and Biomarker Identification</b><br>' ...
+                '    <i>Sleep</i>, 2022; zsac223. <a onclick="sendLink(''https://doi.org/10.1093/sleep/zsac223'')">https://doi.org/10.1093/sleep/zsac223</a>' ...
+                '  </div>' ...
+                '<script>' ...
+                'var _hc = null;' ...
+                'function sendLink(url) {' ...
+                '  if (_hc) _hc.Data = { event: "link", url: url, t: Date.now() };' ...
+                '}' ...
+                'function setup(hc) {' ...
+                '  _hc = hc;' ...
+                '  _hc.Data = { event: "ready" };' ...
+                '}' ...
+                'window.setup = setup;' ...
+                '</script>' ...
+                '</body>' ...
+                '</html>'];
+
+            h = uihtml(g, 'HTMLSource', htmlContent);
+            h.Layout.Row = 1;
+            h.Layout.Column = 1;
+
+            h.DataChangedFcn = @(src, ~) handleDataChanged(src);
+
+            function handleDataChanged(src)
+                d = src.Data;
+                if ~isstruct(d) || ~isfield(d, 'event'), return; end
+                if strcmp(d.event, 'link') && isfield(d, 'url')
+                    web(d.url);
+                end
+            end
+        end
+
+        % ------------------------------------------------------------------
+
+        function runBatch(app, dataList, stagingList)
             % runBatch  Main batch processing loop: iterates over all files and channels.
+            %
+            %   runBatch(app, dataList, stagingList)
+            %
+            %   dataList/stagingList are the ordered file lists to process. They are
+            %   passed in (rather than read from app.DataList/StagingList) so that
+            %   reverse-order runs do not permanently mutate the GUI state.
             %
             %   Execution order per iteration:
             %     1. Load EDF and staging data via load_data.
@@ -2765,73 +3436,126 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %   On completion, all open log file handles are closed and diary is
             %   stopped automatically when consolelog_fid is closed.
 
-            app.TextArea.Value  = {'Beginning run.'};
+            app.TextArea.Value = 'Beginning run...';
+            drawnow;
             app.curr_datetime   = char(datetime('now','Format','yyMMdd_HHmmSS'));
-
-            % Create required output subdirectories
-            if ~exist(strcat(app.OutputDirEditField.Value,'/settings/'),'dir')
-                mkdir(strcat(app.OutputDirEditField.Value,'/settings/'))
-            end
-            if ~exist(strcat(app.OutputDirEditField.Value,'/logs/'),'dir')
-                mkdir(strcat(app.OutputDirEditField.Value,'/logs/'))
-            end
+            app.set_running;
 
             % Build DYNAMO options struct from current GUI settings
-            app.TextArea.Value = {'Updating advanced options.'};
+            app.TextArea.Value = 'Updating advanced options...';
+            drawnow;
             createOptionsStruct(app)
 
-            % Initialise run and console logs
-            app.TextArea.Value = {'Creating run log.'};
-            createRunLog(app)
-            app.TextArea.Value = {'Creating console log.'};
-            createConsoleLog(app)
-
-            % Parse channel list from edit field
-            app.TextArea.Value = {'Processing channel inputs.'};
-            updateChannelInput(app)
-
-            % Create (or refresh) the progress bar widget
-            if isempty(app.progress_bar)
-                app.progress_bar = SmoothProgressBar(app.TimeEstimateGrid, ...
-                    length(app.DataList), app.TimeEstimateGrid.Position);
-            else
-                app.progress_bar.refresh;
+            % Create required output subdirectories and initialise logs (if enabled)
+            if app.SaveLogsSwitch.Value
+                if ~exist(strcat(app.OutputDirEditField.Value,'/settings/'),'dir')
+                    mkdir(strcat(app.OutputDirEditField.Value,'/settings/'))
+                end
+                if ~exist(strcat(app.OutputDirEditField.Value,'/logs/'),'dir')
+                    mkdir(strcat(app.OutputDirEditField.Value,'/logs/'))
+                end
+                app.TextArea.Value = 'Creating run log...';
+                drawnow;
+                createRunLog(app)
+                app.TextArea.Value = 'Creating console log...';
+                drawnow;
+                createConsoleLog(app)
             end
+
+            % Parse channel list, stage identifiers, and delimiter once before the loop
+            app.TextArea.Value = 'Processing channel inputs.';
+            updateChannelInput(app)
+            updateStagesInput(app)
+            updateDelimeterInput(app)
+            drawnow;
+
+            % Initialize the progress bar widget
+            app.ProgressBar.N = length(dataList) * numel(app.ChannelList);
+            app.ProgressBar.start;
 
             % ---------------------------------------------------------------
             %   MAIN BATCH LOOP
             %   Outer: EDF files | Inner: channels
             % ---------------------------------------------------------------
+            warnState = warning('off','all');  % suppress all warnings during run
+            set(0, 'DefaultFigureVisible', 'off');  % suppress figure windows during batch
             app.curr_iteration = 0;
 
-            for jj = 1:length(app.DataList)
+            % Cache the channel list (raw names for load_data) and a parallel
+            % list of filesystem-safe names (used by analysis runners for paths).
+            % Sanitising once up front avoids O(N_channels x N_runners)
+            % redundant fixFilename calls during the loop.
+            channelList      = app.ChannelList;
+            channelListSafe  = cell(size(channelList));
+            for ii = 1:numel(channelList)
+                channelListSafe{ii} = app.fixFilename(channelList{ii},'');
+            end
 
-                for ii = 1:length(app.ChannelList)
-                    app.channel = app.ChannelList{ii};
+            % Pre-create every output subdirectory that enabled analysis steps
+            % will write to. mkdir is idempotent but each call costs a syscall,
+            % so doing this once per (channel) rather than per (channel x runner)
+            % saves O(N_channels * N_runners) mkdir calls per batch.
+            outDir = app.OutputDirEditField.Value;
+            for ii = 1:numel(channelListSafe)
+                chanDir = fullfile(outDir, channelListSafe{ii});
+                if app.SavePeakStatsCheckBox.Value || app.SaveSOPHsCheckBox.Value
+                    mkdir(fullfile(chanDir, 'TFpeaks'));
+                    mkdir(fullfile(chanDir, 'SOPHs'));
+                end
+                if app.SaveDataSummaryCheckBox.Value
+                    mkdir(fullfile(chanDir, 'figures', 'summary'));
+                end
+                if app.SaveParamBasisCheckBox.Value
+                    mkdir(fullfile(chanDir, 'param_basis'));
+                    mkdir(fullfile(chanDir, 'figures', 'param_basis'));
+                end
+                if app.SaveSplineBasisCheckBox.Value
+                    mkdir(fullfile(chanDir, 'spline_basis'));
+                    mkdir(fullfile(chanDir, 'figures', 'spline_basis'));
+                end
+                if app.SaveAuxDataCheckBox.Value
+                    mkdir(fullfile(chanDir, 'auxiliary_data'));
+                end
+            end
 
-                    % Honour stop request before starting each new iteration
+            for jj = 1:length(dataList)
+
+                for ii = 1:length(channelList)
+                    app.channel = channelList{ii};
+
+                    % Honor stop request before starting each new iteration
                     if app.isStopBatchButtonPushed == true
+                        warning(warnState);
+                        set(0, 'DefaultFigureVisible', 'on');
+                        app.stopLogConsoleTimer();
+                        app.updateLogConsole();
+                        if ~isempty(app.consolelog_fid) && app.consolelog_fid > 0, fclose(app.consolelog_fid); end
+                        diary off;
+                        if ~isempty(app.runlog_fid) && app.runlog_fid > 0, fclose(app.runlog_fid); end
+                        app.RunBatchButton.Enabled  = 'on';
+                        app.StopBatchButton.Enabled = 'off';
+                        app.ProgressBar.reset();
+                        app.ProgressBar.Enabled = false;
                         return
                     end
 
                     app.anything_run = 0;
-                    [~, app.input_fbase] = fileparts(app.DataList{jj});
+                    [~, app.input_fbase] = fileparts(dataList{jj});
 
-                    % Parse stage identifiers from UI fields
-                    app.TextArea.Value = {'Processing stage inputs.'};
-                    updateStagesInput(app)
+                    % Log per-iteration header so subject/channel is always visible
+                    % (fprintf goes to MATLAB console → diary → consolelog file → LogConsoleTextArea)
+                    fprintf('\n--- Subject: %s | Channel: %s ---\n', app.input_fbase, app.channel);
+                    app.TextArea.addnl(sprintf('--- Subject: %s | Channel: %s ---', ...
+                        app.input_fbase, app.channel));
+                    drawnow;
 
                     try
-                        % Parse delimiter selection
-                        app.TextArea.Value = {'Processing delimeter input.'};
-                        updateDelimeterInput(app)
-
                         % ---- Load EDF and staging data ----
-                        app.TextArea.Value = strcat('Loading subject',{' '},app.input_fbase, ...
-                            ', channel',{' '},app.channel,' staging and EDF data.');
+                        app.TextArea.addnl('Loading staging and EDF data...');
+                        drawnow;
                         [app.data, app.Fs, app.stage_times, app.stage_vals] = load_data( ...
-                            app.DataList{jj}, ...
-                            app.StagingList{jj}, ...
+                            dataList{jj}, ...
+                            stagingList{jj}, ...
                             app.StagesColumnEditField.Value, ...
                             app.TimesColumnEditField.Value, ...
                             app.channel, ...
@@ -2841,6 +3565,33 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                             app.REMUserInput,      app.N1UserInput, ...
                             app.N2UserInput,       app.N3UserInput, ...
                             app.UnknownUserInput });
+
+                        % Switch to filesystem-safe channel name now that
+                        % load_data has consumed the raw EDF label. Analysis
+                        % runners use app.channel strictly for output paths.
+                        app.channel = channelListSafe{ii};
+
+                        % ---- Resample if requested and Fs differs ----
+                        if app.ResampleSwitch.Value
+                            target_fs = app.ResampleFsEditField.Value;
+                            if app.Fs ~= target_fs
+                                msg = sprintf('Resampling from %g Hz to %g Hz...', app.Fs, target_fs);
+                                fprintf('%s\n', msg);
+                                app.TextArea.addnl(['   ' msg]);
+                                drawnow;
+                                [p, q]   = rat(target_fs / app.Fs);
+                                app.data = resample(app.data, p, q);
+                                app.Fs   = target_fs;
+                            end
+                        end
+
+                        % When running with no stages, treat entire recording as N2
+                        % (must be after resampling so data length reflects final Fs)
+                        % Use length() rather than size(...,1) so row and column vectors both work
+                        if app.use_no_stages
+                            app.stage_times = [0, length(app.data) / app.Fs(1)];
+                            app.stage_vals  = [2, 2];
+                        end
 
                         % ---- Run selected analysis steps ----
 
@@ -2871,31 +3622,49 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
                         % ---- Log success ----
                         if app.anything_run
-                            app.TextArea.Value = strcat('Successfully run subject ',{' '}, ...
-                                app.input_fbase,', channel ',{' '},app.channel,'.');
-                            fprintf(app.runlog_fid, 'Subject %s, channel %s: run successfully.\n', ...
-                                app.input_fbase, app.channel);
+                            app.TextArea.addnl([   'Successfully run subject ', ...
+                                app.input_fbase,', channel ',app.channel,'.']);
+                            app.writeLog(sprintf('Subject %s, channel %s: run successfully.\n', ...
+                                app.input_fbase, app.channel));
                         else
                             % Nothing new to compute: all outputs already existed
-                            fprintf(app.runlog_fid, ...
+                            app.writeLog(sprintf( ...
                                 'Subject %s, channel %s: all files already exist. Subject skipped.\n', ...
-                                app.input_fbase, app.channel);
+                                app.input_fbase, app.channel));
                         end
+                        drawnow;
 
                     catch e
                         % ---- Log error and continue to next iteration ----
-                        app.TextArea.Value = strcat('Error on subject ',{' '},app.input_fbase, ...
-                            ', channel ',{' '},app.channel,'. Check log for details.');
-                        fprintf(app.runlog_fid, 'Subject %s, channel %s: not run. Error: %s\n', ...
-                            app.input_fbase, app.channel, e.message);
+                        app.TextArea.addnl(['Error on subject ',app.input_fbase, ...
+                            ', channel ',app.channel,'. Check log for details.']);
+                        errMsg = getReport(e, 'basic');
+                        fprintf('\nERROR — Subject %s, channel %s: not run.\n%s\n', ...
+                            app.input_fbase, app.channel, errMsg);
+                        app.writeLog(sprintf( ...
+                            'Subject %s, channel %s: not run.\n%s\n', ...
+                            app.input_fbase, app.channel, getReport(e, 'extended')));
+
+                        drawnow;
                     end
 
                     % Update progress bar (wrapped in try-catch to avoid aborting on UI errors)
                     try
                         app.curr_iteration = app.curr_iteration + 1;
-                        app.progress_bar.updateIteration(app.curr_iteration);
+                        app.ProgressBar.updateIteration(app.curr_iteration);
                     catch e
+                        warning(warnState);
+                        set(0, 'DefaultFigureVisible', 'on');
                         disp(e);
+                        app.stopLogConsoleTimer();
+                        app.updateLogConsole();
+                        if ~isempty(app.consolelog_fid) && app.consolelog_fid > 0, fclose(app.consolelog_fid); end
+                        diary off;
+                        if ~isempty(app.runlog_fid) && app.runlog_fid > 0, fclose(app.runlog_fid); end
+                        app.set_rundefault;
+                        app.ProgressBar.reset();
+                        app.ProgressBar.Enabled = false;
+                        return;
                     end
 
                 end % channel loop
@@ -2905,11 +3674,20 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % ---------------------------------------------------------------
             %   CLEANUP
             % ---------------------------------------------------------------
-            app.progress_bar.complete();
-            fclose(app.consolelog_fid);   % Also stops diary
-            fclose(app.runlog_fid);
-            app.z.Enabled = 'on';
-
+            warning(warnState);
+            set(0, 'DefaultFigureVisible', 'on');
+            app.ProgressBar.complete();
+            app.ProgressBar.Enabled = false;
+            app.TextArea.addnl('Batch run complete.');
+            drawnow;
+            app.stopLogConsoleTimer();
+            app.updateLogConsole();  % final capture of any remaining diary output
+            if ~isempty(app.consolelog_fid) && app.consolelog_fid > 0, fclose(app.consolelog_fid); end
+            diary off;
+            if ~isempty(app.runlog_fid) && app.runlog_fid > 0, fclose(app.runlog_fid); end
+            app.RunBatchButton.Enabled  = 'on';
+            app.StopBatchButton.Enabled = 'off';
+            app.set_rundefault;
         end % runBatch
 
         function applyFont(app)
@@ -3003,6 +3781,110 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 end
             end
         end
+
+        function set_running(app)
+            app.RunBatchButton.Icon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 135 140" fill="currentColor"><rect y="10" width="15" height="120" rx="6"><animate attributeName="height" begin="0.5s" dur="1s" values="120;110;100;90;80;70;60;50;40;140;120" calcMode="linear" repeatCount="indefinite"/><animate attributeName="y" begin="0.5s" dur="1s" values="10;15;20;25;30;35;40;45;50;0;10" calcMode="linear" repeatCount="indefinite"/></rect><rect x="30" y="10" width="15" height="120" rx="6"><animate attributeName="height" begin="0.25s" dur="1s" values="120;110;100;90;80;70;60;50;40;140;120" calcMode="linear" repeatCount="indefinite"/><animate attributeName="y" begin="0.25s" dur="1s" values="10;15;20;25;30;35;40;45;50;0;10" calcMode="linear" repeatCount="indefinite"/></rect><rect x="60" width="15" height="140" rx="6"><animate attributeName="height" begin="0s" dur="1s" values="120;110;100;90;80;70;60;50;40;140;120" calcMode="linear" repeatCount="indefinite"/><animate attributeName="y" begin="0s" dur="1s" values="10;15;20;25;30;35;40;45;50;0;10" calcMode="linear" repeatCount="indefinite"/></rect><rect x="90" y="10" width="15" height="120" rx="6"><animate attributeName="height" begin="0.25s" dur="1s" values="120;110;100;90;80;70;60;50;40;140;120" calcMode="linear" repeatCount="indefinite"/><animate attributeName="y" begin="0.25s" dur="1s" values="10;15;20;25;30;35;40;45;50;0;10" calcMode="linear" repeatCount="indefinite"/></rect><rect x="120" y="10" width="15" height="120" rx="6"><animate attributeName="height" begin="0.5s" dur="1s" values="120;110;100;90;80;70;60;50;40;140;120" calcMode="linear" repeatCount="indefinite"/><animate attributeName="y" begin="0.5s" dur="1s" values="10;15;20;25;30;35;40;45;50;0;10" calcMode="linear" repeatCount="indefinite"/></rect></svg>';
+            app.RunBatchButton.Text = 'RUNNING';
+            drawnow;
+        end
+
+        function set_rundefault(app)
+            app.RunBatchButton.Icon = '<path d="M8 5v14l11-7z"/>';
+            app.RunBatchButton.Text = 'RUN';
+            drawnow;
+        end
+
+    end% private methods
+
+    methods (Static, Access=protected)
+        function svg_html = make_logo_svg(varargin)
+            % Set up the input parser
+            p = inputParser;
+            addParameter(p, 'width', []);
+            addParameter(p, 'height', []);
+
+            % Parse the inputs
+            parse(p, varargin{:});
+
+            % Initial string
+            svg_html = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 554.42 282.62"';
+
+            % Check for width and concatenate
+            if ~isempty(p.Results.width)
+                svg_html = [svg_html, ' width = ', num2str(p.Results.width)];
+            end
+
+            % Check for height and concatenate
+            if ~isempty(p.Results.height)
+                svg_html = [svg_html, ' height = ', num2str(p.Results.height)];
+            end
+
+            svg_html = [svg_html '><defs><style>.cls-1,.cls-2{fill:none;}.cls-3,.cls-4{fill:#010101;}.cls-5,.cls-6{fill:#1971b9;}.cls-5,.cls-6,.cls-4{font-family:Saira-Regular, Saira;}.cls-6,.cls-4{font-size:118.08px;}.cls-7{font-size:36px;}.cls-8{font-size:23px;}.cls-2{stroke:#1372ba;stroke-linejoin:round;stroke-width:4.93px;}</style></defs><polyline class="cls-2" points="14.88 59.48 158.69 59.48 159.16 58.62 159.64 57.79 160.12 57.01 160.59 56.32 161.06 55.73 161.54 55.27 162.01 54.94 162.48 54.78 162.96 54.77 163.43 54.94 163.9 55.26 164.38 55.74 164.85 56.36 165.33 57.1 165.8 57.95 166.28 58.87 166.75 59.84 167.22 60.82 167.7 61.78 168.17 62.69 168.65 63.51 169.12 64.22 169.59 64.77 170.07 65.16 170.54 65.35 171.02 65.34 171.49 65.11 171.96 64.67 172.44 64.03 172.91 63.2 173.39 62.2 173.86 61.06 174.34 59.82 174.81 58.52 175.28 57.2 175.76 55.91 176.23 54.7 176.7 53.61 177.18 52.69 177.65 51.98 178.12 51.52 178.6 51.33 179.08 51.44 179.55 51.84 180.03 52.54 180.5 53.52 180.97 54.76 181.45 56.24 181.92 57.88 182.39 59.66 183.34 63.35 183.81 65.13 184.29 66.77 184.76 68.21 185.24 69.39 185.71 70.25 186.19 70.75 186.66 70.86 187.14 70.55 187.61 69.83 188.08 68.69 188.56 67.17 189.03 65.31 189.5 63.16 189.98 60.8 190.45 58.3 190.93 55.75 191.4 53.23 191.87 50.86 192.35 48.71 192.83 46.88 193.3 45.45 193.77 44.48 194.25 44.02 194.72 44.12 195.19 44.77 195.67 46 196.14 47.76 196.62 50 197.09 52.67 197.56 55.68 198.04 58.92 198.52 62.3 198.99 65.67 199.46 68.94 199.94 71.96 200.41 74.62 200.88 76.82 201.36 78.45 201.83 79.44 202.3 79.72 202.78 79.28 203.25 78.11 203.73 76.22 204.2 73.66 204.68 70.52 205.15 66.88 205.63 62.86 206.1 58.62 206.57 54.28 207.05 50.01 207.52 45.97 207.99 42.31 208.47 39.18 208.94 36.7 209.42 34.98 209.89 34.11 210.36 34.13 210.84 35.08 211.32 36.94 211.79 39.66 212.26 43.17 212.74 47.35 213.21 52.08 213.68 57.19 214.16 62.5 214.63 67.83 215.11 72.99 215.58 77.77 216.05 81.99 216.53 85.5 217 88.15 217.48 89.81 217.95 90.41 218.43 89.91 218.9 88.3 219.37 85.61 219.85 81.92 220.32 77.34 220.8 72.02 221.27 66.14 221.74 59.9 222.22 53.52 222.69 47.24 223.16 41.27 223.64 35.85 224.12 31.18 224.59 27.44 225.06 24.79 225.54 23.34 226.01 23.17 226.48 24.3 226.96 26.73 227.43 30.38 227.91 35.13 228.38 40.85 228.85 47.34 229.33 54.36 229.8 61.69 230.28 69.06 230.75 76.2 231.23 82.86 231.7 88.77 232.17 93.72 232.65 97.52 233.12 100 233.59 101.06 234.07 100.64 234.54 98.74 235.02 95.39 235.49 90.71 235.96 84.84 236.44 77.98 236.92 70.36 237.39 62.24 237.86 53.92 238.34 45.69 238.81 37.86 239.28 30.7 239.76 24.48 240.23 19.44 240.71 15.79 241.18 13.65 241.65 13.13 242.13 14.28 242.6 17.06 243.08 21.39 243.55 27.13 244.03 34.1 244.5 42.06 244.97 50.72 245.45 59.79 245.92 68.93 246.4 77.83 246.87 86.16 247.34 93.62 247.82 99.92 248.29 104.83 248.76 108.16 249.24 109.78 249.72 109.61 250.19 107.65 250.66 103.93 251.14 98.6 251.61 91.83 252.09 83.84 252.56 74.91 253.03 65.37 253.51 55.53 253.98 45.77 254.45 36.43 254.93 27.84 255.4 20.34 255.88 14.17 256.35 9.59 256.83 6.76 257.3 5.8 257.77 6.75 258.25 9.6 258.72 14.24 259.2 20.53 259.67 28.25 260.14 37.12 260.62 46.84 261.09 57.06 261.56 67.42 262.04 77.54 262.51 87.07 262.99 95.65 263.46 102.98 263.94 108.78 264.41 112.85 264.89 115.03 265.36 115.23 265.83 113.44 266.31 109.72 266.78 104.2 267.25 97.05 267.73 88.55 268.2 78.98 268.67 68.7 269.15 58.05 269.62 47.44 270.1 37.22 270.57 27.78 271.05 19.45 271.52 12.54 272 7.29 272.47 3.89 272.94 2.46 273.42 3.08 273.89 5.7 274.36 10.24 274.84 16.54 275.31 24.38 275.79 33.47 276.26 43.49 276.73 54.08 277.21 64.87 277.68 75.47 278.16 85.49 278.63 94.58 279.11 102.41 279.58 108.72 280.05 113.26 280.53 115.88 281 116.49 281.48 115.07 281.95 111.67 282.42 106.42 282.9 99.5 283.37 91.17 283.84 81.74 284.32 71.52 284.79 60.91 285.26 50.26 285.74 39.97 286.22 30.41 286.69 21.9 287.17 14.76 287.64 9.23 288.11 5.51 288.59 3.73 289.06 3.93 289.53 6.1 290.01 10.17 290.48 15.98 290.95 23.3 291.43 31.89 291.9 41.41 292.38 51.54 292.85 61.9 293.32 72.12 293.8 81.84 294.27 90.71 294.75 98.43 295.22 104.71 295.7 109.36 296.17 112.21 296.64 113.15 297.12 112.2 297.59 109.37 298.07 104.79 298.54 98.62 299.01 91.11 299.49 82.53 299.96 73.18 300.43 63.42 300.91 53.59 301.39 44.04 301.86 35.12 302.33 27.13 302.81 20.35 303.28 15.02 303.75 11.31 304.23 9.34 304.7 9.17 305.17 10.79 305.65 14.13 306.12 19.03 306.6 25.34 307.07 32.79 307.54 41.12 308.02 50.03 308.5 59.17 308.97 68.24 309.44 76.9 309.92 84.85 310.39 91.82 310.86 97.57 311.34 101.9 311.81 104.68 312.29 105.82 312.76 105.31 313.23 103.17 313.71 99.51 314.18 94.47 314.65 88.26 315.13 81.1 315.61 73.26 316.08 65.03 316.55 56.71 317.03 48.6 317.5 40.98 317.98 34.11 318.45 28.25 318.92 23.56 319.4 20.22 319.87 18.31 320.34 17.89 320.82 18.96 321.29 21.44 321.76 25.24 322.24 30.19 322.72 36.1 323.19 42.75 323.67 49.89 324.14 57.26 324.61 64.59 325.09 71.62 325.56 78.1 326.03 83.82 326.51 88.58 326.98 92.23 327.45 94.65 327.93 95.79 328.4 95.62 328.88 94.17 329.35 91.52 329.83 87.78 330.3 83.1 330.78 77.68 331.25 71.72 331.72 65.43 332.2 59.05 332.67 52.82 333.14 46.94 333.62 41.62 334.09 37.04 334.57 33.35 335.04 30.66 335.51 29.05 335.99 28.54 336.46 29.15 336.93 30.81 337.41 33.45 337.89 36.96 338.36 41.19 338.83 45.97 339.31 51.12 339.78 56.45 340.26 61.77 340.73 66.88 341.2 71.61 341.68 75.79 342.15 79.3 342.62 82.02 343.1 83.87 343.57 84.82 344.04 84.85 344.52 83.98 344.99 82.26 345.47 79.78 345.94 76.64 346.42 72.98 346.89 68.95 347.37 64.67 347.84 60.34 348.31 56.09 348.79 52.07 349.26 48.44 349.73 45.29 350.21 42.74 350.68 40.85 351.16 39.67 351.63 39.23 352.1 39.52 352.58 40.51 353.06 42.14 353.53 44.33 354 46.99 354.48 50.01 354.95 53.28 355.42 56.66 355.9 60.03 356.37 63.28 356.84 66.28 357.32 68.95 357.79 71.2 358.27 72.96 358.74 74.18 359.21 74.84 359.69 74.93 360.16 74.47 360.64 73.5 361.11 72.07 361.59 70.24 362.06 68.09 362.53 65.72 363.01 63.21 363.48 60.66 363.96 58.16 364.43 55.79 364.9 53.64 365.38 51.78 365.85 50.27 366.32 49.13 366.8 48.4 367.27 48.09 367.75 48.2 368.22 48.7 368.7 49.56 369.17 50.74 369.65 52.19 370.12 53.83 370.59 55.61 371.54 59.29 372.01 61.07 372.49 62.72 372.96 64.19 373.43 65.43 373.91 66.42 374.38 67.11 374.86 67.52 375.34 67.62 375.81 67.43 376.28 66.97 376.76 66.26 377.23 65.35 377.7 64.26 378.18 63.05 378.65 61.76 379.12 60.44 379.6 59.13 380.07 57.89 380.55 56.75 381.02 55.76 381.49 54.92 381.97 54.28 382.45 53.84 382.92 53.62 383.39 53.61 383.87 53.8 384.34 54.18 384.81 54.74 385.29 55.44 385.76 56.27 386.24 57.17 386.71 58.13 387.18 59.12 387.66 60.08 388.13 61.01 388.6 61.86 389.08 62.6 389.56 63.22 390.03 63.7 390.5 64.02 390.98 64.18 391.45 64.18 391.92 64.01 392.4 63.69 392.87 63.22 393.35 62.63 393.82 61.94 394.29 61.17 394.77 60.33 395.24 59.47 538.88 59.47"/><text class="cls-6" transform="translate(469.76 210.42)"><tspan x="0" y="0">O</tspan></text><path class="cls-3" d="m7.02,59.44c0-4.49,3.64-8.12,8.13-8.12s8.12,3.64,8.12,8.12-3.64,8.13-8.12,8.13-8.13-3.64-8.13-8.13Z"/><path class="cls-3" d="m530.63,59.44c0-4.49,3.64-8.12,8.12-8.12s8.13,3.64,8.13,8.12-3.64,8.13-8.13,8.13-8.12-3.64-8.12-8.13Z"/><rect class="cls-1" x="36.88" y="217.3" width="510.8" height="50.05"/><text class="cls-5" transform="translate(52.54 245.98)"><tspan class="cls-7"><tspan x="0" y="0">dynamic oscillation toolbox</tspan></tspan></text><text class="cls-4" transform="translate(0 210.42)"><tspan x="0" y="0">DYNAM-</tspan></text></svg>'];
+        end
+
+        function filename = fixFilename(filename, replacement)
+            if nargin < 2
+                replacement = '_';
+            end
+
+            % Validate replacement char is safe (must itself be in the allowed set)
+            assert(isempty(regexprep(replacement, '[\w.\-() ]', '')), ...
+                'replacement character is not a valid filename character');
+
+            filename = char(filename);
+
+            % Separate extension from name
+            [~, name, ext] = fileparts(filename);
+
+            % Whitelist: keep alphanumeric, spaces, dots, hyphens, underscores, parens
+            name = regexprep(name, '[^\w.\-() ]', replacement);
+
+            % Strip leading/trailing whitespace and dots
+            name = strtrim(name);
+            name = regexprep(name, '^\.*', '');   % leading dots
+            name = regexprep(name, '[. ]+$', ''); % trailing dots/spaces
+
+            % Collapse consecutive replacements/spaces into one
+            name = regexprep(name, [regexptranslate('escape', replacement) '+'], replacement);
+            name = strtrim(name);  % trim again in case replacement was a space
+
+            % Handle Windows reserved names
+            reservedNames = '^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$';
+            if ~isempty(regexpi(name, reservedNames))
+                name = [name '_'];
+            end
+
+            % Truncate if too long (preserve extension)
+            maxLen = 255 - length(ext);
+            if length(name) > maxLen
+                name = name(1:maxLen);
+            end
+
+            % Fallback if name is now empty
+            if isempty(name)
+                name = 'unnamed';
+            end
+
+            filename = [name ext];
+        end
+    end % static methods
+
+    methods (Access = private)
+
+        function clearIsError(~, component)
+            % clearIsError  Clear the IsError flag on a CSSui component.
+            %   Used as a ValueChangedFcn to auto-clear validation highlights
+            %   the moment a user corrects a field.
+            component.IsError = false;
+        end
+
+        function onResampleSwitchChanged(app)
+            % onResampleSwitchChanged  Enable/disable the Sampling Freq field
+            %   to match the Resample Data switch state.
+            app.ResampleFsEditField.Enabled          = logical(app.ResampleSwitch.Value);
+            app.ResampleFsEditFieldLabel.Enabled     = logical(app.ResampleSwitch.Value);
+        end
+
     end % private methods
 
 end % classdef

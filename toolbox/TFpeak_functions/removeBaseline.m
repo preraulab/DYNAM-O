@@ -4,7 +4,7 @@ function [spect, bl_threshold] = removeBaseline(spect, baseline, bl_thresh, CI_u
 %   Usage:
 %       [spect, bl_threshold] = removeBaseline(spect, baseline, bl_thresh, CI_upper_bl, f_verb)
 %
-% INPUTS:
+%   Inputs:
 %   spect        --  2D image data used to extract TFpeaks [freq, time] --required
 %   baseline     --  1D baseline spectrum used to normalize the spectrogram. default []
 %   bl_thresh    -- flag indicating use of baseline thresholding to reduce volume of data
@@ -16,19 +16,35 @@ function [spect, bl_threshold] = removeBaseline(spect, baseline, bl_thresh, CI_u
 %                   1 - output current function level.
 %                   defaults to 0. >2 is not recommended unless data is single chunk.
 %
-% OUTPUTS:
+%   Outputs:
 %   spect: spect input with baseline subtracted
 %   wshed_threshold: optional threhsold used to remove noise TFpeaks later
 %
 %
 %
-%   Please provide the following citation for all use:
-%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-%       for Electroencephalographic Phenotyping and Biomarker Identification,
-%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
-%**********************************************************************
-
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
+%
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
+%   GITHUB     https://github.com
+%
+%   ATTRIBUTION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%   in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%   for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
 if nargin<1 || isempty(spect)
     error('Spectrogram must be specificied')
 end
@@ -58,13 +74,13 @@ if f_verb > 0
 end
 
 % Remove baseline. Subtraction in dB equivalent to division in non-dB.
-spect = spect ./ repmat(baseline, 1, size(spect, 2));
+spect = spect ./ baseline; % implicit broadcasting avoids allocating a full freq×time copy of baseline
 
 if ~isempty(bl_thresh) && bl_thresh ~= 0  % Get threshold used to remove low pow data
     if isempty(CI_upper_bl)
         error('If bl_thresh is true, input CI_upper_bl must be provided')
     else
-        bl_threshold = CI_upper_bl./baseline';
+        bl_threshold = CI_upper_bl ./ baseline';
     end
 else
     bl_threshold = [];

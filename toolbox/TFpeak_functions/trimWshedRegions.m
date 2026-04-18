@@ -5,7 +5,7 @@ function [trimmed_regions, trimmed_borders] = trimWshedRegions(data,regions,vol_
 % Usage:
 %   [trimmed_regions, trimmed_borders] = trimWshedRegions(data,regions,vol_thresh,shift_val,conn,f_verb,verb_pref,f_disp)
 %
-% INPUTS:
+%   Inputs:
 %   data       -- 2D matrix of image data. defaults to peaks(100).
 %   regions    -- 1D cell array of vector lists of linear idx of all pixels for each region.
 %   vol_thresh -- fraction maximum trimmed volume (from 0 to 1),
@@ -19,22 +19,37 @@ function [trimmed_regions, trimmed_borders] = trimWshedRegions(data,regions,vol_
 %   verb_pref  -- prefix string for verbose output. defaults to ''.
 %   f_disp     -- flag indicator of whether to plot.
 %                 defaults to 0, unless using default data.
-% OUTPUTS:
+%   Outputs:
 %   trimmed_regions -- 1D cell array of vector lists of linear idx of all pixels for each region.
 %   trimmed_borders -- 1D cell array of vector lists of linear idx of border pixels for each region.
 %
 %
-%   Please provide the following citation for all use:
-%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-%       for Electroencephalographic Phenotyping and Biomarker Identification,
-%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
-%
-%**********************************************************************
-
 %*******************************
 % Set variable inputs to empty *
 %*******************************
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
+%
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
+%   GITHUB     https://github.com
+%
+%   ATTRIBUTION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%   in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%   for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
 if nargin < 1
     data = [];
 end

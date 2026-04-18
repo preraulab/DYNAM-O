@@ -1,5 +1,54 @@
 function [data, Fs, stage_times, stage_vals] = load_data(varargin)
-
+%LOAD_DATA  Load EEG data and sleep staging from EDF and delimited text files
+%
+%   Usage:
+%       [data, Fs, stage_times, stage_vals] = load_data(edf_fpath, scoring_fpath, stage_col, time_col, channels, ...)
+%
+%   Required Inputs:
+%       edf_fpath:      char or cell - path(s) to EDF file(s) -- required
+%       scoring_fpath:  char or cell - path(s) to scoring file(s) -- required
+%       stage_col:      double - column number for sleep stage data (1-based) -- required
+%       time_col:       double - column number for time data (1-based) -- required
+%       channels:       char or cell - EEG channel label(s) to load -- required
+%
+%   Optional Inputs:
+%       stage_vals_in:  cell - custom stage label mappings (default: [])
+%       header_lines:   double - number of header lines in scoring file (default: [])
+%       delimiter:      char - column delimiter (default: ',')
+%       start_time:     char or string - recording start time (default: NaN)
+%       epoch_dur:      double - epoch duration in seconds (default: 30)
+%       plot_on:        logical - plot hypnogram (default: false)
+%       resample_freq:  double - target resampling frequency in Hz (default: [])
+%
+%   Outputs:
+%       data:           [N x C] double - EEG data matrix (samples x channels)
+%       Fs:             double - sampling frequency in Hz
+%       stage_times:    [1 x T] double - sleep stage onset times in seconds
+%       stage_vals:     [1 x T] double - sleep stage values (0=Unk, 1=N3, 2=N2, 3=N1, 4=REM, 5=Wake)
+%
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
+%
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
+%   GITHUB     https://github.com
+%
+%   ATTRIBUTION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%   in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%   for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
 %% INPUT PARSER
 p = inputParser;
 % Required inputs
@@ -29,16 +78,40 @@ end
 
 %% LOAD EDF
 [~, signalHeader] = read_EDF(edf_fpath);
-idx = ismember(channels,{signalHeader.signal_labels});
-if ~all(idx)
-    error(char(strcat('Invalid channels:',{' '},channels(~idx),' | Valid channels: ',{' '},sprintf('%s ',signalHeader.signal_labels))))
+all_labels       = {signalHeader.signal_labels};
+all_labels_lower = lower(cellfun(@strtrim, all_labels, 'UniformOutput', false));
+
+% Validate channels — accept plain labels and valid A-B rereferences.
+% Uses the same leftmost-dash split logic as read_EDF's parse_channel_plan.
+valid = false(size(channels));
+for k = 1:numel(channels)
+    ch = strtrim(channels{k});
+    if ismember(lower(ch), all_labels_lower)
+        valid(k) = true;
+    else
+        dashes = strfind(ch, '-');
+        for di = dashes
+            chA = strtrim(ch(1:di-1));
+            chB = strtrim(ch(di+1:end));
+            if ~isempty(chA) && ~isempty(chB) && ...
+                    ismember(lower(chA), all_labels_lower) && ...
+                    ismember(lower(chB), all_labels_lower)
+                valid(k) = true;
+                break
+            end
+        end
+    end
+end
+if ~all(valid)
+    error(char(strcat('Invalid channels:',{' '},channels(~valid),' | Valid channels: ',{' '},sprintf('%s ',signalHeader.signal_labels))))
 end
 
-[header, signalHeader,data] = read_EDF(edf_fpath,'channels',channels,'forceMATLAB',true);
+[header, signalHeader, data] = read_EDF(edf_fpath, 'channels', channels, 'forceMATLAB', true);
 data = cell2mat(data);
 
+% signalHeader is now ordered to match channels (including any rereferenced
+% virtual channels), so sampling frequencies are already in the right order.
 Fs = [signalHeader.sampling_frequency];
-Fs = Fs(idx);
 
 % Test to see whether start time is valid
 time_str = header.recording_starttime;
@@ -60,15 +133,19 @@ catch e
 end
 header.recording_starttime = time_str;
 %% LOAD SCORING
-if isnumeric(header_lines) & ~isempty(header_lines)
-    staging = read_staging(scoring_fpath,time_col,stage_col,'stage_vals',stage_vals_in,'header_lines',header_lines,'start_time',header.recording_starttime,'delimiter',delimiter,'epoch_dur',epoch_dur,'plot_on',plot_on);
+if ~isempty(scoring_fpath)
+    if isnumeric(header_lines) & ~isempty(header_lines)
+        staging = read_staging(scoring_fpath,time_col,stage_col,'stage_vals',stage_vals_in,'header_lines',header_lines,'start_time',header.recording_starttime,'delimiter',delimiter,'epoch_dur',epoch_dur,'plot_on',plot_on);
+    else
+        %% TO-DO: CHECK THIS
+        staging = read_staging(scoring_fpath,time_col,stage_col,'stage_vals',stage_vals_in,'start_time',header.recording_starttime,'delimiter',delimiter,'epoch_dur',epoch_dur,'plot_on',plot_on);
+    end
+    stage_times = staging.times;
+    stage_vals = staging.vals;
 else
-    %% TO-DO: CHECK THIS
-    staging = read_staging(scoring_fpath,time_col,stage_col,'stage_vals',stage_vals_in,'start_time',header.recording_starttime,'delimiter',delimiter,'epoch_dur',epoch_dur,'plot_on',plot_on);
+    stage_times = [];
+    stage_vals  = [];
 end
-    
-stage_times = staging.times;
-stage_vals = staging.vals;
 
 %% RESAMPLING (if requested)
 if ~isempty(resample_freq) 

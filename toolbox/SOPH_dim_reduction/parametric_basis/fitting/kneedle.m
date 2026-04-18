@@ -25,10 +25,30 @@ function [knee, knee_idx, x_max] = kneedle(x, y, varargin)
 %       V. Satopää, J. Albrecht, D. Irwin and B. Raghavan, “Finding a “Kneedle” in a Haystack: Detecting Knee Points in System Behavior” (2011),
 %       31st International Conference on Distributed Computing Systems Workshops, 2011, pp. 166–171, doi: 10.1109/ICDCSW.2011.20.
 %
-%    Copyright 2024 Prerau Lab - sleepEEG.org
-%% ********************************************************************
-
 % Input parser
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
+%
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
+%   GITHUB     https://github.com
+%
+%   ATTRIBUTION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%   in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%   for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
 p = inputParser;
 addParameter(p, 'sensitivity', 1, @(x) isnumeric(x) && x > 0 && x <= 1);
 addParameter(p, 'plot_on', true, @(x) islogical(x));

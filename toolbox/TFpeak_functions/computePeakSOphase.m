@@ -1,5 +1,5 @@
 function [stats_table, SOphase, SOphase_times, SOdata] = computePeakSOphase(varargin)
-% COMPUTEPEAKSOPHASE: Computes the slow oscillation phase for each TF peak in stats_table
+%COMPUTEPEAKSOPHASE  Compute the slow oscillation phase for each TF peak in stats_table
 %
 %   Usage:
 %       [stats_table, SOphase, SOphase_times, SOdata] = computePeakSOphase(stats_table, data, Fs, <options>)
@@ -26,13 +26,29 @@ function [stats_table, SOphase, SOphase_times, SOdata] = computePeakSOphase(vara
 %       SOdata: 1xN double - SO filtered timeseries data
 %
 %
-%   Please provide the following citation for all use:
-%       Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach,
-%       Robert Stickgold, Michael J Prerau, Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-%       for Electroencephalographic Phenotyping and Biomarker Identification,
-%       Sleep, 2022;, zsac223, https://doi.org/10.1093/sleep/zsac223
-%**********************************************************************
-
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
+%
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
+%   GITHUB     https://github.com
+%
+%   ATTRIBUTION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%   in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%   for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
 %%
 % If a struct is input with settings/params, detect and reformat it to work with the input parser below.
 struct_ind = cellfun(@isstruct,varargin); % Get index of the struct

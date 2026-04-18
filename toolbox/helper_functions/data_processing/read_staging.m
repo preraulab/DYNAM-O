@@ -36,6 +36,29 @@ function [staging, annotations] = read_staging(varargin)
 %           3. Time in strings: If a valid time string (hour:minute:second) 
 %           or full datetime string is detected, data are parsed as
 %           datetime values - start_time.
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
+%
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
+%   GITHUB     https://github.com
+%
+%   ATTRIBUTION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%   in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%   for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
 
 % ---------------- Default stage mappings ----------------
 default_stage_vals = {{'art', 'artifact', 'A', '6'}, ...
@@ -90,6 +113,11 @@ end
 raw_data = readcell(file_name, 'Delimiter', delimiter, 'NumHeaderLines', header_lines);
 
 num_cols = size(raw_data, 2);
+if num_cols == 1
+    error(['Only 1 column found in "%s". ' ...
+        'Check that the File Delimiter matches the file format ' ...
+        'and that Header Rows is set correctly.'], file_name);
+end
 if time_col > num_cols
     error('time_col (%d) exceeds number of columns (%d).', time_col, num_cols);
 end
@@ -105,6 +133,9 @@ times_seconds = convert_time_to_seconds(time_data, start_time, epoch_dur);
 
 % ---------------- Stage processing ----------------
 [stage_values, unmatched_idx] = process_stage_data(stage_data, stage_vals);
+times_seconds = times_seconds(~unmatched_idx);
+stage_values = stage_values(~unmatched_idx);
+assert(length(unique(times_seconds))==length(times_seconds),'Multiple stages identified at the exact same time stamp.');
 
 % ---------------- Outputs ----------------
 staging.times = times_seconds(:);
@@ -115,7 +146,7 @@ if ~isnan(start_time)&staging.times~=0
     staging.vals = [0; staging.vals];
 end
 
-if isempty(unmatched_idx)
+if any(unmatched_idx)
     annotations = struct([]); % return empty
 else
     annotations.times = times_seconds(unmatched_idx);
@@ -136,7 +167,7 @@ numeric_data = str2double(time_data);
 if all(~isnan(numeric_data)) && all(mod(numeric_data,1)==0) && issorted(numeric_data) && median(diff(numeric_data))==1
     assert(epoch_dur>0,'Epoch duration must be greater than zero.');
     vals = numeric_data(:);
-    times_seconds = start_sec + vals * epoch_dur;
+    times_seconds = vals * epoch_dur;
     return;
 end
 
@@ -173,15 +204,13 @@ stage_numbers = [6, 5, 4, 3, 2, 1, 0]; % Artifact → Unknown
 stage_values = nan(size(stage_data));   % start unassigned
 
 for stage_idx = 1:length(stage_vals)
-    strs = lower(string(stage_vals{stage_idx}));
-    for i = 1:length(stage_data)
-        cur = lower(string(stage_data(i)));
-        if any(contains(cur, strs))
-            stage_values(i) = stage_numbers(stage_idx);
-        end
+    strs = string(stage_vals{stage_idx});
+    idx = ismember(lower(stage_data),lower(strs));
+    if any(idx)
+        stage_values(idx) = stage_numbers(stage_idx);
     end
 end
 
-unmatched_idx = find(isnan(stage_values));
-stage_values(unmatched_idx) = 0; % default unmatched to Artifact
+unmatched_idx = isnan(stage_values);
+
 end
