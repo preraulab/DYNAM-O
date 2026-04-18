@@ -168,36 +168,7 @@ if f_valid_inputs
     catch
         in_thread_pool = true;  % safe default
     end
-    mex_exists = exist(['trim_region_mex.' mexext], 'file') == 3;
-    use_trim_mex = ~in_thread_pool && mex_exists;
-
-    % One-time-per-session debug line so the caller can confirm the
-    % MEX gate's verdict. Persistent is per-MATLAB-session, so each
-    % ProcessPool worker logs once on first call; ThreadPool + client
-    % share one session and log once total.
-    persistent logged_trim_mex_status;
-    if isempty(logged_trim_mex_status)
-        logged_trim_mex_status = true;
-        try
-            t = getCurrentTask();
-            if ~isempty(t)
-                tag = sprintf(' [worker %d]', t.ID);
-            else
-                tag = ' [client]';
-            end
-        catch
-            tag = '';
-        end
-        if use_trim_mex
-            fprintf('[trimWshedRegions]%s trim_region_mex: ENABLED\n', tag);
-        elseif in_thread_pool
-            fprintf('[trimWshedRegions]%s trim_region_mex: DISABLED (ThreadPool context; using MATLAB fallback)\n', tag);
-        elseif ~mex_exists
-            fprintf('[trimWshedRegions]%s trim_region_mex: DISABLED (binary not found; using MATLAB fallback)\n', tag);
-        else
-            fprintf('[trimWshedRegions]%s trim_region_mex: DISABLED (unknown reason; using MATLAB fallback)\n', tag);
-        end
-    end
+    use_trim_mex = ~in_thread_pool && exist(['trim_region_mex.' mexext], 'file') == 3;
 
     for ii = 1:num_regions
         if ~isempty(regions{ii})
