@@ -74,6 +74,8 @@
 %       % Fast iteration with precomputed stats_table (skips TF-peak extraction):
 %       [~, ~, ~, ~, ~, ~, ~, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, 'stats_table', stats_table);
 %
+%   See Also: DYNAMO, runSegmentedData, computeTFPeaks, SOpowerphaseHistogram, computePeakStage
+%
 % =========================================================================
 %    ██████╗ ██╗   ██╗███╗   ██╗ █████╗ ███╗   ███╗        ██████╗
 %    ██╔══██╗╚██╗ ██╔╝████╗  ██║██╔══██╗████╗ ████║       ██╔═══██╗
