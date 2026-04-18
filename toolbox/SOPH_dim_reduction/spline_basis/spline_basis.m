@@ -60,6 +60,10 @@ function [splinefit, coefs, spline_obj, knots_x, knots_y, f] = spline_basis(type
 %
 % =========================================================================
 %%
+% Validate type input
+assert(nargin > 0, 'Type must be specified as ''power'' or ''phase''.');
+assert(ismember(type, {'power', 'phase'}), 'Invalid type. Valid types are ''power'' or ''phase''.');
+
 % If a struct is input with settings/params, detect and reformat it to work with the input parser below.
 struct_ind = cellfun(@isstruct,varargin); % Get index of the struct
 
@@ -73,18 +77,22 @@ if any(struct_ind)
     argcell = namedargs2cell(opt_struct); % Convert the struct to cell array
     varargin = cat(2, varargin, argcell); % Add the new cell array with the params to the end of the varargin
 
-    % Test to make sure that none of the additional parameters are already included
-    str_cell = cellstr(varargin(cellfun(@(x)(ischar(x)|isstring(x)),varargin)));
-    assert(length(str_cell) == length(unique(str_cell)), 'Cannot include struct and duplicate parameters.')
+    % Check that no parameter NAME is passed both as an explicit name-value
+    % pair and inside a struct. Only inspect odd-indexed string entries
+    % (the names in name-value pairs) after the 4 required positional args.
+    positional_count = 4; % data, Fs, stage_times, stage_vals
+    name_indices = (positional_count+1):2:length(varargin);
+    name_indices = name_indices(name_indices <= length(varargin));
+    param_names = varargin(name_indices);
+    param_names = param_names(cellfun(@(x) ischar(x) || isstring(x), param_names));
+    assert(length(param_names) == length(unique(param_names)), ...
+        'Cannot include struct and duplicate parameters.')
 end
 
 %% Parse inputs
-% Validate type input
-assert(nargin > 0, 'Type must be specified as ''power'' or ''phase''.');
-assert(ismember(type, {'power', 'phase'}), 'Invalid type. Valid types are ''power'' or ''phase''.');
-
 p = inputParser;
 
+% Required parameters
 addRequired(p, 'SOPH', @(x) isnumeric(x) && isreal(x) && ~any(x(:) < 0) && ~isempty(x) && ismatrix(x) && ~all(isnan(x), 'all'));
 addRequired(p, 'SOfeature_bins', @(x) validateattributes(x, {'numeric'}, {'real','finite','increasing','vector'}));
 addRequired(p, 'freq_bins', @(x) validateattributes(x, {'numeric'}, {'real','finite','increasing','vector'}));
