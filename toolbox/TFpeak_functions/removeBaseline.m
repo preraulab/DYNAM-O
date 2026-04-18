@@ -74,13 +74,13 @@ if f_verb > 0
 end
 
 % Remove baseline. Subtraction in dB equivalent to division in non-dB.
-spect = spect ./ repmat(baseline, 1, size(spect, 2));
+spect = spect ./ baseline; % implicit broadcasting avoids allocating a full freq×time copy of baseline
 
 if ~isempty(bl_thresh) && bl_thresh ~= 0  % Get threshold used to remove low pow data
     if isempty(CI_upper_bl)
         error('If bl_thresh is true, input CI_upper_bl must be provided')
     else
-        bl_threshold = CI_upper_bl./baseline';
+        bl_threshold = CI_upper_bl ./ baseline';
     end
 else
     bl_threshold = [];
