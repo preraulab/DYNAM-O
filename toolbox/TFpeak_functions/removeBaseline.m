@@ -50,7 +50,11 @@ if nargin<1 || isempty(spect)
 end
 
 if nargin<2 || isempty(baseline)
-    error('Baseline must be specificied')
+    % construct baseline using default settings
+    spect_bl = spect;
+    spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
+    baseline_ptile = 2; % using 2nd percentile of spectrogram as baseline
+    baseline = prctile(spect_bl, baseline_ptile, 2); % get baseline
 end
 
 if nargin<3 || isempty(bl_thresh)
@@ -70,7 +74,7 @@ if f_verb > 0
 end
 
 % Remove baseline. Subtraction in dB equivalent to division in non-dB.
-spect = spect./repmat(baseline,1,size(spect,2));
+spect = spect ./ repmat(baseline, 1, size(spect, 2));
 
 if ~isempty(bl_thresh) && bl_thresh ~= 0  % Get threshold used to remove low pow data
     if isempty(CI_upper_bl)
