@@ -171,6 +171,7 @@ else %Handle SOpower/SOpower_times input
     % Compute SOpower stage
     if ~isempty(stage_times) && ~isempty(stage_vals)
         SOpower_stages = interp1(stage_times, stage_vals, SOpower_times, 'previous');
+        SOpower_stages(isnan(SOpower_stages)) = 0; % samples outside scored range marked Unknown
     else
         SOpower_stages = true;
     end
