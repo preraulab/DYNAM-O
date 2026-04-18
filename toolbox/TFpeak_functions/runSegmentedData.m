@@ -162,7 +162,18 @@ segments_processed = 1;
 num_out = nargout;
 
 poolobj = gcp("nocreate");
-num_workers = poolobj.NumWorkers;
+% Defensive: gcp("nocreate") returns [] when no pool exists, and on newer
+% MATLAB versions may return a bare parallel.Pool (no NumWorkers). Thread
+% pools expose NumThreads instead. Treat all of these gracefully.
+if isempty(poolobj)
+    num_workers = 0;
+elseif isprop(poolobj, 'NumWorkers')
+    num_workers = poolobj.NumWorkers;
+elseif isprop(poolobj, 'NumThreads')
+    num_workers = poolobj.NumThreads;
+else
+    num_workers = 1;
+end
 
 if f_verb > 0
     if num_workers>1 && ~debug_mode
