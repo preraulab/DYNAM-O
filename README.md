@@ -155,7 +155,7 @@ The first time you call `runDYNAMO`, it adds the toolbox to the MATLAB path via 
 
 ### 3. (Optional) Set up a C++ compiler for the MEX accelerator
 
-The pipeline ships with a C++ MEX accelerator (`trim_region_mex`) that speeds up the trim stage on **Linux, Windows, and Intel Mac** (auto-disabled on Apple Silicon — see below). To use it, MATLAB needs a configured C++ compiler:
+The pipeline ships with a C++ MEX accelerator (`trim_region_mex`) that speeds up the trim stage on **every platform** — Apple Silicon, Intel Mac, Linux, and Windows. The repo ships prebuilt binaries for Linux x86_64 (`.mexa64`) and Apple Silicon (`.mexmaca64`); Windows (`.mexw64`) and Intel Mac (`.mexmaci64`) binaries are built on first use. To let MATLAB build them, configure a C++ compiler:
 
 ```matlab
 mex -setup cpp
@@ -164,7 +164,7 @@ mex -setup cpp
 If `mex -setup` fails, install the platform toolchain first:
 - **Linux**: `sudo apt install build-essential` (or distribution equivalent)
 - **Windows**: MSVC Build Tools or MinGW-w64 via MATLAB Add-Ons
-- **macOS (Intel)**: `xcode-select --install` in Terminal
+- **macOS (Apple Silicon or Intel)**: `xcode-select --install` in Terminal
 
 Once `mex -setup cpp` succeeds, the MEX auto-compiles on your first `runDYNAMO` call (~30 s one-time cost). You don't need to do anything manually. The first run will print:
 
@@ -173,7 +173,7 @@ Once `mex -setup cpp` succeeds, the MEX auto-compiles on your first `runDYNAMO` 
   MEX compilation complete.
 ```
 
-If compilation fails (e.g., no compiler on an older Mac), the pipeline silently falls back to the MATLAB implementation — correctness is preserved, just a bit slower on the trim stage.
+If compilation fails (e.g., no compiler configured, or on an older Mac where Xcode CLT can't install), the pipeline silently falls back to the MATLAB implementation — correctness is preserved, just a bit slower on the trim stage. The MEX is also **not used when the user overrides `parallel_mode` to `'Threads'`** (MATLAB hard-blocks MEX calls inside ThreadPool workers); the same MATLAB fallback runs in that case. See [Override parallel mode](#override-parallel-mode) below.
 
 ### 4. Verify the install
 

@@ -62,6 +62,17 @@
 %       - A single input of 'segment' or 'night' toggles the example data time range (default: 'segment')
 %       - The SOPHs output includes histogram matrices, bin edges, time-in-bin info, and optionally
 %         parametric and spline fit results for both SO-power and SO-phase histograms.
+%       - Parallel pool type is controlled by detection_options.parallel_mode:
+%           * 'Processes'  (default) — ProcessPool + trim_region_mex. Fastest on
+%             every platform except 8-core Apple Silicon at full-night scale.
+%           * 'Threads'               — ThreadPool; trim_region_mex auto-disables
+%             (MATLAB blocks MEX in thread workers) and falls back to the MATLAB
+%             path, which is bit-identical. Useful on 8-core Apple Silicon
+%             (M2 / M3) for a ~8% wallclock improvement over ProcessPool.
+%           * ''                      — same as 'Processes'.
+%         trim_region_mex auto-compiles on first call if the binary is missing
+%         and a C++ compiler is configured. If it can't compile, the MATLAB
+%         fallback runs automatically with identical output (slower).
 %
 %   Example:
 %       load('example_data/example_data.mat');  % should include data, Fs, stage_times, stage_vals
@@ -189,7 +200,12 @@ timings = struct();
 % summary table.
 ttotal = datetime('now');
 
-%Set up parallel pool (auto-detects Threads vs Processes based on OS)
+%Set up parallel pool. detection_options.parallel_mode controls the
+%pool type: 'Processes' (default, fastest on every host except 8-core
+%Apple Silicon), 'Threads' (override; disables the trim MEX but keeps
+%output bit-identical via the MATLAB fallback), or '' (same as
+%'Processes'). See toolbox/TFpeak_functions/option_sets/detection_opts.m
+%for the full option surface.
 t_stage = tic;
 setup_parallel_pool(detection_options.parallel_mode);
 timings.pool_setup = toc(t_stage);
