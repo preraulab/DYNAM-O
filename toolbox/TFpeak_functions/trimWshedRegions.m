@@ -23,8 +23,10 @@ function [trimmed_regions, trimmed_borders] = trimWshedRegions(data,regions,vol_
 %   Notes:
 %       - Borders are returned as sets (ascending linear-index order); downstream
 %         consumers (cell2Ldata, computePeakStatsTable) treat them as sets.
-%       - On Apple Silicon the MEX fast path is bypassed because ThreadPool workers
-%         cannot execute MEX functions; the stock IPT path produces identical output.
+%       - Inside a ThreadPool worker the MEX fast path is bypassed (MATLAB
+%         cannot execute MEX functions inside a thread worker); the stock
+%         IPT path produces identical output. Serial and ProcessPool calls
+%         use the MEX whenever the binary exists.
 %
 %   See Also: runWatershed, mergeWshedSegment, extractTFPeaks
 %
@@ -141,18 +143,32 @@ if f_valid_inputs
     shift_data = data - shift_val;
     shift_data(shift_data<0) = 0;
 
-    % MEX fast path: disabled on Apple Silicon because that's where the
-    % default pool is ThreadPool and MATLAB hard-blocks MEX inside thread
-    % workers. A runtime getCurrentTask / pool-class check was attempted
-    % and proved unreliable: inside a ThreadPool worker, getCurrentTask
-    % does not reliably return a task object, so the check silently
-    % defaulted to "enabled" and crashed at the MEX call. The static
-    % Apple-Silicon gate matches the actual production configuration
-    % (macOS Apple Silicon auto-chooses ThreadPool in setup_parallel_pool).
-    % The MEX is built by runDYNAMO on the client before any parfor
-    % dispatches; workers just consume the pre-built binary here.
-    is_apple_silicon = ismac && strcmp(computer('arch'), 'maca64');
-    use_trim_mex = ~is_apple_silicon && exist(['trim_region_mex.' mexext], 'file') == 3;
+    % MEX fast path: enabled whenever we're NOT inside a ThreadPool worker
+    % (MATLAB hard-blocks MEX functions inside ThreadPool). Serial calls
+    % and ProcessPool workers can call MEX on every host, including Apple
+    % Silicon.
+    %
+    % Detection is defensive. getCurrentTask() returns the task object
+    % inside a ProcessPool worker, empty on the client, and may return
+    % empty or error inside a ThreadPool worker. Check the task's Parent
+    % when present; otherwise fall back to gcp('nocreate'), which returns
+    % the enclosing pool on the client and inside ThreadPool workers
+    % (since they share the client session). Any failure in this chain
+    % falls back to "disabled" — the MATLAB path is bit-identical, and
+    % defaulting to disabled on uncertainty avoids the hard MEX crash
+    % that an incorrect enable would produce inside a ThreadPool worker.
+    try
+        task = getCurrentTask();
+        if ~isempty(task)
+            in_thread_pool = isa(task.Parent, 'parallel.ThreadPool');
+        else
+            pool = gcp('nocreate');
+            in_thread_pool = ~isempty(pool) && isa(pool, 'parallel.ThreadPool');
+        end
+    catch
+        in_thread_pool = true;  % safe default
+    end
+    use_trim_mex = ~in_thread_pool && exist(['trim_region_mex.' mexext], 'file') == 3;
 
     for ii = 1:num_regions
         if ~isempty(regions{ii})
