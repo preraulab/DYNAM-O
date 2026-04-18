@@ -16,24 +16,15 @@
 //     [~,idx] = max(cellfun(@(x)sum(sub_shift_data(x),'omitnan'), cc.PixelIdxList));
 //     keep    = cc.PixelIdxList{idx};
 // as a set (pixel ordering within the CC in MATLAB's raster order).
-// (b) matches the set of boundary pixels of that CC (a pixel p is on the
-// boundary iff p is in the CC and at least one 4-neighbor of p is NOT in
-// the CC, or p is on the image edge). The boundary is emitted in
-// ascending linear-index order; the MATLAB caller must normalize order
-// for downstream comparisons.
+// (b) matches the set of boundary pixels of that CC as returned by
+// MATLAB's bwboundaries(mask, conn). A pixel p is on the boundary iff p
+// is in the CC and at least one `conn`-neighbor of p is NOT in the CC,
+// or p is on the image edge. The boundary is emitted in ascending
+// linear-index order; the MATLAB caller must normalize order for
+// downstream comparisons.
 //
 // Usage:
 //   [sub_keep_idx, sub_bnd_idx] = trim_region_mex(sub_data, sub_trim_idx, conn)
-//
-// KNOWN LIMITATION (conn=4): the boundary-detection pass always uses a
-// 4-neighbor check regardless of `conn`, which is correct for conn=8
-// components but diverges from MATLAB's bwboundaries(mask, 4) on conn=4
-// components. Regions are still bit-identical in both modes; only the
-// boundary set differs with conn=4. The entire DYNAM-O pipeline passes
-// conn=8 (grep "conn_trim" in extractTFPeaks.m), so this latent bug has
-// zero production impact. test_all_optimizations.m reports it as NOTE,
-// not FAIL. Fix is straightforward if conn=4 is ever wired through:
-// adjust the boundary check to use the same neighborhood as `conn`.
 //
 // Inputs:
 //   sub_data     - MxN double subimage (already shifted so min>=0)
@@ -45,7 +36,9 @@
 //   sub_keep_idx - int32 column of 1-based linear indices in sub_data of
 //                  the picked CC's pixels (raster/column-major order)
 //   sub_bnd_idx  - int32 column of 1-based linear indices of the picked
-//                  CC's 4-connected boundary pixels (ascending order)
+//                  CC's boundary pixels (ascending order). Neighborhood
+//                  for "has an outside neighbor" uses the same `conn` as
+//                  the CC labeling pass.
 
 #include "mex.hpp"
 #include "mexAdapter.hpp"
@@ -231,9 +224,10 @@ public:
             if (L[i] == best) keep.push_back(static_cast<int32_t>(i + 1));
         }
 
-        // --- Boundary set: pixels in `best` CC with at least one 4-neighbor
-        // not in the CC (or on image edge). Emit in ascending linear-index
-        // order.
+        // --- Boundary set: pixels in `best` CC with at least one neighbor
+        // not in the CC (or on image edge). Neighborhood matches `conn`
+        // so the result agrees with MATLAB's bwboundaries(mask, conn) as
+        // a set. Emit in ascending linear-index order.
         std::vector<int32_t> bnd;
         bnd.reserve(keep.size() / 2 + 16);
         for (size_t i = 0; i < N; ++i) {
@@ -244,11 +238,16 @@ public:
             if (r == 0 || r + 1 == R || c == 0 || c + 1 == C) {
                 on_edge = true;
             } else {
-                // Check 4-neighbors
-                if (L[i - 1] != best) on_edge = true;
+                if      (L[i - 1] != best) on_edge = true;
                 else if (L[i + 1] != best) on_edge = true;
                 else if (L[i - R] != best) on_edge = true;
                 else if (L[i + R] != best) on_edge = true;
+                else if (conn8) {
+                    if      (L[i - 1 - R] != best) on_edge = true;
+                    else if (L[i - 1 + R] != best) on_edge = true;
+                    else if (L[i + 1 - R] != best) on_edge = true;
+                    else if (L[i + 1 + R] != best) on_edge = true;
+                }
             }
             if (on_edge) bnd.push_back(static_cast<int32_t>(i + 1));
         }
