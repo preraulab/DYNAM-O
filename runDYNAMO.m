@@ -193,10 +193,12 @@ else
         disp('TF peaks stats table provided. Computing SOPH only.');
     end
 
-    data_time_range = data;
-    t_time_range = (0:length(data)-1)/Fs;
+    t_full = (0:length(data)-1)/Fs;
+    time_range_inds = t_full >= time_range(1) & t_full <= time_range(2);
+    data_time_range = data(time_range_inds);
+    t_time_range = t_full(time_range_inds);
     [spect, stimes, sfreqs] = deal([]);
-    artifacts = detect_artifacts(data, Fs);
+    artifacts = detect_artifacts(data_time_range, Fs);
 end
 
 %% COMPUTE ADDITIONAL PEAK FEATURES
