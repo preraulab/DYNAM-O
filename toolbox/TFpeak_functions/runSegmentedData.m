@@ -200,7 +200,7 @@ if ~debug_mode
             if haspar
                 send(D, ii);
             else
-                h = waitbar(ii/n_segs, [num2str(ii) ' out of ' num2str(n_segs) ' (' num2str((ii/n_segs*100),'%.2f') '%) segments processed...']);
+                waitbar(ii/n_segs, h, [num2str(ii) ' out of ' num2str(n_segs) ' (' num2str((ii/n_segs*100),'%.2f') '%) segments processed...']);
             end
         end
     end
@@ -228,7 +228,7 @@ else
 
         % Update loading bar
         if show_pbar
-            h = waitbar(ii/n_segs, [num2str(ii) ' out of ' num2str(n_segs) ' (' num2str((ii/n_segs*100),'%.2f') '%) segments processed...']);
+            waitbar(ii/n_segs, h, [num2str(ii) ' out of ' num2str(n_segs) ' (' num2str((ii/n_segs*100),'%.2f') '%) segments processed...']);
         end
     end
     if show_pbar
