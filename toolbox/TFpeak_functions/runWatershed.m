@@ -1,0 +1,160 @@
+function Ldata = runWatershed(data, conn, bl_thresh, f_verb, verb_pref, f_disp)
+%RUNWATERSHED  Determine peak regions using MATLAB's watershed function
+%
+%   Usage:
+%       Ldata = runWatershed(data, conn, bl_thresh, f_verb, verb_pref, f_disp)
+%
+%   Required Inputs:
+%       data:      [M x N] double - 2D image data
+%
+%   Optional Inputs:
+%       conn:      integer - pixel connectivity used by watershed (default: 8)
+%       bl_thresh: double - power threshold that zeroes low-power pixels before watershed,
+%                  accelerating labeling (default: [])
+%       f_verb:    integer - verbosity: 0 silent, 1 current level (default: 0)
+%       verb_pref: char - prefix string for verbose output (default: '')
+%       f_disp:    logical - plot labeled regions when true (default: false)
+%
+%   Outputs:
+%       Ldata:     [M x N] double - labeled region image (0 at borders; >0 region ids)
+%
+%   See Also: watershed, Ldata2graph, extractTFPeaks
+%
+%
+%*************************
+% Handle variable inputs *
+%*************************
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
+%
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
+%   GITHUB     https://github.com
+%
+%   ATTRIBUTION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%   in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%   for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
+if nargin<6
+    f_disp = [];
+end
+if nargin<5
+    verb_pref = [];
+end
+if nargin<4
+    f_verb = [];
+end
+if nargin<3
+    bl_thresh = [];
+end
+if nargin<2
+    conn = [];
+end
+if nargin<1   
+    data = [];
+end
+
+%************************
+% Set default arguments *
+%************************
+if isempty(f_disp)
+    f_disp = false;
+end
+if isempty(verb_pref)
+    verb_pref = '';
+end
+
+if isempty(f_verb)
+    f_verb = 0;
+end
+if isempty(conn)
+    conn = 8;
+end
+if isempty(data) || ~any(isfinite(data),"all")
+    error('Data must be non-empty/nan/inf')
+end
+
+%****************
+% Run watershed *
+%****************
+if f_verb > 0
+    disp([verb_pref 'Running watershed...']);
+end
+
+% Handle NaN values
+nan_idx = isnan(data(:));
+data(nan_idx) = 0;
+
+% Run watershed
+if isempty(bl_thresh)
+    % Run watershed
+    Ldata = watershed(-data , conn);
+else %EXPERIMENTAL: Threshold the data prior to running
+    % set value used to mark regions labels where data should be excluded
+    exclusion_val = intmax('uint16');
+    
+    % Set data below threshold to some high number (flintmax)
+    below_thresh_inds = data < bl_thresh';
+    data(below_thresh_inds) = flintmax;
+    
+    % Run watershed
+    Ldata = watershed(-data , conn);
+    
+    % If region contains flintmax, set the region's label to exclusion_val
+    for ii = 1:max(Ldata,[],'all','omitnan')
+        region_inds = Ldata == ii;
+        data_val = max(data(region_inds));
+        if data_val == flintmax
+            Ldata(region_inds) = exclusion_val;
+        end
+    end
+end
+
+%{
+% Adding watershed borders to the image borders
+Ldata(1,:) = 0;
+Ldata(end,:) = 0;
+Ldata(:,1) = 0;
+Ldata(:,end) = 0;
+%}
+
+% Removing bad data
+Ldata(nan_idx) = 0;
+Ldata = bwlabel(Ldata);
+
+if f_disp
+    RGB2 = label2rgb(Ldata, 'jet', 'c', 'shuffle');
+    R = squeeze(RGB2(:,:,1));
+    G = squeeze(RGB2(:,:,2));
+    B = squeeze(RGB2(:,:,3));
+    R(~Ldata) = 100;
+    G(~Ldata) = 100;
+    B(~Ldata) = 100;
+    RGB2 = cat(3,R,G,B);
+    fh = figure('units','normalized','position',[0.7674    0.3978    0.4007    0.4811]);
+    ax = axes(fh);
+    imagesc(ax,RGB2);
+    axis(ax,'xy');
+    title(ax,'Watershed Regions');
+end
+
+%*******************************************************
+% Label border pixels and determine region adjacencies *
+%*******************************************************
+if f_verb > 0
+    disp([verb_pref 'Labeling watershed borders...']);
+end
+
+end

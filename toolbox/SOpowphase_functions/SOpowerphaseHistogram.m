@@ -3,7 +3,9 @@ function [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, num_p
 %SOPOWERPHASEHISTOGRAM  Compute slow-oscillation power and phase histogram matrices
 %
 %   Usage:
-%       [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, num_peaks_at_freq, SOpower_TIB, SOphase_TIB, peak_SOpower, peak_SOphase, peak_selection_inds] = ...
+%       [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, num_peaks_at_freq, ...
+%        SOpower_TIB, SOphase_TIB, peak_SOpower, peak_SOphase, peak_selection_inds, ...
+%        SOpower, SOpower_times, SOphase, SOphase_times, SOdata, soph_timings] = ...
 %                                 SOpowerphaseHistogram(data, Fs, TFpeak_freqs, TFpeak_times, <options>)
 %
 %   Required Inputs:
@@ -44,16 +46,27 @@ function [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, num_p
 %       SOphase_bins:           1D double - SO phase bin center values for dimension 1 of SOphase_mat
 %       freq_bins:              1D double - frequency bin center values for dimension 2 of SOpower_mat and SOphase_mat
 %       num_peaks_at_freq:      1D double - number of TFpeaks in each frequency bin
-%       SOpow_TIB:              1xT double - time (minutes) in each SOpower bin for all stages 1-5 (0min if not in SOPH_stages)
-%       SOphase_TIB:            1xT double - time (minutes) in each SOphase bin for all stages 1-5 (0min if not in SOPH_stages)
+%       SOpower_TIB:            [num_Cbins x 5] double - time (minutes) in each SOpower bin for stages 1-5 (0min if not in SOPH_stages)
+%       SOphase_TIB:            [num_Cbins x 5] double - time (minutes) in each SOphase bin for stages 1-5 (0min if not in SOPH_stages)
 %       peak_SOpower:           1xP double - normalized slow oscillation power at each TFpeak
 %       peak_SOphase:           1xP double - slow oscillation phase at each TFpeak
 %       peak_selection_inds:    1xP logical - which TFpeaks are counted in the histogram
 %       SOpower:                1xM double - SO power timeseries data
 %       SOpower_times:          1xM double - SO power timeseries times
-%       SOphase:                1xN double - SO phase timeseries data
+%       SOphase:                1xN double - SO phase timeseries data (wrapped to [-pi, pi])
 %       SOphase_times:          1xN double - SO phase timeseries times
 %       SOdata:                 1xN double - SO filtered timeseries data
+%       soph_timings:           struct - per-stage wallclock seconds with fields
+%                               sopower_compute, sophase_compute, sopower_hist, sophase_hist.
+%                               Fields default to 0 when the corresponding stage was skipped
+%                               (e.g., SOpower/SOphase precomputed upstream). runDYNAMO folds
+%                               these into its master timings summary.
+%
+%   Notes:
+%       - Frequency bins are half-open [lo, hi) on each bin; freq_range(2) is excluded.
+%         The same [lo, hi) convention applies to SOpower_range and SOphase_range.
+%
+%   See Also: SOpowerHistogram, SOphaseHistogram, computeSOpower, computeSOphase
 %
 %
 % =========================================================================

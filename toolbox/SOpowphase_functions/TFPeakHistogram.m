@@ -34,9 +34,18 @@ function [C_mat, freq_cbins, C_cbins, time_in_bin, prop_in_bin, peak_at_freq] = 
 %       C_mat:          [BxF] double - 2D histogram matrix (C-bins x frequency bins)
 %       freq_cbins:     [1xF] double - frequency bin centers (Hz)
 %       C_cbins:        [1xB] double - C-metric bin centers
-%       time_in_bin:    [1xB] double - time (minutes) in each C-metric bin
-%       prop_in_bin:    [1xB] double - proportion of total time in each bin
+%       time_in_bin:    [B x 5] double - time (minutes) in each C-metric bin per sleep stage
+%       prop_in_bin:    [B x 5] double - proportion of total time in each bin per stage
 %       peak_at_freq:   [1xF] double - number of TF peaks in each frequency bin
+%
+%   Notes:
+%       - Frequency bins are half-open [lo, hi) on each bin; freq_range(2) is excluded.
+%         The same [lo, hi) convention applies to C_range (i.e., the SO_range when this
+%         function is called from SOpowerHistogram or SOphaseHistogram). When
+%         circular_Cmetric is true, the wrapped bins at the circular boundary use the
+%         same half-open convention on each side of the wrap point.
+%
+%   See Also: SOpowerHistogram, SOphaseHistogram, SOpowerphaseHistogram
 %
 % =========================================================================
 %                  DYNAM-O Toolbox  |  Prerau Laboratory

@@ -2,7 +2,7 @@ function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, art
 %COMPUTETFPEAKS  Run watershed algorithm to extract time-frequency peaks from a spectrogram
 %
 %   Usage:
-%       [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts] = ...
+%       [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, tfp_timings] = ...
 %               computeTFPeaks(data, Fs, stage_times, stage_vals, <options>)
 %
 %   Required Inputs:
@@ -58,6 +58,10 @@ function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, art
 %       merge_thresh (opt):        scalar - threshold weight value for when to stop merge rule.
 %                                  Default = [], to be set by quality_setting
 %       quality_setting (opt):     character - Quality settings for the algorithm. Default = 'default'
+%                                       'stokes_2023': matches Stokes et al. 2023 SLEEP paper settings exactly
+%                                           downsample_spect = [];
+%                                           seg_time = 60; (seconds)
+%                                           merge_thresh = 8; (merge weight unit)
 %                                       'precision': high resolution settings
 %                                           downsample_spect = [];
 %                                           seg_time = 30; (seconds)
@@ -83,6 +87,13 @@ function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, art
 %       data_time_range:    [1xn] double - timeseries data in time_range
 %       t_time_range:       [1xn] double - timestamps for data in time_range
 %       artifacts:          1xT logical of times flagged as artifacts (logical OR of hf and bb artifacts)
+%       tfp_timings:        struct - per-stage wallclock seconds with fields
+%                           spect_pass1, artifact, baseline_pass1, extract_pass1,
+%                           spect_pass2, baseline_pass2, extract_pass2, refine.
+%                           Second-pass fields are 0 when double_watershed is false.
+%                           Merged into runDYNAMO's master timings summary.
+%
+%   See Also: runWatershed, mergeWshedSegment, trimWshedRegions, extractTFPeaks, refinePeakFrequency
 %
 %
 % =========================================================================
