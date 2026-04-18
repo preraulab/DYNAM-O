@@ -108,7 +108,7 @@ parfor n = 1:num_windows % REMOVE PARFOR TO TEST
     end
 
     %Multiply the data by the hann taper
-    tapered_data = data_segment.* hann_taper;
+    tapered_data = data_segment .* hann_taper;
 
     %Compute the FFT
     fft_data = fft(tapered_data, nfft);
@@ -120,7 +120,6 @@ parfor n = 1:num_windows % REMOVE PARFOR TO TEST
     hann_spectrogram(:,n) = h_spectrum(freq_inds);
 end
 
-
 %Compute one-sided PSD spectrum
 DC_select = find(sfreqs==0);
 Nyquist_select = find(sfreqs==Fs/2);
@@ -129,7 +128,6 @@ hann_spectrogram = [hann_spectrogram(DC_select,:); 2*hann_spectrogram(select,:);
 
 %Flip if requested
 if xyflip; hann_spectrogram = hann_spectrogram'; end
-
 
 %% PLOT THE SPECTROGRAM
 
@@ -207,7 +205,7 @@ end
 
 %Make sure all events are within the correct range
 win_buffer = data_window_params(1)/2;
-assert(all(event_times>t(1)+win_buffer & event_times<t(end)-win_buffer),'All events must fall within winsize/2 from the time extents of the data');
+assert(all(event_times>=(t(1)+win_buffer) & event_times<=(t(end)-win_buffer)),'All events must fall within winsize/2 from the time extents of the data');
 
 %Fix error in frequency range
 if isscalar(frequency_range) %Set max frequency to nyquist if only lower bound specified
@@ -256,7 +254,7 @@ end
 function [window_idxs, stimes, sfreqs, freq_inds] = get_windows(Fs, nfft, frequency_range, window_start, datawin_size)
 %Create the frequency vector
 df = Fs/nfft;
-sfreqs = 0:df:Fs; % all possible frequencies
+sfreqs = 0:df:Fs-df; % all possible frequencies
 
 %Get just the frequencies for the given frequency range
 freq_inds = (sfreqs >= frequency_range(1)) & (sfreqs <= frequency_range(2));

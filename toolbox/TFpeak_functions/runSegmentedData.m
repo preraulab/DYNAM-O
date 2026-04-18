@@ -115,8 +115,7 @@ end
 % Remove baseline *
 %******************
 if ~isempty(baseline)
-    % Remove baseline. Subtraction in dB equivalent to division in non-dB.
-    spect = spect ./ baseline; % implicit broadcasting avoids allocating a full freq×time copy of baseline
+    spect = removeBaseline(spect, baseline, [], [], f_verb);
 end
 
 %Variables that should not change unless enabling new functionality
