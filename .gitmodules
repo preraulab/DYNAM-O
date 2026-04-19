@@ -18,3 +18,27 @@
 	path = toolbox/helper_functions/CSSuicontrols
 	url = git@github.com:preraulab/CSSuicontrols.git
 	branch = master
+[submodule "toolbox/helper_functions/data_processing"]
+	path = toolbox/helper_functions/data_processing
+	url = git@github.com:preraulab/data_processing.git
+[submodule "toolbox/helper_functions/binning"]
+	path = toolbox/helper_functions/binning
+	url = git@github.com:preraulab/binning.git
+[submodule "toolbox/helper_functions/conversion"]
+	path = toolbox/helper_functions/conversion
+	url = git@github.com:preraulab/conversion.git
+[submodule "toolbox/helper_functions/nanstats"]
+	path = toolbox/helper_functions/nanstats
+	url = git@github.com:preraulab/nanstats.git
+[submodule "toolbox/helper_functions/graphical"]
+	path = toolbox/helper_functions/graphical
+	url = git@github.com:preraulab/graphical.git
+[submodule "toolbox/helper_functions/fig_tools"]
+	path = toolbox/helper_functions/fig_tools
+	url = git@github.com:preraulab/fig_tools.git
+[submodule "toolbox/helper_functions/colormaps"]
+	path = toolbox/helper_functions/colormaps
+	url = git@github.com:preraulab/colormaps.git
+[submodule "toolbox/helper_functions/sleep"]
+	path = toolbox/helper_functions/sleep
+	url = git@github.com:preraulab/sleep.git
