@@ -404,7 +404,7 @@ end
 %% Helper functions
 function [spect, stimes, sfreqs, dur_min, bw_min, ht_db_min] = computeSpectrogram(taper_params, time_window_params, data_time_range, Fs, dsfreqs, freq_range, verbose)
 % For more information on the multitaper spectrogram parameters and implementation visit:
-% https://github.com/preraulab/multitaper
+% https://github.com/preraulab/multitaper_toolbox
 
 % Fixed multitaper computation parameters
 nfft = 2^(nextpow2(Fs/dsfreqs)); % zero pad data to this minimum value for fft
