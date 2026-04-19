@@ -1,22 +1,20 @@
-function [zscored, mu, sigma] = nanzscore(data, varargin)
-%NANZSCORE  Compute z-scores ignoring NaN values
+function tic_h = verb_disp(verbose, message)
+%VERB_DISP  Conditionally display a message and optionally start a timer
 %
 %   Usage:
-%       [zscored, mu, sigma] = nanzscore(data, ...)
+%       verb_disp(verbose, message)
+%       tic_h = verb_disp(verbose, message)
 %
 %   Input:
-%       data: numeric array - data to z-score (NaNs are ignored) -- required
-%       ...:  additional arguments passed to zscore()
+%       verbose: logical - if true, display the message -- required
+%       message: char or string - message to display -- required
 %
 %   Output:
-%       zscored: numeric array - z-scored data (same size as data)
-%       mu:      double - mean used for z-scoring (computed over non-NaN values)
-%       sigma:   double - standard deviation used for z-scoring
+%       tic_h: timer handle (optional) - timer started with tic() if output is requested
 %
-%   Note:
-%       Only non-NaN elements of data are used to compute the z-score.
-%       The resulting zscored array matches the size of data, with NaN
-%       preserved at every position where data was NaN.
+%   Example:
+%       verb_disp(true, 'Processing data...');
+%       tic_h = verb_disp(true, 'Starting timer...');
 %
 % =========================================================================
 %                  DYNAM-O Toolbox  |  Prerau Laboratory
@@ -41,18 +39,10 @@ function [zscored, mu, sigma] = nanzscore(data, varargin)
 %   Sleep, 2022; zsac223. https://doi.org
 %
 % =========================================================================
-inds = ~isnan(data);
-zscored = nan(size(data));
-[zscored(inds), mu, sigma] = zscore(data(inds),varargin{:});
-
-% %NANZSCORE compute zscores ignoring nans
-% if any(isnan(data))
-%     mu = mean(data,'all','omitnan');
-%     sigma = std(data,0,'all','omitnan');
-%     zscored = (data-mu)./sigma;
-% else
-%     [zscored, mu, sigma] = zscore(data(:));
-% end
-
+    if verbose
+        disp(message)
+    end
+    if nargout > 0
+        tic_h = tic;
+    end
 end
-
