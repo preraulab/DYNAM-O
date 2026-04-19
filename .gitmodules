@@ -1,6 +1,6 @@
 [submodule "toolbox/helper_functions/multitaper_spectrogram"]
 	path = toolbox/helper_functions/multitaper_spectrogram
-	url = git@github.com:preraulab/multitaper.git
+	url = git@github.com:preraulab/multitaper_toolbox.git
 	branch = master
 [submodule "toolbox/helper_functions/statistical_tests"]
 	path = toolbox/helper_functions/statistical_tests
