@@ -1,20 +1,25 @@
-function [trimmed_regions, trimmed_borders] = trimWshedRegions(data,regions,vol_thresh,shift_val,conn,f_verb,verb_pref,f_disp)
+function [trimmed_regions, trimmed_borders] = trimWshedRegions(data,regions,vol_thresh,shift_val,conn,f_verb,verb_pref,f_disp,use_trim_mex)
 %TRIMWSHEDREGIONS  Trim watershed regions to a target fraction of volume
 %
 %   Usage:
-%       [trimmed_regions, trimmed_borders] = trimWshedRegions(data, regions, vol_thresh, shift_val, conn, f_verb, verb_pref, f_disp)
+%       [trimmed_regions, trimmed_borders] = trimWshedRegions(data, regions, vol_thresh, shift_val, conn, f_verb, verb_pref, f_disp, use_trim_mex)
 %
 %   Required Inputs:
 %       data:       [M x N] double - 2D image data
 %       regions:    [1 x K] cell - linear indices of all pixels for each region
 %
 %   Optional Inputs:
-%       vol_thresh: double - fraction of maximum trimmed volume in (0, 1]; 1 means no trim (default: 0.8)
-%       shift_val:  double - value subtracted from image prior to volume evaluation (default: min(data(:)))
-%       conn:       integer - pixel connectivity used by the trim step (default: 8)
-%       f_verb:     integer - verbosity level: 0 silent, 1 current level, >1 subfunctions (default: 0)
-%       verb_pref:  char - prefix string prepended to verbose output (default: '')
-%       f_disp:     logical/integer - plot the trimmed result when nonzero (default: 0)
+%       vol_thresh:   double - fraction of maximum trimmed volume in (0, 1]; 1 means no trim (default: 0.8)
+%       shift_val:    double - value subtracted from image prior to volume evaluation (default: min(data(:)))
+%       conn:         integer - pixel connectivity used by the trim step (default: 8)
+%       f_verb:       integer - verbosity level: 0 silent, 1 current level, >1 subfunctions (default: 0)
+%       verb_pref:    char - prefix string prepended to verbose output (default: '')
+%       f_disp:       logical/integer - plot the trimmed result when nonzero (default: 0)
+%       use_trim_mex: logical - allow trim_region_mex when the binary exists and the
+%                     current pool context permits it (default: true). Pass false to
+%                     force the MATLAB trim path for reproduction / bisection /
+%                     benchmarking. ThreadPool workers always use the MATLAB path
+%                     regardless of this flag (MEX cannot run in a thread worker).
 %
 %   Outputs:
 %       trimmed_regions: [1 x K] cell - linear indices of retained pixels for each region
@@ -79,6 +84,9 @@ if nargin < 7
 end
 if nargin < 8
     f_disp = [];
+end
+if nargin < 9 || isempty(use_trim_mex)
+    use_trim_mex = true;
 end
 
 %*************************
@@ -168,7 +176,7 @@ if f_valid_inputs
     catch
         in_thread_pool = true;  % safe default
     end
-    use_trim_mex = ~in_thread_pool && exist(['trim_region_mex.' mexext], 'file') == 3;
+    use_trim_mex = use_trim_mex && ~in_thread_pool && exist(['trim_region_mex.' mexext], 'file') == 3;
 
     for ii = 1:num_regions
         if ~isempty(regions{ii})
