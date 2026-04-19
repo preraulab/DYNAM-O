@@ -191,6 +191,7 @@ addOptional(p, 'refinement', detection_options.refinement, @(x) validateattribut
 addOptional(p, 'show_pbar', detection_options.show_pbar, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'debug_mode', detection_options.debug_mode, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'parallel_mode', detection_options.parallel_mode, @(x) (ischar(x) || isstring(x)) && any(strcmp(x, {'', 'Processes', 'Threads'})));
+addOptional(p, 'use_trim_mex', detection_options.use_trim_mex, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -311,10 +312,10 @@ end
 
 if double_watershed
     [stats_table, regions, borders] = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
-        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), show_pbar, debug_mode);
+        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), show_pbar, debug_mode, use_trim_mex);
 else
     stats_table = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
-        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), show_pbar, debug_mode);
+        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), show_pbar, debug_mode, use_trim_mex);
 end
 
 tfp_timings.extract_pass1 = toc(tfp);
@@ -357,7 +358,7 @@ if double_watershed
     tfp = tic;
 
     stats_table = runSegmentedData(spect_masked, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
-        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), show_pbar, debug_mode);
+        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), show_pbar, debug_mode, use_trim_mex);
 
     tfp_timings.extract_pass2 = toc(tfp);
     if verbose

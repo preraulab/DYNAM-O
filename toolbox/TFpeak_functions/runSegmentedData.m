@@ -88,6 +88,10 @@ addOptional(p, 'trim_vol', 0.8, @(x) isnumeric(x) && isscalar(x) && x >= 0 && x 
 addOptional(p, 'f_verb', 1, @(x) isnumeric(x) && isscalar(x));
 addOptional(p, 'show_pbar', true, @islogical);
 addOptional(p, 'debug_mode', false, @islogical);
+% Route the trim MEX on/off through from detection_options; default true
+% matches current behaviour. When false, the parfor body still passes the
+% flag down so each worker consistently skips the MEX on this call.
+addOptional(p, 'use_trim_mex', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 
 parse(p, spect, stimes, sfreqs, varargin{:});
 S = p.Results;
@@ -105,6 +109,7 @@ trim_vol         = S.trim_vol;
 f_verb           = S.f_verb;
 show_pbar        = S.show_pbar;
 debug_mode       = S.debug_mode;
+use_trim_mex     = S.use_trim_mex;
 
 if debug_mode
     verb_pref = 'DEBUG: ';
@@ -198,12 +203,12 @@ if ~debug_mode
         %This construction with multiple function calls for num_out is most
         %efficient for parallel processing
         if num_out == 1
-            stats_tables{ii} = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref]);
+            stats_tables{ii} = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],[],use_trim_mex);
         elseif num_out == 2
-            [stats_tables{ii}, regions{ii}] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref]);
+            [stats_tables{ii}, regions{ii}] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],[],use_trim_mex);
             regions{ii} = cellfun(@(x)x+pixel_shift(ii),regions{ii},'UniformOutput',false);
         elseif num_out == 3
-            [stats_tables{ii}, regions{ii}, borders{ii}] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref]);
+            [stats_tables{ii}, regions{ii}, borders{ii}] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],[],use_trim_mex);
             regions{ii} = cellfun(@(x)x+pixel_shift(ii),regions{ii},'UniformOutput',false);
             borders{ii} = cellfun(@(x)x+pixel_shift(ii),borders{ii},'UniformOutput',false);
         end
@@ -229,7 +234,7 @@ else
         end
 
         %Compute the stats table with optional regions and borders
-        [stats_tables{ii}, reg, bord] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref]);
+        [stats_tables{ii}, reg, bord] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],[],use_trim_mex);
 
         if num_out>1
             regions{ii} = cellfun(@(x)x+pixel_shift(ii),reg,'UniformOutput',false);

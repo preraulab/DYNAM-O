@@ -86,6 +86,15 @@ addOptional(p, 'debug_mode', false, @(x) validateattributes(x, {'logical', 'nume
 % optimization/OPTIMIZATION_SUMMARY.md §5.2.
 addOptional(p, 'parallel_mode', 'Processes', @(x) (ischar(x) || isstring(x)) && any(strcmp(x, {'', 'Processes', 'Threads'})));
 
+%% Trim-region MEX toggle: set false to force the pure-MATLAB trim path
+% even on ProcessPool / serial runs where the MEX is available. Useful for
+% reproducing a master-branch run without deleting the binary, bisecting
+% a suspected MEX-vs-MATLAB disagreement, or benchmarking MEX impact on a
+% given host. When false, output is bit-identical to the MEX path but
+% runs slower. Always effectively false inside a ThreadPool worker
+% regardless of this setting (MATLAB hard-blocks MEX there).
+addOptional(p, 'use_trim_mex', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+
 %%
 parse(p,varargin{:});
 opts = p.Results;
