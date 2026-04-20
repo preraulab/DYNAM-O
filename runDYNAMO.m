@@ -152,7 +152,7 @@ if nargin == 0 || ~isnumeric(varargin{1})
         assert(ismember(lower(data_range), {'segment','night'}), 'Select ''segment'' or ''night'' as input for example data.');
     end
     addpath(fullfile(fileparts(which('runDYNAMO')), 'example_data'))
-    [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runExampleData(data_range, default_verbose, run_app, varargin{2:end});
+    [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs, timings] = runExampleData(data_range, default_verbose, run_app, varargin{2:end});
     return;
 end
 
