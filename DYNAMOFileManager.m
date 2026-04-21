@@ -3625,26 +3625,28 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                         drawnow;
                     end
 
-                    % Update progress bar (wrapped in try-catch to avoid aborting on UI errors)
-                    try
-                        app.curr_iteration = app.curr_iteration + 1;
-                        app.ProgressBar.updateIteration(app.curr_iteration);
-                    catch e
-                        warning(warnState);
-                        set(0, 'DefaultFigureVisible', 'on');
-                        disp(e);
-                        app.stopLogConsoleTimer();
-                        app.updateLogConsole();
-                        if ~isempty(app.consolelog_fid) && app.consolelog_fid > 0, fclose(app.consolelog_fid); end
-                        diary off;
-                        if ~isempty(app.runlog_fid) && app.runlog_fid > 0, fclose(app.runlog_fid); end
-                        app.set_rundefault;
-                        app.ProgressBar.reset();
-                        app.ProgressBar.Enabled = false;
-                        return;
-                    end
-
                 end % channel loop
+
+                % Update progress bar once per file (wrapped in try-catch to
+                % avoid aborting on UI errors). N was set to length(dataList),
+                % so curr_iteration also tracks files, not file-channel pairs.
+                try
+                    app.curr_iteration = app.curr_iteration + 1;
+                    app.ProgressBar.updateIteration(app.curr_iteration);
+                catch e
+                    warning(warnState);
+                    set(0, 'DefaultFigureVisible', 'on');
+                    disp(e);
+                    app.stopLogConsoleTimer();
+                    app.updateLogConsole();
+                    if ~isempty(app.consolelog_fid) && app.consolelog_fid > 0, fclose(app.consolelog_fid); end
+                    diary off;
+                    if ~isempty(app.runlog_fid) && app.runlog_fid > 0, fclose(app.runlog_fid); end
+                    app.set_rundefault;
+                    app.ProgressBar.reset();
+                    app.ProgressBar.Enabled = false;
+                    return;
+                end
 
             end % file loop
 
