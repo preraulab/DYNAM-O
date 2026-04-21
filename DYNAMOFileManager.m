@@ -3431,9 +3431,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %   stopped automatically when consolelog_fid is closed.
 
             app.TextArea.Value = 'Beginning run...';
-            drawnow;
             app.curr_datetime   = char(datetime('now','Format','yyMMdd_HHmmSS'));
             app.set_running;
+            drawnow;
 
             % Build DYNAMO options struct from current GUI settings
             app.TextArea.Value = 'Updating advanced options...';
@@ -3466,6 +3466,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % Initialize the progress bar widget — ticks once per file, not per
             % (file, channel). Chunkier updates but clearer meaning (each tick
             % = one EDF fully processed across all channels).
+            app.ProgressBar.reset();
             app.ProgressBar.N = length(dataList);
             app.ProgressBar.start;
 
@@ -3544,12 +3545,12 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                     fprintf('\n--- Subject: %s | Channel: %s ---\n', app.input_fbase, app.channel);
                     app.TextArea.addnl(sprintf('--- Subject: %s | Channel: %s ---', ...
                         app.input_fbase, app.channel));
-                    drawnow;
+                  
 
                     try
                         % ---- Load EDF and staging data ----
                         app.TextArea.addnl('Loading staging and EDF data...');
-                        drawnow;
+             
                         [app.data, app.Fs, app.stage_times, app.stage_vals] = load_data( ...
                             dataList{jj}, ...
                             stagingList{jj}, ...
@@ -3594,27 +3595,27 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
                         % TF-peak stats table and/or SO-Power Histograms
                         if app.SavePeakStatsCheckBox.Value || app.SaveSOPHsCheckBox.Value
-                            runStatsTable(app)
+                           runStatsTable(app)
                         end
 
                         % Data summary figure
                         if app.SaveDataSummaryCheckBox.Value
-                            runDataSummaryFigure(app)
+                           runDataSummaryFigure(app)
                         end
 
                         % Parametric basis fit
                         if app.SaveParamBasisCheckBox.Value
-                            runParamBasis(app)
+                           runParamBasis(app)
                         end
 
                         % Spline basis fit
                         if app.SaveSplineBasisCheckBox.Value
-                            runSplineBasis(app)
+                           runSplineBasis(app)
                         end
 
                         % Auxiliary data
                         if app.SaveAuxDataCheckBox.Value
-                            saveAuxData(app)
+                           ssaveAuxData(app)
                         end
 
                         % ---- Log success ----
@@ -3679,6 +3680,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             warning(warnState);
             set(0, 'DefaultFigureVisible', 'on');
             app.ProgressBar.complete();
+            drawnow
             app.ProgressBar.Enabled = false;
             app.TextArea.addnl('Batch run complete.');
             drawnow;
@@ -3690,6 +3692,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.RunBatchButton.Enabled  = 'on';
             app.StopBatchButton.Enabled = 'off';
             app.set_rundefault;
+            drawnow
         end % runBatch
 
         function applyFont(app)
