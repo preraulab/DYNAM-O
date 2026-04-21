@@ -309,7 +309,7 @@ function ydB = nanpow2db(y)
 
 % EDITED BY MJP 2/7/2020
 
-%#codegenr
+%#codegen
 % cond = all(y(:)>=0);
 % if ~cond
 %     coder.internal.assert(cond,'signal:pow2db:InvalidInput');
