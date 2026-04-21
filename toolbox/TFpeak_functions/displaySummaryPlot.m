@@ -224,14 +224,12 @@ if isgraphics(hypn_spect_ax(2))
 
     if ~isgraphics(hypn_spect_ax(3))
         xlabel(hypn_spect_ax(2),'Time (hr)')
+    else
+        set(hypn_spect_ax(2), 'XtickLabel', []);
     end
 
     if ~isgraphics(hypn_spect_ax(1))
         th(1) = title(hypn_spect_ax(2),'EEG Spectrogram');
-    end
-
-    if isgraphics(hypn_spect_ax(3))
-        set(hypn_spect_ax(2), 'XtickLabel', []);
     end
 end
 
