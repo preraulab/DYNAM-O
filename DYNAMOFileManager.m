@@ -3643,13 +3643,12 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                             'Subject %s, channel %s: not run.\n%s\n', ...
                             app.input_fbase, app.channel, e.message));
 
-                        % NOTE: do NOT call app.ProgressBar.reset here —
-                        % that clears StartTime_ to [], and then the
-                        % per-file updateIteration below (line 3658) would
-                        % blow up with "Argument to TOC must be a uint64
-                        % scalar" because it reads the now-empty StartTime_.
-                        % The batch is continuing; the progress bar should
-                        % too. Just record the error and move on.
+                        % Don't reset the progress bar here — the batch is
+                        % continuing and the bar should keep ticking. Any
+                        % prior-halt cleanup belongs at run start, not
+                        % mid-batch. (updateIteration is now tolerant of an
+                        % empty StartTime_, so reset is safe to call before
+                        % the next batch starts, if needed.)
                         drawnow;
                     end
 
