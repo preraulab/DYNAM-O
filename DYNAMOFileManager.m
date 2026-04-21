@@ -3638,7 +3638,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                             app.input_fbase, app.channel, errMsg);
                         app.writeLog(sprintf( ...
                             'Subject %s, channel %s: not run.\n%s\n', ...
-                            app.input_fbase, app.channel, getReport(e, 'extended')));
+                            app.input_fbase, app.channel, e.message));
 
                         app.set_rundefault;
                         app.ProgressBar.reset;
