@@ -2728,12 +2728,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             fclose(fid);
             app.consolelog_fid = [];  % no persistent fid; diary owns the file
 
-            % Ensure any prior diary is off before redirecting.
-            diary off;
-            diary(fullpath);
-            if strcmp(get(0, 'Diary'), 'off')
+            % Start diary. Wrapped so that if MATLAB errors on diary(path)
+            % we don't kill the whole batch (the console log is nice-to-have).
+            try
+                diary off
+                diary(fullpath)
+            catch diaryErr
                 warning('createConsoleLog:diary', ...
-                    'diary(%s) did not activate; console log will be empty.', fullpath);
+                    'diary(%s) failed: %s', fullpath, diaryErr.message);
             end
 
             % If the Run Log Console is already open, start live polling now.
