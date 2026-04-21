@@ -3615,7 +3615,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
                         % Auxiliary data
                         if app.SaveAuxDataCheckBox.Value
-                           ssaveAuxData(app)
+                           saveAuxData(app)
                         end
 
                         % ---- Log success ----
