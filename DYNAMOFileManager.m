@@ -3508,6 +3508,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                         if ~isempty(app.runlog_fid) && app.runlog_fid > 0, fclose(app.runlog_fid); end
                         app.RunBatchButton.Enabled  = 'on';
                         app.StopBatchButton.Enabled = 'off';
+                        app.set_rundefault;       % revert icon + "RUNNING" text back to RUN
                         app.ProgressBar.reset();
                         app.ProgressBar.Enabled = false;
                         return
