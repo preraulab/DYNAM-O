@@ -215,10 +215,13 @@ if ~debug_mode
 
         % Update loading bar
         if show_pbar
+            % NOTE: reference `h` only in the serial (debug_mode) branch below,
+            % never inside parfor. Parfor static analysis broadcasts every
+            % referenced variable to workers, and MATLAB cannot serialize
+            % matlab.ui.control.internal.ProgressIndicator (the class `waitbar`
+            % now returns), which produces a spurious warning on every run.
             if haspar
                 send(D, ii);
-            else
-                h = waitbar(ii/n_segs, [num2str(ii) ' out of ' num2str(n_segs) ' (' num2str((ii/n_segs*100),'%.2f') '%) segments processed...']);
             end
         end
     end
