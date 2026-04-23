@@ -82,8 +82,7 @@ addOptional(p, 'debug_mode', false, @(x) validateattributes(x, {'logical', 'nume
 %% Parallel pool type: 'Processes' (default), 'Threads', or '' (same as 'Processes').
 % ProcessPool is used on every host. ThreadPool is supported as an explicit
 % override but disables trim_region_mex (MEX cannot run inside a ThreadPool
-% worker; the MATLAB fallback is bit-identical but slower). See
-% optimization/OPTIMIZATION_SUMMARY.md §5.2.
+% worker; the MATLAB fallback is bit-identical but slower).
 addOptional(p, 'parallel_mode', 'Processes', @(x) (ischar(x) || isstring(x)) && any(strcmp(x, {'', 'Processes', 'Threads'})));
 
 %% Trim-region MEX toggle: set false to force the pure-MATLAB trim path
