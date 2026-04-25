@@ -65,8 +65,8 @@ if any(struct_ind)
 
     % Check that no parameter NAME is passed both as an explicit name-value
     % pair and inside a struct. Only inspect odd-indexed string entries
-    % (the names in name-value pairs) after the 4 required positional args.
-    positional_count = 4; % data, Fs, stage_times, stage_vals
+    % (the names in name-value pairs) after the 3 required positional args.
+    positional_count = 3; % SOPhH, phase_bins, freq_bins
     name_indices = (positional_count+1):2:length(varargin);
     name_indices = name_indices(name_indices <= length(varargin));
     param_names = varargin(name_indices);

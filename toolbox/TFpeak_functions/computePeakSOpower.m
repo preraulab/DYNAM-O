@@ -1,4 +1,4 @@
-function [stats_table, SOpower, SOpower_times, norm_method] = computePeakSOpower(varargin)
+function [stats_table, SOpower, SOpower_times, norm_method] = computePeakSOpower(stats_table, data, Fs, varargin)
 %COMPUTEPEAKSOPOWER  Compute the slow oscillation power for each TF peak in stats_table
 %
 %   Usage:
@@ -84,8 +84,8 @@ if any(struct_ind)
 
     % Check that no parameter NAME is passed both as an explicit name-value
     % pair and inside a struct. Only inspect odd-indexed string entries
-    % (the names in name-value pairs) after the 4 required positional args.
-    positional_count = 4; % data, Fs, stage_times, stage_vals
+    % (the names in name-value pairs) after the 3 required positional args.
+    positional_count = 3; % stats_table, data, Fs
     name_indices = (positional_count+1):2:length(varargin);
     name_indices = name_indices(name_indices <= length(varargin));
     param_names = varargin(name_indices);
@@ -117,7 +117,7 @@ addOptional(p, 'SOpower_outlier_threshold', SOpower_options.SOpower_outlier_thre
 addOptional(p, 'SOpower_norm_method', SOpower_options.SOpower_norm_method, @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
 addOptional(p, 'SOpower_retain_Fs', SOpower_options.SOpower_retain_Fs, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 
-parse(p,varargin{:});
+parse(p, stats_table, data, Fs, varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
 field_names = fieldnames(p.Results);
 

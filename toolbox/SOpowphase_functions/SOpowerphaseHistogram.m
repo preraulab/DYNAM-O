@@ -1,5 +1,5 @@
 function [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, num_peaks_at_freq, SOpower_TIB, SOphase_TIB, peak_SOpower, peak_SOphase, peak_selection_inds, ...
-    SOpower, SOpower_times, SOphase, SOphase_times, SOdata, soph_timings] = SOpowerphaseHistogram(varargin)
+    SOpower, SOpower_times, SOphase, SOphase_times, SOdata, soph_timings] = SOpowerphaseHistogram(data, Fs, TFpeak_freqs, TFpeak_times, varargin)
 %SOPOWERPHASEHISTOGRAM  Compute slow-oscillation power and phase histogram matrices
 %
 %   Usage:
@@ -109,7 +109,7 @@ if any(struct_ind)
     % Check that no parameter NAME is passed both as an explicit name-value
     % pair and inside a struct. Only inspect odd-indexed string entries
     % (the names in name-value pairs) after the 4 required positional args.
-    positional_count = 4; % data, Fs, stage_times, stage_vals
+    positional_count = 4; % data, Fs, TFpeak_freqs, TFpeak_times
     name_indices = (positional_count+1):2:length(varargin);
     name_indices = name_indices(name_indices <= length(varargin));
     param_names = varargin(name_indices);
@@ -176,7 +176,7 @@ addOptional(p, 'SOphase_binsizestep', SOPH_options.SOphase_binsizestep, @(x) val
 addOptional(p, 'plot_on', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'scalar'}));
 
-parse(p,varargin{:});
+parse(p, data, Fs, TFpeak_freqs, TFpeak_times, varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
 field_names = fieldnames(p.Results);
 

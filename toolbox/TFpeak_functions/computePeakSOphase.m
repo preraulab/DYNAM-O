@@ -1,4 +1,4 @@
-function [stats_table, SOphase, SOphase_times, SOdata] = computePeakSOphase(varargin)
+function [stats_table, SOphase, SOphase_times, SOdata] = computePeakSOphase(stats_table, data, Fs, varargin)
 %COMPUTEPEAKSOPHASE  Compute the slow oscillation phase for each TF peak in stats_table
 %
 %   Usage:
@@ -71,8 +71,8 @@ if any(struct_ind)
 
     % Check that no parameter NAME is passed both as an explicit name-value
     % pair and inside a struct. Only inspect odd-indexed string entries
-    % (the names in name-value pairs) after the 4 required positional args.
-    positional_count = 4; % data, Fs, stage_times, stage_vals
+    % (the names in name-value pairs) after the 3 required positional args.
+    positional_count = 3; % stats_table, data, Fs
     name_indices = (positional_count+1):2:length(varargin);
     name_indices = name_indices(name_indices <= length(varargin));
     param_names = varargin(name_indices);
@@ -99,7 +99,7 @@ SOphase_options = SOpowerphasehist_opts(); % get the default parameters
 addOptional(p, 'SO_freqrange', SOphase_options.SO_freqrange, @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','vector','numel',2}));
 addOptional(p, 'SOphase_filter', SOphase_options.SOphase_filter);
 
-parse(p,varargin{:});
+parse(p, stats_table, data, Fs, varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
 field_names = fieldnames(p.Results);
 

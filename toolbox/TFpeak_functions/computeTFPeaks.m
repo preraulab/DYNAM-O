@@ -1,4 +1,4 @@
-function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, tfp_timings] = computeTFPeaks(varargin)
+function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, tfp_timings] = computeTFPeaks(data, Fs, stage_times, stage_vals, varargin)
 %COMPUTETFPEAKS  Run watershed algorithm to extract time-frequency peaks from a spectrogram
 %
 %   Usage:
@@ -195,7 +195,7 @@ addOptional(p, 'debug_mode', detection_options.debug_mode, @(x) validateattribut
 addOptional(p, 'parallel_mode', detection_options.parallel_mode, @(x) (ischar(x) || isstring(x)) && any(strcmp(x, {'', 'Processes', 'Threads'})));
 addOptional(p, 'use_trim_mex', detection_options.use_trim_mex, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 
-parse(p,varargin{:});
+parse(p, data, Fs, stage_times, stage_vals, varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
 field_names = fieldnames(p.Results);
 
