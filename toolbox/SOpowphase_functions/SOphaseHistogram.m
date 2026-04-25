@@ -169,7 +169,7 @@ else %Handle SOphase/SOphase_times input
     % Compute SOphase stage
     if ~isempty(stage_times) && ~isempty(stage_vals)
         SOphase_stages = interp1(stage_times, stage_vals, SOphase_times, 'previous');
-        SOphase_stages(isnan(SOphase_stages)) = 0; % samples outside scored range marked Unknown
+        SOphase_stages(isnan(SOphase_stages)) = 0; % a conservative choice to mark samples outside scored stages as Unknown
     else
         SOphase_stages = true;
     end

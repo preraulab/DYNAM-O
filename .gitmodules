@@ -1,44 +1,54 @@
+; Submodule URLs use RELATIVE paths so the protocol (https/ssh) is
+; inherited from the parent repository's remote. A user who clones this
+; repo via https://github.com/preraulab/DYNAM-O_dev.git gets https
+; submodules; a user who clones via git@github.com:preraulab/DYNAM-O_dev.git
+; gets ssh submodules. Hardcoded SSH URLs here previously broke recursive
+; HTTPS clones for team members without SSH keys configured (2026-04-24).
+;
+; If you already have a checkout from before this change, run once:
+;     git submodule sync && git submodule update --init --recursive
+; to flip existing .git/config entries to the new URL pattern.
 [submodule "toolbox/helper_functions/multitaper_spectrogram"]
 	path = toolbox/helper_functions/multitaper_spectrogram
-	url = git@github.com:preraulab/multitaper_toolbox.git
+	url = ../multitaper_toolbox.git
 	branch = master
 [submodule "toolbox/helper_functions/statistical_tests"]
 	path = toolbox/helper_functions/statistical_tests
-	url = git@github.com:preraulab/multicomp_test.git
+	url = ../multicomp_test.git
 	branch = master
 [submodule "toolbox/helper_functions/artifact_detection"]
 	path = toolbox/helper_functions/artifact_detection
-	url = git@github.com:preraulab/artifact_detection.git
+	url = ../artifact_detection.git
 	branch = master
 [submodule "toolbox/helper_functions/read_EDF"]
 	path = toolbox/helper_functions/read_EDF
-	url = git@github.com:preraulab/read_EDF.git
+	url = ../read_EDF.git
 	branch = master
 [submodule "toolbox/helper_functions/CSSuicontrols"]
 	path = toolbox/helper_functions/CSSuicontrols
-	url = git@github.com:preraulab/CSSuicontrols.git
+	url = ../CSSuicontrols.git
 	branch = master
 [submodule "toolbox/helper_functions/data_processing"]
 	path = toolbox/helper_functions/data_processing
-	url = git@github.com:preraulab/data_processing.git
+	url = ../data_processing.git
 [submodule "toolbox/helper_functions/binning"]
 	path = toolbox/helper_functions/binning
-	url = git@github.com:preraulab/binning.git
+	url = ../binning.git
 [submodule "toolbox/helper_functions/conversion"]
 	path = toolbox/helper_functions/conversion
-	url = git@github.com:preraulab/conversion.git
+	url = ../conversion.git
 [submodule "toolbox/helper_functions/nanstats"]
 	path = toolbox/helper_functions/nanstats
-	url = git@github.com:preraulab/nanstats.git
+	url = ../nanstats.git
 [submodule "toolbox/helper_functions/graphical"]
 	path = toolbox/helper_functions/graphical
-	url = git@github.com:preraulab/graphical.git
+	url = ../graphical.git
 [submodule "toolbox/helper_functions/fig_tools"]
 	path = toolbox/helper_functions/fig_tools
-	url = git@github.com:preraulab/fig_tools.git
+	url = ../fig_tools.git
 [submodule "toolbox/helper_functions/colormaps"]
 	path = toolbox/helper_functions/colormaps
-	url = git@github.com:preraulab/colormaps.git
+	url = ../colormaps.git
 [submodule "toolbox/helper_functions/sleep"]
 	path = toolbox/helper_functions/sleep
-	url = git@github.com:preraulab/sleep.git
+	url = ../sleep.git

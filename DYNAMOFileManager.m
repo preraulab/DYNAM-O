@@ -60,7 +60,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         LoadStagingFileListMenu         matlab.ui.container.Menu        % Menu item: load staging path list
         ShowRunLogConsoleMenu           matlab.ui.container.Menu        % Menu item: toggle Run Log Console
         HelpMenu                        matlab.ui.container.Menu        % Top-level 'Help' menu
-        HelpMenuItem                    matlab.ui.container.Menu        % Menu item: show usage instructions
+        HelpMenuItem                    matlab.ui.container.Menu        % Menu item: open README documentation in browser
         AboutMenu                       matlab.ui.container.Menu        % Menu item: show About dialog
 
         % --- Top-Level Tab Group ---
@@ -69,7 +69,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
         % --- Top-Level Layout Grids ---
         FullDYNAMOSetupGrid             matlab.ui.container.GridLayout  % Root grid inside DYNAMOSetupTab
-        HelpButton                      % CSSuiButton                   % Opens help dialog
+        HelpButton                      % CSSuiButton                   % Opens README documentation in browser
         BottomGrid                      matlab.ui.container.GridLayout  % Grid containing status, run buttons, time estimate
 
         % --- Time Estimate & Run Controls ---
@@ -1614,15 +1614,40 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ==================================================================
 
         function showHelpButtonPushed(app)
-            % showHelpButtonPushed  Display a modal help dialog with usage instructions.
+            % showHelpButtonPushed  Open the File Manager README in the system web browser.
+            %
+            %   If an internet connection is available, opens the GitHub README.
+            %   Otherwise, falls back to a local HTML help file.
 
-            uialert(app.UIFigure, ...
-                sprintf(['Instructions:\n' ...
-                '1. In File Selection tab: Add Data files (EDF) and Staging files (CSV/TXT).\n' ...
-                '2. Make sure the file counts match and order corresponds.\n' ...
-                '3. In Output Options tab: Choose an output directory and select save options.\n' ...
-                '4. Click Run Batch to process files.']), ...
-                'Help', 'Icon', 'info');
+            githubURL = 'https://github.com/preraulab/DYNAM-O_dev/blob/comment-unification-and-checks/DYNAMOFileManager_README.md';
+
+            % Check for internet connectivity
+            hasInternet = false;
+            try
+                java.net.URL('https://github.com').openConnection().connect();
+                hasInternet = true;
+            catch
+            end
+
+            if hasInternet
+                web(githubURL, '-browser');
+            else
+                % Fall back to local HTML help file
+                helpPath = fullfile(fileparts(mfilename('fullpath')), 'DYNAMOFileManager_README.html');
+                if ~isfile(helpPath)
+                    uialert(app.UIFigure, ...
+                        sprintf('Help file not found:\n%s', helpPath), ...
+                        'Help', 'Icon', 'warning');
+                    return
+                end
+                if ispc
+                    fileURI = ['file:///' strrep(helpPath, '\', '/')];
+                else
+                    fileURI = ['file://' helpPath];
+                end
+                fileURI = strrep(fileURI, ' ', '%20');
+                web(fileURI, '-browser');
+            end
         end
 
         % ------------------------------------------------------------------

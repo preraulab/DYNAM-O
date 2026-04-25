@@ -148,11 +148,13 @@ end
 %% Parse inputs
 p = inputParser;
 
+% Required parameters
 addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','vector'}));
 addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','scalar'}));
 addRequired(p, 'stage_times', @(x) validateattributes(x, {'double','single'}, {'real','finite','nondecreasing','vector'}));
 addRequired(p, 'stage_vals', @(x) validateattributes(x, {'double','single'}, {'real','finite','nonnegative','vector'}));
 
+% Optional parameters with default values
 addOptional(p, 't_data', [], @(x) validateattributes(x,{'numeric'},{'real','finite','2d'}));
 addOptional(p, 'time_range', [], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
 addOptional(p, 'features', 'all',  @(x) validateattributes(x,{'char','cell'},{'nonempty'}));
@@ -408,7 +410,7 @@ function [spect, stimes, sfreqs, dur_min, bw_min, ht_db_min] = computeSpectrogra
 
 % Fixed multitaper computation parameters
 nfft = 2^(nextpow2(Fs/dsfreqs)); % zero pad data to this minimum value for fft
-detrend = 'constant'; % do not detrend
+detrend_opt = 'constant'; % do not detrend
 weight = 'unity'; % each taper is weighted the same
 ploton = false; % do not plot out
 mts_verbose = verbose; % inherit verbose setting from computeTFPeaks()
@@ -430,9 +432,9 @@ if verbose
 end
 
 if exist(['multitaper_spectrogram_coder_mex.' mexext],'file')
-    [spect,stimes,sfreqs] = multitaper_spectrogram_mex(data_time_range, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
+    [spect,stimes,sfreqs] = multitaper_spectrogram_mex(data_time_range, Fs, freq_range, taper_params, time_window_params, nfft, detrend_opt, weight, ploton, mts_verbose);
 else
-    [spect,stimes,sfreqs] = multitaper_spectrogram(data_time_range, Fs, freq_range, taper_params, time_window_params, nfft, detrend, weight, ploton, mts_verbose);
+    [spect,stimes,sfreqs] = multitaper_spectrogram(data_time_range, Fs, freq_range, taper_params, time_window_params, nfft, detrend_opt, weight, ploton, mts_verbose);
     warning(sprintf('Unable to use mex version of multitaper_spectrogram. Using compiled multitaper spectrogram function will greatly increase the speed of this computaton. \n\nFind mex code at:\n    https://github.com/preraulab/multitaper_toolbox')); %#ok<SPWRN>
 end
 end

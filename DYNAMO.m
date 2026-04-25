@@ -184,6 +184,10 @@ classdef DYNAMO < handle
                 addpath(genpath(fileparts(which('DYNAMO.m'))))
             end
 
+            if isempty(which('runExampleData'))
+                addpath(fullfile(fileparts(which('DYNAMO.m')), 'example_data'))
+            end
+
             if nargin <= 1 && strcmp(class(obj),"DYNAMO")
                 if nargin == 0
                     data_range = 'segment';

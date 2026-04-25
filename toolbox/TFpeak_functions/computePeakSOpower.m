@@ -82,15 +82,23 @@ if any(struct_ind)
     argcell = namedargs2cell(opt_struct); % Convert the struct to cell array
     varargin = cat(2, varargin, argcell); % Add the new cell array with the params to the end of the varargin
 
-    % Test to make sure that none of the additional parameters are already included
-    str_cell = cellstr(varargin(cellfun(@(x)(ischar(x)|isstring(x)),varargin)));
-    assert(length(str_cell) == length(unique(str_cell)), 'Cannot include struct and duplicate parameters.')
+    % Check that no parameter NAME is passed both as an explicit name-value
+    % pair and inside a struct. Only inspect odd-indexed string entries
+    % (the names in name-value pairs) after the 4 required positional args.
+    positional_count = 4; % data, Fs, stage_times, stage_vals
+    name_indices = (positional_count+1):2:length(varargin);
+    name_indices = name_indices(name_indices <= length(varargin));
+    param_names = varargin(name_indices);
+    param_names = param_names(cellfun(@(x) ischar(x) || isstring(x), param_names));
+    assert(length(param_names) == length(unique(param_names)), ...
+        'Cannot include struct and duplicate parameters.')
 end
 
 %% Parse inputs
 p = inputParser;
 p.KeepUnmatched = true;
 
+% Required parameters
 addRequired(p, 'stats_table', @(x) validateattributes(x, {'table'}, {'real','2d'}));
 addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','vector'}));
 addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','scalar'}));
