@@ -1,24 +1,26 @@
 function Ldata = runWatershed(data, conn, bl_thresh, f_verb, verb_pref, f_disp)
-% RUNWATERSHED determines peak regions using matlab watershed function.
+%RUNWATERSHED  Determine peak regions using MATLAB's watershed function
 %
-% Usage:
-%   Ldata = runWatershed(data, conn, bl_thresh, f_verb, verb_pref, f_disp)
+%   Usage:
+%       Ldata = runWatershed(data, conn, bl_thresh, f_verb, verb_pref, f_disp)
 %
-%   Inputs:
-%   data   -- 2D matrix of image data. defaults to peaks(100).
-%   conn   -- pixel connection to be used by watershed. default 8. 
-%   bl_thresh  -- power threshold used to cut off low power data to speed
-%                 up computation. Default = [];
-%   f_verb -- flag indicator whether to output text statements of progress.
-%             0 - no output. 1 - output current function level.
-%             defaults to 0. 
-%   verb_pref -- prefix string for verbose output. defaults to ''.
-%   f_disp -- flag indicator whether to plot. 
-%             defaults to false, unless using default data.
+%   Required Inputs:
+%       data:      [M x N] double - 2D image data
+%
+%   Optional Inputs:
+%       conn:      integer - pixel connectivity used by watershed (default: 8)
+%       bl_thresh: double - power threshold that zeroes low-power pixels before watershed,
+%                  accelerating labeling (default: [])
+%       f_verb:    integer - verbosity: 0 silent, 1 current level (default: 0)
+%       verb_pref: char - prefix string for verbose output (default: '')
+%       f_disp:    logical - plot labeled regions when true (default: false)
+%
 %   Outputs:
-%   Ldata: labeled region data
+%       Ldata:     [M x N] double - labeled region image (0 at borders; >0 region ids)
 %
-%      
+%   See Also: watershed, Ldata2graph, extractTFPeaks
+%
+%
 %*************************
 % Handle variable inputs *
 %*************************

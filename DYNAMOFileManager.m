@@ -333,10 +333,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 app.FileValidationCallback = p.Results.ValidationCallback;
             end
             
-            v = ver;
-            if any(strcmp({v.Name}, 'Parallel Computing Toolbox')) && isempty(gcp('nocreate'))
-                gcp;
-            end
+            setup_parallel_pool('');
 
             sc = get(0, 'ScreenSize');
             app.WindowWidth             = min(app.WindowWidth, sc(3));   % Default figure width in pixels
@@ -1622,7 +1619,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %   If an internet connection is available, opens the GitHub README.
             %   Otherwise, falls back to a local HTML help file.
 
-            githubURL = 'https://github.com/preraulab/DYNAM-O_dev/blob/comment-unification-and-checks/DYNAMOFileManager_README.md';
+            githubURL = 'https://github.com/preraulab/DYNAM-O_dev/blob/master/DYNAMOFileManager_README.md';
 
             % Check for internet connectivity
             hasInternet = false;
@@ -2736,18 +2733,40 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %
             %   Creates <OutputDir>/logs/console_log_<timestamp>.txt and activates
             %   MATLAB's diary function to capture all subsequent console output.
-return;
-            % app.consolelog_fname = strcat('console_log_', app.curr_datetime, '.txt');
-            % app.consolelog_fpath = strcat(app.OutputDirEditField.Value, '/logs/');
-            % app.consolelog_fid   = fopen(fullfile(app.consolelog_fpath, app.consolelog_fname), 'w');
-            % 
-            % fprintf(app.consolelog_fid, 'Date and time of run start: %s\n\n', app.curr_datetime);
-            % diary(fullfile(app.consolelog_fpath, app.consolelog_fname))
-            % 
-            % % If the Run Log Console is already open, start live polling now.
-            % if ~isempty(app.LogConsoleFig) && isvalid(app.LogConsoleFig)
-            %     app.startLogConsoleTimer();
-            % end
+
+            app.consolelog_fname = strcat('console_log_', app.curr_datetime, '.txt');
+            app.consolelog_fpath = strcat(app.OutputDirEditField.Value, '/logs/');
+            fullpath = fullfile(app.consolelog_fpath, app.consolelog_fname);
+
+            % Write the header via a scoped fopen + fclose. We must NOT hold
+            % the fid open, because `diary` takes ownership of the file right
+            % after this; two open handles to the same path makes diary's
+            % appends unreliable on macOS (silent failure with empty log).
+            fid = fopen(fullpath, 'w');
+            if fid < 0
+                warning('createConsoleLog:fopen', ...
+                    'Could not open console log at %s; diary not started.', fullpath);
+                app.consolelog_fid = [];
+                return
+            end
+            fprintf(fid, 'Date and time of run start: %s\n\n', app.curr_datetime);
+            fclose(fid);
+            app.consolelog_fid = [];  % no persistent fid; diary owns the file
+
+            % Start diary. Wrapped so that if MATLAB errors on diary(path)
+            % we don't kill the whole batch (the console log is nice-to-have).
+            try
+                diary off
+                diary(fullpath)
+            catch diaryErr
+                warning('createConsoleLog:diary', ...
+                    'diary(%s) failed: %s', fullpath, diaryErr.message);
+            end
+
+            % If the Run Log Console is already open, start live polling now.
+            if ~isempty(app.LogConsoleFig) && isvalid(app.LogConsoleFig)
+                app.startLogConsoleTimer();
+            end
         end
 
         % ==================================================================
@@ -3437,9 +3456,9 @@ return;
             %   stopped automatically when consolelog_fid is closed.
 
             app.TextArea.Value = 'Beginning run...';
-            drawnow;
             app.curr_datetime   = char(datetime('now','Format','yyMMdd_HHmmSS'));
             app.set_running;
+            drawnow;
 
             % Build DYNAMO options struct from current GUI settings
             app.TextArea.Value = 'Updating advanced options...';
@@ -3469,8 +3488,11 @@ return;
             updateDelimeterInput(app)
             drawnow;
 
-            % Initialize the progress bar widget
-            app.ProgressBar.N = length(dataList) * numel(app.ChannelList);
+            % Initialize the progress bar widget — ticks once per file, not per
+            % (file, channel). Chunkier updates but clearer meaning (each tick
+            % = one EDF fully processed across all channels).
+            app.ProgressBar.reset();
+            app.ProgressBar.N = length(dataList);
             app.ProgressBar.start;
 
             % ---------------------------------------------------------------
@@ -3534,6 +3556,7 @@ return;
                         if ~isempty(app.runlog_fid) && app.runlog_fid > 0, fclose(app.runlog_fid); end
                         app.RunBatchButton.Enabled  = 'on';
                         app.StopBatchButton.Enabled = 'off';
+                        app.set_rundefault;       % revert icon + "RUNNING" text back to RUN
                         app.ProgressBar.reset();
                         app.ProgressBar.Enabled = false;
                         return
@@ -3547,12 +3570,12 @@ return;
                     fprintf('\n--- Subject: %s | Channel: %s ---\n', app.input_fbase, app.channel);
                     app.TextArea.addnl(sprintf('--- Subject: %s | Channel: %s ---', ...
                         app.input_fbase, app.channel));
-                    drawnow;
+                  
 
                     try
                         % ---- Load EDF and staging data ----
                         app.TextArea.addnl('Loading staging and EDF data...');
-                        drawnow;
+             
                         [app.data, app.Fs, app.stage_times, app.stage_vals] = load_data( ...
                             dataList{jj}, ...
                             stagingList{jj}, ...
@@ -3597,27 +3620,27 @@ return;
 
                         % TF-peak stats table and/or SO-Power Histograms
                         if app.SavePeakStatsCheckBox.Value || app.SaveSOPHsCheckBox.Value
-                            runStatsTable(app)
+                           runStatsTable(app)
                         end
 
                         % Data summary figure
                         if app.SaveDataSummaryCheckBox.Value
-                            runDataSummaryFigure(app)
+                           runDataSummaryFigure(app)
                         end
 
                         % Parametric basis fit
                         if app.SaveParamBasisCheckBox.Value
-                            runParamBasis(app)
+                           runParamBasis(app)
                         end
 
                         % Spline basis fit
                         if app.SaveSplineBasisCheckBox.Value
-                            runSplineBasis(app)
+                           runSplineBasis(app)
                         end
 
                         % Auxiliary data
                         if app.SaveAuxDataCheckBox.Value
-                            saveAuxData(app)
+                           saveAuxData(app)
                         end
 
                         % ---- Log success ----
@@ -3645,29 +3668,37 @@ return;
                             'Subject %s, channel %s: not run.\n%s\n', ...
                             app.input_fbase, app.channel, e.message));
 
+                        % Don't reset the progress bar here — the batch is
+                        % continuing and the bar should keep ticking. Any
+                        % prior-halt cleanup belongs at run start, not
+                        % mid-batch. (updateIteration is now tolerant of an
+                        % empty StartTime_, so reset is safe to call before
+                        % the next batch starts, if needed.)
                         drawnow;
                     end
 
-                    % Update progress bar (wrapped in try-catch to avoid aborting on UI errors)
-                    try
-                        app.curr_iteration = app.curr_iteration + 1;
-                        app.ProgressBar.updateIteration(app.curr_iteration);
-                    catch e
-                        warning(warnState);
-                        set(0, 'DefaultFigureVisible', 'on');
-                        disp(e);
-                        app.stopLogConsoleTimer();
-                        app.updateLogConsole();
-                        if ~isempty(app.consolelog_fid) && app.consolelog_fid > 0, fclose(app.consolelog_fid); end
-                        diary off;
-                        if ~isempty(app.runlog_fid) && app.runlog_fid > 0, fclose(app.runlog_fid); end
-                        app.set_rundefault;
-                        app.ProgressBar.reset();
-                        app.ProgressBar.Enabled = false;
-                        return;
-                    end
-
                 end % channel loop
+
+                % Update progress bar once per file (wrapped in try-catch to
+                % avoid aborting on UI errors). N was set to length(dataList),
+                % so curr_iteration also tracks files, not file-channel pairs.
+                try
+                    app.curr_iteration = app.curr_iteration + 1;
+                    app.ProgressBar.updateIteration(app.curr_iteration);
+                catch e
+                    warning(warnState);
+                    set(0, 'DefaultFigureVisible', 'on');
+                    disp(e);
+                    app.stopLogConsoleTimer();
+                    app.updateLogConsole();
+                    if ~isempty(app.consolelog_fid) && app.consolelog_fid > 0, fclose(app.consolelog_fid); end
+                    diary off;
+                    if ~isempty(app.runlog_fid) && app.runlog_fid > 0, fclose(app.runlog_fid); end
+                    app.set_rundefault;
+                    app.ProgressBar.reset();
+                    app.ProgressBar.Enabled = false;
+                    return;
+                end
 
             end % file loop
 
@@ -3677,6 +3708,7 @@ return;
             warning(warnState);
             set(0, 'DefaultFigureVisible', 'on');
             app.ProgressBar.complete();
+            drawnow
             app.ProgressBar.Enabled = false;
             app.TextArea.addnl('Batch run complete.');
             drawnow;
@@ -3688,6 +3720,7 @@ return;
             app.RunBatchButton.Enabled  = 'on';
             app.StopBatchButton.Enabled = 'off';
             app.set_rundefault;
+            drawnow
         end % runBatch
 
         function applyFont(app)

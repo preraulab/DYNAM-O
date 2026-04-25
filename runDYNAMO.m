@@ -7,7 +7,10 @@
 %   parametric and spline fits are also computed.
 %
 %   Usage:
-%       [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, ...)
+%       [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs, timings] = runDYNAMO(data, Fs, stage_times, stage_vals, ...)
+%
+%   The 9th output `timings` is optional; 7- and 8-output callers work
+%   unchanged.
 %
 %   Required Inputs:
 %       data:               [N x 1] double - time-domain EEG signal
@@ -25,7 +28,7 @@
 %       spline_basis_power_options:   struct - parameters for spline fitting of SO-power histograms (default: spline_basis_opts('power'))
 %       spline_basis_phase_options:   struct - parameters for spline fitting of SO-phase histograms (default: spline_basis_opts('phase'))
 %       stats_table:                  table/double - precomputed TF-peak table to bypass detection (default: [])
-%       verbose:                      logical - print progress info (default: true)
+%       verbose:                      logical - print progress info + timing summary table (default: true)
 %       plot_on:                      logical - generate summary figure (default: true)
 %       save_output_image:            logical - save summary figure to disk (default: false)
 %       output_fname:                 string/char - output filename for image (default: 'DYNAM-O_output')
@@ -41,16 +44,48 @@
 %       t_time_range:       [1 x T] double - time axis vector for data within time range
 %       artifacts:          [1 x T] logical - artifact mask for data within time range
 %       SOPHs:              struct - SO-power and SO-phase histograms (and fits if fit_param_basis or fit_spline_basis is true)
+%       timings:            struct (optional) - per-stage wallclock seconds
+%                           Fields: pool_setup, mex_build, spect_pass1,
+%                                   artifact, baseline_pass1, extract_pass1,
+%                                   spect_pass2, baseline_pass2, extract_pass2,
+%                                   refine, peak_stage, peak_sopower,
+%                                   peak_sophase, soph_sopower_compute,
+%                                   soph_sophase_compute, soph_sopower_hist,
+%                                   soph_sophase_hist, plot_summary,
+%                                   fit_param_basis, fit_spline_basis, total.
+%                           Stages that didn't run are absent or zero.
+%                           A sorted summary table with these timings also
+%                           prints at the end of verbose runs.
 %
 %   Notes:
 %       - If no inputs are provided, the function runs an internal example using bundled data.
 %       - A single input of 'segment' or 'night' toggles the example data time range (default: 'segment')
 %       - The SOPHs output includes histogram matrices, bin edges, time-in-bin info, and optionally
 %         parametric and spline fit results for both SO-power and SO-phase histograms.
+%       - Parallel pool type is controlled by detection_options.parallel_mode:
+%           * 'Processes'  (default) — ProcessPool + trim_region_mex. Fastest on
+%             every platform except 8-core Apple Silicon at full-night scale.
+%           * 'Threads'               — ThreadPool; trim_region_mex auto-disables
+%             (MATLAB blocks MEX in thread workers) and falls back to the MATLAB
+%             path, which is bit-identical. Useful on 8-core Apple Silicon
+%             (M2 / M3) for a ~8% wallclock improvement over ProcessPool.
+%           * ''                      — same as 'Processes'.
+%         trim_region_mex auto-compiles on first call if the binary is missing
+%         and a C++ compiler is configured. If it can't compile, the MATLAB
+%         fallback runs automatically with identical output (slower).
 %
 %   Example:
 %       load('example_data/example_data.mat');  % should include data, Fs, stage_times, stage_vals
-%       [stats_table, spect, stimes, sfreqs, artifacts, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals);
+%       [stats_table, spect, stimes, sfreqs, ~, ~, artifacts, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals);
+%
+%       % With per-stage timing capture:
+%       [~, ~, ~, ~, ~, ~, ~, SOPHs, timings] = runDYNAMO(data, Fs, stage_times, stage_vals);
+%       disp(timings)
+%
+%       % Fast iteration with precomputed stats_table (skips TF-peak extraction):
+%       [~, ~, ~, ~, ~, ~, ~, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, 'stats_table', stats_table);
+%
+%   See Also: DYNAMO, runSegmentedData, computeTFPeaks, SOpowerphaseHistogram, computePeakStage
 %
 % =========================================================================
 %    ██████╗ ██╗   ██╗███╗   ██╗ █████╗ ███╗   ███╗        ██████╗
@@ -84,7 +119,7 @@
 %
 % =========================================================================
 
-function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runDYNAMO(varargin)
+function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs, timings] = runDYNAMO(varargin)
 %%%% Example script showing how to compute time-frequency peaks and SO-power/phase histograms
 %
 % Users are encouraged to edit this script and the data loading boilerplate in runExampleData()
@@ -92,15 +127,13 @@ function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, art
 % purposes on how to use various functions in DYNAM-O in tandem.
 
 %% SYSTEM SETTINGS
-% Add necessary functions to path (only if not already on path)
+% Add necessary functions to path (only if not already on path).
+% genpath recurses into every subfolder under toolbox/, which picks up
+% toolbox/TFpeak_functions/mex/ automatically — that's where
+% trim_region_mex and build_trim_mex live.
 if isempty(which('computeTFPeaks'))
-    addpath(genpath(fullfile(fileparts(which('runDYNAMO')), 'toolbox')))
-end
-
-%Check for parallel toolbox and only start pool if none is running
-v = ver;
-if any(strcmp({v.Name}, 'Parallel Computing Toolbox')) && isempty(gcp('nocreate'))
-    gcp;
+    repo_root = fileparts(which('runDYNAMO'));
+    addpath(genpath(fullfile(repo_root, 'toolbox')))
 end
 
 % default verbose setting for all processing steps
@@ -119,7 +152,7 @@ if nargin == 0 || ~isnumeric(varargin{1})
         assert(ismember(lower(data_range), {'segment','night'}), 'Select ''segment'' or ''night'' as input for example data.');
     end
     addpath(fullfile(fileparts(which('runDYNAMO')), 'example_data'))
-    [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runExampleData(data_range, default_verbose, run_app, varargin{2:end});
+    [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs, timings] = runExampleData(data_range, default_verbose, run_app, varargin{2:end});
     return;
 end
 
@@ -156,6 +189,85 @@ field_names = fieldnames(p.Results);
 %Automatically add parser results to the workspace
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 
+% Per-stage timing accumulator. Fields populated by each stage below;
+% merged with computeTFPeaks' tfp_timings struct after the big call.
+% Returned as 9th output for programmatic callers (bench loops, CI) and
+% printed as a formatted summary at the end of the function when verbose.
+timings = struct();
+
+% Start the master wallclock timer here so pool_setup / mex_build are
+% included in timings.total — gives coherent 100% bookkeeping in the
+% summary table.
+ttotal = datetime('now');
+
+%Set up parallel pool. detection_options.parallel_mode controls the
+%pool type: 'Processes' (default, fastest on every host except 8-core
+%Apple Silicon), 'Threads' (override; disables the trim MEX but keeps
+%output bit-identical via the MATLAB fallback), or '' (same as
+%'Processes'). See toolbox/TFpeak_functions/option_sets/detection_opts.m
+%for the full option surface.
+t_stage = tic;
+setup_parallel_pool(detection_options.parallel_mode);
+timings.pool_setup = toc(t_stage);
+
+%Pre-build trim MEX on the client, ONCE, before any parfor. This avoids
+%every worker racing to compile the same file simultaneously (N workers
+%= N concurrent build_trim_mex calls writing to the same output). The
+%build is attempted on every platform that has a .mex* file missing;
+%trim_region_mex runs on every pool context except ThreadPool workers
+%(see trimWshedRegions.m for the runtime gate), so the build is
+%worthwhile on every host including Apple Silicon.
+t_stage = tic;
+mex_name_ = ['trim_region_mex.' mexext];
+if exist(mex_name_, 'file') ~= 3 && exist('build_trim_mex', 'file') == 2
+    try
+        fprintf('  Compiling trim_region_mex for this platform (first-time only)...\n');
+        build_trim_mex();
+        mex_dir_ = fileparts(which('build_trim_mex'));
+        if ~isempty(mex_dir_) && exist(fullfile(mex_dir_, mex_name_), 'file') == 3
+            addpath(mex_dir_);
+        end
+        fprintf('  MEX compilation complete.\n');
+    catch
+        fprintf('  MEX compilation failed; using stock MATLAB path.\n');
+    end
+end
+clear mex_name_ mex_dir_
+timings.mex_build = toc(t_stage);
+
+%Report configuration
+if verbose
+    pool = gcp('nocreate');
+    if isempty(pool)
+        fprintf('  Parallel mode: serial (no pool)\n');
+    else
+        if isprop(pool, 'NumWorkers')
+            nw = pool.NumWorkers;
+        elseif isprop(pool, 'NumThreads')
+            nw = pool.NumThreads;
+        else
+            nw = feature('numcores');
+        end
+        if isa(pool, 'parallel.ThreadPool')
+            fprintf('  Parallel mode: ThreadPool (%d threads)\n', nw);
+        else
+            fprintf('  Parallel mode: ProcessPool (%d workers)\n', nw);
+        end
+    end
+    fprintf('  Segment size:  %g s\n', detection_options.seg_time);
+    mex_avail = exist(['trim_region_mex.' mexext], 'file') == 3;
+    mex_usable = mex_avail && (isempty(pool) || ~isa(pool, 'parallel.ThreadPool'));
+    if mex_usable
+        fprintf('  Trim MEX:      enabled (trim_region_mex)\n');
+    elseif mex_avail
+        fprintf('  Trim MEX:      disabled (ThreadPool cannot run MEX)\n');
+    elseif ~isempty(pool) && isa(pool, 'parallel.ThreadPool')
+        fprintf('  Trim MEX:      n/a (ThreadPool cannot run MEX)\n');
+    else
+        fprintf('  Trim MEX:      not built (will auto-compile on first run)\n');
+    end
+end
+
 %Force data to be a column vector
 if isrow(data) %#ok<*NODEF>
     data = data(:);
@@ -174,17 +286,20 @@ end
 %Cast stage_vals to single for interpolations
 stage_vals = single(stage_vals);
 
-%Start a timer
-ttotal = datetime('now');
-
 %% COMPUTE TIME-FREQUENCY PEAKS
 % See computeTFPeaks() for a full list of optional arguments for finer
 % control of watershed extraction of Time-Frequency Peaks
 
 if isempty(stats_table)
     % If no stats table provided
-    [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts]= computeTFPeaks(data, Fs, stage_times, stage_vals,...
+    [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, tfp_timings] = computeTFPeaks(data, Fs, stage_times, stage_vals,...
         'time_range', time_range, 'verbose', verbose, detection_options, baseline_options);
+    % Fold computeTFPeaks' per-stage timings into our master struct
+    % (spect_pass1, artifact, baseline_pass1, extract_pass1, spect_pass2,
+    % baseline_pass2, extract_pass2, refine).
+    fns = fieldnames(tfp_timings);
+    for kk = 1:numel(fns), timings.(fns{kk}) = tfp_timings.(fns{kk}); end
+    clear tfp_timings fns
 else
     % If stats table provided, check to be sure SOPH is requested by output
     assert(nargout > 7, 'Nothing to compute. Must request SOPH output if stats table is inputted.');
@@ -193,12 +308,19 @@ else
         disp('TF peaks stats table provided. Computing SOPH only.');
     end
 
+    % Truncate to time_range — same as computeTFPeaks does when building
+    % fresh. Without this, SOpower_times would span the full recording
+    % and interp1(stage_times, stage_vals, SOpower_times, 'previous')
+    % would return NaN stages for samples before the first / after the
+    % last scored stage, which the histogram validator rejects.
     t_full = (0:length(data)-1)/Fs;
     time_range_inds = t_full >= time_range(1) & t_full <= time_range(2);
     data_time_range = data(time_range_inds);
     t_time_range = t_full(time_range_inds);
     [spect, stimes, sfreqs] = deal([]);
+    t_stage = tic;
     artifacts = detect_artifacts(data_time_range, Fs);
+    timings.artifact = toc(t_stage);
 end
 
 %% COMPUTE ADDITIONAL PEAK FEATURES
@@ -207,21 +329,36 @@ end
 % section to populate the table with other feature columns.
 
 % Compute sleep stage at each TF peak
+t_stage = tic;
 stats_table = computePeakStage(stats_table, stage_times, stage_vals, t_time_range, artifacts);
+timings.peak_stage = toc(t_stage);
 % Compute slow oscillation power (SO-Power) at each TF peak
+t_stage = tic;
 [stats_table, SOpower_norm, SOpower_times] = computePeakSOpower(stats_table, data_time_range, Fs, 'EEG_times', t_time_range, 'isexcluded', artifacts, SOPH_options);
+timings.peak_sopower = toc(t_stage);
 % Compute slow oscillation phase (SO-Phase) at each TF peak
+t_stage = tic;
 [stats_table, SOphase, SOphase_times] = computePeakSOphase(stats_table, data_time_range, Fs, 'EEG_times', t_time_range, 'isexcluded', artifacts, SOPH_options);
+timings.peak_sophase = toc(t_stage);
 
 %% COMPUTE SO-POWER/PHASE HISTOGRAMS
 % See SOpowerphaseHistogram() for a full list of optional arguments for
 % finer control of histogram generation
 
 if nargout > 7
+    t_stage = tic;
     [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, num_peaks_at_freq,...
-        SOpower_TIB, SOphase_TIB, ~, ~, hist_peakidx] = SOpowerphaseHistogram(data_time_range, Fs, stats_table.PeakFrequency, stats_table.PeakTime,...
+        SOpower_TIB, SOphase_TIB, ~, ~, hist_peakidx, ~, ~, ~, ~, ~, soph_timings] = SOpowerphaseHistogram(data_time_range, Fs, stats_table.PeakFrequency, stats_table.PeakTime,...
         'stage_times', stage_times, 'stage_vals', stage_vals, 'verbose', verbose, SOPH_options,...
         'SOpower', SOpower_norm, 'SOpower_times', SOpower_times, 'SOphase', SOphase, 'SOphase_times', SOphase_times);
+    timings.soph_histograms = toc(t_stage);
+    % Merge the sub-breakdown (sopower_compute, sophase_compute,
+    % sopower_hist, sophase_hist) into the master struct. The outer
+    % timings.soph_histograms total ≈ sum of these four + tiny sync/masking
+    % overhead, so we keep both: the coarse total AND the individual parts.
+    fns = fieldnames(soph_timings);
+    for kk = 1:numel(fns), timings.(['soph_' fns{kk}]) = soph_timings.(fns{kk}); end
+    clear soph_timings fns
 
     %Create a SOPHs structure for output
     SOPHs = createSOPHsStruct(SOpower_mat, SOphase_mat, SOpower_bins, SOpower_norm, SOpower_times, SOphase_bins, freq_bins, num_peaks_at_freq, SOpower_TIB, SOphase_TIB);
@@ -245,6 +382,7 @@ end
 
 %% PLOT OUTPUT SUMMARY FIGURE
 if plot_on
+    t_stage = tic;
     if nargout > 7
         fh = displaySummaryPlot('stage_times',stage_times, 'stage_vals',stage_vals, 'artifacts',artifacts, 't_time_range',t_time_range,...
             'data',data, 'Fs',Fs, 'time_range',time_range,...
@@ -262,6 +400,7 @@ if plot_on
     if save_output_image
         print(fh,'-dpng','-r200',output_fname);
     end
+    timings.plot_summary = toc(t_stage);
 end
 
 %% DIMENSIONALITY REDUCTION OF SO-POWER/PHASE HISTOGRAMS
@@ -274,11 +413,15 @@ if nargout > 7 && (fit_param_basis || fit_spline_basis)
     plot_each = plot_on && ~plot_both;
 
     if fit_param_basis
+        t_stage = tic;
         SOPHs = fitParamBasis(SOPHs, param_basis_power_options, param_basis_phase_options, valid_powerhist, valid_phasehist, verbose, plot_each, plot_both);
+        timings.fit_param_basis = toc(t_stage);
     end
 
     if fit_spline_basis
+        t_stage = tic;
         SOPHs = fitSplineBasis(SOPHs, spline_basis_power_options, spline_basis_phase_options, valid_powerhist, valid_phasehist, verbose, plot_each, plot_both);
+        timings.fit_spline_basis = toc(t_stage);
     end
 
     if plot_on
@@ -286,11 +429,106 @@ if nargout > 7 && (fit_param_basis || fit_spline_basis)
     end
 end
 
-%%
+%% Print a formatted per-stage timing summary
+timings.total = seconds(datetime('now') - ttotal);
+
 if verbose
-    disp([newline, 'Total time: ' char(datetime('now')-ttotal)]);
+    printTimingSummary(timings);
 end
 
+end
+
+
+% ------------------------------------------------------------------------
+% printTimingSummary
+%   Pretty-prints the timings struct as a right-aligned, dot-leadered table
+%   with per-stage percentages of total wallclock. Any fields missing from
+%   the struct (stage didn't run — e.g., plot_on=false) are simply skipped.
+% ------------------------------------------------------------------------
+function printTimingSummary(timings)
+% Display: pipeline stages sorted by time (largest first) with
+% millisecond precision so small stages don't show as 0.0 s. Any
+% fields missing from the struct (stage didn't run — e.g.,
+% plot_on=false, single-watershed) are silently omitted.
+% timings.soph_histograms is the outer wall for the full SOpowerphaseHistogram
+% call; we list its sub-parts (soph_sopower_hist, soph_sophase_hist, and
+% the two optional compute stages) separately so the breakdown is visible.
+% We skip the outer total to avoid double-counting in the summary.
+order = { ...
+    'pool_setup',           'Parallel pool setup'; ...
+    'mex_build',            'MEX build / check'; ...
+    'spect_pass1',          'Spectrogram (pass 1)'; ...
+    'artifact',             'Artifact rejection'; ...
+    'baseline_pass1',       'Baseline (pass 1)'; ...
+    'extract_pass1',        'TF peak extraction (pass 1)'; ...
+    'spect_pass2',          'Spectrogram (pass 2)'; ...
+    'baseline_pass2',       'Baseline + mask (pass 2)'; ...
+    'extract_pass2',        'TF peak extraction (pass 2)'; ...
+    'refine',               'Peak refinement'; ...
+    'peak_stage',           'Peak stage assignment'; ...
+    'peak_sopower',         'Peak SO-power compute'; ...
+    'peak_sophase',         'Peak SO-phase compute'; ...
+    'soph_sopower_compute', 'SOPH: SO-power compute (if needed)'; ...
+    'soph_sophase_compute', 'SOPH: SO-phase compute (if needed)'; ...
+    'soph_sopower_hist',    'SOPH: SO-power histogram'; ...
+    'soph_sophase_hist',    'SOPH: SO-phase histogram'; ...
+    'plot_summary',         'Summary plot'; ...
+    'fit_param_basis',      'Parametric basis fit'; ...
+    'fit_spline_basis',     'Spline basis fit'};
+
+total = timings.total;
+if total <= 0, total = eps; end  % avoid /0 on degenerate runs
+
+% Collect present stages, sort descending by time. Skip rows with
+% exactly 0 value — treats "stage exists but didn't run" (e.g., the
+% soph_sopower_compute field when SOpower is precomputed upstream)
+% the same as "field never populated at all".
+keys   = order(:, 1);
+labels = order(:, 2);
+pres   = cellfun(@(k) isfield(timings, k) && timings.(k) > 0, keys);
+labels = labels(pres);
+times  = cellfun(@(k) timings.(k), keys(pres));
+[times_sorted, si] = sort(times, 'descend');
+labels_sorted = labels(si);
+
+width   = 70;
+bar_top = repmat(char(9552), 1, width);   % ═
+bar_sep = repmat(char(9472), 1, width);   % ─
+fprintf('\n%s\n', bar_top);
+fprintf(' %-*s\n', width-1, 'TIMING SUMMARY  (stages sorted by time, ms precision)');
+fprintf('%s\n', bar_top);
+
+sum_reported = 0;
+for k = 1:numel(labels_sorted)
+    t = times_sorted(k);
+    sum_reported = sum_reported + t;
+    pct = 100 * t / total;
+    left = sprintf(' %s ', labels_sorted{k});
+    right = sprintf(' %8.3f s   (%5.1f%%)', t, pct);
+    fill_len = width - numel(left) - numel(right);
+    if fill_len < 1, fill_len = 1; end
+    fprintf('%s%s%s\n', left, repmat('.', 1, fill_len), right);
+end
+
+% "Other" catches any time between stages (tic/toc boundaries, arg
+% parsing, unmeasured helpers). Printed only when it's non-trivial
+% (>100 ms) so clean runs stay clean.
+other = total - sum_reported;
+if other > 0.1
+    left = ' Other / overhead ';
+    right = sprintf(' %8.3f s   (%5.1f%%)', other, 100 * other / total);
+    fill_len = width - numel(left) - numel(right);
+    if fill_len < 1, fill_len = 1; end
+    fprintf('%s%s%s\n', left, repmat('.', 1, fill_len), right);
+end
+
+fprintf('%s\n', bar_sep);
+left = ' Total ';
+right = sprintf(' %8.3f s   (100.0%%)', total);
+fill_len = width - numel(left) - numel(right);
+if fill_len < 1, fill_len = 1; end
+fprintf('%s%s%s\n', left, repmat('.', 1, fill_len), right);
+fprintf('%s\n\n', bar_top);
 end
 
 

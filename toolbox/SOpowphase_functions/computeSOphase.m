@@ -17,7 +17,10 @@ function [SOphase, SOphase_times, SOphase_stages, filtdata] = computeSOphase(var
 %       SOphase_filter: digitalFilter - custom bandpass filter for SO phase estimation (default: [])
 %
 %   Outputs:
-%       SOphase:        [1xN] double - unwrapped SO phase timeseries (radians)
+%       SOphase:        [1xN] double - unwrapped SO phase timeseries (radians).
+%                       Note: this series is returned unwrapped; downstream binning
+%                       (SOpowerphaseHistogram, computePeakSOphase) applies wrapToPi
+%                       to re-wrap phases into [-pi, pi] before histogramming.
 %       SOphase_times:  [1xN] double - timestamps for SOphase samples (s)
 %       SOphase_stages: [1xN] double - sleep stage at each SOphase time point
 %       filtdata:       [1xN] double - bandpass-filtered EEG data used for phase estimation

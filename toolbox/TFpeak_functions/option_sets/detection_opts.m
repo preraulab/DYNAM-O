@@ -43,25 +43,17 @@ addOptional(p, 'mtm_window_stepsize', 0.05, @(x) validateattributes(x,{'numeric'
 %Double vs single watershed
 addOptional(p, 'double_watershed', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 %Decimation steps for the spectrogram prior to watershed: first index along the time axis; second index along frequency
-addOptional(p, 'downsample_spect', [], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2)); % set by quality_setting
+addOptional(p, 'downsample_spect', [2, 2], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
 %Segment size for spectrogram parallelization
-addOptional(p, 'seg_time', [], @(x) isa(x,'numeric') && (isempty(x) || isscalar(x))); % set by quality_setting
+addOptional(p, 'seg_time', 30, @(x) isa(x,'numeric') && isscalar(x));
 %Threshold weight value for when to stop merge rule
-addOptional(p, 'merge_thresh', [], @(x) isa(x,'numeric') && (isempty(x) || isscalar(x))); % set by quality_setting
-%Fixed quality setting by string options: 'stokes_2023', 'precision', or 'default'
-% 'stokes_2023':
-%   downsample_spect = [];
-%   seg_time = 60; (seconds)
-%   merge_thresh = 8; (merge weight unit)
-% 'precision':
-%   downsample_spect = [];
-%   seg_time = 30; (seconds)
-%   merge_thresh = 8; (merge weight unit)
-% 'default':
-%   downsample_spect = [2, 2]; (steps, steps)
-%   seg_time = 30; (seconds)
-%   merge_thresh = 11; (merge weight unit)
-addOptional(p, 'quality_setting', 'default', @(x) any(validatestring(x, {'stokes_2023', 'precision', 'default'})));
+addOptional(p, 'merge_thresh', 11, @(x) isa(x,'numeric') && isscalar(x));
+%Quality setting preset: 'stokes_2023', 'precision', 'default', or '' (use individual params above).
+% Overrides downsample_spect, seg_time, and merge_thresh when non-empty.
+% 'stokes_2023':  downsample_spect=[],    seg_time=60, merge_thresh=8
+% 'precision':    downsample_spect=[],    seg_time=30, merge_thresh=8
+% 'default':      downsample_spect=[2,2], seg_time=30, merge_thresh=11
+addOptional(p, 'quality_setting', '', @(x) (ischar(x) || isstring(x)) && (isempty(x) || any(validatestring(x, {'stokes_2023', 'precision', 'default'}))));
 
 %% Merging and trimming parameters
 %Maximum number of merges to perform
@@ -87,6 +79,39 @@ addOptional(p, 'show_pbar', true, @(x) validateattributes(x, {'logical', 'numeri
 %% Add debug mode to execute runSegmentedData() in serial instead of parfor
 addOptional(p, 'debug_mode', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 
+%% Parallel pool type: 'Processes' (default), 'Threads', or '' (same as 'Processes').
+% ProcessPool is used on every host. ThreadPool is supported as an explicit
+% override but disables trim_region_mex (MEX cannot run inside a ThreadPool
+% worker; the MATLAB fallback is bit-identical but slower).
+addOptional(p, 'parallel_mode', 'Processes', @(x) (ischar(x) || isstring(x)) && any(strcmp(x, {'', 'Processes', 'Threads'})));
+
+%% Trim-region MEX toggle: set false to force the pure-MATLAB trim path
+% even on ProcessPool / serial runs where the MEX is available. Useful for
+% reproducing a master-branch run without deleting the binary, bisecting
+% a suspected MEX-vs-MATLAB disagreement, or benchmarking MEX impact on a
+% given host. When false, output is bit-identical to the MEX path but
+% runs slower. Always effectively false inside a ThreadPool worker
+% regardless of this setting (MATLAB hard-blocks MEX there).
+addOptional(p, 'use_trim_mex', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+
 %%
 parse(p,varargin{:});
 opts = p.Results;
+
+% A non-empty quality_setting overrides downsample_spect, seg_time, and merge_thresh
+if ~isempty(opts.quality_setting)
+    switch lower(opts.quality_setting)
+        case 'stokes_2023'
+            opts.downsample_spect = [];
+            opts.seg_time = 60;
+            opts.merge_thresh = 8;
+        case 'precision'
+            opts.downsample_spect = [];
+            opts.seg_time = 30;
+            opts.merge_thresh = 8;
+        case 'default'
+            opts.downsample_spect = [2, 2];
+            opts.seg_time = 30;
+            opts.merge_thresh = 11;
+    end
+end

@@ -2,7 +2,7 @@ function [ stats_table ] = computePeakStage(varargin)
 %COMPUTEPEAKSTAGE  Compute the sleep stage for each TF peak in stats_table
 %
 %   Usage:
-%       stats_table = computePeakStage(stats_table, stage_times, stage_vals, t_time_range, artifacts)
+%       stats_table = computePeakStage(stats_table, stage_times, stage_vals, t_artifacts, artifacts)
 %
 %   Required Inputs:
 %       stats_table: table - TFpeak stats table from computeTFPeaks(); must contain PeakTime -- required
@@ -17,7 +17,22 @@ function [ stats_table ] = computePeakStage(varargin)
 %                    artifact stage (6=ARTIFACT) to TF peaks. (default: [])
 %
 %   Outputs:
-%       stats_table: table - input table with PeakStage column added
+%       stats_table: table - input table with PeakStage column added.
+%                    PeakStage encoding:
+%                        0 = Unknown / unscored
+%                        1 = N3
+%                        2 = N2
+%                        3 = N1
+%                        4 = REM
+%                        5 = Wake
+%                        6 = Artifact (only when artifacts vector is provided)
+%
+%   Notes:
+%       - Stage assignment uses interp1(..., 'previous'): each peak is labelled with the
+%         stage in effect from the most recent stage transition at or before its PeakTime.
+%         Peaks occurring before the first scored stage are assigned 0 (Unknown).
+%       - Artifact stage (6) is only populated when both t_artifacts and artifacts are provided;
+%         otherwise peaks overlapping artifact windows retain their scored sleep stage.
 %
 %
 % =========================================================================

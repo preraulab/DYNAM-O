@@ -1,48 +1,46 @@
 function [stats_table, regions, borders] = extractTFPeaks(img,x,y,features,num_segment,conn_wshed,...
     merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,...
-    bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
-% EXTRACTTFPEAKS Determines the peak regions within a spectral topography and extracts a set of features for each
+    bl_thresh,merge_rule,f_verb,verb_pref,f_disp,use_trim_mex)
+%EXTRACTTFPEAKS  Determine peak regions within a spectrogram and extract features for each
 %
 %   Usage:
-%       stats_table = extractTFPeaks(img,x,y,num_segment,conn_wshed,...
-%       merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,...
-%       bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
+%       [stats_table, regions, borders] = extractTFPeaks(img, x, y, features, num_segment, conn_wshed, ...
+%           merge_thresh, max_merges, downsample_spect, dur_min, bw_min, trim_vol, trim_shift, conn_trim, ...
+%           bl_thresh, merge_rule, f_verb, verb_pref, f_disp, use_trim_mex)
 %
-%   Inputs:
-%   img          -- 2D matrix of image data. defaults to peaks(100).
-%   x            -- x axis of image data. default 1:size(data,2).
-%   y            -- y axis of image data. default 1:size(data,1).
-%   features     -- cell array of features to include, can be any subset of
-%                   {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData',
-%                    'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. default 'all'
-%   num_segment  -- segment number if data comes from larger image. default 1.
-%   conn_wshed   -- pixel connection to be used by peaksWShed. default 8.
-%   merge_thresh -- threshold weight value for when to stop merge rule. default 8.
-%   max_merges   -- maximum number of merges to perform. default inf.
-%   downsample_spect  --  2x1 double indicating numbers of columns and rows to downsize spect to. Default = []
-%   dur_min      -- minimum duration allowed
-%   bw_min       -- minimum bandwidth allowed
-%   trim_vol     -- fraction maximum trimmed volume (from 0 to 1),
-%                   i.e. 1 means no trim. default 0.8.
-%   trim_shift   -- value to be subtracted from image prior to evaulation of trim volume.
-%                   default min(min(img_data)).
-%   conn_trim    -- pixel connection to be used by trimRegionsWShed. default 8.
-%   bl_thresh    -- power threshold used to cut off low power data to speed
-%                   up computation. Default = [];
-%   merge_rule   --
-%   f_verb       -- number indicating depth of output text statements of progress.
-%                   0 - no output.
-%                   1 - output current function level.
-%                   2 - output within sequence functions.
-%                   3 - output internal progress of merge and trim.
-%                   defaults to 0, unless using default data.
-%   verb_pref    -- prefix string for verbose output. defaults to ''.
-%   f_disp       -- flag indicator of whether to plot.
-%                   defaults to 0, unless using default data.
+%   Required Inputs:
+%       img:          [M x N] double - 2D image data
+%
+%   Optional Inputs (positional):
+%       x:                [1 x N] double - x axis of image data (default: 1:size(img,2))
+%       y:                [1 x M] double - y axis of image data (default: 1:size(img,1))
+%       features:         cell or char - any subset of {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox',
+%                         'Duration', 'Height', 'HeightData', 'PeakFrequency', 'PeakTime', 'SegmentNum',
+%                         'Volume'} or 'all' (default: 'all')
+%       num_segment:      integer - segment index if img is a sub-segment of a larger image (default: 1)
+%       conn_wshed:       integer - pixel connectivity used in watershed labeling (default: 8)
+%       merge_thresh:     double - threshold weight at which merging stops (default: 8)
+%       max_merges:       integer - maximum number of merges to perform (default: inf)
+%       downsample_spect: [1 x 2] double - [cols, rows] decimation factors for low-res pass (default: [])
+%       dur_min:          double - minimum peak duration allowed (default: 0)
+%       bw_min:           double - minimum peak bandwidth allowed (default: 0)
+%       trim_vol:         double - fraction of max volume to retain after trim, in (0, 1] (default: 0.8)
+%       trim_shift:       double - floor value subtracted from img before trim (default: min(img(:)))
+%       conn_trim:        integer - pixel connectivity used during trim (default: 8)
+%       bl_thresh:        double - optional power cutoff to accelerate computation (default: [])
+%       merge_rule:       char - reserved (default: 'default')
+%       f_verb:           integer - verbosity depth: 0 silent, up to 3 for full internal progress (default: 0)
+%       verb_pref:        char - prefix string for verbose output (default: '')
+%       f_disp:           logical/integer - plot progress if nonzero (default: 0)
+%       use_trim_mex:     logical - allow trim_region_mex on ProcessPool / serial calls;
+%                         false forces the MATLAB trim path (default: true)
+%
 %   Outputs:
-%   stats_table  -- Table of peak statistics. Each row is a peak.
-%   regions      -- A cell array of linear indices of peak regions in the current image.
-%   borders      -- A cell array of linear indices of peak borders in the current image.
+%       stats_table: table - peak statistics, one row per peak
+%       regions:     [1 x K] cell - linear indices of peak regions (full image coords)
+%       borders:     [1 x K] cell - linear indices of peak borders (full image coords)
+%
+%   See Also: runWatershed, Ldata2graph, mergeWshedSegment, trimWshedRegions, computePeakStatsTable
 %
 %
 %*************************
@@ -129,6 +127,9 @@ if nargin < 18
 end
 if nargin < 19
     f_disp = [];
+end
+if nargin < 20 || isempty(use_trim_mex)
+    use_trim_mex = true;
 end
 
 %************************
@@ -288,17 +289,18 @@ end
 %**********************************************************
 % Do not trim regions already below the removal criteria  *
 %**********************************************************
-    function [i_sub, j_sub] = fastind2sub(siz,ndx)
-        vi = rem(ndx-1, siz(1)) + 1;
-        j_sub = ((ndx - vi)/siz(1) + 1);
-        i_sub = vi;
-    end
+% NOTE: a nested fastind2sub helper lived here previously, on the theory
+% that hand-rolled arithmetic would beat ind2sub's call overhead. Profiling
+% in R2025b shows the opposite: nested-function dispatch (closure capture
+% for access to this function's workspace) costs ~24 µs/call vs ind2sub's
+% ~13 µs/call. Removed 2026-04-16 — worth ~20 s of serial time across the
+% three call sites below. If you revive something like it, measure on the
+% target MATLAB version first.
 
 if dur_min>0 || bw_min>0
     df = y(2)-y(1);
     dt = x(2)-x(1);
-    % [f_inds,t_inds] = cellfun(@(x)ind2sub(size(img),x),regions,'UniformOutput',false);
-    [f_inds,t_inds] = cellfun(@(x)fastind2sub(size(img),x),regions,'UniformOutput',false);
+    [f_inds,t_inds] = cellfun(@(x)ind2sub(size(img),x),regions,'UniformOutput',false);
     good_inds = cellfun(@(x)(max(x)-min(x))*dt>dur_min,t_inds) & cellfun(@(x)(max(x)-min(x))*df>bw_min,f_inds);
     regions = regions(good_inds);
     borders = borders(good_inds);
@@ -323,7 +325,7 @@ if trim_vol < 1
         disp([verb_pref '  Starting trim to ' num2str(100*trim_vol) ' percent volume...']);
         ttic = tic;
     end
-    [trim_regions, trim_borders] = trimWshedRegions(img,regions,trim_vol,trim_shift,conn_trim,f_verb-1,['    ' verb_pref],f_disp);
+    [trim_regions, trim_borders] = trimWshedRegions(img,regions,trim_vol,trim_shift,conn_trim,f_verb-1,['    ' verb_pref],f_disp,use_trim_mex);
     if f_verb > 0
         disp([verb_pref '    trim took: ' num2str(toc(ttic)) ' seconds.']);
     end

@@ -1,33 +1,9 @@
 function [stats_table, regions, borders] = runSegmentedData(spect, stimes, sfreqs, varargin)
-% =========================================================================
-%                  DYNAM-O Toolbox  |  Prerau Laboratory
-%       Characterizing Individualized Neural Dynamics in Sleep EEG
-% -------------------------------------------------------------------------
-%
-%   WEB        https://sleepeeg.org
-%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
-%   GITHUB     https://github.com
-%
-%   ATTRIBUTION
-%   If you use this toolbox, please cite:
-%
-%   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
-%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
-%   in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
-%
-%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
-%   Manoach, D. S., Stickgold, R., Prerau, M. J.
-%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
-%   for Electroencephalographic Phenotyping and Biomarker Identification"
-%   Sleep, 2022; zsac223. https://doi.org
-%
-% =========================================================================
-
 %RUNSEGMENTEDDATA  Segment, extract, and compile time-frequency peaks from a spectrogram
 %
 %   Usage:
 %       [stats_table, regions, borders] = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, features, ...
-%           dur_min, bw_min, merge_thresh, max_merges, trim_vol, f_verb, debug_mode)
+%           dur_min, bw_min, merge_thresh, max_merges, trim_vol, f_verb, show_pbar, debug_mode)
 %
 %   Required Inputs:
 %       spect: 2D double array - Spectrogram data [freqs x time] -- required
@@ -59,6 +35,31 @@ function [stats_table, regions, borders] = runSegmentedData(spect, stimes, sfreq
 %   Notes:
 %       All optional inputs must be passed in exact order when using this version with addOptional.
 %
+%   See Also: extractTFPeaks, segmentData, computeTFPeaks
+%
+% =========================================================================
+%                  DYNAM-O Toolbox  |  Prerau Laboratory
+%       Characterizing Individualized Neural Dynamics in Sleep EEG
+% -------------------------------------------------------------------------
+%
+%   WEB        https://sleepeeg.org
+%   TUTORIALS  https://prerau.bwh.harvard.edu/dynam-o/
+%   GITHUB     https://github.com
+%
+%   ATTRIBUTION
+%   If you use this toolbox, please cite:
+%
+%   He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J.
+%   "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics
+%   in Sleep EEG", bioRxiv, 2026 - Pending Journal Publication
+%
+%   Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S.,
+%   Manoach, D. S., Stickgold, R., Prerau, M. J.
+%   "Transient Oscillation Dynamics During Sleep Provide a Robust Basis
+%   for Electroencephalographic Phenotyping and Biomarker Identification"
+%   Sleep, 2022; zsac223. https://doi.org
+%
+% =========================================================================
 
 % --------------------
 % Input validation
@@ -87,6 +88,10 @@ addOptional(p, 'trim_vol', 0.8, @(x) isnumeric(x) && isscalar(x) && x >= 0 && x 
 addOptional(p, 'f_verb', 1, @(x) isnumeric(x) && isscalar(x));
 addOptional(p, 'show_pbar', true, @islogical);
 addOptional(p, 'debug_mode', false, @islogical);
+% Route the trim MEX on/off through from detection_options; default true
+% matches current behaviour. When false, the parfor body still passes the
+% flag down so each worker consistently skips the MEX on this call.
+addOptional(p, 'use_trim_mex', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 
 parse(p, spect, stimes, sfreqs, varargin{:});
 S = p.Results;
@@ -104,6 +109,7 @@ trim_vol         = S.trim_vol;
 f_verb           = S.f_verb;
 show_pbar        = S.show_pbar;
 debug_mode       = S.debug_mode;
+use_trim_mex     = S.use_trim_mex;
 
 if debug_mode
     verb_pref = 'DEBUG: ';
@@ -196,24 +202,26 @@ if ~debug_mode
         %This construction with multiple function calls for num_out is most
         %efficient for parallel processing
         if num_out == 1
-            stats_tables{ii} = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref]);
+            stats_tables{ii} = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],[],use_trim_mex);
         elseif num_out == 2
-            [stats_tables{ii}, regions{ii}] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref]);
+            [stats_tables{ii}, regions{ii}] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],[],use_trim_mex);
             regions{ii} = cellfun(@(x)x+pixel_shift(ii),regions{ii},'UniformOutput',false);
         elseif num_out == 3
-            [stats_tables{ii}, regions{ii}, borders{ii}] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref]);
+            [stats_tables{ii}, regions{ii}, borders{ii}] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],[],use_trim_mex);
             regions{ii} = cellfun(@(x)x+pixel_shift(ii),regions{ii},'UniformOutput',false);
             borders{ii} = cellfun(@(x)x+pixel_shift(ii),borders{ii},'UniformOutput',false);
         end
 
         % Update loading bar
-        % NOTE: reference `h` only in the serial (debug_mode) branch below,
-        % never inside parfor. Parfor static analysis broadcasts every
-        % referenced variable to workers, and MATLAB cannot serialize
-        % matlab.ui.control.internal.ProgressIndicator (the class `waitbar`
-        % now returns), which produces a spurious warning on every run.
-        if show_pbar && haspar
-            send(D, ii);
+        if show_pbar
+            % NOTE: reference `h` only in the serial (debug_mode) branch below,
+            % never inside parfor. Parfor static analysis broadcasts every
+            % referenced variable to workers, and MATLAB cannot serialize
+            % matlab.ui.control.internal.ProgressIndicator (the class `waitbar`
+            % now returns), which produces a spurious warning on every run.
+            if haspar
+                send(D, ii);
+            end
         end
     end
     if show_pbar
@@ -228,7 +236,7 @@ else
         end
 
         %Compute the stats table with optional regions and borders
-        [stats_tables{ii}, reg, bord] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref]);
+        [stats_tables{ii}, reg, bord] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],[],use_trim_mex);
 
         if num_out>1
             regions{ii} = cellfun(@(x)x+pixel_shift(ii),reg,'UniformOutput',false);

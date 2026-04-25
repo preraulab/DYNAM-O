@@ -1,8 +1,8 @@
-function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts] = computeTFPeaks(varargin)
+function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, tfp_timings] = computeTFPeaks(data, Fs, stage_times, stage_vals, varargin)
 %COMPUTETFPEAKS  Run watershed algorithm to extract time-frequency peaks from a spectrogram
 %
 %   Usage:
-%       [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts] = ...
+%       [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, tfp_timings] = ...
 %               computeTFPeaks(data, Fs, stage_times, stage_vals, <options>)
 %
 %   Required Inputs:
@@ -58,6 +58,10 @@ function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, art
 %       merge_thresh (opt):        scalar - threshold weight value for when to stop merge rule.
 %                                  Default = [], to be set by quality_setting
 %       quality_setting (opt):     character - Quality settings for the algorithm. Default = 'default'
+%                                       'stokes_2023': matches Stokes et al. 2023 SLEEP paper settings exactly
+%                                           downsample_spect = [];
+%                                           seg_time = 60; (seconds)
+%                                           merge_thresh = 8; (merge weight unit)
 %                                       'precision': high resolution settings
 %                                           downsample_spect = [];
 %                                           seg_time = 30; (seconds)
@@ -83,6 +87,13 @@ function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, art
 %       data_time_range:    [1xn] double - timeseries data in time_range
 %       t_time_range:       [1xn] double - timestamps for data in time_range
 %       artifacts:          1xT logical of times flagged as artifacts (logical OR of hf and bb artifacts)
+%       tfp_timings:        struct - per-stage wallclock seconds with fields
+%                           spect_pass1, artifact, baseline_pass1, extract_pass1,
+%                           spect_pass2, baseline_pass2, extract_pass2, refine.
+%                           Second-pass fields are 0 when double_watershed is false.
+%                           Merged into runDYNAMO's master timings summary.
+%
+%   See Also: runWatershed, mergeWshedSegment, trimWshedRegions, extractTFPeaks, refinePeakFrequency
 %
 %
 % =========================================================================
@@ -181,8 +192,10 @@ addOptional(p, 'bw_max', detection_options.bw_max, @(x) validateattributes(x,{'n
 addOptional(p, 'refinement', detection_options.refinement, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'show_pbar', detection_options.show_pbar, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'debug_mode', detection_options.debug_mode, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+addOptional(p, 'parallel_mode', detection_options.parallel_mode, @(x) (ischar(x) || isstring(x)) && any(strcmp(x, {'', 'Processes', 'Threads'})));
+addOptional(p, 'use_trim_mex', detection_options.use_trim_mex, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 
-parse(p,varargin{:});
+parse(p, data, Fs, stage_times, stage_vals, varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
 field_names = fieldnames(p.Results);
 
@@ -239,14 +252,19 @@ if isempty(baseline_exclude)
     baseline_exclude = false(1, length(data));
 end
 
-%% Get presets if needed
-if ~isempty(downsample_spect) || ~isempty(seg_time) || ~isempty(merge_thresh)
-    assert(~isempty(downsample_spect) && ~isempty(seg_time) && ~isempty(merge_thresh), 'Must specify all three quality parameters together.')
-    assert(isempty(quality_setting), 'Cannot specify quality parameters and quality_setting at the same time.')
-else
-    assert(~isempty(quality_setting), 'Must set quality_setting when not directly providing quality parameters.')
-    [downsample_spect, seg_time, merge_thresh] = getPresets(quality_setting);
-end
+%% Timing struct — captures per-stage durations so runDYNAMO can print a
+% uniform summary. Populated throughout this function; all fields are in
+% seconds. Fields added in the order stages execute; second-pass fields
+% (spect_pass2, extract_pass2) are 0 when double_watershed is false.
+tfp_timings = struct();
+tfp_timings.spect_pass1    = 0;
+tfp_timings.artifact       = 0;
+tfp_timings.baseline_pass1 = 0;
+tfp_timings.extract_pass1  = 0;
+tfp_timings.spect_pass2    = 0;
+tfp_timings.baseline_pass2 = 0;
+tfp_timings.extract_pass2  = 0;
+tfp_timings.refine         = 0;
 
 %% Truncate data to time range
 time_range_inds = t_data >= time_range(1) & t_data <= time_range(2);
@@ -255,10 +273,13 @@ t_time_range = t_data(time_range_inds);
 baseline_exclude = baseline_exclude(time_range_inds);
 
 %% Compute spectrogram
+t_stage = tic;
 [spect, stimes, sfreqs, dur_min, bw_min, ht_db_min] = computeSpectrogram(mtm_taper_params, [mtm_window_length_1, mtm_window_stepsize], data_time_range, Fs, mtm_dsfreqs, mtm_freq_range, verbose);
 stimes = stimes + t_time_range(1); % adjust the time axis to t_data
+tfp_timings.spect_pass1 = toc(t_stage);
 
 %% Artifact Detection
+t_stage = tic;
 if isempty(artifacts)
     if verbose
         disp('Performing artifact rejection...');
@@ -267,20 +288,23 @@ if isempty(artifacts)
 else
     artifacts = artifacts(time_range_inds); % apply time_range selection
 end
+tfp_timings.artifact = toc(t_stage);
 
 %% Compute baseline spectrum used to flatten data spectrum
 % Exclude artifacts, baseline_exclude, and times corresponding to stages not in baseline_stages from baseline computation
+t_stage = tic;
 exclude_stages = ~ismember(stage_vals, baseline_stages); %stages to use passed in
 exclude_stages_resamp = interp1(stage_times, single(exclude_stages), t_time_range, 'previous')~=0; % ~=0 excludes both 1 and NaN (when t_time_range exceeds the interp1 range)
 baseline_exclude = artifacts(:) | exclude_stages_resamp(:) | baseline_exclude(:);
 
 baseline = computeBaseline(spect, stimes, t_time_range, baseline_exclude, baseline_range, baseline_ptile);
+tfp_timings.baseline_pass1 = toc(t_stage);
 
 %% Compute time-frequency peaks
 if verbose
     disp('Extracting TF peaks from the spectrogram...');
-    tfp = tic;
 end
+tfp = tic;
 
 % Augment extracted features with necessary computation features that will be removed later if extra added
 compute_features = unique([features, {'PeakFrequency', 'PeakTime', 'Duration', 'Bandwidth', 'Height'}]);
@@ -290,14 +314,15 @@ end
 
 if double_watershed
     [stats_table, regions, borders] = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
-        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), show_pbar, debug_mode);
+        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), show_pbar, debug_mode, use_trim_mex);
 else
     stats_table = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
-        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), show_pbar, debug_mode);
+        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), show_pbar, debug_mode, use_trim_mex);
 end
 
+tfp_timings.extract_pass1 = toc(tfp);
 if verbose
-    disp(['TF peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]); %#ok<*DATST>
+    disp(['TF peak extraction took ' datestr(seconds(tfp_timings.extract_pass1),'HH:MM:SS'), newline]); %#ok<*DATST>
 end
 
 %% Filter stats_table based on {Duration, Bandwidth, PeakFrequency, and Height}
@@ -315,26 +340,31 @@ if double_watershed
     stimes_first = stimes;
 
     % Compute multitaper spectrogram using new parameters with smaller spectral resolution
+    t_stage = tic;
     [spect, stimes, sfreqs, ~, bw_min, ht_db_min] = computeSpectrogram(mtm_taper_params, [mtm_window_length_2, mtm_window_stepsize], data_time_range, Fs, mtm_dsfreqs, mtm_freq_range, verbose);
     stimes = stimes + t_time_range(1); % adjust the time axis to t_data
+    tfp_timings.spect_pass2 = toc(t_stage);
 
     % Recompute baseline using the same baseline_exclude computed above
+    t_stage = tic;
     baseline = computeBaseline(spect, stimes, t_time_range, baseline_exclude, baseline_range, baseline_ptile);
 
     % Mask the spectrogram using extracted TFpeaks from the first round of watershed
     spect_masked = maskSpectrogram(spect, stimes_first, stimes, regions, borders);
+    tfp_timings.baseline_pass2 = toc(t_stage);
 
     % Compute time-frequency peaks
     if verbose
         disp('[2nd] Extracting TF peaks from the spectrogram...');
-        tfp = tic;
     end
+    tfp = tic;
 
     stats_table = runSegmentedData(spect_masked, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
-        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), show_pbar, debug_mode);
+        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), show_pbar, debug_mode, use_trim_mex);
 
+    tfp_timings.extract_pass2 = toc(tfp);
     if verbose
-        disp(['[2nd] TF peak extraction took ' datestr(seconds(toc(tfp)),'HH:MM:SS'), newline]);
+        disp(['[2nd] TF peak extraction took ' datestr(seconds(tfp_timings.extract_pass2),'HH:MM:SS'), newline]);
     end
 
     % Filter stats_table based on {Duration, Bandwidth, PeakFrequency, and Height}
@@ -350,14 +380,15 @@ end
 if refinement
     if verbose
         disp('Refining peaks...');
-        rft = tic;
     end
+    rft = tic;
 
     stats_table = refinePeakFrequency(data_time_range, Fs, stats_table, 'freq_range', mtm_freq_range, 't', t_time_range);
     stats_table(isnan(stats_table.PeakFrequency),:) = [];
 
+    tfp_timings.refine = toc(rft);
     if verbose
-        disp(['TF peak refinement took ' datestr(seconds(toc(rft)),'HH:MM:SS'), newline]);
+        disp(['TF peak refinement took ' datestr(seconds(tfp_timings.refine),'HH:MM:SS'), newline]);
     end
 end
 

@@ -2,18 +2,20 @@ function [stats_table] = refinePeakFrequency(varargin)
 %REFINEPEAKFREQUENCY  Compute a Hann spectrogram with 1Hz spectral resolution to refine the event frequencies
 %
 %   Usage:
-%       [stats_table] = refine_TFpeaks(data, Fs, stats_table, baseline_opt, method)
+%       [stats_table] = refinePeakFrequency(data, Fs, stats_table, freq_range, t, baseline_opt, refine_method, remove_edge_peaks)
 %
-%   Input:
-%       data: <number of samples> x 1  vector - time series data -- required
-%       Fs: double - sampling frequency in Hz  -- required
+%   Required Inputs:
+%       data: <number of samples> x 1 vector - time series data
+%       Fs: double - sampling frequency in Hz
 %       stats_table: table - list of events, including the peak times, peak frequencies,
-%                    and the bounding box -- required
+%                    and the bounding box
+%
+%   Optional Inputs:
 %       freq_range: 1x2 vector - frequency range to compute spectrogram over (Hz). Default = [0, 30]
-%       t: double - <number of samples> x 1  vector - timestamps for data. Default = (0:length(data)-1)/Fs;
+%       t: <number of samples> x 1 vector - timestamps for data. Default = (0:length(data)-1)/Fs
 %       baseline_opt: logical - true to include baseline removal, false to exclude. Default = false
-%       refine_method: Method to assign max frequency value using interpolation
-%                      {'spline_interp', 'spline_opt', or 'spect_max'}. Default = 'spline_interp'
+%       refine_method: char - method to assign max frequency value using interpolation;
+%                      {'spline_interp', 'spline_opt', 'spect_max'}. Default = 'spline_interp'
 %       remove_edge_peaks: logical - true to remove peaks at edge of event bounding box. Default = true
 %
 %   Output:

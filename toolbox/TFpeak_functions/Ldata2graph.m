@@ -1,22 +1,25 @@
 function [rgn, rgn_lbls, Lborders, adj_list] = Ldata2graph(Ldata, exclusion_val, f_disp, ax)
-% LDATA2GRAPH label region border pixels and determine region adjacencies.
+%LDATA2GRAPH  Label region border pixels and build the region adjacency list
 %
-% Usage:
-%    [rgn, rgn_lbls, Lborders, adj_list] = Ldata2graph(Ldata, exclusion_val, f_disp, ax)
+%   Usage:
+%       [rgn, rgn_lbls, Lborders, adj_list] = Ldata2graph(Ldata, exclusion_val, f_disp, ax)
 %
-%   Inputs:
-%   Ldata  -- 2D matrix of labeled image data. Assumes boundaries are
-%             labeled 0 as for the output of watershed.
-%             defaults to abs(peaks(50))+randn(50)*.01.
-%   exclusion_val -- value of
-%   f_disp -- flag indicator whether to plot.
-%             defaults to false, unless using default Ldata.
+%   Required Inputs:
+%       Ldata:         [M x N] double - labeled image data; assumes boundary pixels are labeled 0
+%                      (as produced by watershed)
+%
+%   Optional Inputs:
+%       exclusion_val: scalar - label value to exclude from the graph (default: [])
+%       f_disp:        logical/integer - plot the labeled image when nonzero (default: 0)
+%       ax:            axes handle - axes to draw into when f_disp>0 (default: new figure)
+%
 %   Outputs:
-%   rgn         -- 1D cell array of vector lists of linear idx of all pixels for each region.
-%   rgn_lbls    -- vector of region labels.
-%   Lborders    -- 1D cell array of vector lists of linear idx of border pixels for each region.
-%   adj_list       -- two-column matrix of region adjacencies.
-%                  each row contains region lables of two adjacent regions.
+%       rgn:       [1 x K] cell - linear indices of pixels per region
+%       rgn_lbls:  [1 x K] integer - region labels
+%       Lborders:  [1 x K] cell - linear indices of border pixels per region
+%       adj_list:  [E x 2] integer - pairs of adjacent region labels
+%
+%   See Also: runWatershed, mergeWshedSegment, extractTFPeaks
 %
 %
 %*************************
@@ -171,9 +174,14 @@ for ii = 1:num_rgns
     i_full = i_sub+i_min-1;
     j_full = j_sub+j_min-1;
 
-    % Convert to linear indicies
+    % Convert to linear indicies. Sort so downstream mergeRegions can use
+    % the flag-free ismembc (requires sorted 2nd arg) instead of
+    % ismember(...,'R2012a') which fires validatestring on every call.
+    % Subimage linear order != full-image linear order whenever subimage
+    % height differs from full-image height, so the remapped indices need
+    % an explicit sort. Borders are treated as sets by every consumer.
     % Lborders{ii} = sub2ind([num_rows num_cols],i_full,j_full);
-    Lborders{ii} = i_full + (j_full-1)*num_rows;
+    Lborders{ii} = sort(i_full + (j_full-1)*num_rows);
 
     %******************************
     % Determine current neighbors *

@@ -21,9 +21,13 @@ function [fitresult, gof] = fit_rotGauss(pow_hist, pow_bins, freq_bins, B0, LB, 
 %           - theta: Angle of rotation (in radians) for the Gaussian.
 %           For example, to fit two Gaussian peaks, B0 would be a 2x6 matrix.
 %
-%       LB: Matrix - Lower bounds for model parameters (optional)
-%       UB: Matrix - Upper bounds for model parameters (optional)
-%       plot_on: logical - Flag to control whether to plot the fit results (optional, default: true)
+%       LB: Matrix - Lower bounds for model parameters. No default; must be supplied
+%                    with matching size to B0 when B0 is non-empty.
+%       UB: Matrix - Upper bounds for model parameters. No default; must be supplied
+%                    with matching size to B0 when B0 is non-empty.
+%       plot_on: logical - Flag to control whether to plot the fit results. Defaults to
+%                          true only when fewer than 5 inputs are provided (nargin<5);
+%                          otherwise plot_on must be supplied explicitly when LB/UB are passed.
 %
 %   Output:
 %       fitresult: Fit object - Contains the result of the nonlinear least squares fitting
@@ -80,7 +84,6 @@ if ~isempty(B0)
 
     %Create variable names (trick into being in alphabetical order)
     var_names = {'amp','fmean','fstd','pmean','pstd','theta'};
-    num_params = length(var_names);
 
     %Initialize
     eqn_string = [];

@@ -1,28 +1,39 @@
-function [trimmed_regions, trimmed_borders] = trimWshedRegions(data,regions,vol_thresh,shift_val,conn,f_verb,verb_pref,f_disp)
-% TRIMWSHEDREGIONS takes data and regions from peaksWShed and regionsMergeByWeight
-% and trims the regions to a certain fraction of volume.
+function [trimmed_regions, trimmed_borders] = trimWshedRegions(data,regions,vol_thresh,shift_val,conn,f_verb,verb_pref,f_disp,use_trim_mex)
+%TRIMWSHEDREGIONS  Trim watershed regions to a target fraction of volume
 %
-% Usage:
-%   [trimmed_regions, trimmed_borders] = trimWshedRegions(data,regions,vol_thresh,shift_val,conn,f_verb,verb_pref,f_disp)
+%   Usage:
+%       [trimmed_regions, trimmed_borders] = trimWshedRegions(data, regions, vol_thresh, shift_val, conn, f_verb, verb_pref, f_disp, use_trim_mex)
 %
-%   Inputs:
-%   data       -- 2D matrix of image data. defaults to peaks(100).
-%   regions    -- 1D cell array of vector lists of linear idx of all pixels for each region.
-%   vol_thresh -- fraction maximum trimmed volume (from 0 to 1),
-%                 i.e. 1 means no trim. default 0.8.
-%   shift_val  -- value to be subtracted from image prior to evaulation of trim volume.
-%                 default min(min(img_data)).
-%   conn       -- pixel connection to be used by trimRegionsWShed. default 8.
-%   f_verb     -- number indicating depth of output text statements of progress.
-%                 0 - no output. 1 - output current function level.
-%                 >1 - output at subfunction levels. defaults to 0, unless using defaul data.
-%   verb_pref  -- prefix string for verbose output. defaults to ''.
-%   f_disp     -- flag indicator of whether to plot.
-%                 defaults to 0, unless using default data.
+%   Required Inputs:
+%       data:       [M x N] double - 2D image data
+%       regions:    [1 x K] cell - linear indices of all pixels for each region
+%
+%   Optional Inputs:
+%       vol_thresh:   double - fraction of maximum trimmed volume in (0, 1]; 1 means no trim (default: 0.8)
+%       shift_val:    double - value subtracted from image prior to volume evaluation (default: min(data(:)))
+%       conn:         integer - pixel connectivity used by the trim step (default: 8)
+%       f_verb:       integer - verbosity level: 0 silent, 1 current level, >1 subfunctions (default: 0)
+%       verb_pref:    char - prefix string prepended to verbose output (default: '')
+%       f_disp:       logical/integer - plot the trimmed result when nonzero (default: 0)
+%       use_trim_mex: logical - allow trim_region_mex when the binary exists and the
+%                     current pool context permits it (default: true). Pass false to
+%                     force the MATLAB trim path for reproduction / bisection /
+%                     benchmarking. ThreadPool workers always use the MATLAB path
+%                     regardless of this flag (MEX cannot run in a thread worker).
+%
 %   Outputs:
-%   trimmed_regions -- 1D cell array of vector lists of linear idx of all pixels for each region.
-%   trimmed_borders -- 1D cell array of vector lists of linear idx of border pixels for each region.
+%       trimmed_regions: [1 x K] cell - linear indices of retained pixels for each region
+%       trimmed_borders: [1 x K] cell - linear indices of border pixels for each trimmed region
 %
+%   Notes:
+%       - Borders are returned as sets (ascending linear-index order); downstream
+%         consumers (cell2Ldata, computePeakStatsTable) treat them as sets.
+%       - Inside a ThreadPool worker the MEX fast path is bypassed (MATLAB
+%         cannot execute MEX functions inside a thread worker); the stock
+%         IPT path produces identical output. Serial and ProcessPool calls
+%         use the MEX whenever the binary exists.
+%
+%   See Also: runWatershed, mergeWshedSegment, extractTFPeaks
 %
 %*******************************
 % Set variable inputs to empty *
@@ -73,6 +84,9 @@ if nargin < 7
 end
 if nargin < 8
     f_disp = [];
+end
+if nargin < 9 || isempty(use_trim_mex)
+    use_trim_mex = true;
 end
 
 %*************************
@@ -137,6 +151,33 @@ if f_valid_inputs
     shift_data = data - shift_val;
     shift_data(shift_data<0) = 0;
 
+    % MEX fast path: enabled whenever we're NOT inside a ThreadPool worker
+    % (MATLAB hard-blocks MEX functions inside ThreadPool). Serial calls
+    % and ProcessPool workers can call MEX on every host, including Apple
+    % Silicon.
+    %
+    % Detection is defensive. getCurrentTask() returns the task object
+    % inside a ProcessPool worker, empty on the client, and may return
+    % empty or error inside a ThreadPool worker. Check the task's Parent
+    % when present; otherwise fall back to gcp('nocreate'), which returns
+    % the enclosing pool on the client and inside ThreadPool workers
+    % (since they share the client session). Any failure in this chain
+    % falls back to "disabled" — the MATLAB path is bit-identical, and
+    % defaulting to disabled on uncertainty avoids the hard MEX crash
+    % that an incorrect enable would produce inside a ThreadPool worker.
+    try
+        task = getCurrentTask();
+        if ~isempty(task)
+            in_thread_pool = isa(task.Parent, 'parallel.ThreadPool');
+        else
+            pool = gcp('nocreate');
+            in_thread_pool = ~isempty(pool) && isa(pool, 'parallel.ThreadPool');
+        end
+    catch
+        in_thread_pool = true;  % safe default
+    end
+    use_trim_mex = use_trim_mex && ~in_thread_pool && exist(['trim_region_mex.' mexext], 'file') == 3;
+
     for ii = 1:num_regions
         if ~isempty(regions{ii})
             % Get pixel list of current region and sort by height
@@ -188,35 +229,122 @@ if f_valid_inputs
                 level = list_vals(jj);
                 sub_trim = sub_pixels(list_vals>=level);
 
-                % Form binary subimage
-                tmp_data = zeros(num_sub_rows,num_sub_cols);
-                tmp_data(sub_trim) = 1;
+                if use_trim_mex
+                    % Single-MEX fast path: runs imfill(4-conn)+bwconncomp+
+                    % pick-largest+boundary-set in one pass. Boundary is
+                    % returned as a set in ascending linear-index order;
+                    % downstream uses boundaries as sets only (see
+                    % cell2Ldata and computePeakStatsTable).
+                    [sub_trim_cc, sub_bnd] = trim_region_mex( ...
+                        double(sub_shift_data), int32(sub_trim), int32(conn));
+                    sub_trim_cc = double(sub_trim_cc);
 
-                % Fill any holes and get connected components
-                tmp_data = imfill(tmp_data,'holes');
-                tmp_cc = bwconncomp(tmp_data,conn);
+                    trimmed_regions{ii} = subLidx2FullLidx(sub_trim_cc, ...
+                        [num_sub_rows num_sub_cols], [i_min j_min], [num_rows num_cols]);
 
-                % Use largest connected component as trimmed region
-                trimmed_vols = cellfun(@(x)sum(sub_shift_data(x),'omitnan'),tmp_cc.PixelIdxList);
-                [~,idx] = max(trimmed_vols);
+                    % Convert boundary subimage linear indices -> full image
+                    if ~isempty(sub_bnd)
+                        trimmed_borders{ii} = subLidx2FullLidx(double(sub_bnd), ...
+                            [num_sub_rows num_sub_cols], [i_min j_min], [num_rows num_cols]);
+                    else
+                        trimmed_borders{ii} = [];
+                    end
+                else
+                    % Form binary subimage. logical() instead of double so
+                    % imreconstruct takes its faster binary path.
+                    tmp_data = false(num_sub_rows,num_sub_cols);
+                    tmp_data(sub_trim) = true;
 
-                % Get linear pixel indices of trimmed region in subimage
-                sub_trim_cc = tmp_cc.PixelIdxList{idx};
+                    % Inline imfill(tmp_data, 'holes'): reconstruct the
+                    % complement from its border pixels, then complement
+                    % back. Skips imfill's parse_inputs (~13 s serial
+                    % across the 326k calls) and the redundant padarray
+                    % (tmp_data is already padded by im_buffer=1 above,
+                    % so its borders are background — imfill would pad a
+                    % second time to the same effect). Bit-identical to
+                    % imfill('holes') on a pre-padded 2D logical input.
+                    %
+                    % NOTE: imfill('holes') defaults to conndef(2,'min')=4,
+                    % while imreconstruct defaults to 8 in 2D — pass 4
+                    % explicitly or the output diverges on diagonal gaps.
+                    not_bw = ~tmp_data;
+                    marker = false(num_sub_rows, num_sub_cols);
+                    marker(1, :)   = not_bw(1, :);
+                    marker(end, :) = not_bw(end, :);
+                    marker(:, 1)   = not_bw(:, 1);
+                    marker(:, end) = not_bw(:, end);
+                    tmp_data = ~imreconstruct(marker, not_bw, 4);
 
-                % Convert pixel indices back to full image
-                trimmed_regions{ii} = subLidx2FullLidx(sub_trim_cc,[num_sub_rows num_sub_cols],[i_min j_min],[num_rows num_cols]);
+                    % CC + pick-largest + boundary via stock IPT.
+                    %
+                    % HISTORY: 2026-04-16 we tried replacing bwconncomp+
+                    % cellfun(@sum)+max+bwboundaries with an inline path
+                    % (bwlabel + accumarray + 4-neighbor perimeter). The
+                    % synthetic bench on peaks(100/150/200) showed 3.74×
+                    % faster (10 vs 39 µs/call, 5609/5609 bit-identical).
+                    % But the full-pipeline runDYNAMO('night') got
+                    % consistently slower. Likely cause: the bench masks
+                    % were smaller than typical production masks, and on
+                    % larger masks my inline path's extra MATLAB-level
+                    % memory passes (allocating a full double label
+                    % matrix from bwlabel, then rebuilding structures
+                    % bwconncomp's internal C already had) cost more than
+                    % the parse-overhead savings. Reverted. Lesson:
+                    % synthetic microbenches can lie about production
+                    % scale — validate against real pipeline wallclock
+                    % before committing.
+                    tmp_cc = bwconncomp(tmp_data,conn);
 
-                % Get boundaries of trimmed region
-                tmp_data = zeros(num_sub_rows,num_sub_cols);
-                tmp_data(sub_trim_cc) = 1;
-                tmp2 = bwboundaries(tmp_data,conn,'noholes');
+                    % Use largest connected component as trimmed region
+                    trimmed_vols = cellfun(@(x)sum(sub_shift_data(x),'omitnan'),tmp_cc.PixelIdxList);
+                    [~,idx] = max(trimmed_vols);
 
-                % Convert row-col subimage boundaries to full image
-                tmp2{1}(:,1) = tmp2{1}(:,1) + i_min-1;
-                tmp2{1}(:,2) = tmp2{1}(:,2) + j_min-1;
+                    % Get linear pixel indices of trimmed region in subimage
+                    sub_trim_cc = tmp_cc.PixelIdxList{idx};
 
-                % Convert row-col boundaries to linear pixel indices
-                trimmed_borders{ii} = sub2ind([num_rows num_cols],tmp2{1}(:,1),tmp2{1}(:,2));
+                    % Convert pixel indices back to full image
+                    trimmed_regions{ii} = subLidx2FullLidx(sub_trim_cc,[num_sub_rows num_sub_cols],[i_min j_min],[num_rows num_cols]);
+
+                    % Inline 4-neighbor perimeter extraction.
+                    %
+                    % The HYBRID kept the stock bwconncomp above (its C
+                    % internal bwconncomp_2d is memory-efficient — stores
+                    % only PixelIdxList, not a full label matrix). But
+                    % bwboundaries' wrapper costs ~30-40 s of serial time
+                    % in the full-night profile from its string-validation
+                    % machinery (3 validatestring calls + mustBeNonzeroLengthText
+                    % + validateOptionalArg1 + stringToChar + an extra
+                    % internal bwlabel call — together ~978k
+                    % mustBeNonzeroLengthText calls, ~326k validateOptionalArg1
+                    % calls). We already have cc_mask from bwconncomp;
+                    % compute the boundary set directly instead.
+                    %
+                    % A pixel is on the boundary iff it's in the CC AND at
+                    % least one 4-neighbor is outside (or at image edge).
+                    % Zero external dependency — works on any MATLAB with
+                    % logical arrays. Produces the same pixel SET as
+                    % bwboundaries(cc_mask,conn,'noholes') minus the
+                    % closing-loop duplicate bwboundaries emits to close
+                    % its traced contour; every downstream consumer
+                    % (ismembc, setxor, cell2Ldata painting) treats
+                    % borders as sets so the duplicate was meaningless.
+                    %
+                    % Memory-safe: operates on cc_mask (logical, same size
+                    % as the subimage) — no double-precision label matrix
+                    % or per-call cell rebuilding like the
+                    % bwlabel+accumarray path that regressed production.
+                    cc_mask = false(num_sub_rows,num_sub_cols);
+                    cc_mask(sub_trim_cc) = true;
+                    padded = false(num_sub_rows+2, num_sub_cols+2);
+                    padded(2:end-1, 2:end-1) = cc_mask;
+                    bnd_mask = cc_mask & ~( ...
+                        padded(1:end-2, 2:end-1) & padded(3:end, 2:end-1) & ...
+                        padded(2:end-1, 1:end-2) & padded(2:end-1, 3:end));
+                    [bi, bj] = find(bnd_mask);
+                    bi = bi + (i_min-1);
+                    bj = bj + (j_min-1);
+                    trimmed_borders{ii} = sub2ind([num_rows num_cols], bi, bj);
+                end
 
                 if f_verb > 1
                     if mod(ii,50)==0

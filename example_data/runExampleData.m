@@ -1,4 +1,4 @@
-function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runExampleData(data_range, default_verbose, run_app, varargin)
+function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs, timings] = runExampleData(data_range, default_verbose, run_app, varargin)
 % =========================================================================
 %                  DYNAM-O Toolbox  |  Prerau Laboratory
 %       Characterizing Individualized Neural Dynamics in Sleep EEG
@@ -104,11 +104,11 @@ else
     end
 
     if skip_SOPH
-        [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options,...
+        [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts,~,timings] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options,...
             'verbose', verbose, 'plot_on', plot_on);
         SOPHs = [];
     else
-        [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options,...
+        [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs, timings] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options,...
             'verbose', verbose, 'plot_on', plot_on);
     end
 end
