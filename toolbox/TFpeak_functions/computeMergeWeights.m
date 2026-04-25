@@ -1,10 +1,15 @@
-function e_wts = computeMergeWeights(rgn,data,rgn_lbls,rgn_bnds,amatr,merge_rule,f_verb,verb_pref)
+function e_wts = computeMergeWeights(rgn,data,rgn_lbls,rgn_bnds,amatr,merge_rule,f_verb,verb_pref,lbl_map)
 % COMPUTEMERGEWEIGHTS determines the weights of directed adjacencies between regions
 % in a segmented 2D image. The weights are computed by edgeWeight, which is
 % internalized for speed.
 %
 % Usage:
-%    e_wts = computeMergeWeights(rgn,data,rgn_lbls,rgn_bnds,amatr,merge_rule,f_verb,verb_pref)
+%    e_wts = computeMergeWeights(rgn,data,rgn_lbls,rgn_bnds,amatr,merge_rule,f_verb,verb_pref,lbl_map)
+%
+% Optional lbl_map: containers.Map mapping region label -> slot index.
+% When provided, replaces the per-edge O(R) `rgn_lbls==amatr(ii,X)` linear
+% scans with O(1) lookups. mergeWshedSegment already builds this map; pass
+% it here to avoid rebuilding label-to-slot indices inside the hot loop.
 %
 %   Inputs:
 %   rgn      -- a 1D cell array with each cell containing a vector of linear
@@ -51,6 +56,9 @@ function e_wts = computeMergeWeights(rgn,data,rgn_lbls,rgn_bnds,amatr,merge_rule
 %
 % =========================================================================
 
+if nargin < 9
+    lbl_map = [];
+end
 if nargin < 8
     verb_pref = [];
 end
@@ -96,13 +104,22 @@ else
             disp([verb_pref 'Weighting regions...']);
         end
         % For each adjacency, determine directed edge weight
+        have_map = ~isempty(lbl_map);
         for ii = 1:length(e_wts)
-            % Get "to region" of current adjacency
-            rgn_lbl_ii = rgn_lbls==amatr(ii,1); % logical indicating label index of "to region"
+            % Get "to region" of current adjacency (O(1) via map, else O(R) scan)
+            if have_map
+                rgn_lbl_ii = lbl_map(amatr(ii,1));
+            else
+                rgn_lbl_ii = rgn_lbls==amatr(ii,1);
+            end
             rgn_ii = rgn{rgn_lbl_ii}; % linear indices of pixels of "to region"
 
             % Get "from region" of current adjacency
-            rgn_lbl_jj = rgn_lbls==amatr(ii,2); % logical indicating label index of "from region"
+            if have_map
+                rgn_lbl_jj = lbl_map(amatr(ii,2));
+            else
+                rgn_lbl_jj = rgn_lbls==amatr(ii,2);
+            end
             rgn_jj = rgn{rgn_lbl_jj}; % linear indices of pixels of "from region"
 
             % Get boundaries of current regions
@@ -148,8 +165,10 @@ function e = edgeWeightEqual(rgn_ii,bnds_ii,rgn_jj,bnds_jj,data)
 
 % fastest version to get intersection of "to region" boundary with "from region"
 % adj_bnds = bnds_ii(ismember(bnds_ii,bnds_jj));
-sorted_jj = sort(bnds_jj);
-adj_mask  = ismembc(bnds_ii, sorted_jj);
+% bnds_jj is already sorted ascending (borders are sorted at Ldata2graph's
+% source and every uniquehelper update keeps them sorted), so the explicit
+% sort here was redundant — it fired on all 15.7M calls to this function.
+adj_mask  = ismembc(bnds_ii, bnds_jj);
 adj_bnds  = bnds_ii(adj_mask);
 
 %Max data value of the adjacent boundary pixels

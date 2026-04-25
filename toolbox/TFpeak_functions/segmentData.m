@@ -1,23 +1,25 @@
 function  [data_segs, x_segs, x_inds] = segmentData(spect, stimes, sfreqs, seg_time, f_verb, verb_pref)
-%SEGMENTDATA takes a full spectrogram and chunks it into separate segments
+%SEGMENTDATA  Chunk a spectrogram into fixed-duration segments
 %
 %   Usage:
 %       [data_segs, x_segs, x_inds] = segmentData(spect, stimes, sfreqs, seg_time, f_verb, verb_pref)
 %
-%   Inputs:
-%   spect         -- 2D matrix of image data. defaults to peaks(100).
-%   stimes        -- x axis of image data. default 1:size(data,2).
-%   sfreqs        -- y axis of image data. default 1:size(data,1).
-%   seg_time      -- seconds per seg to use (default = 30).
-%   f_verb        -- number indicating depth of output text statements of progress.
-%                   0 - no output.
-%                   1 - output current function level.
-%   verb_pref    -- prefix string for verbose output. defaults to ''.
+%   Required Inputs:
+%       spect:     [F x T] double - spectrogram data
+%
+%   Optional Inputs:
+%       stimes:    [1 x T] double - spectrogram time axis (s) (default: 1:size(spect,2))
+%       sfreqs:    [1 x F] double - spectrogram frequency axis (Hz) (default: 1:size(spect,1))
+%       seg_time:  double - target segment duration (s) (default: 30)
+%       f_verb:    integer - verbosity: 0 silent, 1 current level (default: 0)
+%       verb_pref: char - prefix string for verbose output (default: '')
 %
 %   Outputs:
-%   data_segs: segmented spectrogram data
-%   x_segs: x-values for segmented spectrogram data
-%   x_inds: x-value indices for segmented spectrogram data
+%       data_segs: [1 x S] cell - segmented spectrogram data
+%       x_segs:    [1 x S] cell - time values within each segment (s)
+%       x_inds:    [1 x S] cell - column indices of each segment into the original spect
+%
+%   See Also: runSegmentedData, extractTFPeaks
 %
 %
 %*************************

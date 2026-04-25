@@ -2,33 +2,44 @@
 <img src="https://prerau.bwh.harvard.edu/wp-content/uploads/2023/01/DYNAM-O-Logo-medium.png" width="450">
 </p>
 
-<p align="center"><i>Characterizing Individualized Neural Dynamics in Sleep EEG</i></p>
+## DYNAM-O: The Dynamic Oscillation Toolbox for MATLAB
 
-<p align="center">
-<b>Developed by the Prerau Laboratory</b><br>
-<a href="https://sleepeeg.org">sleepeeg.org</a> |
-<a href="https://prerau.bwh.harvard.edu/dynam-o/">Tutorials</a> |
-<a href="https://github.com/preraulab/DYNAM-O">GitHub</a>
-</p>
+This repository contains the MATLAB toolbox for extracting transient oscillatory events from sleep EEG and characterizing them via slow-oscillation power and phase histograms.
+
+### Start here — the DYNAM-O File Manager (GUI)
+
+The **File Manager** is the primary interface for DYNAM-O. It is a graphical application for loading EDF recordings and hypnograms, configuring channels and analysis options, and running batch analyses across many subjects without writing any MATLAB code. Standalone (compiled) executables for macOS, Windows, and Linux are in development; until those ship, the File Manager runs inside MATLAB.
+
+- **File Manager guide:** [`DYNAMOFileManager_README.md`](DYNAMOFileManager_README.md)
+- **Launch from MATLAB:** `DYNAMOFileManager();`
+
+Most users should start with the File Manager. The rest of this README covers the **MATLAB DYNAM-O API** — `runDYNAMO`, the `DYNAMO` class, and the underlying pipeline functions — for users writing their own analysis scripts or integrating DYNAM-O into a larger MATLAB workflow.
+
+### MATLAB API at a glance
+
+**What you'll need:** a single-channel EEG time series (`data`, `Fs`) and a hypnogram (`stage_times`, `stage_vals`). The sampling rate can be anything reasonable (≥100 Hz); stages use the DYNAM-O convention `1=N3, 2=N2, 3=N1, 4=REM, 5=Wake` (see warning in [Required inputs](#rundynamo)).
+**What you'll get:** a `stats_table` (one row per detected TF-peak), a `SOPHs` struct containing SO-power and SO-phase histograms, and a summary figure showing hypnogram, spectrogram, TF-peak scatter, and both histograms.
+**Time to first plot:** ~60–140 s on the bundled `'segment'` example (platform-dependent), including one-time MEX compile.
+
+> **Staging label gotcha:** DYNAM-O uses `1=N3, 2=N2, 3=N1, 4=REM, 5=Wake` — this is the **reverse** of the convention used by most EDF stagers and EDF+ annotation files. If your histograms come out empty or inverted, check stage numbering first.
 
 ---
 
-### Attribution
+## License
 
-If you use this toolbox in publications or derived work, please cite:
+BSD 3-Clause — see [LICENSE](LICENSE) at the repository root.
 
-> He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J. "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics in Sleep EEG", 2026 — *Pending Publication*
+---
 
+### Citation
+
+Please cite both of the following when using this toolbox:
+
+> He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M. J. *DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics in Sleep EEG*, bioRxiv, 2026 (pending journal publication).
 > Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S., Manoach, D. S., Stickgold, R., Prerau, M. J. "Transient Oscillation Dynamics During Sleep Provide a Robust Basis for Electroencephalographic Phenotyping and Biomarker Identification", *Sleep*, 2022; zsac223. https://doi.org/10.1093/sleep/zsac223
 
 If using the included perceptually uniform colormaps (`gouldian`, `rainbow4`), also cite:
 > Peter Kovesi. *Good Colour Maps: How to Design Them*. arXiv:1509.03700 [cs.GR] 2015. https://arxiv.org/abs/1509.03700
-
----
-
-## DYNAM-O: The Dynamic Oscillation Toolbox for MATLAB
-
-This repository contains the updated and optimized MATLAB toolbox for extracting transient oscillatory events from sleep EEG and characterizing them via slow-oscillation power and phase histograms. A [Python port (pyDYNAM-O)](https://github.com/preraulab/pyDYNAM-O) is also available.
 
 ---
 
@@ -38,6 +49,8 @@ This repository contains the updated and optimized MATLAB toolbox for extracting
 - [Background and Motivation](#background-and-motivation)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
+- [Performance and Platform Setup](#performance-and-platform-setup)
+- [Recipes (advanced usage)](#recipes-advanced-usage)
 - [Main Pipeline Functions](#main-pipeline-functions)
   - [runDYNAMO](#rundynamo)
   - [DYNAMO (OOP class)](#dynamo-oop-class)
@@ -52,6 +65,7 @@ This repository contains the updated and optimized MATLAB toolbox for extracting
 - [Output Reference](#output-reference)
   - [stats_table — TF-Peak Features](#stats_table--tf-peak-features)
   - [SOPHs — Histogram Struct](#sophs--histogram-struct)
+  - [timings — Per-Stage Wallclock](#timings--per-stage-wallclock)
 - [Algorithm Details](#algorithm-details)
   - [Part 1: TF-Peak Detection](#part-1-tf-peak-detection)
   - [Part 2: Feature Computation](#part-2-feature-computation)
@@ -110,12 +124,23 @@ These produce **SO-power** and **SO-phase histograms** — comprehensive, contin
 
 ## Installation
 
-Clone the repository with submodules:
+### Requirements
+
+- **MATLAB R2018a or newer** (the MEX accelerator uses the R2018a CppMexFunction API).
+- **Memory:** 8 GB RAM is comfortable for full-night recordings; 4 GB works for shorter segments.
+- Required MATLAB toolboxes: see [Required Toolboxes](#required-toolboxes).
+
+### 1. Clone the repository with submodules
 
 ```bash
-mkdir DYNAM-O_dev
-git clone --recursive git@github.com:preraulab/DYNAM-O_dev.git DYNAM-O_dev
+git clone --recursive https://github.com/preraulab/DYNAM-O.git
 git submodule foreach --recursive git checkout master
+```
+
+Submodule initialization is **required** — the toolbox depends on helper repos vendored as submodules. If you clone without `--recursive`, multitaper-spectrogram and plotting helpers will be missing and `runDYNAMO` will fail with `Undefined function` errors. If you already cloned without it, run:
+
+```bash
+git submodule update --init --recursive
 ```
 
 To update submodules later:
@@ -124,7 +149,39 @@ To update submodules later:
 git submodule update --remote
 ```
 
-No separate installation step is needed. `runDYNAMO` automatically adds the toolbox to the MATLAB path via `addpath(genpath(...))`.
+### 2. MATLAB path
+
+The first time you call `runDYNAMO`, it adds the toolbox to the MATLAB path via `addpath(genpath('toolbox'))`, which also covers the MEX directory at `toolbox/TFpeak_functions/mex/`. No separate `install.m` is required beyond the submodule init above.
+
+### 3. (Optional) Set up a C++ compiler for the MEX accelerator
+
+The pipeline ships with a C++ MEX accelerator (`trim_region_mex`) that speeds up the trim stage on **every platform** — Apple Silicon, Intel Mac, Linux, and Windows. The repo ships prebuilt binaries for Linux x86_64 (`.mexa64`) and Apple Silicon (`.mexmaca64`); Windows (`.mexw64`) and Intel Mac (`.mexmaci64`) binaries are built on first use. To let MATLAB build them, configure a C++ compiler:
+
+```matlab
+mex -setup cpp
+```
+
+If `mex -setup` fails, install the platform toolchain first:
+- **Linux**: `sudo apt install build-essential` (or distribution equivalent)
+- **Windows**: MSVC Build Tools or MinGW-w64 via MATLAB Add-Ons
+- **macOS (Apple Silicon or Intel)**: `xcode-select --install` in Terminal
+
+Once `mex -setup cpp` succeeds, the MEX auto-compiles on your first `runDYNAMO` call (~30 s one-time cost). You don't need to do anything manually. The first run will print:
+
+```
+  Compiling trim_region_mex for this platform (first-time only)...
+  MEX compilation complete.
+```
+
+If compilation fails (e.g., no compiler configured, or on an older Mac where Xcode CLT can't install), the pipeline silently falls back to the MATLAB implementation — correctness is preserved, just a bit slower on the trim stage. The MEX is also **not used when the user overrides `parallel_mode` to `'Threads'`** (MATLAB hard-blocks MEX calls inside ThreadPool workers); the same MATLAB fallback runs in that case. See [Override parallel mode](#override-parallel-mode) below.
+
+### 4. Verify the install
+
+```matlab
+runDYNAMO('segment');   % ~90 min excerpt, should complete in 1-3 min depending on platform
+```
+
+A summary figure appears and a timing table prints at the end.
 
 ---
 
@@ -133,22 +190,39 @@ No separate installation step is needed. `runDYNAMO` automatically adds the tool
 ### Run the bundled example
 
 ```matlab
-% Segment (~90 minutes):
+% Segment (~90 minutes of example data):
 runDYNAMO('segment');
 
 % Full night:
 runDYNAMO('night');
 ```
 
-This loads `example_data/example_data.mat`, runs the full pipeline, and produces a summary figure showing the hypnogram, spectrogram, TF-peak scatter, and SO-power/phase histograms.
+This loads `example_data/example_data.mat`, runs the full pipeline, and produces a summary figure with the hypnogram, spectrogram, TF-peak scatter, and SO-power/phase histograms. Expect ~60–140 s on first run (platform-dependent; first run also compiles MEX).
 
-### Run on your own data
+### Minimal call on your own data
 
 ```matlab
-% Minimal call — all options use defaults
-[stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = ...
-    runDYNAMO(data, Fs, stage_times, stage_vals);
+% All options use defaults
+[stats_table, ~, ~, ~, ~, ~, ~, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals);
 ```
+
+**What you get back:**
+- `stats_table` — one row per detected TF-peak, with columns for time, frequency, amplitude, bandwidth, duration, sleep stage, SO-power and SO-phase.
+- `SOPHs` — struct containing the 2D SO-power and SO-phase histograms (aggregated across peaks) plus bin definitions and optional parametric/spline fits. The SOPHs are the per-subject summary; the stats_table is the raw per-peak data.
+- A summary figure (unless `'plot_on', false`).
+
+### Batch example (many subjects, no plots)
+
+```matlab
+for k = 1:numel(subjects)
+    close all
+    [stats_table{k}, ~, ~, ~, ~, ~, ~, SOPHs{k}] = runDYNAMO( ...
+        subjects(k).data, subjects(k).Fs, subjects(k).stage_times, subjects(k).stage_vals, ...
+        'plot_on', false, 'verbose', false);
+end
+```
+
+For more recipes (precomputed stats_table reuse, option presets, skipping the fits, saving output images), see [Recipes (advanced usage)](#recipes-advanced-usage).
 
 ### OOP interface
 
@@ -159,10 +233,167 @@ d.fitParamBasis();
 fh = d.displaySummaryPlot();
 ```
 
+Use `runDYNAMO` for one-shot scripted or batch analysis. Use the `DYNAMO` class when you want to iterate on options against the same recording without reloading the data — e.g., re-run with different SOPH bin sizes or fit settings by calling `d.updateOptions(...)` and `d.runDYNAMO()` again.
+
 ### GUI batch processing
 
 ```matlab
 DYNAMOFileManager();
+```
+
+---
+
+## Performance and Platform Setup
+
+### What runs where
+
+The pipeline uses a single default on every platform: **ProcessPool + MEX**. ThreadPool is supported as an explicit opt-in for users who want it (primarily on 8-core Apple Silicon, where it can still edge out ProcessPool on full-night runs).
+
+| Platform | Default pool | Trim MEX | Notes |
+|---|---|---|---|
+| **Apple Silicon macOS** (M1/M2/M3/M4) | **ProcessPool** | Enabled | MEX runs inside ProcessPool workers on every host; the `'Threads'` override below still wins by ~8% on 8-core M2/M3 for full-night recordings |
+| **Intel macOS** | **ProcessPool** | Enabled if a C++ compiler is configured, else MATLAB fallback | |
+| **Linux** | **ProcessPool** | Enabled (GCC MEX) | NUMA locality + MEX; scales cleanly to 20+ cores |
+| **Windows** | **ProcessPool** | Enabled (MSVC MEX) | ProcessPool is clearly faster than ThreadPool on Windows regardless of core count |
+
+Both defaults are in `setup_parallel_pool.m` (pool type → ProcessPool) and `trimWshedRegions.m` (MEX on/off → runtime ThreadPool detection with a safe-disable fallback). Both live under `toolbox/` and are on the MATLAB path after the first `runDYNAMO` call. The MEX gate is not machine-specific: it inspects the current pool at runtime and auto-disables inside a ThreadPool worker (where MATLAB hard-blocks MEX execution), otherwise enables.
+
+### Override parallel mode
+
+```matlab
+det = detection_opts();
+det.parallel_mode = 'Processes';   % default (ProcessPool + MEX)
+det.parallel_mode = 'Threads';     % force ThreadPool; trim_region_mex auto-disables, MATLAB fallback is bit-identical
+det.parallel_mode = '';            % same as 'Processes'
+[stats_table, ~, ~, ~, ~, ~, ~, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, ...
+    baseline_opts(), det);
+```
+
+- **`'Processes'`** — the default. Creates a ProcessPool; `trim_region_mex` runs inside each worker. This is the fastest path on every platform we've characterized except 8-core Apple Silicon at full-night scale.
+- **`'Threads'`** — forces a ThreadPool. `trim_region_mex` detects the ThreadPool context at runtime and falls back to the pure-MATLAB trim path, which is bit-identical. The override is useful on 8-core Apple Silicon, where Mach-IPC cost makes ProcessPool slower than ThreadPool despite the MEX win. On 16+-core Apple Silicon (M4 Max and up) and on all Linux/Windows hosts, the override will run slower and should only be used for debugging or reproduction.
+- **`''`** (empty) — treated identically to `'Processes'`.
+
+The `DYNAMO` class exposes the same knob via `d.detection_options.parallel_mode`.
+
+### Expected runtimes on bundled `'night'` example
+
+| Platform | Wallclock |
+|---|---|
+| Apple M3 Mac (8 cores, ProcessPool) | ~55-65 s |
+| Apple M4 Max (16 cores, ProcessPool) | ~55 s |
+| Linux 24-core Threadripper (ProcessPool) | ~60-65 s |
+| Linux 32-core Threadripper (ProcessPool) | ~35-40 s |
+| Windows 6-core Ryzen (ProcessPool) | ~210-230 s |
+
+Single-run variance is typically ±5-15% depending on thermal / OS scheduling. For benchmarking, run 3-5 times and take the median.
+
+> If a run on the bundled `'segment'` example takes more than ~5 minutes without producing any output in the Command Window, something is wrong — most often a stalled parallel pool startup, a missing submodule, or antivirus scanning the MEX compile. Check the Troubleshooting section below.
+
+### Troubleshooting
+
+- **Figures accumulate across repeated runs**: `runDYNAMO` opens a summary figure when `plot_on=true`. In loops, pass `'plot_on', false` or call `close all` between iterations.
+- **"Trim MEX: not built" message on first run**: expected. It will auto-compile. If this persists across runs, `mex -setup cpp` isn't configured — see Installation step 3.
+- **MATLAB license error in batch mode (e.g., running under `matlab -batch` on a cluster)**: your license server is unreachable from the batch host. Interactive sessions are unaffected. A VPN is typically required.
+- **`Undefined function 'multitaper_spectrogram'` or similar missing-function errors**: the git submodules were not initialized. Run `git submodule update --init --recursive` in the repo root.
+- **NaN values in EEG**: the pipeline does not tolerate NaNs in `data`. Either interpolate across NaN runs or mark them via the artifact detector. A single NaN in `data` will silently propagate through the spectrogram and produce empty histograms.
+- **`stage_times` and `stage_vals` length mismatch**: both must be the same length; `stage_times` must be non-decreasing.
+- **`Fs` does not match the length of `data`**: recording duration is `length(data)/Fs`. If your `stage_times` extend past that duration, the validator will reject the staging.
+- **Recording is shorter than one `seg_time` window** (default 30 s): the pipeline requires at least one complete segment. Reduce `detection_opts.seg_time` for very short recordings.
+- **Hypnogram starts at `t > 0`**: `stage_times` is interpreted in the same seconds-from-start frame as `data`. If your hypnogram starts at, e.g., 300 s (because recording began before lights-off), either shift `stage_times` to start at 0 or pass an explicit `time_range` matching the scored span.
+- **Histograms returned empty / warnings about "power histogram is empty"**: often a staging-convention mismatch (see the gotcha at the top of this README), or `time_range` too short for SOPH minimum time-in-bin.
+- **"Cmetric_stages invalid, expected finite"**: requires version v1.1+ (fixed upstream).
+
+---
+
+## Recipes (advanced usage)
+
+`runDYNAMO` can be driven in several configurations depending on what you need. Each recipe below is a minimal modification to the basic call in [Quick Start](#quick-start).
+
+### Full pipeline (default)
+
+```matlab
+[stats_table, spect, stimes, sfreqs, data_tr, t_tr, artifacts, SOPHs] = ...
+    runDYNAMO(data, Fs, stage_times, stage_vals);
+```
+
+Runs everything: multitaper spectrogram → artifact rejection → TF-peak extraction (both passes) → refinement → peak features → SO-power/phase histograms → parametric + spline fits → summary figure. Takes ~125-220 s on bundled example depending on platform.
+
+### Capture per-stage timings
+
+Add a 9th output to collect a timing struct with per-stage wallclock seconds:
+
+```matlab
+[~, ~, ~, ~, ~, ~, ~, SOPHs, timings] = runDYNAMO(data, Fs, stage_times, stage_vals);
+disp(timings)
+```
+
+A sorted, millisecond-precision summary table also prints at the end of verbose runs. Useful for benchmarking or profiling specific stages without the full MATLAB profiler. Fields: `pool_setup`, `spect_pass1`, `artifact`, `baseline_pass1`, `extract_pass1`, `spect_pass2`, `baseline_pass2`, `extract_pass2`, `refine`, `peak_stage`, `peak_sopower`, `peak_sophase`, `soph_sopower_hist`, `soph_sophase_hist`, `plot_summary`, `fit_param_basis`, `fit_spline_basis`, `total`.
+
+### Fast iteration with a precomputed stats_table
+
+The TF-peak extraction takes 80-90% of total wallclock. If you already have the peak table from an earlier run and want to iterate on downstream parameters (SOPH bin sizes, fit options, plot tweaks) without recomputing peaks:
+
+```matlab
+% First full run — save the peak table
+[stats_table, ~, ~, ~, ~, ~, ~, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals);
+save('run_outputs.mat', 'stats_table', 'data', 'Fs', 'stage_times', 'stage_vals');
+
+% Subsequent iteration — passes the saved stats_table to skip TF-peak extraction
+[~, ~, ~, ~, ~, ~, ~, SOPHs, timings] = runDYNAMO(data, Fs, stage_times, stage_vals, ...
+    'stats_table', stats_table, 'plot_on', false);
+```
+
+Typical speedup: ~125 s → ~5-8 s (15-25×). Cuts the iteration loop for histogram / fit tuning to seconds.
+
+### Batch / no-plot mode
+
+See the batch example under [Quick Start](#minimal-call-on-your-own-data). `close all` inside the loop is belt-and-suspenders — `plot_on=false` suppresses the summary figure, but a few internal paths may still create sub-figures, and `close all` flushes them between iterations to prevent memory accumulation.
+
+### Skip the fit stages
+
+Parametric and spline fits add ~5-15 s. If you only need the histograms themselves:
+
+```matlab
+[~, ~, ~, ~, ~, ~, ~, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, ...
+    'fit_param_basis', false, ...
+    'fit_spline_basis', false);
+```
+
+### Save the output figure
+
+```matlab
+runDYNAMO(data, Fs, stage_times, stage_vals, ...
+    'save_output_image', true, ...
+    'output_fname', 'subject_001_summary');
+```
+
+Writes `subject_001_summary.png` (PNG, 200 DPI). `output_fname` is passed directly to MATLAB's `print`, so a bare name is resolved against the **current working directory**. To write elsewhere, provide an absolute path (e.g., `/data/outputs/subject_001_summary`). Do not include the `.png` extension — `print -dpng` adds it.
+
+### Only the TF-peak table (no SOPH)
+
+Request only 7 outputs and the SOPH histograms + fits are skipped entirely:
+
+```matlab
+[stats_table, spect, stimes, sfreqs, data_tr, t_tr, artifacts] = ...
+    runDYNAMO(data, Fs, stage_times, stage_vals);
+```
+
+Cuts ~10 s from a typical run.
+
+### Option presets for custom studies
+
+```matlab
+% Use the Stokes-2023 paper's published parameters
+det = detection_opts('quality_setting', 'stokes_2023');
+
+% Highest-precision detection (no spectrogram downsampling)
+det = detection_opts('quality_setting', 'precision');
+
+% Custom SO-power normalization
+soph = SOpowerphasehist_opts('SOpower_norm_method', 'percentile');
+
+[stats_table, ~, ~, ~, ~, ~, ~, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, ...
+    'detection_options', det, 'SOPH_options', soph);
 ```
 
 ---
@@ -174,18 +405,20 @@ DYNAMOFileManager();
 The primary functional entry point. Orchestrates the complete pipeline and returns all outputs.
 
 ```matlab
-[stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs] = ...
+[stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs, timings] = ...
     runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options, ...)
 ```
+
+The 9th output `timings` is optional — omit it and existing callers work unchanged. See [Running Modes](#running-modes) for examples of each invocation style.
 
 **Required inputs:**
 
 | Argument | Type | Description |
 |---|---|---|
-| `data` | `[N×1] double` | Single-channel EEG time series |
+| `data` | `[N×1]` or `[1×N]` double | Single-channel EEG time series (accepts row or column; internally reshaped to column) |
 | `Fs` | `double` | Sampling frequency (Hz) |
 | `stage_times` | `[1×S] double` | Sleep stage time markers (s) |
-| `stage_vals` | `[1×S] double` | Stage labels: 1=N3, 2=N2, 3=N1, 4=REM, 5=Wake |
+| `stage_vals` | `[1×S] double` | Stage labels — **DYNAM-O convention: 1=N3, 2=N2, 3=N1, 4=REM, 5=Wake** (opposite of the ordering used by many EDF stagers) |
 
 **Optional name-value inputs:**
 
@@ -209,11 +442,13 @@ The primary functional entry point. Orchestrates the complete pipeline and retur
 
 **Outputs:** See [Output Reference](#output-reference).
 
+> **Positional vs. name-value forms.** Because `runDYNAMO` uses `addOptional`, each optional argument can be supplied either by name (`'time_range', [t0 t1]`) or by position (4th, 5th, 6th, … after the four required inputs, in the order listed above). As with any `addOptional` chain, once you skip a positional argument you must switch to name-value for the rest. Both forms work; mixing them works too.
+
 ---
 
 ### `DYNAMO` (OOP class)
 
-An object-oriented wrapper around `runDYNAMO` that stores data, options, and results as properties.
+An object-oriented wrapper around `runDYNAMO` that stores data, options, and results as properties. Use `runDYNAMO` for one-shot scripted/batch analysis; use `DYNAMO` when you want to re-run with tweaked options on the same data without reloading from disk.
 
 ```matlab
 d = DYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options);
@@ -223,7 +458,7 @@ d.fitSplineBasis();
 fh = d.displaySummaryPlot();
 ```
 
-**Key properties:** `Data`, `Fs`, `stage_times`, `stage_vals`, `stats_table`, `spect`, `stimes`, `sfreqs`, `artifacts`, `SOPHs`
+**Key properties:** `data`, `Fs`, `stage_times`, `stage_vals`, `stats_table`, `spect`, `stimes`, `sfreqs`, `artifacts`, `SOPHs`, plus the option structs (`baseline_options`, `detection_options`, `SOPH_options`, and the four `param_basis_*` / `spline_basis_*` option structs), and `time_range`. The class also accepts a `fit_SOPH` logical option to toggle both parametric and spline fits together (equivalent to setting `fit_param_basis` and `fit_spline_basis` on `runDYNAMO`).
 
 **Key methods:**
 
@@ -270,7 +505,7 @@ Runs the watershed-based TF-peak extraction pipeline on raw EEG.
 
 | Argument | Description |
 |---|---|
-| `data` | `[1×N] double` — EEG time series |
+| `data` | `[N×1]` or `[1×N]` double — EEG time series (row or column accepted) |
 | `Fs` | Sampling frequency (Hz) |
 | `stage_vals` | Sleep stage values at each `stage_times` |
 | `stage_times` | Timestamps of stage values |
@@ -502,6 +737,43 @@ The `SOPHs` struct returned by `runDYNAMO` contains:
 | `phase_param_fit` | Parametric fit results for SO-phase histogram (if `fit_param_basis=true`) |
 | `pow_spline_fit` | Spline fit for SO-power histogram (if `fit_spline_basis=true`) |
 | `phase_spline_fit` | Spline fit for SO-phase histogram (if `fit_spline_basis=true`) |
+
+---
+
+### `timings` — Per-Stage Wallclock
+
+Optional 9th output of `runDYNAMO`. Struct with per-stage wallclock seconds. Stages that didn't run in a given invocation (optional plots, second-pass watershed if disabled, etc.) are either absent or zero-valued. Captured with `tic`/`toc` around each stage boundary; the sum is within ~0.1 s of the total wallclock.
+
+| Field | Stage |
+|---|---|
+| `pool_setup` | `setup_parallel_pool` |
+| `mex_build` | First-time MEX auto-compile (zero after first run) |
+| `spect_pass1` | Multitaper spectrogram, first pass (1 s window) |
+| `artifact` | `detect_artifacts` |
+| `baseline_pass1` | `computeBaseline`, first pass |
+| `extract_pass1` | TF-peak extraction across all segments, first pass |
+| `spect_pass2` | Multitaper spectrogram, second pass (2 s window) |
+| `baseline_pass2` | Baseline recompute + spectrogram masking, second pass |
+| `extract_pass2` | TF-peak extraction, second pass (finer freq resolution) |
+| `refine` | `refinePeakFrequency` (Hann-window peak refinement) |
+| `peak_stage` | `computePeakStage` (assign sleep stage to each peak) |
+| `peak_sopower` | `computePeakSOpower` |
+| `peak_sophase` | `computePeakSOphase` |
+| `soph_sopower_compute` | SO-power recompute inside `SOpowerphaseHistogram` (typically 0 since already computed above) |
+| `soph_sophase_compute` | SO-phase recompute inside `SOpowerphaseHistogram` (typically 0) |
+| `soph_sopower_hist` | `SOpowerHistogram` (2D histogram construction) |
+| `soph_sophase_hist` | `SOphaseHistogram` |
+| `plot_summary` | `displaySummaryPlot` (only if `plot_on=true`) |
+| `fit_param_basis` | Gaussian/von Mises parametric fit (if `fit_param_basis=true`) |
+| `fit_spline_basis` | Spline basis fit (if `fit_spline_basis=true`) |
+| `total` | End-to-end wallclock from start to finish |
+
+Use this struct for programmatic benchmarking or CI timing assertions:
+
+```matlab
+[~,~,~,~,~,~,~, ~, timings] = runDYNAMO(data, Fs, stage_times, stage_vals);
+assert(timings.total < 300, 'Pipeline regressed past the 5-minute CI budget');
+```
 
 ---
 
@@ -832,3 +1104,9 @@ git submodule update --remote
 ## Documentation and Tutorials
 
 For in-depth documentation and video tutorials, visit the [Prerau Lab DYNAM-O page](https://prerau.bwh.harvard.edu/DYNAM-O/).
+
+---
+
+## Python Port
+
+A Python port, [**pyDYNAM-O**](https://github.com/preraulab/pyDYNAM-O), is available for Python-native workflows (e.g., MNE-based pipelines). **The Python port implements only the TF-peak detection and SO-power / SO-phase histogram pipeline from Stokes et al. (*Sleep*, 2022)**; it does not include the parametric and spline basis fits, statistical testing, File Manager GUI, performance work, or other extensions introduced in this MATLAB toolbox and described in He et al. (2026, bioRxiv). pyDYNAM-O is not currently being updated to track those additions. Use the MATLAB implementation for the full DYNAM-O feature set, the File Manager GUI, and the forthcoming standalone executables.

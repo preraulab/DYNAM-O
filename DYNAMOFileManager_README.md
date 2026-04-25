@@ -1,50 +1,30 @@
 <p align="center">
-<img src="https://prerau.bwh.harvard.edu/wp-content/uploads/2023/01/DYNAM-O-Logo-medium.png" width="450">
+<img src=https://user-images.githubusercontent.com/78376124/214062562-4f8fc73b-5a0a-4cf7-b219-9d0de101528d.png>
 </p>
-
-<p align="center"><i>Characterizing Individualized Neural Dynamics in Sleep EEG</i></p>
-
-<p align="center">
-<b>Developed by the Prerau Laboratory</b><br>
-<a href="https://sleepeeg.org">sleepeeg.org</a> |
-<a href="https://prerau.bwh.harvard.edu/dynam-o/">Tutorials</a> |
-<a href="https://github.com/preraulab/DYNAM-O">GitHub</a>
-</p>
-
----
-
-### Attribution
-
-If you use this toolbox in publications or derived work, please cite:
-
-> He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M.J. "DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics in Sleep EEG", *bioRxiv*, 2026 -- Pending Journal Publication
-
-> Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S., Manoach, D. S., Stickgold, R., Prerau, M. J. "Transient Oscillation Dynamics During Sleep Provide a Robust Basis for Electroencephalographic Phenotyping and Biomarker Identification", *Sleep*, 2022; zsac223. https://doi.org/10.1093/sleep/zsac223
-
----
 
 # DYNAM-O File Manager
 
 The DYNAM-O File Manager is the primary graphical interface for running batch EEG/polysomnography analyses with the DYNAM-O (Dynamical Oscillation) toolbox. It manages file loading, analysis configuration, and batch execution across multiple subjects and channels, with real-time progress monitoring and structured output logging.
+
+The goal of the File Manager is to provide a fully operational GUI — with standalone executables for macOS, Windows, and Linux in development — so users can run DYNAM-O without writing any MATLAB code. For programmatic use of the MATLAB DYNAM-O API (`runDYNAMO`, the `DYNAMO` class, and lower-level pipeline functions), see the main [`README.md`](README.md).
 
 ---
 
 ## Table of Contents
 
 1. [Quick Start](#1-quick-start)
-2. [Loading Files](#2-loading-files)
-3. [Configuring Channels](#3-configuring-channels)
-4. [Sampling Frequency and Resampling](#4-sampling-frequency-and-resampling)
+2. [Batch Behavior at a Glance](#2-batch-behavior-at-a-glance)
+3. [Loading Files](#3-loading-files)
+4. [Configuring Channels](#4-configuring-channels)
 5. [Configuring Staging File Parsing](#5-configuring-staging-file-parsing)
-6. [Running Without Staging Files](#6-running-without-staging-files)
-7. [Configuring Output Options](#7-configuring-output-options)
-8. [Configuring Analysis Parameters](#8-configuring-analysis-parameters)
-9. [Running the Batch](#9-running-the-batch)
-10. [Monitoring and Stopping a Run](#10-monitoring-and-stopping-a-run)
-11. [Output Structure](#11-output-structure)
-12. [GUI Reference: Tabs](#12-gui-reference-tabs)
-13. [GUI Reference: Menus](#13-gui-reference-menus)
-14. [Programmatic API](#14-programmatic-api)
+6. [Configuring Output Options](#6-configuring-output-options)
+7. [Configuring Analysis Parameters](#7-configuring-analysis-parameters)
+8. [Running the Batch](#8-running-the-batch)
+9. [Monitoring and Stopping a Run](#9-monitoring-and-stopping-a-run)
+10. [Output Structure](#10-output-structure)
+11. [GUI Reference: Tabs](#11-gui-reference-tabs)
+12. [GUI Reference: Menus](#12-gui-reference-menus)
+13. [Programmatic API](#13-programmatic-api)
 
 ---
 
@@ -59,11 +39,49 @@ The DYNAM-O File Manager is the primary graphical interface for running batch EE
 6. Click RUN
 ```
 
-If staging files are provided, the data and staging file counts must match — each EDF is paired with the staging file at the same list position. If no staging files are loaded, the manager can run in a stage-free mode (see [Running Without Staging Files](#6-running-without-staging-files)).
+**Inputs must be EDF.** MAT-based recordings are not supported by the File Manager.
+
+Data and staging file counts must match — each EDF is paired with the staging file at the same list position.
 
 ---
 
-## 2. Loading Files
+## 2. Batch Behavior at a Glance
+
+The File Manager is designed around long-running batches (e.g. 50 EDFs × 2 channels = 100 iterations). Three facts matter before you hit RUN:
+
+### Output Layout (summary)
+
+Results are written into per-channel subdirectories of your chosen output directory:
+
+```
+<OutputDir>/<channel>/{TFpeaks, SOPHs, param_basis, spline_basis, auxiliary_data, figures/}
+<OutputDir>/logs/       (if Save Logs is on)
+<OutputDir>/settings/   (if Save Logs is on)
+```
+
+Full tree in [Output Structure](#10-output-structure).
+
+### Skip / Overwrite Semantics
+
+When **Overwrite** is off, the manager checks **per output file**, not per subject. For each output it would produce, if the target already exists on disk it is skipped; if it is missing, the manager re-computes whatever prerequisites are needed (including re-running DYNAMO itself) to produce it. A subject whose `stats_table` exists but whose summary figure is missing will therefore re-run the full pipeline to regenerate the figure.
+
+### Error Containment and Resuming After a Crash
+
+Each subject-channel iteration is wrapped in `try/catch`. A failure on one file (e.g. a requested channel missing from that EDF, a malformed staging file) logs the error to `file_log_*.txt`, prints it to the console log, and the batch continues with the next iteration. One bad file does not abort the run.
+
+If MATLAB itself crashes or the user clicks STOP partway through a 50-file batch, simply re-click **RUN** with Overwrite **off**. Any subject-channel that already has all its requested outputs on disk is skipped; the batch picks up where it left off. Because skip is per-output-file, subjects that were interrupted mid-pipeline will finish the missing steps on the re-run.
+
+### Missing-Channel Behavior
+
+If a requested channel is not present in a given EDF, `load_data` raises an error. The per-iteration `try/catch` catches it, logs `Subject <name>, channel <ch>: not run.` to the file log with the full error report in the console log, and moves on. Other subjects and other channels on that same subject are unaffected.
+
+### Running Without Staging Files
+
+The STAGING list may be left empty. On RUN, a confirmation dialog warns that all non-artifact time will be analyzed; if confirmed, the entire recording is treated as a single N2 epoch (stage value 2) for the purposes of TF-peak and SOPH analyses. Staging-parsing fields are ignored in this mode.
+
+---
+
+## 3. Loading Files
 
 ### Adding Files Manually
 
@@ -76,10 +94,10 @@ Each file list (DATA and STAGING) has its own set of action buttons:
 | **Delete File** | Removes the currently selected file(s) from the list |
 | **Move Up / Move Down** | Reorders files to align data–staging pairs |
 
-Duplicate files are automatically prevented — adding a file that is already in the list has no effect.
-
-- **Double-click an EDF file** to open a floating header viewer showing recording metadata (signal names, sampling rates, record duration, start time). If the header viewer is already open, it refreshes in place.
-- **Double-click a staging file** to open it in the default text editor for inspection (TextEdit on Mac, default handler on Windows/Linux).
+- **Add Folder (DATA)** globs `*.edf` in the chosen folder only.
+- **Add Folder (STAGING)** globs `*.csv`; if no CSV files are found it falls back to `*.txt`. It does not mix the two or scan other extensions.
+- **Double-click an EDF file** to open a floating header viewer showing recording metadata (signal names, sampling rates, record duration, start time).
+- **Double-click a staging file** to open it in the default text editor for inspection.
 
 ### Loading a File List from a Text File
 
@@ -87,11 +105,11 @@ Duplicate files are automatically prevented — adding a file that is already in
 
 Loads a plain-text file with one file path per line. The manager validates each path, removes duplicates, and reports any issues. If missing or duplicate entries are found, a dedicated window appears showing the skipped and duplicated files, with an option to save a log file for review.
 
-Supported list file extensions: `.txt`, `.csv`, `.tsv`, `.dat`, `.lst`
+Accepted list-file extensions (shown in the file picker filter): `.txt`, `.csv`, `.tsv`, `.dat`, `.lst`. The file itself is read as plain text — the extension only controls what is offered in the picker.
 
 ---
 
-## 3. Configuring Channels
+## 4. Configuring Channels
 
 ### Channel(s) Field
 
@@ -126,36 +144,36 @@ When channels are added via the browser, the File Manager checks each channel's 
 
 ---
 
-## 4. Sampling Frequency and Resampling
-
-### Why Sampling Frequency Matters
-
-DYNAM-O computes multitaper spectrograms and SO-Power/Phase histograms over configurable frequency ranges. The Nyquist theorem requires that the sampling frequency (Fs) be at least **twice** the highest frequency of interest. For example, if the analysis upper bound is 30 Hz, the data must be sampled at ≥ 60 Hz.
-
-In practice:
-- **Fs too low**: If the data's sampling rate doesn't satisfy Nyquist for the configured frequency range, the analysis will fail or produce invalid results. You must either upsample the data (though this does not recover missing spectral content) or lower the analysis frequency range in the DYNAM-O Settings tab.
-- **Fs much higher than needed**: Very high sampling rates (e.g., 2000 Hz for a 30 Hz analysis) work correctly but consume significantly more memory and processing time. Downsampling to a reasonable rate (e.g., 200–256 Hz) is recommended.
-
-### Using the Resample Option
-
-Enable the **Resample Data** switch and enter a target frequency in **New Fs (Hz)**. All EDF data will be resampled to this frequency before analysis. Resampling is performed per-channel using MATLAB's `resample` function (polyphase antialiasing filter).
-
-**Choosing a target frequency**: A good default is 4–8× the upper analysis frequency bound. For typical sleep EEG with a 30 Hz upper bound, 200 Hz is a practical choice.
-
-Resampling occurs after EDF loading but before any analysis steps, so all downstream outputs reflect the resampled data.
-
----
-
 ## 5. Configuring Staging File Parsing
 
-Staging files are delimited text files containing sleep stage labels and epoch timestamps. Set these fields to match your staging file format:
+Staging files are delimited text files containing sleep stage labels and epoch timestamps, one row per scored epoch. Set these fields to match your staging file format:
 
 | Field | Description |
 |-------|-------------|
 | **Stages Column** | Column index (1-based) containing sleep stage labels |
-| **Times Column** | Column index containing epoch onset times |
+| **Times Column** | Column index (1-based) containing epoch onset times (seconds from recording start) |
 | **Header Rows** | Number of header rows to skip before data begins |
 | **File Delimiter** | Column delimiter: Comma, Tab, Space, or Semicolon |
+
+### Staging File Format
+
+A staging file is a delimited text file. Each row corresponds to one scored epoch. The defaults match `load_data.m`:
+
+- **Epoch onset time** is in **seconds from the start of the EDF recording**, at `time_col`.
+- **Stage label** at `stage_col` is mapped through the Stage Label Mapping fields below.
+- **Indices are 1-based** (column 1 is the first column).
+- **Default epoch duration** is 30 s.
+- After label mapping, internal stage values are: `0=Unknown, 1=N3, 2=N2, 3=N1, 4=REM, 5=Wake` (artifact epochs are handled separately via the Artifact mapping).
+
+Minimal two-row example (comma-delimited, one header row, `time_col=1`, `stage_col=2`):
+
+```
+onset_s,stage
+0,W
+30,N1
+60,N2
+90,N2
+```
 
 ### Stage Label Mapping
 
@@ -175,23 +193,11 @@ All stage label fields except Unknown must be filled for validation to pass.
 
 ---
 
-## 6. Running Without Staging Files
-
-The File Manager supports running without any staging files. If no staging files are loaded when you click **RUN**, a confirmation dialog asks whether to proceed. If confirmed:
-
-- The entire recording is treated as a single N2 epoch spanning from time 0 to the end of the data.
-- All non-artifact times are incorporated into TF-peak detection and SO-Power/Phase histogram analyses.
-- The staging parsing fields (columns, header rows, delimiter) are still required to pass validation but are not used.
-
-This mode is useful for exploratory analyses on unsegmented data or when sleep staging is unavailable.
-
----
-
-## 7. Configuring Output Options
+## 6. Configuring Output Options
 
 ### Output Directory
 
-Click **Browse** to select the folder where all results will be saved. If the selected directory does not exist, you will be prompted to create it. Outputs are organized into subdirectories automatically (see [Output Structure](#11-output-structure)).
+Click **Browse** to select the folder where all results will be saved. Outputs are organized into subdirectories automatically (see [Output Structure](#10-output-structure)).
 
 ### Saving Options Tab
 
@@ -223,24 +229,28 @@ Check the boxes for the data types and figures to generate:
 
 ### File Formats Tab
 
-Select the output format for each data type:
+Select the output format for each data type. Every format dropdown also includes a **`--`** value meaning **"do not save this output"**, which suppresses writing even when the corresponding Save checkbox is on.
 
 | Output | Available Formats |
 |--------|-------------------|
-| Peak Stats Table | `.csv`, `.mat`, All |
-| SO Histograms | `.tiff`, `.mat`, All |
-| Parametric Basis | `.csv`, `.mat`, All |
-| Spline Basis | `.tiff`, `.mat`, All |
+| Peak Stats Table | `.csv`, `.mat`, All, `--` |
+| SO Histograms | `.tiff`, `.mat`, All, `--` |
+| Parametric Basis | `.csv`, `.mat`, All, `--` |
+| Spline Basis | `.tiff`, `.mat`, All, `--` |
 | Auxiliary Data | `.mat` |
-| Data Summary Figure | `.png`, `.jpg`, `.jpeg` |
-| Parametric Basis Figure | `.png`, `.jpg`, `.jpeg` |
-| Spline Basis Figure | `.png`, `.jpg`, `.jpeg` |
+| Data Summary Figure | `.png`, `.jpg`, `.jpeg`, `--` |
+| Parametric Basis Figure | `.png`, `.jpg`, `.jpeg`, `--` |
+| Spline Basis Figure | `.png`, `.jpg`, `.jpeg`, `--` |
 
-Selecting **All** saves every available format for that output type. Selecting **--** disables saving for that output type even if the corresponding checkbox is enabled.
+Selecting **All** saves every available format for that output type. Selecting **`--`** disables saving for that output.
+
+### Save Logs Switch
+
+The **Save Logs** switch in the output options controls whether `logs/` and `settings/` are written at all. When it is **off**, the guarantees below about `file_log_*.txt`, `console_log_*.txt`, and `run_settings_*.txt` do not apply — no log or settings files are written for the run. Leave it on for any batch you may need to audit, reproduce, or resume after a crash.
 
 ---
 
-## 8. Configuring Analysis Parameters
+## 7. Configuring Analysis Parameters
 
 Click the **DYNAM-O Settings** tab to access the embedded settings panel. Parameters are organized into sections:
 
@@ -250,41 +260,43 @@ Click the **DYNAM-O Settings** tab to access the embedded settings panel. Parame
 - **Parametric Basis Fit Options** — Power and phase parametric model settings
 - **Spline Basis Fit Options** — Power and phase spline model settings
 
-These settings are saved with each run to `<OutputDir>/settings/run_settings_<timestamp>.txt` for reproducibility (when Save Logs is enabled).
-
-**Note:** The upper bounds of the SOPH frequency range and the multitaper frequency range determine the minimum acceptable sampling frequency for your data (see [Sampling Frequency and Resampling](#4-sampling-frequency-and-resampling)).
+These settings are saved with each run to `<OutputDir>/settings/run_settings_<timestamp>.txt` for reproducibility (when Save Logs is on).
 
 ---
 
-## 9. Running the Batch
+## 8. Running the Batch
 
 ### Pre-Run Validation
 
 Clicking **RUN** triggers an automatic validation pass. The following conditions are checked, and any failures are reported in an error dialog with the offending fields highlighted in red:
 
-- At least one EDF data file is loaded
-- An output directory is specified
-- If staging files are loaded, their count matches the data file count
-- Stages column, times column, and header rows are all specified
-- At least one channel is entered
-- All stage label fields (Artifact, Wake, REM, N1, N2, N3) are non-empty
-- Every file in both lists exists on disk
+- [ ] DATA list has EDF files; STAGING list has matching staging files **or is empty** (see below)
+- [ ] DATA and STAGING lists have the same number of files (unless STAGING is empty)
+- [ ] Files are paired correctly (same position = same subject)
+- [ ] At least one channel is entered
+- [ ] All staging parsing fields are filled (ignored if STAGING is empty)
+- [ ] An output directory is selected
+- [ ] Save Logs switch is set as desired (on = `logs/` and `settings/` written)
 
-Fix the reported issues and click RUN again. Validation highlights clear automatically when you correct a field.
+If STAGING is empty and all other validation passes, a confirmation dialog asks whether to run without stages. Accepting treats the entire recording as N2 (see [Running Without Staging Files](#running-without-staging-files)).
 
 ### Run Options
 
 | Option | Description |
 |--------|-------------|
-| **Reverse** | Processes files in reverse list order — useful when running two parallel File Manager instances on the same dataset to avoid overlap |
-| **Overwrite** | Re-processes subjects even if output files already exist; when off, subjects with existing outputs are skipped automatically |
+| **Reverse** | Processes files in reverse list order — useful when running parallel instances on the same dataset to avoid overlap |
+| **Overwrite** | Re-processes subjects even if output files already exist; when off, missing outputs are computed and existing outputs are skipped on a per-file basis |
+
+### Validation
+
+Clicking **RUN** triggers a validation pass. If any issues are found (mismatched file counts, missing files, empty fields), an alert dialog lists all errors. Fix the reported issues and click RUN again.
 
 ### Processing Pipeline (per subject-channel)
 
 For each EDF + staging file pair, for each selected channel:
 
 1. Load EDF and extract the target channel
-2. Parse staging file and align epochs (or assign full-recording N2 if running without stages)
+2. Parse staging file and align epochs (or use whole-recording N2 in no-stages mode)
 3. Resample data if enabled
 4. Compute TF-peak statistics table and SO-Power/Phase histograms
 5. (If enabled) Generate and save data summary figure
@@ -297,9 +309,11 @@ For each EDF + staging file pair, for each selected channel:
 
 A **Help** button is located in the bottom-right area of the File Manager window, next to the progress bar. Clicking it opens this README documentation in the system's default web browser.
 
+Errors in any step are caught per-iteration — see [Error Containment and Resuming After a Crash](#error-containment-and-resuming-after-a-crash).
+
 ---
 
-## 10. Monitoring and Stopping a Run
+## 9. Monitoring and Stopping a Run
 
 ### Status Area
 
@@ -307,19 +321,19 @@ The STATUS text area (bottom-left) shows real-time processing messages as each s
 
 ### Progress Bar
 
-The progress bar (bottom-right) fills as iterations complete, showing overall batch progress across all file–channel combinations.
+The progress bar (bottom-right) fills as iterations complete. The denominator is **files × channels**: a batch of 50 EDFs and 2 channels produces **100 ticks**, one per subject-channel iteration.
 
 ### Run Log Console
 
-**File → Show Run Log Console** opens a floating window that displays live console output during processing (polled every 0.3 seconds). This is useful for detailed diagnostics. The menu item toggles to **Hide Run Log Console** while the window is open; closing the window also stops polling. The full console output is saved to `<OutputDir>/logs/console_log_<timestamp>.txt` (when Save Logs is enabled).
+**File → Show Run Log Console** opens a floating window that displays live console output during processing. This is useful for detailed diagnostics. The full console output is also saved to `<OutputDir>/logs/console_log_<timestamp>.txt` (when Save Logs is on).
 
 ### Stopping
 
-Click **STOP** to request a graceful halt. The current subject-channel will finish processing before the run stops. Partial results up to that point are saved normally.
+Click **STOP** to request a graceful halt. The current subject-channel will finish processing before the run stops. Partial results are saved normally. Re-click **RUN** with Overwrite off to resume.
 
 ---
 
-## 11. Output Structure
+## 10. Output Structure
 
 ```
 <OutputDir>/
@@ -351,23 +365,34 @@ Click **STOP** to request a graceful halt. The current subject-channel will fini
     └── run_settings_<timestamp>.txt
 ```
 
-**Note:** Channel names containing special characters (e.g., `C3-A2`) are sanitized for filesystem compatibility — invalid characters are removed and the cleaned name is used for directory and file naming.
+### Channel Name → Directory Name
 
-All required subdirectories are created automatically before the batch loop begins.
+The `<channel>` placeholder above is **not** the raw EDF label; the manager runs each channel name through a filesystem-safe sanitizer (`fixFilename`) before using it as a directory or filename component. Characters outside `[A-Za-z0-9._\-() ]` are replaced with `_`; leading dots and trailing dots/spaces are stripped; consecutive replacements are collapsed.
+
+The raw label is still used for channel lookup inside the EDF — only the on-disk names change.
+
+Examples:
+
+| Raw EDF label | Sanitized `<channel>` used in paths |
+|---------------|-------------------------------------|
+| `C3`          | `C3` |
+| `C3-A2`       | `C3-A2` (hyphen is allowed) |
+| `EEG C3:A2`   | `EEG C3_A2` |
+| `C4/A1`       | `C4_A1` |
 
 ### Log Files
 
 | File | Contents |
 |------|----------|
-| `file_log_*.txt` | Per-subject outcome: success, skipped (outputs already exist), or error with details |
+| `file_log_*.txt` | Per-subject-channel outcome (success, skipped-all-exist, or error message) |
 | `console_log_*.txt` | Full MATLAB console output for the entire run |
 | `run_settings_*.txt` | All DYNAM-O option structs used for the run |
 
-Logs and settings files are only written when **Save Logs** is enabled.
+All three files are only written when the **Save Logs** switch is on.
 
 ---
 
-## 12. GUI Reference: Tabs
+## 11. GUI Reference: Tabs
 
 ### File Selection Tab
 
@@ -377,19 +402,19 @@ The main configuration tab. Contains the DATA and STAGING file lists on the left
 
 - **DATA list** — EDF files to process, with Add File/Add Folder/Delete File/Move Up/Move Down buttons
 - **STAGING list** — Paired staging files, with the same set of buttons
-- **Channel(s)** — Target channel labels; Select button opens channel browser with sampling rate display
-- **Staging Options** — Stage label mapping (with default values), column indices, delimiter, header row count
-- **Resample Data / New Fs** — Optional resampling before analysis (disabled by default; enable switch to activate frequency field)
-- **Saving Options sub-tab** — Checkboxes for data and figure outputs, plus Save Logs toggle
-- **File Formats sub-tab** — Format selector for each output type
+- **Channel(s)** — Target channel labels; Select button opens channel browser
+- **Staging Options** — Stage label mapping, column indices, delimiter, header row count
+- **Resample Data / New Fs** — Optional resampling before analysis
+- **Saving Options sub-tab** — Checkboxes for data and figure outputs, plus the Save Logs switch
+- **File Formats sub-tab** — Format selector for each output type (including `--` to disable)
 
 ### DYNAM-O Settings Tab
 
-Hosts the embedded DYNAMOOptions sub-app for configuring all analysis parameters. Changes here are applied to all subjects in the next run and are saved to the settings log.
+Hosts the embedded DYNAMOOptions sub-app for configuring all analysis parameters. Changes here are applied to all subjects in the next run and are saved to the settings log (when Save Logs is on).
 
 ---
 
-## 13. GUI Reference: Menus
+## 12. GUI Reference: Menus
 
 ### File Menu
 
@@ -408,9 +433,9 @@ Hosts the embedded DYNAMOOptions sub-app for configuring all analysis parameters
 
 ---
 
-## 14. Programmatic API
+## 13. Programmatic API
 
-The File Manager can be embedded in scripts or larger applications.
+The File Manager exposes a handful of helper methods for populating file lists and querying state from scripts. It does **not** expose a public method for launching a batch run non-interactively: the batch is driven by the RUN button and depends on internal GUI state, so scripts can pre-populate the manager but a human (or a simulated button click) is still required to start processing. Treat the API below as a convenience layer, not a headless-batch entry point.
 
 ### Constructor
 

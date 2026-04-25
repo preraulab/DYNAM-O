@@ -1,31 +1,34 @@
 function [regions, borders] = mergeWshedSegment(data,regions,region_lbls,borders,adj_list,merge_thresh,max_merges,merge_rule,f_verb,verb_pref,f_disp)
-% MERGEWSHEDSEGMENT takes the labeled image, borders, and adjacencies output
-% from peaksWShed and merges the regions according to the desired rule. The
-% default rule is designed to form large, complete peaks. It calls
-% computeMergeWeights and mergeRegion.
+%MERGEWSHEDSEGMENT  Merge watershed regions iteratively under a merge rule
 %
-% Usage:
-%   [regions, borders] = mergeWshedSegment(data,regions,region_lbls,borders,adj_list,merge_thresh,max_merges,merge_rule,f_verb,verb_pref,f_disp)
+%   Usage:
+%       [regions, borders] = mergeWshedSegment(data, regions, region_lbls, borders, adj_list, ...
+%           merge_thresh, max_merges, merge_rule, f_verb, verb_pref, f_disp)
 %
-%   Inputs:
-%   data         -- 2D matrix of image data. defaults to peaks(100).
-%   regions          -- 1D cell array of vector lists of linear idx of all pixels for each region.
-%   region_lbls     -- vector of region labels.
-%   borders     -- 1D cell array of vector lists of linear idx of border pixels for each region
-%   adj_list        -- two-column matrix of region adjacencies.
-%                   each row contains region labels of two adjacent regions.
-%   merge_thresh -- threshold weight value for when to stop merge rule. default 8.
-%   max_merges   -- maximum number of merges to perform. default inf.
-%   merge_rule   -- default = absolute
-%   f_verb       -- number indicating depth of output text statements of progress.
-%                   0 - no output. 1 - output current function level.
-%                   >1 - output at subfunction levels. defaults to 0, unless using defaul data.
-%   verb_pref    -- prefix string for verbose output. defaults to ''.
-%   f_disp       -- flag indicator of whether to plot.
-%                   defaults to 0, unless using default data.
+%   Required Inputs:
+%       data:         [M x N] double - 2D image data
+%       regions:      [1 x K] cell - linear indices of pixels per region
+%       region_lbls:  [1 x K] integer - region labels
+%       borders:      [1 x K] cell - linear indices of border pixels per region
+%       adj_list:     [E x 2] integer - pairs of adjacent region labels
+%
+%   Optional Inputs:
+%       merge_thresh: double - threshold weight at which merging stops (default: 8)
+%       max_merges:   integer - maximum number of merges to perform (default: inf)
+%       merge_rule:   char - merge weight rule (default: 'absolute')
+%       f_verb:       integer - verbosity depth: 0 silent, 1 current level, >1 subfunctions (default: 0)
+%       verb_pref:    char - prefix string for verbose output (default: '')
+%       f_disp:       logical/integer - plot progress when nonzero (default: 0)
 %
 %   Outputs:
-%   region, borders -- versions of inputs after merger
+%       regions: [1 x K] cell - region pixel lists after merging (merged entries are empty)
+%       borders: [1 x K] cell - region border pixel lists after merging
+%
+%   Notes:
+%       - Calls computeMergeWeights and mergeRegions iteratively until either
+%         merge_thresh or max_merges is reached.
+%
+%   See Also: computeMergeWeights, mergeRegions, Ldata2graph, extractTFPeaks
 %
 %
 %*************************
@@ -113,6 +116,11 @@ if isempty(merge_thresh)
     merge_thresh = 8;
 end
 
+% Precompute label-to-index map once; used by both computeMergeWeights
+% (initial + per-iteration) and mergeRegions below. Building it here (before
+% the initial weights call) lets the initial call avoid its O(E*R) scan.
+lbl_map = containers.Map(region_lbls, 1:length(region_lbls));
+
 %*************************
 % Check adjacency matrix *
 %*************************
@@ -128,7 +136,7 @@ elseif size(adj_list,2)==2
         disp([verb_pref 'Computing initial edge weights...']);
         ttic = tic;
     end
-    e_wts = computeMergeWeights(regions,data,region_lbls,borders,adj_list,merge_rule,f_verb-1,['  ' verb_pref]);
+    e_wts = computeMergeWeights(regions,data,region_lbls,borders,adj_list,merge_rule,f_verb-1,['  ' verb_pref],lbl_map);
     if f_verb > 0
         disp([verb_pref '  Initial weighting took ' num2str(toc(ttic)) ' sec.']);
     end
@@ -169,8 +177,7 @@ if num_regions == 1
     return
 end
 
-% Precompute label-to-index map for O(1) lookups in mergeRegions
-lbl_map = containers.Map(region_lbls, 1:length(region_lbls));
+% lbl_map was built above, before initial weight computation
 [max_wt,max_idx] = max(ematr(:,3));
 
 % Set dynamic merge_thresh if merge_thresh is nan
@@ -201,7 +208,7 @@ while ~isempty(ematr) && max_wt > merge_thresh && num_merges < max_merges && num
 
     % Update edge weights
     if ~isempty(find(pick_update,1))
-        e_wts = computeMergeWeights(regions,data,region_lbls,borders,ematr(pick_update,1:2),merge_rule,f_verb-1,['  ' verb_pref]);
+        e_wts = computeMergeWeights(regions,data,region_lbls,borders,ematr(pick_update,1:2),merge_rule,f_verb-1,['  ' verb_pref],lbl_map);
         ematr(pick_update,3) = e_wts;
     end
 

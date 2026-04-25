@@ -275,7 +275,7 @@ if isgraphics(ax(1))
     pmax_inds = stats_table_SOPH.Volume> pmax;
     peak_size(pmax_inds) = nan;
 
-    scatter(ax(1), stats_table_SOPH.PeakTime/3600, stats_table_SOPH.PeakFrequency, peak_size, stats_table_SOPH.SOphase, 'filled'); % scatter plot all peaks
+    scatter(ax(1), stats_table_SOPH.PeakTime/3600, stats_table_SOPH.PeakFrequency, peak_size, stats_table_SOPH.SOphase, 'filled', 'MarkerEdgeColor', 'none');
 
     %Make circular colormap
     colormap(ax(1),circshift(hsv(2^12),-650))

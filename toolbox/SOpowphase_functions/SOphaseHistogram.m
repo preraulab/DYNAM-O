@@ -1,7 +1,7 @@
 function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_at_freq, peak_SOphase, peak_selection_inds, SOphase, SOphase_times] = SOphaseHistogram(v1,v2,varargin)
 % SOPHASEHISTOGRAM computes slow-oscillation phase histogram matrix
 % Usage:
-%   [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_at_freq, peak_SOphase, peak_selection_inds] = ...
+%   [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_at_freq, peak_SOphase, peak_selection_inds, SOphase, SOphase_times] = ...
 %                                 SOphaseHistogram(EEG, Fs, TFpeak_freqs, TFpeak_times, <options>)
 %
 %  Inputs:
@@ -39,6 +39,12 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_at_freq, 
 %       peak_selection_inds: 1xP logical - which TFpeaks are counted in the histogram
 %       SOphase: 1xN double - SO phase timeseries data
 %       SOphase_times: 1xN double - SO phase timeseries times
+%
+%  Notes:
+%       - Frequency bins are half-open [lo, hi) on each bin; freq_range(2) is excluded.
+%         The same [lo, hi) convention applies to SO_range.
+%
+%  See Also: SOpowerHistogram, SOpowerphaseHistogram, computeSOphase, TFPeakHistogram
 %
 %
 % =========================================================================

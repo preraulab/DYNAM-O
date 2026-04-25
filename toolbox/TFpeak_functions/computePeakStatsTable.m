@@ -1,22 +1,26 @@
 function stats_table = computePeakStatsTable(regions,boundaries,data,xvalues,yvalues,segment_num, features)
-% COMPUTEPEAKSTATSTABLE Creates a table of the region properties for the peaks
+%COMPUTEPEAKSTATSTABLE  Create a table of region properties for detected peaks
 %
 %   Usage:
-%   statsTable = computePeakStatsTable(regions, boundaries, data, xvalues, yvalues, segment_num)
+%       stats_table = computePeakStatsTable(regions, boundaries, data, xvalues, yvalues, segment_num, features)
 %
-%   Inputs:
-%   regions    -- 1D cell array of vector lists of linear idx of all pixels for each region.
-%   boundaries -- 1D cell array of vector lists of linear idx of border pixels for each region.
-%   data       -- 2D matrix of image data. defaults to peaks(100).
-%   xvalues      -- x axis of image data. default 1:size(data,2).
-%   yvalues      -- y axis of image data. default 1:size(data,1).
-%   segment_num  -- segment number if data comes from larger image. default 1.
-%   features   -- cell array of features to include, can be any subset of
-%                 {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData', 
-%                  'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. default 'all'
+%   Required Inputs:
+%       regions:     [1 x K] cell - linear indices of pixels per region
+%       boundaries:  [1 x K] cell - linear indices of border pixels per region
+%       data:        [M x N] double - 2D image data
+%
+%   Optional Inputs:
+%       xvalues:     [1 x N] double - x axis of image data (default: 1:size(data,2))
+%       yvalues:     [1 x M] double - y axis of image data (default: 1:size(data,1))
+%       segment_num: integer - segment index when data is a sub-segment (default: 1)
+%       features:    cell or char - any subset of {'Area', 'Bandwidth', 'Boundaries',
+%                    'BoundingBox', 'Duration', 'Height', 'HeightData', 'PeakFrequency',
+%                    'PeakTime', 'SegmentNum', 'Volume'} or 'all' (default: 'all')
 %
 %   Outputs:
-%   stats_table   -- Table of peak statistics
+%       stats_table: table - one row per peak, columns determined by features
+%
+%   See Also: extractTFPeaks, runSegmentedData, computeTFPeaks
 %
 %
 % =========================================================================

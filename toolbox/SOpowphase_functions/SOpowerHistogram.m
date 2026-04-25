@@ -1,8 +1,8 @@
 function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_at_freq, peak_SOpower, peak_selection_inds, SOpower, SOpower_times] = SOpowerHistogram(v1,v2,varargin)
 % SOPOWERHISTOGRAM computes slow-oscillation power histogram matrix
 % Usage:
-%   [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_at_freq, peak_SOpower_norm, peak_selection_inds] = ...
-%                                 SOpowerHistogram(EEG, Fs, TFpeak_times, TFpeak_freqs, <options>)
+%   [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_at_freq, peak_SOpower, peak_selection_inds, SOpower, SOpower_times] = ...
+%                                 SOpowerHistogram(EEG, Fs, TFpeak_freqs, TFpeak_times, <options>)
 %
 %  Inputs:
 %   REQUIRED:
@@ -31,14 +31,20 @@ function [SO_mat, freq_cbins, SO_cbins, time_in_bin, prop_in_bin, peak_at_freq, 
 %       SO_mat: SO power histogram (SOpower x frequency)
 %       freq_cbins: 1xF double - centers of the frequency bins
 %       SO_cbins: 1xPO double - centers of the power SO bins
-%       time_in_bin: 1xTx5 double - minutes spent in each power bin for each stage
-%       prop_in_bin: 1xT double - proportion of total time (all stages) in each bin spent in
+%       time_in_bin: [num_Cbins x 5] double - minutes spent in each power bin for each stage
+%       prop_in_bin: [num_Cbins x 5] double - proportion of total time (all stages) in each bin spent in
 %                          the selected stages
 %       peak_at_freq: 1xF - number of peaks in each frequency bin
 %       peak_SOpower: 1xP double - normalized slow oscillation power at each TFpeak
 %       peak_selection_inds: 1xP logical - which TFpeaks are counted in the histogram
 %       SOpower: 1xM double - SO power timeseries data
 %       SOpower_times: 1xM double - SO power timeseries times
+%
+%  Notes:
+%       - Frequency bins are half-open [lo, hi) on each bin; freq_range(2) is excluded.
+%         The same [lo, hi) convention applies to SO_range.
+%
+%  See Also: SOphaseHistogram, SOpowerphaseHistogram, computeSOpower, TFPeakHistogram
 %
 %
 % =========================================================================
