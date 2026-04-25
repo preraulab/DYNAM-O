@@ -84,7 +84,6 @@ if ~isempty(B0)
 
     %Create variable names (trick into being in alphabetical order)
     var_names = {'amp','fmean','fstd','pmean','pstd','theta'};
-    num_params = length(var_names);
 
     %Initialize
     eqn_string = [];
