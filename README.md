@@ -36,6 +36,7 @@ BSD 3-Clause — see [LICENSE](LICENSE) at the repository root.
 Please cite both of the following when using this toolbox:
 
 > He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M. J. *DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics in Sleep EEG*, bioRxiv, 2026 (pending journal publication).
+
 > Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S., Manoach, D. S., Stickgold, R., Prerau, M. J. "Transient Oscillation Dynamics During Sleep Provide a Robust Basis for Electroencephalographic Phenotyping and Biomarker Identification", *Sleep*, 2022; zsac223. https://doi.org/10.1093/sleep/zsac223
 
 If using the included perceptually uniform colormaps (`gouldian`, `rainbow4`), also cite:
