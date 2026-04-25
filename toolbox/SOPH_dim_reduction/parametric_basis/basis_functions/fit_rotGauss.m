@@ -136,7 +136,7 @@ if plot_on
     surface(pow_bins, freq_bins, pow_hist,'edgecolor','none')
     axis xy;
     cx = prctile(pow_hist(:),[5,95]);
-    caxis(cx);
+    clim(cx);
     zl = zlim;
 
     title('Observed');
@@ -145,11 +145,9 @@ if plot_on
     view(-50, 50);
 
     axes(ax(2))
-
-    [Xg, Yg] = meshgrid(pow_bins, freq_bins);
-    surface(pow_bins, freq_bins, feval(fitresult,Xg,Yg),'edgecolor','none')
+    surface(pow_bins, freq_bins, feval(fitresult,xData,yData),'edgecolor','none')
     axis xy;
-    caxis(cx);
+    clim(cx);
     title('Model Fit');
     xlabel('%SO-power');
     ylabel('Frequency (Hz)');
@@ -157,4 +155,3 @@ if plot_on
 
     view(-50, 50);
 end
-

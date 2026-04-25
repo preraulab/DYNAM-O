@@ -1,8 +1,8 @@
 <p align="center">
-<img src=https://user-images.githubusercontent.com/78376124/214062562-4f8fc73b-5a0a-4cf7-b219-9d0de101528d.png>
+<img src="https://prerau.bwh.harvard.edu/wp-content/uploads/2023/01/DYNAM-O-Logo-medium.png" width="450">
 </p>
 
-## DYNAM-O: The Dynamic Oscillation Toolbox for MATLAB — Prerau Laboratory ([sleepEEG.org](https://prerau.bwh.harvard.edu/))
+## DYNAM-O: The Dynamic Oscillation Toolbox for MATLAB
 
 This repository contains the MATLAB toolbox for extracting transient oscillatory events from sleep EEG and characterizing them via slow-oscillation power and phase histograms.
 
@@ -31,16 +31,12 @@ BSD 3-Clause — see [LICENSE](LICENSE) at the repository root.
 
 ---
 
-## Citation
+### Citation
 
 Please cite both of the following when using this toolbox:
 
 > He, M., Saremsky, S., Noamany, H., Chen, S., Prerau, M. J. *DYNAM-O Toolbox: Characterizing Individualized Neural Dynamics in Sleep EEG*, bioRxiv, 2026 (pending journal publication).
-
-> Patrick A Stokes, Preetish Rath, Thomas Possidente, Mingjian He, Shaun Purcell, Dara S Manoach, Robert Stickgold, Michael J Prerau, *Transient Oscillation Dynamics During Sleep Provide a Robust Basis for Electroencephalographic Phenotyping and Biomarker Identification*, Sleep, 2022; zsac223. https://doi.org/10.1093/sleep/zsac223
-
-Refer to the toolbox in text as:
-> Prerau Lab's Dynamic Oscillation Toolbox (DYNAM-O) v1.0 (sleepEEG.org)
+> Stokes, P. A., Rath, P., Possidente, T., He, M., Purcell, S., Manoach, D. S., Stickgold, R., Prerau, M. J. "Transient Oscillation Dynamics During Sleep Provide a Robust Basis for Electroencephalographic Phenotyping and Biomarker Identification", *Sleep*, 2022; zsac223. https://doi.org/10.1093/sleep/zsac223
 
 If using the included perceptually uniform colormaps (`gouldian`, `rainbow4`), also cite:
 > Peter Kovesi. *Good Colour Maps: How to Design Them*. arXiv:1509.03700 [cs.GR] 2015. https://arxiv.org/abs/1509.03700
@@ -74,10 +70,14 @@ If using the included perceptually uniform colormaps (`gouldian`, `rainbow4`), a
   - [Part 1: TF-Peak Detection](#part-1-tf-peak-detection)
   - [Part 2: Feature Computation](#part-2-feature-computation)
   - [Part 3: Feature Histograms](#part-3-feature-histograms)
+  - [Dimensionality Reduction of Feature Histograms](#dimensionality-reduction-of-feature-histograms)
+    - [Parametric Basis Fitting](#parametric-basis-fitting)
+    - [Spline Basis Fitting](#spline-basis-fitting)
   - [Part 4: Statistical Testing](#part-4-statistical-testing)
   - [SO-Power Computation and Normalization](#so-power-computation-and-normalization)
   - [SO-Phase Computation](#so-phase-computation)
 - [Repository Structure](#repository-structure)
+- [Included Submodules](#included-submodules)
 - [Required Toolboxes](#required-toolboxes)
 
 ---
@@ -86,24 +86,24 @@ If using the included perceptually uniform colormaps (`gouldian`, `rainbow4`), a
 
 The primary goal of DYNAM-O is to provide an analytic framework for characterizing and understanding the multidimensional dynamics of spindle-like transient oscillations in the sleep EEG spectrogram. This framework includes methods to extract time-frequency peaks (TF-peaks) and their properties, to visualize distributions of TF-peak features in an interpretable and efficient manner, and to conduct statistical tests to gain insights into sleep physiology. In doing so, DYNAM-O provides a powerful tool through which researchers can explore stable features of sleep EEG, efficiently capturing the neural dynamics of tens of thousands of transient oscillatory events throughout the night.
 
-The pipeline is structured into four main parts:
+The processing pipeline is structured into four main parts:
 
-1. **TF-peak identification** — extract transient oscillation events from a multitaper spectrogram using a watershed-based algorithm
-2. **Feature computation** — compute microscopic (geometry, location) and macroscopic (sleep stage, SO-power, SO-phase) properties for each peak
-3. **Feature histograms** — encode the overnight distribution of TF-peak properties into SO-power and SO-phase histograms, with optional parametric and spline dimensionality reduction
-4. **Statistical testing** — whole-histogram and mode-based group comparisons with FDR correction and permutation testing
+1. **Identifying TF-peaks from spectrograms** — extract transient oscillation events from a multitaper spectrogram using a watershed-based algorithm with sequential optimization for temporal and spectral resolution
+2. **Computing feature properties of TF-peaks** — compute microscopic (geometry, location) and macroscopic (sleep stage, SO-power, SO-phase) properties for each peak
+3. **Encoding TF-peak dynamics with feature histograms** — represent the overnight distribution of TF-peak properties as SO-power and SO-phase histograms, with optional parametric and spline dimensionality reduction
+4. **Statistical tests on TF-peak dynamics** — whole-histogram and mode-based group comparisons with FDR correction and permutation testing
 
-The analyses can be applied autonomously to any single-channel electrophysiological recording from overnight sleep EEG data.
+The analyses can be applied autonomously to any single-channel electrophysiological recording from overnight sleep EEG data. While DYNAM-O is designed for sleep EEG, `computeTFPeaks` can also be used with dummy staging to analyze transient oscillation events in any time series data.
 
 ---
 
 ## Background and Motivation
 
-Electroencephalography (EEG) is one of the most important modalities for studying sleep physiology. Both macroscopic structures of sleep, such as distinct sleep stages, and microscopic features such as sleep spindles, have been established as part of the clinical manual for sleep scoring. However, brain wave patterns in polysomnography (PSG) are noisy and difficult to quantify, often producing diverging results from repeated recordings or from two different raters reading the same recording. It is challenging to determine whether within-subject changes in EEG measures over multiple nights are meaningful or simply natural variability.
+Electroencephalography (EEG) is one of the most important modalities to study sleep physiology. Since the onset of sleep research, clinicians and researchers have been carefully inspecting time traces for brain wave patterns, where both macroscopic structures of sleep such as distinct sleep stages, and microscopic features such as sleep spindles, have been established as part of the clinical manual for sleep scoring. However, brain wave patterns in polysomnography (PSG) are noisy and difficult to quantify, often producing diverging results from repeated recordings or from two different raters reading the same recording. It is challenging to determine whether within-subject changes in EEG measures over multiple nights are meaningful or simply natural variability.
 
-EEG signals during sleep are primarily generated by cortical activity, whose neuronal and subcortical origins presumably do not change drastically from night to night. This suggests that some features of sleep should be robust to nightly perturbations while being highly individualized. Indeed, recent studies have revealed numerous stable and individualized features of sleep, including aspects of the EEG power spectrum, waveform morphological traits, and properties of sleep spindles. Measures that capture these stable patterns carry great potential to be more representative of an individual's physiological state during sleep and more informative of underlying neural dynamics.
+It is important to recognize that EEG signals during sleep are primarily generated by cortical activity within a sleeping individual, whose neuronal and subcortical origins presumably do not change drastically from night to night. This suggests that some features of sleep should be robust to nightly perturbations while being highly individualized. Indeed, recent studies have revealed numerous stable and individualized features of sleep, including aspects of the EEG power spectrum, waveform morphological traits, and properties of sleep spindles. Measures that capture these stable patterns carry great potential to be more representative of an individual's physiological state during sleep and more informative of underlying neural dynamics.
 
-A common challenge for sleep EEG measures is that conventional measures are often derived heuristically rather than from a principled basis. Sleep spindles, for example, are traditionally defined as a train of distinct waves oscillating within 11–16 Hz lasting more than 0.5 seconds — a definition that stems from the earliest days of visual PSG inspection. Imposing hard-coded cutoffs may appear to enforce consistent standards but in fact renders outcome measures more variable and less interpretable due to bias. Our earlier work showed that sleep spindles detected by human experts represent only about 30% of spindle-like transient oscillations in the spindle frequency range during NREM sleep. When considering all detectable transient oscillations, there is a much stronger night-to-night stability in event counts than in spindle rates or spectral power.
+A common challenge for sleep EEG measures to capture neural dynamics is that conventional measures are often derived heuristically instead of from a principled basis. A prominent example is sleep spindles, traditionally defined as a train of distinct waves oscillating within 11–16 Hz lasting more than 0.5 seconds — a definition that stems from the earliest days of visual PSG inspection. Imposing hard-coded cutoffs may appear to enforce consistent standards but in fact renders outcome measures more variable and less interpretable due to bias. Our earlier work showed that sleep spindles detected by human experts represent only about 30% of spindle-like transient oscillations in the spindle frequency range during NREM sleep. When considering all detectable transient oscillations, there is a much stronger night-to-night stability in event counts than in spindle rates or spectral power.
 
 By studying all transient oscillations from spectrograms in an agnostic way, we coined the term **time-frequency peaks (TF-peaks)** to denote spindle-like electrophysiological events in sleep EEG. These TF-peaks turned out to be highly robust and individualized across multiple nights of sleep from the same subjects. Furthermore, studying TF-peaks allowed us to summarize in a single view the dynamics of tens of thousands of transient oscillations, revealing previously unreported changes in low-alpha transient oscillations in schizophrenia patients compared to controls.
 
@@ -781,53 +781,42 @@ assert(timings.total < 300, 'Pipeline regressed past the 5-minute CI budget');
 
 ### Part 1: TF-Peak Detection
 
-```
-computeTFPeaks()
-├── multitaper_spectrogram()       DPSS tapers, [2,3] params, 1s/0.05s window
-├── detect_artifacts()             dual z-score threshold (HF + broadband)
-├── removeBaseline()               subtract 2nd-percentile baseline spectrum
-└── runSegmentedData()             split into 30s segments, run in parfor
-    ├── [downsample spectrogram]   decimation for speed (quality-dependent)
-    ├── runWatershed()             watershed on negated spectrogram
-    ├── computeMergeWeights()      edge intensity between adjacent regions
-    ├── mergeRegions()             iterative merge until weight < merge_thresh
-    ├── [map back to full res]     interpolate boundaries onto original grid
-    ├── trimWshedRegions()         trim to 80% of total peak volume
-    ├── computePeakStatsTable()    area, centroid, bandwidth, height, etc.
-    └── [filter by dur/bw]         reject peaks outside dur_max / bw_max
-```
+**Spectrogram estimation.** To study the time-frequency information contained in sleep EEG, DYNAM-O first transforms the recording into a spectrogram using the multi-taper method (MTM). While wavelet transforms are often used in sleep EEG analysis, MTM provides regularly discretized and equal controls of spectral and temporal resolutions, and MTM spectrograms are more conducive for the subsequent image processing steps.
 
-**Spectrogram estimation.** DYNAM-O uses the multi-taper method (MTM) with Fourier transforms to obtain spectrograms. While wavelet transforms are often used in sleep EEG analysis, MTM provides regularly discretized and equal controls of spectral and temporal resolutions, and MTM spectrograms are more conducive for the subsequent image processing steps used to identify transient oscillation events.
+**Spectrogram normalization.** Electrophysiological recordings exhibit a 1/f-like drop-off in power with frequency. To emphasize transient oscillatory activity above this aperiodic background, DYNAM-O normalizes the spectrogram by subtracting a baseline spectrum estimated as the 2nd percentile of spectral power at each frequency across non-artifact periods.
 
-**Spectrogram normalization.** Electrophysiological recordings exhibit a 1/f-shaped drop-off in power with frequency. To emphasize transient increases in spectral power from oscillations above and beyond this aperiodic background, DYNAM-O normalizes the spectrogram by subtracting a baseline spectrum estimated as the 2nd percentile of spectral power at each frequency across non-artifact periods of the recording.
+**The watershed algorithm.** The watershed algorithm — an image segmentation method from computer vision — identifies prominent peaks on a landscape by finding where "water" flowing downward gets trapped. Applied to the baseline-corrected spectrogram, it identifies all local spectral peaks at once, where each "catchment basin" corresponds to a candidate transient oscillation event.
 
-**Watershed segmentation.** The watershed algorithm — an image segmentation method widely used in computer vision — identifies local sinks on a landscape where water flowing downward would get trapped. By applying the watershed algorithm to a baseline-corrected spectrogram with negated power spectral density, DYNAM-O identifies all prominent local peaks at once, where each "catchment basin" corresponds to a candidate transient oscillation event.
+**Region merging.** Running watershed on a noisy spectrogram produces many small fragmented peaks (over-segmentation). DYNAM-O uses a custom merging algorithm that iteratively recombines neighboring regions into larger, better-defined peaks. The algorithm computes a weight for each pair of adjacent regions reflecting how likely they are part of the same peak vs. truly distinct events. Regions are merged in order of decreasing weight until all remaining weights fall below a threshold.
 
-**Region merging.** Running watershed on a noisy spectrogram produces an enormous number of small peaks, since every tiny local maximum will be treated as a distinct region (severe over-segmentation). DYNAM-O addresses this with a custom merging algorithm that iteratively recombines neighboring watershed regions into larger peaks with better-defined structure. Merging is based on a mathematical rule that gives rise to an iterative bootstrapping process; neighboring regions are merged in order of decreasing edge weight until all remaining weights fall below `merge_thresh`. Merged peaks above minimal detection thresholds are retained as TF-peaks; the rest are discarded as noise.
+**TF-peak trimming.** Because spectral peaks are relatively sparse on real spectrograms, merged regions often have wide, flat bases extending far from the central peak. Each detected peak is trimmed to retain 80% of its volume, yielding contours that tightly enclose the main body of the peak. Peaks are also filtered by minimum duration, bandwidth, and height thresholds to separate meaningful events from noise.
 
-**Volume trimming.** Because spectral peaks are relatively sparse on real EEG spectrograms, the output of the merging algorithm contains a few prominent peaks each with a wide, flat base extending to the border of the next peak. These extended contours do not well represent the main body of the spectral peak. Each detected peak is therefore trimmed to retain 80% of its volume, yielding contours that tightly enclose the central mass of the peak and exclude the flat regions from watershed/merging.
+**Sequential optimization for temporal and spectral resolution.** Due to the uncertainty principle, there is a fundamental tradeoff between temporal and spectral resolution in spectrogram estimation. DYNAM-O addresses this by performing two rounds of the watershed-merging-trimming process: a first pass with a 1-second window (4 Hz spectral resolution) to resolve events that are close in time, followed by a second pass with a 2-second window (2 Hz spectral resolution) to resolve events that are close in frequency. Peaks detected in the first pass are masked before the second pass so only additional peaks are extracted. The combined set captures the full range of transient oscillation events.
 
-**Sequential optimization for temporal and spectral resolution.** The ability to distinguish adjacent TF-peaks is limited by the spectrogram's spectral and temporal resolutions, which are determined by MTM parameters. Due to the uncertainty principle, trading off these resolutions at the spectrogram stage is unavoidable. DYNAM-O therefore performs two rounds of watershed-merging-trimming on two spectrograms computed with different MTM parameters (1s and 2s windows), sequentially optimizing first for temporal and then for spectral resolution. This allows transient oscillation events that are adjacent in the time-frequency space to be identified as distinct TF-peaks.
-
-**Parallel processing.** The pipeline splits the spectrogram into 30-second segments processed independently in a `parfor` loop, then stitches results together. For speed, watershed and merging run on a decimated version of the spectrogram; boundaries are interpolated back to the full-resolution grid afterward.
+**Parallel processing.** The spectrogram is split into 30-second segments processed independently in a `parfor` loop, then stitched together. For speed, watershed and merging can run on a decimated spectrogram; boundaries are interpolated back to full resolution afterward.
 
 ---
 
 ### Part 2: Feature Computation
 
-For each identified TF-peak, DYNAM-O computes two types of feature properties:
+For each identified TF-peak, DYNAM-O computes several feature properties, which can be divided into **microscopic** and **macroscopic** categories:
 
 **Microscopic properties** describe the geometry and location of the peak on the spectrogram: time, frequency, height, area, duration, bandwidth, volume, and bounding box (see [stats_table](#stats_table--tf-peak-features)).
 
-**Macroscopic properties** capture the contextual brain state at the time of each peak: scored sleep stage, slow-oscillation power (SO-power), and slow-oscillation phase (SO-phase). These are motivated by extensive literature on discrete sleep stages, continuous measures of sleep depth, and cross-frequency coupling of fast transient oscillations with cortical up/down states reflected by slow oscillations.
+**Macroscopic properties** capture the contextual brain state at the time of each peak. The current version of DYNAM-O focuses on three macroscopic properties:
+- **Sleep stage** at which a TF-peak event occurs
+- **Slow oscillation power (SO-power, 0.3–1.5 Hz)** — a continuous proxy for depth of sleep
+- **Slow oscillation phase (SO-phase, 0.3–1.5 Hz)** — a continuous proxy for cortical up/down states
 
-**Peak frequency refinement.** The spectrogram used for TF-peak extraction has a spectral resolution of ~2 Hz (from the 2s MTM window). Many electroencephalographic phenomena during sleep — such as slow vs. fast sleep spindles — manifest with frequency separations less than 2 Hz. DYNAM-O therefore performs an additional peak frequency estimation using a Hann window function to achieve a refined spectral resolution, reducing variability and better preserving the separability of TF-peak clusters at close frequencies. This refinement is critical for the interpretability of subsequent feature histograms.
+These are motivated by extensive literature on discrete sleep stages, continuous measures of sleep depth, and cross-frequency coupling of fast transient oscillations with cortical states reflected by slow oscillations.
+
+**Peak frequency refinement.** The spectrogram used for TF-peak extraction has a spectral resolution of ~2 Hz (from the 2s MTM window). Many electroencephalographic phenomena during sleep — such as slow vs. fast sleep spindles — manifest with frequency separations less than 2 Hz. DYNAM-O therefore refines the peak frequency for each detected event by computing a Hann-windowed power spectrum on a 4-second segment centered at the peak time, achieving 1 Hz resolution. The Hann window is chosen over multitaper estimation for this step because its single central lobe provides a cleaner peak estimate without the sidelobe leakage that can arise from higher-order DPSS tapers. This refinement is critical for the interpretability of subsequent feature histograms.
 
 ---
 
 ### Part 3: Feature Histograms
 
-Rather than stratifying TF-peaks by fixed frequency cutoffs or sleep stage labels — which impose arbitrary boundaries and ignore substantial within-stage variability — DYNAM-O takes a distributional approach. Feature histograms encode the occurrence of tens of thousands of discrete TF-peak events across the multi-dimensional feature space, providing a condensed snapshot of overnight sleep dynamics.
+The first two parts of the DYNAM-O pipeline yield a table of identified TF-peaks, each described by a collection of local (microscopic) and contextual (macroscopic) feature properties. Rather than stratifying TF-peaks by fixed frequency cutoffs or sleep stage labels — which impose arbitrary boundaries and ignore substantial within-stage variability — DYNAM-O takes a distributional approach. Feature histograms encode the occurrence of tens of thousands of discrete TF-peak events across the multi-dimensional feature space, providing a condensed snapshot of overnight sleep dynamics.
 
 **SO-power histogram.** A 2D histogram encoding the density of TF-peak occurrence (events/minute) as a function of peak frequency and SO-power (a continuous proxy for depth of sleep). This reveals how different types of transient oscillations emerge and change across the full continuum of sleep depth throughout the night.
 
@@ -837,46 +826,179 @@ Rather than stratifying TF-peaks by fixed frequency cutoffs or sleep stage label
 <figcaption><b>Example SO-power (left) and SO-phase (right) histograms from an overnight sleep EEG recording.</b></figcaption></figure>
 <br/>
 
-**Dimensionality reduction.** Feature histograms are non-parametric summaries with ~8,000 bins, making direct statistical comparison challenging. DYNAM-O provides two approaches for dimensionality reduction:
+Visualizing the SO feature histograms already provides substantial insight into overnight sleep dynamics. For subsequent statistical comparisons across subjects or conditions, DYNAM-O provides two complementary dimensionality reduction approaches — [parametric basis fitting](#parametric-basis-fitting) and [spline basis fitting](#spline-basis-fitting) — described in detail below.
 
-- **Parametric fitting** (`param_basis_power`, `param_basis_phase`): Seeds initial parameters by running a second watershed pass on the histogram itself (`extracthistpeaks`), then fits a sum of basis functions via nonlinear least squares:
-  - *SO-power*: rotated 2D Gaussians — `[amplitude, f_mean, f_std, power_mean, power_std, rotation_angle]`
-  - *SO-phase*: von Mises × Gaussian hybrids — `[amplitude, f_mean, f_std, phase_preference, kappa]` — handling the circular periodicity of phase
-  - Mode selection via `select_modes` prunes redundant modes by amplitude, overlap, and ΔR²; the `kneedle` algorithm identifies the optimal mode count from a scree plot
+---
 
-- **Spline fitting** (`spline_basis` / `SOPH2spline`): Fits bivariate least-squares splines to the 2D histogram surface, reducing ~8,000 bins to ~100 spline coefficients. Produces smoother fits than the parametric approach, with fewer edge artifacts, and is better suited to complex or irregular mode patterns.
+### Dimensionality Reduction of Feature Histograms
+
+Feature histograms contain thousands of bins, making direct statistical comparison challenging. DYNAM-O provides two complementary approaches to reduce dimensionality while preserving the key structures in the histograms.
+
+#### Parametric Basis Fitting
+
+Parametric fitting identifies prominent clusters (modes) in the histogram and fits interpretable basis functions to each. The objective is to construct a low-dimensional representation where each mode corresponds to a distinct type of transient oscillation activity (e.g., sleep spindles, theta bursts), described by a small set of meaningful parameters that can be directly compared across subjects or conditions.
+
+**How it works:**
+
+1. The watershed algorithm is first run on the histogram itself to identify potential peaks as initial conditions for fitting
+2. A sequence of models with increasing numbers of modes is fit via nonlinear least squares (MATLAB `fit()`)
+3. At each iteration, a new mode is added from the next watershed region and the full model is refit
+4. Modes that fall below a minimum amplitude or exceed a maximum spatial overlap with existing modes are rejected
+5. The optimal number of modes is selected based on the adjusted R² curve — either by minimum percentage change in R² or by the kneedle (elbow) algorithm
+
+**SO-power histograms** (`param_basis_power`): The SO-power histogram is modeled as a sum of *N* rotated 2D Gaussian modes on a linear baseline plane, where *p* is SO-power and *f* is frequency:
+
+$$H(p, f) = \text{baseline}(p, f) + \sum_{n=1}^{N} \text{mode}_n(p, f)$$
+
+The baseline is a linear plane capturing any residual trend in the histogram:
+
+$$\text{baseline}(p, f) = \beta_{0} + \beta_{p} p + \beta_{f} f$$
+
+Each mode is a rotated 2D Gaussian:
+
+$$\text{mode}_n(p, f) = A \exp\left(-\left(\frac{(f - \mu_f)\cos\theta + (p - \mu_p)\sin\theta}{\sigma_f}\right)^2 - \left(\frac{-(f - \mu_f)\sin\theta + (p - \mu_p)\cos\theta}{\sigma_p}\right)^2\right)$$
+
+The fitted parameters for each mode are:
+
+| Parameter | Description |
+|---|---|
+| `amplitude` (*A*) | Peak density of the mode |
+| `center_frequency` (*μ_f*) | Center frequency (Hz) |
+| `center_SOpower` (*μ_p*) | Center SO-power (dB) |
+| `frequency_std` (*σ_f*) | Spread in frequency |
+| `SOpower_std` (*σ_p*) | Spread in SO-power |
+| `rotation` (*θ*) | Rotation angle of the Gaussian |
+
+**SO-phase histograms** (`param_basis_phase`): The SO-phase histogram is modeled as a sum of *N* von Mises × Gaussian modes on a sinusoidal baseline, where *ϕ* is SO-phase and *f* is frequency:
+
+$$H(\phi, f) = \text{baseline}(\phi, f) + \sum_{n=1}^{N} \text{mode}_n(\phi, f)$$
+
+The baseline is sinusoidal, capturing any overall phase preference across all frequencies:
+
+$$\text{baseline}(\phi, f) = \beta_{0} + \beta_{1} \sin(\phi + \beta_{2})$$
+
+Each mode is a von Mises (circular) × Gaussian (frequency) product:
+
+$$\text{mode}_n(\phi, f) = A \exp\left(-(f - \mu_f)^2 / \sigma_f\right) \exp\left(\kappa \cos(\phi - \mu_\phi + (f - \mu_f)\sin\theta) - \kappa\right)$$
+
+The von Mises component handles the periodicity of phase naturally, while the Gaussian component models the frequency spread. The subtraction of *κ* in the exponent normalizes the von Mises peak to 1, so *A* directly represents mode amplitude. To handle modes spanning the ±π boundary, three concatenated copies of the histogram are used during watershed seeding. After fitting, each frequency row is optionally normalized to sum to 1. The fitted parameters for each mode are:
+
+| Parameter | Description |
+|---|---|
+| `amplitude` (*A*) | Peak density of the mode |
+| `center_frequency` (*μ_f*) | Center frequency (Hz) |
+| `center_SOphase` (*μ_ϕ*) | Preferred SO-phase (rad) |
+| `frequency_std` (*σ_f*) | Spread in frequency |
+| `von_Mises_kappa` (*κ*) | Concentration parameter (higher = more phase-locked) |
+| `rotation` (*θ*) | Phase–frequency coupling angle |
+
+**Usage:**
+
+```matlab
+% Fit SO-power histogram
+params = param_basis_power(SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins);
+
+% Fit SO-phase histogram
+params = param_basis_phase(SOPHs.SOphase_mat, SOPHs.SOphase_bins, SOPHs.freq_bins);
+```
+
+Both functions return a parameter matrix with one row per identified mode and have built-in plotting functionality.
+
+**Parametric Basis Options** (`param_basis_opts`):
+
+```matlab
+opts = param_basis_opts('power');   % or 'phase'
+```
+
+| Parameter | Default (power / phase) | Description |
+|---|---|---|
+| `freq_limits` | `[2, 16]` | Frequency range for fitting (Hz) |
+| `power_limits` / `phase_limits` | `[-2, 20]` / `[-π, π]` | SO-power or SO-phase range for fitting |
+| `max_peaks` | `6` | Maximum number of modes to fit (`-1` for unlimited) |
+| `max_overlap` | `0.2` / `0.15` | Maximum allowed spatial overlap between modes |
+| `criterion` | `'minpctr2'` | Model selection criterion: `'minpctr2'` (minimum % change in R²), `'mindr2'` (minimum absolute change), `'kneedle'` (elbow detection), `'max'` (fit all modes) |
+| `min_pctr2` | `0.01` / `0.025` | Minimum percentage change in R² to accept a new mode |
+| `min_dr2` | `0.01` | Minimum absolute change in R² |
+| `watershed_params` | *(see below)* | `[merge_thresh, dur_min, bw_min, height_min, trim_vol]` for initial peak finding |
+| `prefix_modes` | `[]` | Preset mode parameters to include before watershed-seeded modes |
+| `prefix_modes_order` | `-1` | `-1` = append after, `0` = use only prefix, `1` = prepend before watershed modes |
+| `plot_on` | `1` | `0` = none, `1` = final result, `2` = each iteration, `3` = both |
+| `verbose` | `true` | Print progress information |
+
+---
+
+#### Spline Basis Fitting
+
+While parametric fitting yields interpretable modes, some histograms have complex patterns that are not easily represented as Gaussian peaks. Spline basis fitting provides a nonparametric alternative by fitting a smooth two-dimensional surface to the histogram, capturing all structure regardless of shape.
+
+**How it works:**
+
+A two-dimensional tensor-product B-spline surface is fit to the histogram values across the SO-power (or SO-phase) and frequency axes using least-squares approximation. The spline is defined by a grid of internal knots along each axis, with the knot density controlling the tradeoff between smoothness and fidelity. The fitted spline coefficients provide a compact representation of the histogram that can be used for statistical comparisons.
+
+**Usage:**
+
+```matlab
+% Fit SO-power histogram
+[splinefit, coefs] = spline_basis('power', SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins);
+
+% Fit SO-phase histogram
+[splinefit, coefs] = spline_basis('phase', SOPHs.SOphase_mat, SOPHs.SOphase_bins, SOPHs.freq_bins);
+```
+
+`splinefit` is the smoothed histogram surface (same dimensions as the input), and `coefs` is the matrix of spline coefficients used for dimensionality-reduced comparisons.
+
+**Spline Basis Options** (`spline_basis_opts`):
+
+```matlab
+opts = spline_basis_opts('power');   % or 'phase'
+```
+
+| Parameter | Default (power / phase) | Description |
+|---|---|---|
+| `freq_limits` | `[2, 16]` | Frequency range for fitting (Hz) |
+| `power_limits` / `phase_limits` | `[-2, 20]` / `[-π, π]` | SO-power or SO-phase range for fitting |
+| `num_knots_x` | `5` | Number of internal knots along the SO-power/phase axis |
+| `num_knots_y` | `18` / `9` | Number of internal knots along the frequency axis |
+| `plot_on` | `true` | Plot fitted surface |
+| `SOPH_clim_prctiles` | `[5, 98]` | Percentiles for heatmap color scaling |
+
+The difference in frequency knots (18 for power, 9 for phase) reflects the typically smoother structure of SO-phase histograms, which require fewer knots to capture their variation.
 
 ---
 
 ### Part 4: Statistical Testing
 
-**Feature and mode analysis.** Hypothesis testing can be performed on individual TF-peak feature properties from `stats_table` (analogous to conventional spindle analyses but extended to all TF-peaks), or on parametric mode parameters extracted from fitted histograms. Distributional comparisons (e.g., Kolmogorov–Smirnov tests) can be conducted on any feature property across conditions or cohorts.
+The outputs from the DYNAM-O Toolbox are naturally suited for statistical tests in different forms.
+
+**Feature and mode analysis.** Hypothesis testing can be performed on individual TF-peak feature properties from `stats_table` (analogous to conventional spindle analyses but extended to all TF-peaks), or on parametric mode parameters extracted from fitted histograms. For example, mode center frequencies, amplitudes, and SO-power positions can be compared across groups to identify differences in specific types of transient oscillations.
 
 **Whole-histogram analysis.** Given feature histograms from multiple subjects or recording sessions, DYNAM-O supports "whole-histogram" group comparisons (analogous to whole-brain voxel-wise fMRI analyses). Two approaches are implemented:
 
-- **Pixel-wise FDR testing** (`FDR_2D`): Two-sample or paired-sample statistical tests at each histogram bin, with false discovery rate controlled at 10% using the Benjamini–Yekutieli procedure.
-- **Global permutation testing** (`gpermtest`): Tests on the linearized feature histograms based on the number of bins exceeding one-dimensional acceptance bounds, providing greater sensitivity to detect small but consistent differences between histograms.
+- **Pixel-wise FDR testing** (`FDR_2D`): Two-sample or paired-sample statistical tests at each histogram bin, with false discovery rate correction using the [Benjamini–Yekutieli procedure](https://en.wikipedia.org/wiki/False_discovery_rate#Benjamini%E2%80%93Yekutieli_procedure).
+- **Global permutation testing** (`gpermtest`): Tests on the linearized feature histograms based on the number of bins exceeding acceptance bounds, providing greater sensitivity to detect small but consistent differences across the entire histogram. Based on the method described in [Harrison et al. (2009)](https://www.nature.com/articles/nn.2501).
+
+These methods enable detection of group differences (e.g., between clinical populations or across experimental conditions) that may be distributed across multiple frequency ranges and sleep depths simultaneously.
 
 ---
 
 ### SO-Power Computation and Normalization
 
-SO-power is the integrated multitaper spectral power in the slow-oscillation band (default 0.3–1.5 Hz):
+The total spectral power within the 0.3–1.5 Hz slow oscillation band of the raw recording is used to measure the strength of slow oscillations as a proxy for sleep depth:
 
-1. Compute multitaper spectrogram (default: [5,9] tapers, 5s window, 0.5s step)
-2. Integrate spectrogram between 0.3 and 1.5 Hz
+1. Compute a multitaper spectrogram of the raw EEG (default: time-bandwidth product 5, 9 tapers, 5s window, 0.5s step)
+2. Integrate spectral power between 0.3 and 1.5 Hz to obtain the SO-power time series
 3. Normalize by selected method (see [SO-power normalization methods](#so-power-normalization-methods))
-4. Optionally upsample to EEG sampling rate
+4. Assign SO-power to each TF-peak based on its peak time
 
 ### SO-Phase Computation
 
-SO-phase is the instantaneous phase of the slow-oscillation signal:
+The phase of slow oscillations reflects the timing of cortical up/down states:
 
-1. Bandpass filter EEG to SO band (default 0.3–1.5 Hz) — precomputed FIR filters or IIR fallback
-2. Apply Hilbert transform to obtain complex analytic signal
-3. Unwrap phase to be monotonically increasing (cumulative radians)
-4. Interpolate unwrapped phase at each TF peak time
-5. Re-wrap to `[-π, π]` where **0 rad = SO peak** and **±π = SO trough**
+1. Bandpass filter the raw EEG to the SO band (0.3–1.5 Hz) using a zero-phase IIR bandpass filter
+2. Apply the Hilbert transform to obtain the instantaneous phase
+3. Unwrap phase to be monotonically increasing
+4. Interpolate the unwrapped phase at each TF-peak time
+5. Re-wrap to `[-π, π]` where **0 rad = SO peak** (cortical up state) and **±π = SO trough** (cortical down state)
 
 ---
 
@@ -944,6 +1066,26 @@ DYNAMO_dev/
         ├── statistical_tests/       permtest, gpermtest, FDR_1D, FDR_2D
         ├── data_processing/         nanzscore, nanpow2db, get_chunks, create_bins
         └── conversion/              csv2table, read_staging, struct2nvp, hmstext2seconds
+```
+
+---
+
+## Included Submodules
+
+DYNAM-O depends on several standalone libraries included as Git submodules under `toolbox/helper_functions/`. These are cloned automatically with `--recursive` (see [Installation](#installation)).
+
+| Submodule | Repository | Description |
+|---|---|---|
+| **Multitaper Spectrogram** | [preraulab/multitaper](https://github.com/preraulab/multitaper) | Multitaper spectral estimation (MATLAB, Python, R). Provides the time-frequency decomposition underlying TF-peak detection and SO-power computation. Includes an optimized C MEX implementation. |
+| **Artifact Detection** | [preraulab/artifact_detection](https://github.com/preraulab/artifact_detection) | Detects and removes artifacts in EEG time series using high-frequency and broadband filtering with adaptive z-score thresholding. Includes Hjorth feature-based detection. |
+| **Read EDF** | [preraulab/read_EDF](https://github.com/preraulab/read_EDF) | Reads European Data Format (EDF/EDF+) files with full metadata extraction, per-signal scaling, and optional MEX acceleration. Includes a GUI for exploring EDF headers. |
+| **Statistical Tests** | [preraulab/multicomp_test](https://github.com/preraulab/multicomp_test) | Permutation-based statistical tests and false discovery rate (FDR) correction for multi-dimensional data. Provides `permtest`, `gpermtest`, `FDR_1D`, and `FDR_2D`. |
+| **CSSuicontrols** | [preraulab/CSSuicontrols](https://github.com/preraulab/CSSuicontrols) | CSS-styled HTML-backed UI controls for MATLAB App Designer. Powers the progress bar, text areas, buttons, and other custom widgets in DYNAMOFileManager. |
+
+To update all submodules to their latest versions:
+
+```bash
+git submodule update --remote
 ```
 
 ---

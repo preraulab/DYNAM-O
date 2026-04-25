@@ -80,11 +80,10 @@ end
 
 %% SPECTROGRAM PARAMS
 dsfreqs = 0.05; % For example, with Fs = 200, this should make the nfft = 2^12
-
+nfft = 2^(nextpow2(Fs/dsfreqs)); % zero pad data to this minimum value for fft
 window_size = 4;
 step_size = 0.05;
-nfft = 2^(nextpow2(Fs/dsfreqs)); % zero pad data to this minimum value for fft
-detrend = 'constant'; % do not detrend
+detrend_opt = 'constant'; % do not detrend
 ploton = false; % do not plot out
 mts_verbose = false; % suppress verbose messages
 
@@ -92,7 +91,7 @@ mts_verbose = false; % suppress verbose messages
 event_times = stats_table.PeakTime;
 % Exclude event times that fall within half the window size distance from
 % the start/end of the data collected
-event_times_inc = event_times > t(1)+(0.5*window_size) & event_times < t(end)-(0.5*window_size);
+event_times_inc = event_times >= (t(1)+(0.5*window_size)) & event_times <= (t(end)-(0.5*window_size));
 
 bounding_box_lower = stats_table.BoundingBox(event_times_inc,2); % Element 2 of the bounding box corresponds to the lower bound frequency of the detected event
 bounding_box_height = stats_table.BoundingBox(event_times_inc,4); % Element 4 of the bounding box gives the height of the bounding box
@@ -103,21 +102,13 @@ bounding_box_height = stats_table.BoundingBox(event_times_inc,4); % Element 4 of
 % computing the entire spectrogram, this approach takes a fixed window
 % around each event center to use for the frequency refinement
 [spect, ~, sfreqs] = hann_event_spectra(data, Fs, event_times(event_times_inc),'t',t, ...
-    'frequency_range',freq_range,'data_window_params',[window_size,step_size],'NFFT',nfft,'detrend_opt',detrend, 'plot_on',ploton,'verbose',mts_verbose);
+    'frequency_range',freq_range,'data_window_params',[window_size,step_size],'NFFT',nfft,'detrend_opt',detrend_opt, 'plot_on',ploton,'verbose',mts_verbose);
 
 %% RECOMPUTE BASELINE
 
 % If baseline removal is on
 if baseline_opt
-    spect_bl = spect;
-    spect_bl(spect_bl==0) = NaN; % Turn 0s to NaNs for percentile computation
-
-    baseline_ptile = 2; % using 2nd percentile of spectrogram as baseline
-    baseline = prctile(spect_bl, baseline_ptile, 2); % get baseline
-
-    clear spect_bl % for cleanup
-
-    [spect, ~] = removeBaseline(spect, baseline); % recompute spect with baseline removed
+    spect = removeBaseline(spect); % recompute spect with baseline removed
 end
 
 %% REFINE STATS_TABLE
@@ -148,7 +139,7 @@ parfor ii = 1:N_events
             %performed at a fine level. Moreover, as the grids are
             %non-uniform between peaks (1k points between start and end
             %freqs) this should not produce fix discretization and thus
-            %not corrupt the peaks. This method far more computationally
+            %not corrupt the peaks. This method is far more computationally
             %efficient than the spline optimization.
 
             freq_interp = linspace(start_freq, end_freq, 1000);

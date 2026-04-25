@@ -31,9 +31,9 @@ The goal of the File Manager is to provide a fully operational GUI — with stan
 ## 1. Quick Start
 
 ```
-1. Add EDF data files and matching staging files
+1. Add EDF data files and (optionally) matching staging files
 2. Select channels to process
-3. Set staging file parsing options
+3. Set staging file parsing options (if staging files are used)
 4. Choose an output directory and what to save
 5. (Optional) Adjust analysis parameters in the Settings tab
 6. Click RUN
@@ -90,8 +90,8 @@ Each file list (DATA and STAGING) has its own set of action buttons:
 | Button | Action |
 |--------|--------|
 | **Add File** | Opens a file browser to select one or more files |
-| **Add Folder** | Adds all valid files in a selected folder |
-| **Delete File** | Removes the currently selected file from the list |
+| **Add Folder** | Adds all matching files in a selected folder (DATA: `*.edf`; STAGING: `*.csv`, falling back to `*.txt` if no CSV files are found) |
+| **Delete File** | Removes the currently selected file(s) from the list |
 | **Move Up / Move Down** | Reorders files to align data–staging pairs |
 
 - **Add Folder (DATA)** globs `*.edf` in the chosen folder only.
@@ -103,7 +103,7 @@ Each file list (DATA and STAGING) has its own set of action buttons:
 
 **File → Load EDF File List...** or **File → Load Staging File List...**
 
-Loads a plain-text file with one file path per line. The manager validates each path, reports missing and duplicate entries, and offers to save a log of any skipped files.
+Loads a plain-text file with one file path per line. The manager validates each path, removes duplicates, and reports any issues. If missing or duplicate entries are found, a dedicated window appears showing the skipped and duplicated files, with an option to save a log file for review.
 
 Accepted list-file extensions (shown in the file picker filter): `.txt`, `.csv`, `.tsv`, `.dat`, `.lst`. The file itself is read as plain text — the extension only controls what is offered in the picker.
 
@@ -121,13 +121,26 @@ Click **Select** to open the interactive channel browser, which scans all loaded
 
 - All available channel names
 - Sampling frequency per channel
-- How many files contain each channel
+- How many files contain each channel (e.g., `8 / 10` means 8 of 10 loaded files contain that channel)
 
-Select one or more channels and click **Add to Batch Run** to populate the channel field.
+Select one or more channels and click **Add to Batch Run** to populate the channel field. Selected channels are appended to any channels already in the field, without introducing duplicates.
 
 #### Creating Rereference Channels
 
-The channel browser supports virtual rereference channels computed as the difference between two real channels (e.g., `C3-A2`). Use the rereference sub-dialog to choose a signal and a reference; the manager validates that both channels exist in the same files and share the same sampling rate.
+The channel browser supports virtual rereference channels computed as the difference between two real channels (e.g., `C3-A2`). Click **Add Rereference** to open a sub-dialog where you choose a signal and a reference. The manager validates that:
+
+- Both channels exist in the same files
+- Both channels share the same sampling rate in every overlapping file
+- The rereference label is not already in the channel list
+
+The resulting virtual channel appears in the table with its own file count (only files containing both constituent channels).
+
+#### Sampling Frequency Warnings
+
+When channels are added via the browser, the File Manager checks each channel's sampling frequency against the DYNAM-O analysis frequency range. The upper analysis bound is the larger of the SOPH frequency range upper limit and the multitaper spectrogram frequency range upper limit (configured in the DYNAM-O Settings tab). Two warnings may appear:
+
+- **Fs too high** (Fs > 10× the upper analysis bound): The channel's sampling rate far exceeds what DYNAM-O analyzes. This wastes memory and processing time. Consider enabling **Resample Data** to downsample before processing.
+- **Fs too low** (Fs < 2× the upper analysis bound): The Nyquist frequency (Fs/2) is below the upper analysis bound, meaning the analysis frequency range cannot be fully represented at this sampling rate. You **must** enable **Resample Data** and upsample, or the run will fail. However, note that upsampling does not create real spectral content above the original Nyquist — consider whether narrowing the analysis frequency range is more appropriate.
 
 ---
 
@@ -166,19 +179,17 @@ onset_s,stage
 
 For each stage, enter the identifiers used in your staging file as a comma-separated list. Multiple synonyms are supported (e.g., `W, Wake, 0`).
 
-| Field | Stage |
-|-------|-------|
-| **Artifact** | Artifact epochs |
-| **Wake** | Wakefulness |
-| **REM** | REM sleep |
-| **N1** | NREM Stage 1 |
-| **N2** | NREM Stage 2 |
-| **N3** | NREM Stage 3 |
-| **Unknown** | Unscored or unknown epochs |
+| Field | Default Labels | Stage |
+|-------|----------------|-------|
+| **Artifact** | `artifact, A, 6` | Artifact epochs |
+| **Wake** | `wake, W, 5` | Wakefulness |
+| **REM** | `REM, R, 4` | REM sleep |
+| **N1** | `N1, Stage 1, 1` | NREM Stage 1 |
+| **N2** | `N2, Stage 2, 2` | NREM Stage 2 |
+| **N3** | `N3, Stage 3, 3` | NREM Stage 3 |
+| **Unknown** | `Unk, U, Unknown` | Unscored or unknown epochs |
 
-### Resampling
-
-Enable the **Resample Data** switch and enter a target frequency in **New Fs (Hz)** to resample all EDF data before analysis.
+All stage label fields except Unknown must be filled for validation to pass.
 
 ---
 
@@ -193,20 +204,28 @@ Click **Browse** to select the folder where all results will be saved. Outputs a
 Check the boxes for the data types and figures to generate:
 
 **Data to Save**
+
 | Option | Description |
 |--------|-------------|
 | Peak Stats Tables | TF-peak statistics table per subject-channel |
 | SO-Power Histogram | SO-Power and SO-Phase histograms |
 | Parametric Basis | Parametric basis fit coefficients |
 | Spline Basis | Spline basis fit data |
-| Auxiliary Data | Artifacts, Fs, stage times/values, normalization method |
+| Auxiliary Data | Artifacts, Fs, stage times/values, SO-power normalization method |
 
 **Figures to Save**
+
 | Option | Description |
 |--------|-------------|
-| Data Summary | Overview summary figure |
+| Data Summary | Overview summary figure (spectrogram, SO-power, detected peaks, histograms) |
 | Parametric Basis | Parametric basis fit visualization |
 | Spline Basis | Spline basis fit visualization |
+
+**Logging**
+
+| Option | Description |
+|--------|-------------|
+| Save Logs | Save file log, console log, and run settings to the output `logs/` and `settings/` directories. When disabled, no logs or settings files are written. |
 
 ### File Formats Tab
 
@@ -235,9 +254,9 @@ The **Save Logs** switch in the output options controls whether `logs/` and `set
 
 Click the **DYNAM-O Settings** tab to access the embedded settings panel. Parameters are organized into sections:
 
-- **SOPH Options** — SO-Power/Phase histogram configuration
+- **SOPH Options** — SO-Power/Phase histogram configuration (including frequency range)
 - **Baseline Options** — Baseline normalization settings
-- **Detection Options** — TF-peak detection thresholds
+- **Detection Options** — TF-peak detection thresholds (including multitaper frequency range)
 - **Parametric Basis Fit Options** — Power and phase parametric model settings
 - **Spline Basis Fit Options** — Power and phase spline model settings
 
@@ -247,9 +266,9 @@ These settings are saved with each run to `<OutputDir>/settings/run_settings_<ti
 
 ## 8. Running the Batch
 
-### Pre-Run Checklist
+### Pre-Run Validation
 
-Before clicking RUN, verify:
+Clicking **RUN** triggers an automatic validation pass. The following conditions are checked, and any failures are reported in an error dialog with the offending fields highlighted in red:
 
 - [ ] DATA list has EDF files; STAGING list has matching staging files **or is empty** (see below)
 - [ ] DATA and STAGING lists have the same number of files (unless STAGING is empty)
@@ -279,13 +298,16 @@ For each EDF + staging file pair, for each selected channel:
 1. Load EDF and extract the target channel
 2. Parse staging file and align epochs (or use whole-recording N2 in no-stages mode)
 3. Resample data if enabled
-4. Compute TF-peak statistics table
-5. Generate SO-Power and SO-Phase histograms
-6. (If enabled) Fit parametric basis model
-7. (If enabled) Fit spline basis model
-8. (If enabled) Generate and save summary/basis figures
-9. Save selected outputs to structured output directory
-10. Log result to file log
+4. Compute TF-peak statistics table and SO-Power/Phase histograms
+5. (If enabled) Generate and save data summary figure
+6. (If enabled) Fit parametric basis model and save results/figures
+7. (If enabled) Fit spline basis model and save results/figures
+8. (If enabled) Save auxiliary data
+9. Log result (success, skipped, or error) to the file log
+
+### Help Button
+
+A **Help** button is located in the bottom-right area of the File Manager window, next to the progress bar. Clicking it opens this README documentation in the system's default web browser.
 
 Errors in any step are caught per-iteration — see [Error Containment and Resuming After a Crash](#error-containment-and-resuming-after-a-crash).
 
@@ -295,7 +317,7 @@ Errors in any step are caught per-iteration — see [Error Containment and Resum
 
 ### Status Area
 
-The STATUS text area (bottom-left) shows real-time processing messages as each subject-channel pair is processed.
+The STATUS text area (bottom-left) shows real-time processing messages as each subject-channel pair is processed, including loading, analysis step, and saving notifications.
 
 ### Progress Bar
 
@@ -378,7 +400,7 @@ The main configuration tab. Contains the DATA and STAGING file lists on the left
 
 **Sections:**
 
-- **DATA list** — EDF files to process, with Add/Delete/Move/AddFolder buttons
+- **DATA list** — EDF files to process, with Add File/Add Folder/Delete File/Move Up/Move Down buttons
 - **STAGING list** — Paired staging files, with the same set of buttons
 - **Channel(s)** — Target channel labels; Select button opens channel browser
 - **Staging Options** — Stage label mapping, column indices, delimiter, header row count
@@ -406,7 +428,7 @@ Hosts the embedded DYNAMOOptions sub-app for configuring all analysis parameters
 
 | Item | Description |
 |------|-------------|
-| **Help** | Shows a brief usage guide dialog |
+| **Help** | Opens this README documentation in the system web browser |
 | **About DYNAM-O...** | Displays lab info, website/GitHub links, and paper citations |
 
 ---
@@ -425,6 +447,15 @@ app = DYNAMOFileManager('BatchCallback', @myCallback)
 app = DYNAMOFileManager('ValidationCallback', @myValidator)
 ```
 
+| Parameter | Description |
+|-----------|-------------|
+| `Title` | Window title (default: `'DYNAM-O Toolbox'`) |
+| `Position` | `[x y width height]` figure position vector |
+| `BatchCallback` | `function_handle` invoked at batch start; receives `(dataList, stagingList, opts)` where `opts` is a struct of save option values |
+| `ValidationCallback` | `function_handle(filepath)` called per file during Add File; return `true` to accept, `false` to reject |
+
+If the Parallel Computing Toolbox is installed and no parallel pool is running, one is started automatically on launch.
+
 ### Adding Files
 
 ```matlab
@@ -435,6 +466,8 @@ app.addDataFiles({'/path/to/sub01.edf', '/path/to/sub02.edf'})
 app.addStagingFiles('/path/to/subject01_staging.csv')
 app.addStagingFiles({'/path/to/sub01_staging.csv', '/path/to/sub02_staging.csv'})
 ```
+
+Duplicate file paths are silently ignored.
 
 ### Retrieving File Lists
 
