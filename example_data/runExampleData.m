@@ -24,11 +24,13 @@ function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, art
 % =========================================================================
 %% PARSE INPUTS
 p = inputParser;
+p.KeepUnmatched = true;  % pass-through for runDYNAMO name-value args
+                         % (backend, fit_param_basis, etc.)
 
-addOptional(p, 'skip_SOPH', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
-addOptional(p, 'plot_on', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
-addOptional(p, 'verbose', default_verbose, @(x) validateattributes(x, {'logical', 'numeric'}, {'scalar'}));
-addOptional(p, 'speed_test', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+addParameter(p, 'skip_SOPH', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+addParameter(p, 'plot_on', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+addParameter(p, 'verbose', default_verbose, @(x) validateattributes(x, {'logical', 'numeric'}, {'scalar'}));
+addParameter(p, 'speed_test', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -36,6 +38,13 @@ field_names = fieldnames(p.Results);
 
 %Automatically add parser results to the workspace
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
+
+% Forward any unrecognised name-value pairs to runDYNAMO (e.g., 'backend',
+% 'fit_param_basis', other detection-option overrides). Converting
+% p.Unmatched (a struct) to a {name,value,...} cell preserves argument
+% pairing for varargin expansion at the runDYNAMO call below.
+unmatched_cell = [fieldnames(p.Unmatched)'; struct2cell(p.Unmatched)'];
+unmatched_cell = unmatched_cell(:)';
 
 if speed_test
     skip_SOPH = true;
@@ -105,11 +114,11 @@ else
 
     if skip_SOPH
         [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts,~,timings] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options,...
-            'verbose', verbose, 'plot_on', plot_on);
+            'verbose', verbose, 'plot_on', plot_on, unmatched_cell{:});
         SOPHs = [];
     else
         [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs, timings] = runDYNAMO(data, Fs, stage_times, stage_vals, time_range, baseline_options, detection_options, SOPH_options,...
-            'verbose', verbose, 'plot_on', plot_on);
+            'verbose', verbose, 'plot_on', plot_on, unmatched_cell{:});
     end
 end
 
