@@ -31,24 +31,32 @@
 [submodule "toolbox/helper_functions/data_processing"]
 	path = toolbox/helper_functions/data_processing
 	url = ../data_processing.git
+	branch = master
 [submodule "toolbox/helper_functions/binning"]
 	path = toolbox/helper_functions/binning
 	url = ../binning.git
+	branch = master
 [submodule "toolbox/helper_functions/conversion"]
 	path = toolbox/helper_functions/conversion
 	url = ../conversion.git
+	branch = master
 [submodule "toolbox/helper_functions/nanstats"]
 	path = toolbox/helper_functions/nanstats
 	url = ../nanstats.git
+	branch = master
 [submodule "toolbox/helper_functions/graphical"]
 	path = toolbox/helper_functions/graphical
 	url = ../graphical.git
+	branch = master
 [submodule "toolbox/helper_functions/fig_tools"]
 	path = toolbox/helper_functions/fig_tools
 	url = ../fig_tools.git
+	branch = master
 [submodule "toolbox/helper_functions/colormaps"]
 	path = toolbox/helper_functions/colormaps
 	url = ../colormaps.git
+	branch = master
 [submodule "toolbox/helper_functions/sleep"]
 	path = toolbox/helper_functions/sleep
 	url = ../sleep.git
+	branch = master
