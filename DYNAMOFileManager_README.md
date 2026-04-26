@@ -142,6 +142,16 @@ When channels are added via the browser, the File Manager checks each channel's 
 - **Fs too high** (Fs > 10× the upper analysis bound): The channel's sampling rate far exceeds what DYNAM-O analyzes. This wastes memory and processing time. Consider enabling **Resample Data** to downsample before processing.
 - **Fs too low** (Fs < 2× the upper analysis bound): The Nyquist frequency (Fs/2) is below the upper analysis bound, meaning the analysis frequency range cannot be fully represented at this sampling rate. You **must** enable **Resample Data** and upsample, or the run will fail. However, note that upsampling does not create real spectral content above the original Nyquist — consider whether narrowing the analysis frequency range is more appropriate.
 
+### Resampling
+
+The **Resample Data** switch is **ON by default at 100 Hz** — leave it that way for standard sleep-oscillation analysis. Why:
+
+- DYNAM-O analyzes **0–30 Hz**, so 100 Hz Nyquist is well above anything the pipeline cares about. Resampling to 100 Hz is **lossless** for sleep oscillations.
+- The multitaper FFT size is `2^nextpow2(Fs/0.1)`. Above **Fs = 102.4 Hz** (a common boundary that 128 / 200 / 256 / 500 / 1000 Hz EDFs all cross), NFFT doubles and the spectrogram typically spills past CPU L3 cache. Every downstream stage takes a 2–3× memory-bandwidth hit on top of the doubled FFT cost.
+- Empirically: a 10.5 h × 128 Hz EDF runs in ~22 s resampled to 100 Hz vs ~41 s at native rate (Threadripper Pro, Rust backend).
+
+Turn the switch **off** only if you specifically need spectral content above 50 Hz (e.g., gamma analysis beyond DYNAM-O's analyzed band). The FileManager will warn if a selected channel's native Fs > 102.4 Hz and Resample is disabled.
+
 ---
 
 ## 5. Configuring Staging File Parsing
@@ -188,6 +198,7 @@ For each stage, enter the identifiers used in your staging file as a comma-separ
 | **N2** | `N2, Stage 2, 2` | NREM Stage 2 |
 | **N3** | `N3, Stage 3, 3` | NREM Stage 3 |
 | **Unknown** | `Unk, U, Unknown` | Unscored or unknown epochs |
+
 
 All stage label fields except Unknown must be filled for validation to pass.
 
