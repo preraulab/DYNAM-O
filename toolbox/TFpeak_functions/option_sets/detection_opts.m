@@ -94,7 +94,7 @@ addOptional(p, 'parallel_mode', 'Processes', @(x) (ischar(x) || isstring(x)) && 
 %            peaks within ~0.8% of MATLAB reference). Requires built MEX files
 %            in rust_bridge/; if missing runDYNAMO errors with a build recipe.
 % 'matlab' - pure-MATLAB reference path (ground truth, slower, uses a parpool).
-addOptional(p, 'backend', 'rust', @(x) (ischar(x) || isstring(x)) && any(strcmp(lower(char(x)), {'rust', 'matlab'})));
+addOptional(p, 'backend', 'rust', @(x) (ischar(x) || isstring(x)) && any(strcmpi(char(x), {'rust', 'matlab'})));
 
 %%
 parse(p,varargin{:});
