@@ -19,6 +19,9 @@
 %       stage_vals:         [1 x S] double - sleep stage labels (1-5)
 %
 %   Optional Inputs (Name-Value Pairs):
+%       backend:                      char - pipeline backend: 'rust' (default, MEX wrappers
+%                                     around dynamo_rs; ~4x faster, -0.8% peak count vs MATLAB)
+%                                     or 'matlab' (pure MATLAB reference path).
 %       time_range:                   [1 x 2] double - start and end time in seconds (default: entire scored range)
 %       baseline_options:             struct - parameters for baseline estimation (default: baseline_opts())
 %       detection_options:            struct - parameters for TF-peak detection (default: detection_opts())
@@ -45,8 +48,8 @@
 %       artifacts:          [1 x T] logical - artifact mask for data within time range
 %       SOPHs:              struct - SO-power and SO-phase histograms (and fits if fit_param_basis or fit_spline_basis is true)
 %       timings:            struct (optional) - per-stage wallclock seconds
-%                           Fields: pool_setup, mex_build, spect_pass1,
-%                                   artifact, baseline_pass1, extract_pass1,
+%                           Fields: pool_setup, spect_pass1, artifact,
+%                                   baseline_pass1, extract_pass1,
 %                                   spect_pass2, baseline_pass2, extract_pass2,
 %                                   refine, peak_stage, peak_sopower,
 %                                   peak_sophase, soph_sopower_compute,
@@ -54,6 +57,7 @@
 %                                   soph_sophase_hist, plot_summary,
 %                                   fit_param_basis, fit_spline_basis, total.
 %                           Stages that didn't run are absent or zero.
+%                           (backend='rust' skips pool_setup entirely.)
 %                           A sorted summary table with these timings also
 %                           prints at the end of verbose runs.
 %
@@ -62,17 +66,13 @@
 %       - A single input of 'segment' or 'night' toggles the example data time range (default: 'segment')
 %       - The SOPHs output includes histogram matrices, bin edges, time-in-bin info, and optionally
 %         parametric and spline fit results for both SO-power and SO-phase histograms.
-%       - Parallel pool type is controlled by detection_options.parallel_mode:
-%           * 'Processes'  (default) — ProcessPool + trim_region_mex. Fastest on
-%             every platform except 8-core Apple Silicon at full-night scale.
-%           * 'Threads'               — ThreadPool; trim_region_mex auto-disables
-%             (MATLAB blocks MEX in thread workers) and falls back to the MATLAB
-%             path, which is bit-identical. Useful on 8-core Apple Silicon
-%             (M2 / M3) for a ~8% wallclock improvement over ProcessPool.
-%           * ''                      — same as 'Processes'.
-%         trim_region_mex auto-compiles on first call if the binary is missing
-%         and a C++ compiler is configured. If it can't compile, the MATLAB
-%         fallback runs automatically with identical output (slower).
+%       - Two pipeline backends via the 'backend' option:
+%           * 'rust' (default) — dynamo_rs MEX wrappers. ~3.7x faster on night.
+%             Requires pre-built MEX files (see rust_bridge/README.md).
+%             Rayon parallelises internally; MATLAB parpool is not started.
+%           * 'matlab' — pure MATLAB reference path. Uses parpool over
+%             segments; pool type is controlled by detection_options.parallel_mode
+%             ('Processes' (default) / 'Threads' / '').
 %
 %   Example:
 %       load('example_data/example_data.mat');  % should include data, Fs, stage_times, stage_vals
@@ -128,12 +128,27 @@ function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, art
 
 %% SYSTEM SETTINGS
 % Add necessary functions to path (only if not already on path).
-% genpath recurses into every subfolder under toolbox/, which picks up
-% toolbox/TFpeak_functions/mex/ automatically — that's where
-% trim_region_mex and build_trim_mex live.
 if isempty(which('computeTFPeaks'))
     repo_root = fileparts(which('runDYNAMO'));
     addpath(genpath(fullfile(repo_root, 'toolbox')))
+end
+
+% ---- Required MATLAB toolboxes ----
+% DYNAM-O uses watershed(), regionprops(), imresize(), label2rgb(),
+% bwconncomp(), imreconstruct() from the Image Processing Toolbox in BOTH
+% backends — the rust backend replaces the compute-heavy watershed/merge/
+% trim calls with MEX, but display helpers (runWatershed plot path,
+% label2rgb in extract diagnostics, imresize for pass-1/pass-2 alignment
+% in the pure-MATLAB path) still touch IPT. Fail fast with a clear message
+% so users don't hit cryptic "Undefined function 'watershed'" errors deep
+% in the pipeline.
+if ~license('test', 'Image_Toolbox') || exist('watershed', 'file') == 0
+    error('runDYNAMO:missingToolbox', [ ...
+        'DYNAM-O requires the MATLAB Image Processing Toolbox, which ' ...
+        'is not available on this machine.\n\n' ...
+        'To install:  Home tab > Add-Ons > Get Add-Ons > search ' ...
+        '"Image Processing Toolbox" > Install.\n' ...
+        'Or via license portal: https://www.mathworks.com/products/image.html']);
 end
 
 % default verbose setting for all processing steps
@@ -181,6 +196,12 @@ addOptional(p, 'save_output_image', false, @(x) validateattributes(x, {'logical'
 addOptional(p, 'output_fname', 'DYNAM-O_output', @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
 addOptional(p, 'fit_param_basis', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'fit_spline_basis', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+% Pipeline backend override. Empty (default) means "inherit from
+% detection_options.backend" (which defaults to 'rust'); pass 'rust' or
+% 'matlab' here to override what the GUI/detection_opts set. 'rust' uses
+% compiled MEX wrappers around dynamo_rs (~3.7x faster on night, peaks
+% within ~0.8% of MATLAB); 'matlab' is the pure-MATLAB reference path.
+addOptional(p, 'backend', '', @(x) isempty(x) || any(validatestring(lower(char(x)), {'matlab','rust'})));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -200,71 +221,87 @@ timings = struct();
 % summary table.
 ttotal = datetime('now');
 
-%Set up parallel pool. detection_options.parallel_mode controls the
-%pool type: 'Processes' (default, fastest on every host except 8-core
-%Apple Silicon), 'Threads' (override; disables the trim MEX but keeps
-%output bit-identical via the MATLAB fallback), or '' (same as
-%'Processes'). See toolbox/TFpeak_functions/option_sets/detection_opts.m
-%for the full option surface.
-t_stage = tic;
-setup_parallel_pool(detection_options.parallel_mode);
-timings.pool_setup = toc(t_stage);
+% Harden against partial option structs: a user may pass an
+% old/incomplete struct from a prior session (e.g., before a new field
+% like reuse_baseline or seg_time was added). Without backfilling we'd
+% crash deep in the pipeline with "Unrecognized field name". Merge any
+% missing fields from the canonical defaults so partial inputs are
+% always well-formed.
+detection_options = mergeOptsDefaults(detection_options, detection_opts());
+baseline_options  = mergeOptsDefaults(baseline_options,  baseline_opts());
 
-%Pre-build trim MEX on the client, ONCE, before any parfor. This avoids
-%every worker racing to compile the same file simultaneously (N workers
-%= N concurrent build_trim_mex calls writing to the same output). The
-%build is attempted on every platform that has a .mex* file missing;
-%trim_region_mex runs on every pool context except ThreadPool workers
-%(see trimWshedRegions.m for the runtime gate), so the build is
-%worthwhile on every host including Apple Silicon.
-t_stage = tic;
-mex_name_ = ['trim_region_mex.' mexext];
-if exist(mex_name_, 'file') ~= 3 && exist('build_trim_mex', 'file') == 2
-    try
-        fprintf('  Compiling trim_region_mex for this platform (first-time only)...\n');
-        build_trim_mex();
-        mex_dir_ = fileparts(which('build_trim_mex'));
-        if ~isempty(mex_dir_) && exist(fullfile(mex_dir_, mex_name_), 'file') == 3
-            addpath(mex_dir_);
-        end
-        fprintf('  MEX compilation complete.\n');
-    catch
-        fprintf('  MEX compilation failed; using stock MATLAB path.\n');
+% Resolve backend: explicit top-level override wins; otherwise inherit
+% from detection_options.backend (the GUI/options-struct source of truth).
+if isempty(backend)
+    if isfield(detection_options, 'backend') && ~isempty(detection_options.backend)
+        backend = detection_options.backend;
+    else
+        backend = 'rust';
     end
 end
-clear mex_name_ mex_dir_
-timings.mex_build = toc(t_stage);
+backend = lower(char(backend));
+% Sync the resolved value back into the struct so downstream struct-expand
+% callers see a single, consistent backend (prevents inputParser's
+% "Cannot include struct and duplicate parameters" error when the struct
+% is passed alongside an explicit 'backend' name/value pair).
+detection_options.backend = backend;
 
-%Report configuration
-if verbose
-    pool = gcp('nocreate');
-    if isempty(pool)
-        fprintf('  Parallel mode: serial (no pool)\n');
-    else
-        if isprop(pool, 'NumWorkers')
-            nw = pool.NumWorkers;
-        elseif isprop(pool, 'NumThreads')
-            nw = pool.NumThreads;
-        else
-            nw = feature('numcores');
-        end
-        if isa(pool, 'parallel.ThreadPool')
-            fprintf('  Parallel mode: ThreadPool (%d threads)\n', nw);
-        else
-            fprintf('  Parallel mode: ProcessPool (%d workers)\n', nw);
-        end
+if strcmp(backend, 'rust')
+    % Rust MEX backend: add rust_bridge/ to path, assert the four MEX
+    % wrappers exist, and skip parpool setup entirely (Rust internally
+    % parallelises via rayon).
+    repo_root_ = fileparts(which('runDYNAMO'));
+    rb_dir_ = fullfile(repo_root_, 'rust_bridge');
+    if isfolder(rb_dir_)
+        addpath(rb_dir_);
     end
-    fprintf('  Segment size:  %g s\n', detection_options.seg_time);
-    mex_avail = exist(['trim_region_mex.' mexext], 'file') == 3;
-    mex_usable = mex_avail && (isempty(pool) || ~isa(pool, 'parallel.ThreadPool'));
-    if mex_usable
-        fprintf('  Trim MEX:      enabled (trim_region_mex)\n');
-    elseif mex_avail
-        fprintf('  Trim MEX:      disabled (ThreadPool cannot run MEX)\n');
-    elseif ~isempty(pool) && isa(pool, 'parallel.ThreadPool')
-        fprintf('  Trim MEX:      n/a (ThreadPool cannot run MEX)\n');
-    else
-        fprintf('  Trim MEX:      not built (will auto-compile on first run)\n');
+    clear repo_root_ rb_dir_
+
+    needed = {'extract_tfpeaks_mex', 'mask_spectrogram_mex', ...
+        'refine_peaks_mex', 'tfpeak_histogram_mex'};
+    missing = needed(cellfun(@(n) exist(n, 'file') ~= 3, needed));
+    if ~isempty(missing)
+        error('runDYNAMO:missingMEX', ['backend=''rust'' requires compiled MEX files ' ...
+            '(missing: %s).\n\nBuild them with:\n  cd <DYNAM-O_rs>/rust && cargo build --release\n' ...
+            '  cd <DYNAMO_dev>/rust_bridge && build_rust_mex\n\n' ...
+            'Or call runDYNAMO(..., ''backend'', ''matlab'') to use the pure MATLAB path.'], ...
+            strjoin(missing, ', '));
+    end
+    timings.pool_setup = 0;
+    timings.mex_build = 0;
+
+    if verbose
+        fprintf('  Backend:       rust (MEX)\n');
+        fprintf('  Parallel mode: rayon (in-MEX, no MATLAB parpool)\n');
+        fprintf('  Segment size:  %g s\n', detection_options.seg_time);
+    end
+else
+    % MATLAB backend: parpool benefits segment parfor in runSegmentedData.
+    t_stage = tic;
+    setup_parallel_pool(detection_options.parallel_mode);
+    timings.pool_setup = toc(t_stage);
+    timings.mex_build = 0;
+
+    if verbose
+        pool = gcp('nocreate');
+        fprintf('  Backend:       matlab\n');
+        if isempty(pool)
+            fprintf('  Parallel mode: serial (no pool)\n');
+        else
+            if isprop(pool, 'NumWorkers')
+                nw = pool.NumWorkers;
+            elseif isprop(pool, 'NumThreads')
+                nw = pool.NumThreads;
+            else
+                nw = feature('numcores');
+            end
+            if isa(pool, 'parallel.ThreadPool')
+                fprintf('  Parallel mode: ThreadPool (%d threads)\n', nw);
+            else
+                fprintf('  Parallel mode: ProcessPool (%d workers)\n', nw);
+            end
+        end
+        fprintf('  Segment size:  %g s\n', detection_options.seg_time);
     end
 end
 
@@ -350,7 +387,8 @@ if nargout > 7
     [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, num_peaks_at_freq,...
         SOpower_TIB, SOphase_TIB, ~, ~, hist_peakidx, ~, ~, ~, ~, ~, soph_timings] = SOpowerphaseHistogram(data_time_range, Fs, stats_table.PeakFrequency, stats_table.PeakTime,...
         'stage_times', stage_times, 'stage_vals', stage_vals, 'verbose', verbose, SOPH_options,...
-        'SOpower', SOpower_norm, 'SOpower_times', SOpower_times, 'SOphase', SOphase, 'SOphase_times', SOphase_times);
+        'SOpower', SOpower_norm, 'SOpower_times', SOpower_times, 'SOphase', SOphase, 'SOphase_times', SOphase_times,...
+        'backend', backend);
     timings.soph_histograms = toc(t_stage);
     % Merge the sub-breakdown (sopower_compute, sophase_compute,
     % sopower_hist, sophase_hist) into the master struct. The outer
@@ -533,6 +571,22 @@ end
 
 
 %% Helper functions
+function opts = mergeOptsDefaults(opts, defaults)
+% Backfill any fields present in `defaults` but missing from `opts`. Fields
+% already in `opts` are preserved (user-supplied values win). Returns a
+% struct with the union of fields. No-op when opts already has every field.
+if ~isstruct(opts) || ~isstruct(defaults)
+    return
+end
+fns = fieldnames(defaults);
+for ii = 1:numel(fns)
+    if ~isfield(opts, fns{ii})
+        opts.(fns{ii}) = defaults.(fns{ii});
+    end
+end
+end
+
+
 function [SOPHs] = createSOPHsStruct(SOpower_mat, SOphase_mat, SOpower_bins, SOpower_norm, SOpower_times, SOphase_bins, freq_bins, num_peaks_at_freq, SOpower_TIB, SOphase_TIB)
 SOPHs = struct;
 SOPHs.SOpower_mat = SOpower_mat;

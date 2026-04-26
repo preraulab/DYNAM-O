@@ -69,23 +69,19 @@ classdef DYNAMO < handle
     %       d.updateOptions('detection_options', opts);
     %       d.runDYNAMO();
     %
-    %       % Force ThreadPool (disables trim MEX; useful on 8-core Apple Silicon)
+    %       % Force the MATLAB backend with a ThreadPool (useful on 8-core Apple Silicon)
     %       opts = detection_opts('parallel_mode', 'Threads');
     %       d.updateOptions('detection_options', opts);
-    %       d.runDYNAMO();
+    %       d.runDYNAMO('backend', 'matlab');
     %
-    %   Notes on pool type:
+    %   Notes on pool type (backend='matlab' only — backend='rust' uses no parpool):
     %       detection_options.parallel_mode controls the parallel pool:
-    %           'Processes'  (default) — ProcessPool + trim_region_mex; fastest on
-    %                                    every platform except 8-core Apple Silicon.
-    %           'Threads'              — ThreadPool; trim_region_mex auto-disables
-    %                                    and falls back to the bit-identical MATLAB
-    %                                    path. ~8% wallclock improvement over
-    %                                    ProcessPool on 8-core M2/M3.
+    %           'Processes'  (default) — ProcessPool; fastest on most hosts.
+    %           'Threads'              — ThreadPool; ~8% faster on 8-core M2/M3.
     %           ''                     — same as 'Processes'.
-    %       trim_region_mex auto-compiles on first runDYNAMO call if missing and a
-    %       C++ compiler is configured (`mex -setup cpp`). Missing compiler is not
-    %       fatal — the pipeline falls back to the MATLAB path automatically.
+    %       The Rust backend (default) calls dynamo_rs via MEX wrappers that
+    %       parallelise internally with rayon; MATLAB parpool is skipped in
+    %       that mode. See rust_bridge/README.md for build instructions.
     %
     %       % Visualize and fit SOPH models
     %       fh = d.displaySummaryPlot();
@@ -1071,6 +1067,10 @@ classdef DYNAMO < handle
                     end
                     return;
                 end
+                if strcmp(param, 'backend')
+                    value = lower(str);
+                    return;
+                end
                 if isempty(str)
                     value = [];
                 elseif ismember(str, {'true'})
@@ -1142,6 +1142,11 @@ classdef DYNAMO < handle
                     else
                         str = char(value);
                     end
+                    return;
+                end
+
+                if isequal(constructor, @detection_opts) && strcmp(param, 'backend')
+                    str = lower(char(value));
                     return;
                 end
 
@@ -1238,10 +1243,11 @@ classdef DYNAMO < handle
                         'dur_max', 'Max duration (s)', ...
                         'bw_max', 'Max bandwidth (Hz)', ...
                         'refinement', 'Refine peak frequency', ...
+                        'reuse_baseline', 'Reuse pass-1 baseline in pass-2 (~5% faster)', ...
                         'features', 'Features to compute', ...
                         'debug_mode', 'Debug mode', ...
                         'parallel_mode', 'Pool type: Processes, Threads, or auto', ...
-                        'use_trim_mex', 'Use trim_region_mex when available');
+                        'backend', 'Pipeline backend: rust (MEX, fast) or matlab (reference)');
                 elseif isequal(constructor, @baseline_opts)
                     map = struct(...
                         'baseline_stages', 'Sleep stages for baseline 5=Wake, 4=REM, 3=N1, 2=N2, 1=N1, 0=Unknown, 6=Artifact', ...
