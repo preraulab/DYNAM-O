@@ -1,12 +1,12 @@
 function [stats_table, regions, borders] = extractTFPeaks(img,x,y,features,num_segment,conn_wshed,...
     merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,...
-    bl_thresh,merge_rule,f_verb,verb_pref,f_disp,use_trim_mex)
+    bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
 %EXTRACTTFPEAKS  Determine peak regions within a spectrogram and extract features for each
 %
 %   Usage:
 %       [stats_table, regions, borders] = extractTFPeaks(img, x, y, features, num_segment, conn_wshed, ...
 %           merge_thresh, max_merges, downsample_spect, dur_min, bw_min, trim_vol, trim_shift, conn_trim, ...
-%           bl_thresh, merge_rule, f_verb, verb_pref, f_disp, use_trim_mex)
+%           bl_thresh, merge_rule, f_verb, verb_pref, f_disp)
 %
 %   Required Inputs:
 %       img:          [M x N] double - 2D image data
@@ -32,8 +32,6 @@ function [stats_table, regions, borders] = extractTFPeaks(img,x,y,features,num_s
 %       f_verb:           integer - verbosity depth: 0 silent, up to 3 for full internal progress (default: 0)
 %       verb_pref:        char - prefix string for verbose output (default: '')
 %       f_disp:           logical/integer - plot progress if nonzero (default: 0)
-%       use_trim_mex:     logical - allow trim_region_mex on ProcessPool / serial calls;
-%                         false forces the MATLAB trim path (default: true)
 %
 %   Outputs:
 %       stats_table: table - peak statistics, one row per peak
@@ -127,9 +125,6 @@ if nargin < 18
 end
 if nargin < 19
     f_disp = [];
-end
-if nargin < 20 || isempty(use_trim_mex)
-    use_trim_mex = true;
 end
 
 %************************
@@ -325,7 +320,7 @@ if trim_vol < 1
         disp([verb_pref '  Starting trim to ' num2str(100*trim_vol) ' percent volume...']);
         ttic = tic;
     end
-    [trim_regions, trim_borders] = trimWshedRegions(img,regions,trim_vol,trim_shift,conn_trim,f_verb-1,['    ' verb_pref],f_disp,use_trim_mex);
+    [trim_regions, trim_borders] = trimWshedRegions(img,regions,trim_vol,trim_shift,conn_trim,f_verb-1,['    ' verb_pref],f_disp);
     if f_verb > 0
         disp([verb_pref '    trim took: ' num2str(toc(ttic)) ' seconds.']);
     end
