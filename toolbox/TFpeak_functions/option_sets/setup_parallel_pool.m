@@ -2,14 +2,12 @@ function setup_parallel_pool(parallel_mode)
 %SETUP_PARALLEL_POOL  Create or reuse a parallel pool.
 %
 %   setup_parallel_pool('')            default ('Processes')
-%   setup_parallel_pool('Processes')   force ProcessPool (default; allows MEX)
-%   setup_parallel_pool('Threads')     force ThreadPool (disables trim MEX)
+%   setup_parallel_pool('Processes')   force ProcessPool (default)
+%   setup_parallel_pool('Threads')     force ThreadPool
 %
-%   ProcessPool is the default on every host. ThreadPool is supported as
-%   an explicit override but disables `trim_region_mex` (MATLAB cannot
-%   execute MEX functions inside a ThreadPool worker). The trim MATLAB
-%   fallback produces bit-identical output; the override is purely a
-%   performance trade-off.
+%   Only used by the 'matlab' backend. Either pool type works; ThreadPool
+%   can be ~8% faster on 8-core Apple Silicon. The 'rust' backend
+%   parallelises via rayon inside MEX and does not call this function.
 %
 %   If a pool of the correct type already exists, it is kept. If a pool
 %   of the wrong type exists, it is deleted and replaced. If no Parallel
