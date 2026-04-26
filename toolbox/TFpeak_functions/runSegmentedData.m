@@ -296,13 +296,10 @@ else
     D = [];
 end
 
-% Print the progress-line label unconditionally: computeTFPeaks is our
-% direct caller and has already emitted its own "Extracting TF peaks from
-% the spectrogram..." header with f_verb=verbose, but it passes f_verb=0
-% down to us (expecting silence), so gating the ticks on f_verb > 0 hides
-% them entirely. Per user request ("output 10%, 20%, ... in the console
-% regardless"), we ignore f_verb here and always print.
-fprintf('%s  Extracting TF peaks:', verb_pref);
+% Print the progress-line label
+if f_verb > -1
+    fprintf('%s  Extracting TF peaks:', verb_pref);
+end
 
 %Need to save the nargout outside the parfor.
 %extractTFPeaks returns at most 3 outputs (stats, regions, borders). The
@@ -381,13 +378,17 @@ else
         end
 
         % Inline 10%-tick printing (serial / debug path).
-        nPrintConsoleTick(ii);
+        if f_verb > -1
+            nPrintConsoleTick(ii);
+        end
     end
 end
+
 % Close the line the console-tick listener/inline-printer was building
-% up across the parfor / serial loop. Matches the label print above —
-% unconditional.
-fprintf('\n');
+% up across the parfor / serial loop.
+if f_verb > -1
+    fprintf('\n');
+end
 
 % Console-tick listener: runs on the main MATLAB thread (afterEach
 % marshals from parfor workers) so fprintf is safe here. Accepts the
