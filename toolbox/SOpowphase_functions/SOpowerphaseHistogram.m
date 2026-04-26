@@ -175,6 +175,10 @@ addOptional(p, 'SOphase_binsizestep', SOPH_options.SOphase_binsizestep, @(x) val
 %Display settings
 addOptional(p, 'plot_on', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'scalar'}));
+% Pipeline backend: 'rust' (default) uses tfpeak_histogram_mex for binning;
+% 'matlab' forces the pure-MATLAB loop (keeps backend='matlab' a faithful
+% reference implementation, no Rust behind the scenes).
+addOptional(p, 'backend', 'rust', @(x) any(validatestring(lower(char(x)), {'matlab','rust'})));
 
 parse(p, data, Fs, TFpeak_freqs, TFpeak_times, varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -238,7 +242,7 @@ t_stage = tic;
     'freq_range', freq_range, 'freq_binsizestep', freq_binsizestep, 'SO_range', SOpower_range, 'SO_binsizestep', SOpower_binsizestep,...
     'SO_freqrange', SO_freqrange, 'SOPH_stages', SOPH_stages, 'compute_rate', compute_rate,...
     'min_time_in_bin', SOpower_min_time_in_bin, 'norm_method', SOpower_norm_method,... # these two options are specific to SOpower histogram
-    'plot_on', plot_on, 'verbose', verbose);
+    'plot_on', plot_on, 'verbose', verbose, 'backend', backend);
 soph_timings.sopower_hist = toc(t_stage);
 
 %% Compute SO-phase histogram
@@ -252,7 +256,7 @@ t_stage = tic;
     'freq_range', freq_range, 'freq_binsizestep', freq_binsizestep, 'SO_range', SOphase_range, 'SO_binsizestep', SOphase_binsizestep, ...
     'SO_freqrange', SO_freqrange, 'SOPH_stages', SOPH_stages, 'compute_rate', compute_rate,...
     'min_peak_at_freq', SOphase_min_peak_at_freq, 'norm_dim', SOphase_norm_dim,... # these two options are specific to SOphase histogram
-    'plot_on', plot_on, 'verbose', verbose);
+    'plot_on', plot_on, 'verbose', verbose, 'backend', backend);
 soph_timings.sophase_hist = toc(t_stage);
 
 %% Verify that the same TF peaks are included in the two histograms

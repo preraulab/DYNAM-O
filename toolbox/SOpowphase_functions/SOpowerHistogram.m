@@ -124,6 +124,9 @@ addOptional(p, 'retain_Fs', SOPH_options.SOpower_retain_Fs, @(x) validateattribu
 %Display settings
 addOptional(p, 'plot_on', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+% Pipeline backend — forwarded to TFPeakHistogram so 'matlab' backend
+% keeps pure-MATLAB binning (no Rust MEX behind the scenes).
+addOptional(p, 'backend', 'rust', @(x) any(validatestring(lower(char(x)), {'matlab','rust'})));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -267,6 +270,6 @@ end
     'freq_range', freq_range, 'freq_binsizestep', freq_binsizestep,...
     'norm_dim', norm_dim, 'compute_rate', compute_rate,...
     'min_time_in_bin', min_time_in_bin,... # specific to SOpower histogram
-    'plot_on', plot_on, 'verbose', verbose);
+    'plot_on', plot_on, 'verbose', verbose, 'backend', backend);
 
 end

@@ -122,6 +122,9 @@ addOptional(p, 'SOphase_filter', SOPH_options.SOphase_filter);
 %Display settings
 addOptional(p, 'plot_on', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+% Pipeline backend — forwarded to TFPeakHistogram so 'matlab' backend
+% keeps pure-MATLAB binning (no Rust MEX behind the scenes).
+addOptional(p, 'backend', 'rust', @(x) any(validatestring(lower(char(x)), {'matlab','rust'})));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -252,6 +255,6 @@ clear SOphase_stages_valid SOphase_excluded_valid SOphase_times_valid
     'freq_range', freq_range, 'freq_binsizestep', freq_binsizestep,...
     'norm_dim', norm_dim, 'compute_rate', compute_rate,...
     'min_peak_at_freq', min_peak_at_freq,... # specific to SOphase histogram
-    'plot_on', plot_on, 'verbose', verbose);
+    'plot_on', plot_on, 'verbose', verbose, 'backend', backend);
 
 end
