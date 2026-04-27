@@ -15,7 +15,7 @@ function stats_table = computePeakStatsTable(regions,boundaries,data,xvalues,yva
 %       segment_num: integer - segment index when data is a sub-segment (default: 1)
 %       features:    cell or char - any subset of {'Area', 'Bandwidth', 'Boundaries',
 %                    'BoundingBox', 'Duration', 'Height', 'HeightData', 'PeakFrequency',
-%                    'PeakTime', 'SegmentNum', 'Volume'} or 'all' (default: 'all')
+%                    'Peakiness', 'PeakTime', 'SegmentNum', 'Volume'} or 'all' (default: 'all')
 %
 %   Outputs:
 %       stats_table: table - one row per peak, columns determined by features
@@ -67,7 +67,7 @@ if nargin<6 || isempty(segment_num)
 end
 
 if nargin<7 || isempty(features) || any(strcmpi(features,'all'))
-    features = {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData', 'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'};
+    features = {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData', 'PeakFrequency', 'Peakiness', 'PeakTime', 'SegmentNum', 'Volume'};
 end
 
 assert(iscell(regions) && ~isempty(regions),'Regions must be a cell array');
@@ -83,15 +83,17 @@ end
 %Compute the stats table
 r_props = {'Area'};
 
+% Peakiness = Area*Height/Volume — needs BoundingBox, PixelValues for
+% Height and Volume.
 if any(strcmpi(features,'BoundingBox')) || any(strcmpi(features,'Bandwidth')) || any(strcmpi(features,'Duration'))
     r_props = cat(2,r_props,'BoundingBox');
 end
 
-if any(strcmpi(features,'PeakTime')) || any(strcmpi(features,'PeakFrequency')) 
+if any(strcmpi(features,'PeakTime')) || any(strcmpi(features,'PeakFrequency'))
     r_props = cat(2,r_props,'WeightedCentroid');
 end
 
-if any(strcmpi(features,'Height')) || any(strcmpi(features,'HeightData')) || any(strcmpi(features,'Volume')) 
+if any(strcmpi(features,'Height')) || any(strcmpi(features,'HeightData')) || any(strcmpi(features,'Volume')) || any(strcmpi(features,'Peakiness'))
     r_props = cat(2,r_props,'PixelValues');
 end
 
@@ -186,6 +188,19 @@ if any(strcmpi(features,'SegmentNum'))
     stats_table.SegmentNum(:,1) = segment_num;
     stats_table.Properties.VariableDescriptions{'SegmentNum'} = 'Data segment number';
     stats_table.Properties.VariableUnits{'SegmentNum'} = '#';
+end
+
+%Peakiness = Area * Height / Volume. Recomputed from PixelValues so this
+%block is order-independent: stats_table.Area gets either rescaled (line
+%127) or emptied (line 131) above depending on whether 'Area' is requested,
+%and likewise stats_table.PixelValues will be renamed/dropped below.
+if any(strcmpi(features,'Peakiness'))
+    pk_area   = cellfun(@numel, stats_table.PixelValues) * dx * dy;       % sec*Hz
+    pk_height = cellfun(@max, stats_table.PixelValues) - cellfun(@min, stats_table.PixelValues);
+    pk_volume = cellfun(@(x) sum(x) * dx * dy, stats_table.PixelValues);  % sec*μV^2
+    stats_table.Peakiness = pk_area .* pk_height ./ pk_volume;
+    stats_table.Properties.VariableDescriptions{'Peakiness'} = 'Peakiness: Area * Height / Volume';
+    stats_table.Properties.VariableUnits{'Peakiness'} = 'sec*Hz/μV^2';
 end
 
 %Region data

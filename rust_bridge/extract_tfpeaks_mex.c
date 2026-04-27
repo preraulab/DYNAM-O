@@ -15,7 +15,9 @@
  *
  *     stats: MATLAB struct with fields
  *       PeakTime (Nx1), PeakFrequency (Nx1), Duration (Nx1), Bandwidth (Nx1),
- *       Height (Nx1), Volume (Nx1), SegmentNum (Nx1), BoundingBox (Nx4).
+ *       Height (Nx1), Volume (Nx1), SegmentNum (Nx1), BoundingBox (Nx4),
+ *       Area (Nx1), Peakiness (Nx1), Boundaries (Nx1 cell of Mi x 2 doubles
+ *       in (time, freq) columns), HeightData (Nx1 cell of Mi x 1 doubles).
  *     The caller converts to a table via struct2table() if desired.
  *
  * Layout note: the Rust C ABI expects row-major (F, T) spectrogram with
@@ -132,6 +134,60 @@ static mxArray *take_rust_bbox(double *ptr, size_t n_peaks) {
         dynamo_free_buffer_f64(ptr, n_peaks * 4);
     }
     return out;
+}
+
+/* Convert a flattened CSR (height_data) into an Nx1 cell of Mi x 1 doubles.
+ * Each cell i contains the spectrogram pixel values for peak i. The Rust
+ * buffers are freed after copying. `flat_len` is the total element count
+ * of `flat` (matches out.n_height_data_elems). */
+static mxArray *take_rust_heightdata_cell(double *flat, size_t flat_len,
+                                          uint64_t *offsets, size_t n_peaks) {
+    mxArray *cell = mxCreateCellMatrix((mwSize)n_peaks, 1);
+    if (n_peaks > 0 && offsets != NULL) {
+        for (size_t i = 0; i < n_peaks; ++i) {
+            size_t lo = (size_t)offsets[i];
+            size_t hi = (size_t)offsets[i + 1];
+            size_t mi = hi - lo;
+            mxArray *m = mxCreateDoubleMatrix((mwSize)mi, 1, mxREAL);
+            if (mi > 0 && flat != NULL) {
+                memcpy(mxGetPr(m), flat + lo, mi * sizeof(double));
+            }
+            mxSetCell(cell, (mwIndex)i, m);
+        }
+    }
+    if (flat != NULL) dynamo_free_buffer_f64(flat, flat_len);
+    if (offsets != NULL) dynamo_free_buffer_u64(offsets, n_peaks + 1);
+    return cell;
+}
+
+/* Convert a flattened CSR (boundaries_xy, interleaved t,f) into an Nx1
+ * cell of Mi x 2 doubles where column 1 = time, column 2 = freq. Rust
+ * stores [t1, f1, t2, f2, ...] interleaved per peak; we deinterleave
+ * into MATLAB's column-major (Mi x 2) layout. `n_boundary_pixels` is the
+ * total pixel count across all peaks (matches out.n_boundary_pixels). */
+static mxArray *take_rust_boundaries_cell(double *flat, size_t n_boundary_pixels,
+                                          uint64_t *offsets, size_t n_peaks) {
+    mxArray *cell = mxCreateCellMatrix((mwSize)n_peaks, 1);
+    if (n_peaks > 0 && offsets != NULL) {
+        for (size_t i = 0; i < n_peaks; ++i) {
+            size_t lo = (size_t)offsets[i];      /* in pixel units */
+            size_t hi = (size_t)offsets[i + 1];
+            size_t mi = hi - lo;
+            mxArray *m = mxCreateDoubleMatrix((mwSize)mi, 2, mxREAL);
+            if (mi > 0 && flat != NULL) {
+                double *dst = mxGetPr(m);
+                /* MATLAB column-major (mi, 2): [t0..t_{mi-1} | f0..f_{mi-1}] */
+                for (size_t k = 0; k < mi; ++k) {
+                    dst[k]      = flat[2 * (lo + k)];     /* time */
+                    dst[mi + k] = flat[2 * (lo + k) + 1]; /* freq */
+                }
+            }
+            mxSetCell(cell, (mwIndex)i, m);
+        }
+    }
+    if (flat != NULL) dynamo_free_buffer_f64(flat, n_boundary_pixels * 2);
+    if (offsets != NULL) dynamo_free_buffer_u64(offsets, n_peaks + 1);
+    return cell;
 }
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
@@ -289,7 +345,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     /* Build output struct */
     const char *fields[] = {
         "PeakTime", "PeakFrequency", "Duration", "Bandwidth",
-        "Height", "Volume", "SegmentNum", "BoundingBox"
+        "Height", "Volume", "SegmentNum", "BoundingBox",
+        "Area", "Peakiness", "Boundaries", "HeightData"
     };
     const int nfields = sizeof(fields) / sizeof(fields[0]);
     mxArray *result = mxCreateStructMatrix(1, 1, nfields, fields);
@@ -302,6 +359,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     mxSetField(result, 0, "Volume",        take_rust_f64(out.volume,    n));
     mxSetField(result, 0, "SegmentNum",    take_rust_f64(out.segment_num, n));
     mxSetField(result, 0, "BoundingBox",   take_rust_bbox(out.bounding_box, n));
+    mxSetField(result, 0, "Area",          take_rust_f64(out.area,      n));
+    mxSetField(result, 0, "Peakiness",     take_rust_f64(out.peakiness, n));
+    mxSetField(result, 0, "Boundaries",
+               take_rust_boundaries_cell(out.boundaries_xy,
+                                         out.n_boundary_pixels,
+                                         out.boundary_offsets, n));
+    mxSetField(result, 0, "HeightData",
+               take_rust_heightdata_cell(out.height_data,
+                                         out.n_height_data_elems,
+                                         out.height_data_offsets, n));
 
     /* labels: (F, T) int64 row-major from Rust. Emit as MATLAB (F, T)
      * int64 column-major if the caller requested it. Transpose-copy. */
