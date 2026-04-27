@@ -105,7 +105,7 @@ git clone --recursive https://github.com/preraulab/DYNAM-O.git
 Submodule initialization is required (vendored helper repos for multitaper
 spectrogram, plotting, etc.).
 
-**Meta-repo (all three flavors):**
+**Meta-repo (WIP: not functional yet):**
 ```bash
 git clone --recursive https://github.com/preraulab/DYNAM-O_toolbox.git
 ```
