@@ -192,6 +192,8 @@ runDYNAMO('segment')
 
 A summary figure appears and a timing table prints at the end.
 
+<p align="right"><sub><a href="#table-of-contents">↑ Back to Table of Contents</a></sub></p>
+
 ---
 
 ## Quick Start
@@ -248,6 +250,8 @@ settings via `d.updateOptions(...)` and `d.runDYNAMO()`.
 ```matlab
 DYNAMOFileManager();
 ```
+
+<p align="right"><sub><a href="#table-of-contents">↑ Back to Table of Contents</a></sub></p>
 
 ---
 
@@ -333,6 +337,8 @@ soph = SOpowerphasehist_opts('SOpower_norm_method', 'percentile');
 [stats_table, ~, ~, ~, ~, ~, ~, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, ...
     'detection_options', det, 'SOPH_options', soph);
 ```
+
+<p align="right"><sub><a href="#table-of-contents">↑ Back to Table of Contents</a></sub></p>
 
 ---
 
@@ -451,6 +457,8 @@ Creates 2D SO-power and SO-phase histograms from TF-peak data.
     SOpowerphaseHistogram(EEG, Fs, TFpeak_freqs, TFpeak_times, ...)
 ```
 
+<p align="right"><sub><a href="#table-of-contents">↑ Back to Table of Contents</a></sub></p>
+
 ---
 
 ## Options
@@ -541,6 +549,8 @@ opts = SOpowerphasehist_opts('SOpower_norm_method', 'p5shift123', 'SOPH_stages',
 | `'proportion'` | Ratio of SO-power to total power |
 | `'none'` | Raw dB power |
 
+<p align="right"><sub><a href="#table-of-contents">↑ Back to Table of Contents</a></sub></p>
+
 ---
 
 ## Output Reference
@@ -613,6 +623,8 @@ Optional 9th output. Struct with per-stage wallclock seconds.
 | `fit_param_basis` | Parametric fit (if `fit_param_basis=true`) |
 | `fit_spline_basis` | Spline fit (if `fit_spline_basis=true`) |
 | `total` | End-to-end wallclock |
+
+<p align="right"><sub><a href="#table-of-contents">↑ Back to Table of Contents</a></sub></p>
 
 ---
 
@@ -691,6 +703,8 @@ DYNAM-O depends on several standalone libraries included as Git submodules under
 `runDYNAMO` verifies the Image Processing Toolbox is licensed at startup
 and errors with a clear install pointer if it's missing — so you won't hit
 cryptic `Undefined function 'watershed'` errors mid-pipeline.
+
+<p align="right"><sub><a href="#table-of-contents">↑ Back to Table of Contents</a></sub></p>
 
 ---
 
@@ -791,6 +805,8 @@ Fs     = 100;
 - **Recording shorter than one `seg_time` window** (default 30 s) — reduce `detection_opts.seg_time` for very short recordings.
 - **Hypnogram starts at `t > 0`** — `stage_times` is interpreted in the same seconds-from-start frame as `data`. Shift `stage_times` to start at 0 or pass an explicit `time_range`.
 - **Histograms empty / "power histogram is empty" warnings** — often a staging-convention mismatch (see gotcha at top), or `time_range` too short for SOPH min-time-in-bin.
+
+<p align="right"><sub><a href="#table-of-contents">↑ Back to Table of Contents</a></sub></p>
 
 ---
 
