@@ -47,7 +47,7 @@ function out_path = benchmark_runDYNAMO(varargin)
     sysinfo = collect_sysinfo();
 
     % --- repo SHAs (best-effort; empty if not a git checkout) ---
-    shas.dynamo_dev_sha = git_short_sha(fileparts(here));  % DYNAMO_dev root
+    shas.dynamo_dev_sha = git_short_sha(fileparts(here));  % DYNAM-O_dev root
     shas.dynamo_dev_dirty = git_is_dirty(fileparts(here));
     rs_root = find_dynamo_rs_root(here);
     shas.dynamo_rs_sha = git_short_sha(rs_root);
@@ -239,7 +239,7 @@ end
 
 
 function rs_root = find_dynamo_rs_root(rust_bridge_dir)
-    % Canonical layout: DYNAMO_dev/rust_bridge  sibling to  DYNAM-O_rs
+    % Canonical layout: DYNAM-O_dev/rust_bridge  sibling to  DYNAM-O_rs
     candidates = {
         fullfile(fileparts(fileparts(rust_bridge_dir)), 'DYNAM-O_rs'), ...
         fullfile(fileparts(fileparts(rust_bridge_dir)), 'DYNAM-O_rs-rust-bridge')
@@ -264,7 +264,7 @@ function print_summary(record)
         record.cores, record.ram_gb);
     fprintf('  CPU:  %s\n', record.cpu);
     fprintf('  MATLAB: %s\n', record.matlab_version);
-    fprintf('  DYNAMO_dev: %s%s  |  DYNAM-O_rs: %s%s\n', ...
+    fprintf('  DYNAM-O_dev: %s%s  |  DYNAM-O_rs: %s%s\n', ...
         record.dynamo_dev_sha, dirty_mark(record.dynamo_dev_dirty), ...
         record.dynamo_rs_sha,  dirty_mark(record.dynamo_rs_dirty));
     fprintf('  Fixture: %s  (warmup=%s)\n', record.fixture, bool2str(record.warmup));
@@ -298,7 +298,7 @@ function maybe_push(out_path, push_mode, sysinfo, shas)
     % Commit + push the single benchmark JSON file. Never touch unrelated
     % uncommitted work — we only `git add` the exact path we just wrote.
     here = fileparts(fileparts(out_path));  % rust_bridge
-    repo = fileparts(here);                  % DYNAMO_dev
+    repo = fileparts(here);                  % DYNAM-O_dev
     rel = strrep(strrep(out_path, [repo filesep], ''), '\', '/');
     msg = sprintf('bench: %s %s/%s (dynamo_dev @ %s, dynamo_rs @ %s)', ...
         sysinfo.hostname, sysinfo.os, sysinfo.arch, ...

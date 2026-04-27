@@ -178,7 +178,7 @@ cargo build --release
 **b. Build the MEX wrappers** (needs a C compiler via `mex -setup C`):
 
 ```matlab
-cd <workspace>/DYNAMO_dev/rust_bridge
+cd <workspace>/DYNAM-O_dev/rust_bridge
 build_rust_mex
 ```
 
@@ -707,7 +707,7 @@ Optional 9th output. Struct with per-stage wallclock seconds.
 ## Repository Structure
 
 ```
-DYNAMO_dev/
+DYNAM-O_dev/
 ├── DYNAMO.m                         OOP pipeline class
 ├── runDYNAMO.m                      Functional pipeline entry point
 ├── DYNAMOFileManager.m              GUI batch processing app

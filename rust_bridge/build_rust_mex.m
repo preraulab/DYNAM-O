@@ -2,7 +2,7 @@ function build_rust_mex()
 %BUILD_RUST_MEX  Compile the 3 MEX wrappers that bridge MATLAB to dynamo_rs.
 %
 %   Usage:
-%       cd /path/to/DYNAMO_dev/rust_bridge
+%       cd /path/to/DYNAM-O_dev/rust_bridge
 %       build_rust_mex
 %
 %   Prerequisites (must all be true before calling):
@@ -26,8 +26,8 @@ function build_rust_mex()
 %   the dylib without DYLD_LIBRARY_PATH hacks. For a standalone `mcc` build
 %   the dylib needs to be copied next to the .app bundle (see Phase 7 notes).
 
-    here      = fileparts(mfilename('fullpath'));              % DYNAMO_dev/rust_bridge
-    dev_root  = fileparts(here);                               % DYNAMO_dev
+    here      = fileparts(mfilename('fullpath'));              % DYNAM-O_dev/rust_bridge
+    dev_root  = fileparts(here);                               % DYNAM-O_dev
     rs_root   = fullfile(dev_root, '..', 'DYNAM-O_rs', 'rust');
     inc_dir   = fullfile(rs_root, 'include');
     lib_dir   = fullfile(rs_root, 'target', 'release');

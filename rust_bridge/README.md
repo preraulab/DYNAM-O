@@ -40,10 +40,10 @@ On night data, the Rust backend runs ~3.7× faster than pure MATLAB
    gcc (Linux), or MSVC / MinGW-w64 (Windows).
 
 3. **The `dynamo_rs` source tree** must be present as a sibling of
-   `DYNAMO_dev`:
+   `DYNAM-O_dev`:
    ```
    <workspace>/
-     DYNAMO_dev/
+     DYNAM-O_dev/
        rust_bridge/          ← you are here
      DYNAM-O_rs/
        rust/                 ← Rust crate
@@ -79,7 +79,7 @@ It also generates the C header at `rust/include/dynamo_rs.h`
 From MATLAB:
 
 ```matlab
-cd <workspace>/DYNAMO_dev/rust_bridge
+cd <workspace>/DYNAM-O_dev/rust_bridge
 build_rust_mex
 ```
 
