@@ -139,10 +139,6 @@ The GUI (`DYNAMOFileManager` / `DYNAMOOptionsApp`) also surfaces the
 `backend` setting as a dropdown on the Detection options panel — no
 command-line override needed.
 
-If you skip step 3, `'matlab'` backend works immediately. If you call
-`'rust'` without the MEX files built, you get a clear error with the
-build recipe.
-
 </details>
 
 <details>
@@ -163,8 +159,12 @@ and don't want the noise.
 ### 3. Build the Rust backend (optional, for speed)
 
 The `'rust'` backend uses MEX wrappers around a pure-Rust kernel
-([`DYNAM-O_rs`](https://github.com/preraulab/DYNAM-O_rs)). Two build
-steps, both one-time:
+([`DYNAM-O_rs`](https://github.com/preraulab/DYNAM-O_rs)). If you skip this step,
+`'matlab'` backend works immediately. If you call `'rust'` without the MEX files built, 
+you get a clear error with the build recipe.
+
+<details>
+<summary><b>Two build steps</b>, both one-time — Rust kernel, then MEX wrappers</summary>
 
 **a. Build `libdynamo_rs`** (needs the [Rust toolchain](https://rustup.rs)):
 
@@ -182,6 +182,8 @@ build_rust_mex
 
 Produces four `.mex*` files in `rust_bridge/` with the extension for your
 platform (`.mexmaca64`, `.mexmaci64`, `.mexa64`, or `.mexw64`).
+
+</details>
 
 See [`rust_bridge/README.md`](rust_bridge/README.md) for per-platform
 details and troubleshooting.
