@@ -627,23 +627,39 @@ if verbose && (valid_powerhist || valid_phasehist)
     disp('  Fitting parametric basis...');
 end
 
-% Parametric fit of SO-Power Histogram
+% Power and phase fits run independently — a failure in one is reported
+% but does not abort the other. *_paramfit is left empty to signal failure.
+pow_ok = false; phase_ok = false;
+SOPHs.SOpower_paramfit = [];
+SOPHs.SOphase_paramfit = [];
+
 if valid_powerhist
     power_opts.plot_on = plot_each;
     power_opts.verbose = verbose-1;
-    [params_power, fitobj_power, gof_power, model_SOPH_power, wshed_img_power] = param_basis_power(SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins, power_opts);
-    SOPHs.SOpower_paramfit = createSOPHparamfitStruct(params_power, fitobj_power, gof_power, model_SOPH_power, wshed_img_power);
+    try
+        [params_power, fitobj_power, gof_power, model_SOPH_power, wshed_img_power] = param_basis_power(SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins, power_opts);
+        SOPHs.SOpower_paramfit = createSOPHparamfitStruct(params_power, fitobj_power, gof_power, model_SOPH_power, wshed_img_power);
+        pow_ok = true;
+    catch ME_pow
+        fprintf(2, '  [ERROR] param_basis_power failed: %s\n', ME_pow.message);
+        warning('runDYNAMO:fitParamBasis:power', 'param_basis_power failed: %s', ME_pow.message);
+    end
 end
 
-% Parametric fit of SO-Phase Histogram
 if valid_phasehist
     phase_opts.plot_on = plot_each;
     phase_opts.verbose = verbose-1;
-    [params_phase, fitobj_phase, gof_phase, model_SOPH_phase, wshed_img_phase] = param_basis_phase(SOPHs.SOphase_mat, SOPHs.SOphase_bins, SOPHs.freq_bins, phase_opts);
-    SOPHs.SOphase_paramfit = createSOPHparamfitStruct(params_phase, fitobj_phase, gof_phase, model_SOPH_phase, wshed_img_phase);
+    try
+        [params_phase, fitobj_phase, gof_phase, model_SOPH_phase, wshed_img_phase] = param_basis_phase(SOPHs.SOphase_mat, SOPHs.SOphase_bins, SOPHs.freq_bins, phase_opts);
+        SOPHs.SOphase_paramfit = createSOPHparamfitStruct(params_phase, fitobj_phase, gof_phase, model_SOPH_phase, wshed_img_phase);
+        phase_ok = true;
+    catch ME_phase
+        fprintf(2, '  [ERROR] param_basis_phase failed: %s\n', ME_phase.message);
+        warning('runDYNAMO:fitParamBasis:phase', 'param_basis_phase failed: %s', ME_phase.message);
+    end
 end
 
-if plot_both
+if plot_both && pow_ok && phase_ok
     plot_SOPH_paramfits( ...
         SOPHs.SOpower_bins, SOPHs.SOpower_paramfit.wshed_img, SOPHs.SOpower_mat, model_SOPH_power, params_power, power_opts.SOPH_clim_prctiles, power_opts.power_limits, power_opts.freq_limits, ...
         SOPHs.SOphase_bins, SOPHs.SOphase_paramfit.wshed_img, SOPHs.SOphase_mat, model_SOPH_phase, params_phase, phase_opts.SOPH_clim_prctiles, phase_opts.phase_limits, phase_opts.freq_limits, ...
@@ -657,21 +673,35 @@ if verbose && (valid_powerhist || valid_phasehist)
     disp('  Fitting spline basis...');
 end
 
-% Spline fit of SO-Power Histogram
+pow_ok = false; phase_ok = false;
+SOPHs.SOpower_splinefit = [];
+SOPHs.SOphase_splinefit = [];
+
 if valid_powerhist
     power_opts.plot_on = plot_each;
-    [splinefit_power, coefs_power, spline_obj_power, knots_x_power, knots_y_power] = spline_basis('power', SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins, power_opts);
-    SOPHs.SOpower_splinefit = createSOPHsplinefitStruct(splinefit_power, coefs_power, spline_obj_power, knots_x_power, knots_y_power);
+    try
+        [splinefit_power, coefs_power, spline_obj_power, knots_x_power, knots_y_power] = spline_basis('power', SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins, power_opts);
+        SOPHs.SOpower_splinefit = createSOPHsplinefitStruct(splinefit_power, coefs_power, spline_obj_power, knots_x_power, knots_y_power);
+        pow_ok = true;
+    catch ME_pow
+        fprintf(2, '  [ERROR] spline_basis (power) failed: %s\n', ME_pow.message);
+        warning('runDYNAMO:fitSplineBasis:power', 'spline_basis (power) failed: %s', ME_pow.message);
+    end
 end
 
-% Spline fit of SO-Phase Histogram
 if valid_phasehist
     phase_opts.plot_on = plot_each;
-    [splinefit_phase, coefs_phase, spline_obj_phase, knots_x_phase, knots_y_phase] = spline_basis('phase', SOPHs.SOphase_mat, SOPHs.SOphase_bins, SOPHs.freq_bins, phase_opts);
-    SOPHs.SOphase_splinefit = createSOPHsplinefitStruct(splinefit_phase, coefs_phase, spline_obj_phase, knots_x_phase, knots_y_phase);
+    try
+        [splinefit_phase, coefs_phase, spline_obj_phase, knots_x_phase, knots_y_phase] = spline_basis('phase', SOPHs.SOphase_mat, SOPHs.SOphase_bins, SOPHs.freq_bins, phase_opts);
+        SOPHs.SOphase_splinefit = createSOPHsplinefitStruct(splinefit_phase, coefs_phase, spline_obj_phase, knots_x_phase, knots_y_phase);
+        phase_ok = true;
+    catch ME_phase
+        fprintf(2, '  [ERROR] spline_basis (phase) failed: %s\n', ME_phase.message);
+        warning('runDYNAMO:fitSplineBasis:phase', 'spline_basis (phase) failed: %s', ME_phase.message);
+    end
 end
 
-if plot_both
+if plot_both && pow_ok && phase_ok
     plot_SOPH_splinefits( ...
         SOPHs.SOpower_mat, SOPHs.SOpower_bins, splinefit_power, coefs_power, knots_x_power, knots_y_power, power_opts, ...
         SOPHs.SOphase_mat, SOPHs.SOphase_bins, splinefit_phase, coefs_phase, knots_x_phase, knots_y_phase, phase_opts, ...
