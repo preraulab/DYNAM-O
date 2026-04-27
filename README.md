@@ -100,7 +100,6 @@ MATLAB, Python, and Rust together as pinned submodules.
 **Standalone (MATLAB-only):**
 ```bash
 git clone --recursive https://github.com/preraulab/DYNAM-O.git
-git submodule update --init --recursive
 ```
 
 Submodule initialization is required (vendored helper repos for multitaper
@@ -109,7 +108,6 @@ spectrogram, plotting, etc.).
 **Meta-repo (all three flavors):**
 ```bash
 git clone --recursive https://github.com/preraulab/DYNAM-O_toolbox.git
-# This repo lands at DYNAM-O_toolbox/matlab/
 ```
 
 ### 2. Pick a backend
