@@ -20,7 +20,7 @@ function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, art
 %       features (opt):            [1xf] char or cell array of char -
 %                                  features to be extracted from each peak region. Can be any subset of
 %                                  {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData',
-%                                   'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. Default = 'all'
+%                                   'PeakFrequency', 'Peakiness', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. Default = 'all'
 %       display_peaks (opt):       logical - whether to display all detected TF-peaks overlaid on spectrogram in a new figure
 %       artifacts (opt):           [nx1] logical - boolean indicating artifact time points. Default = logical([]), run detect_artifacts()
 %       artifact_filters (opt):    struct with 2 digitalFilter fields "hpFilt_high","hpFilt_broad" -
@@ -243,7 +243,7 @@ assert(min(t_data)<max(time_range) & max(t_data)>min(time_range),'Staging times 
 %Set default features
 if any(strcmpi(features, 'all'))
     features = {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height',...
-        'HeightData', 'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'};
+        'HeightData', 'PeakFrequency', 'Peakiness', 'PeakTime', 'SegmentNum', 'Volume'};
 end
 
 %Check if filters are passed in

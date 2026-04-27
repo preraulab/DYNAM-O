@@ -75,7 +75,7 @@ addOptional(p, 'reuse_baseline', true, @(x) validateattributes(x, {'logical', 'n
 
 %% Features to compute
 all_features = {'all', 'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height',  'HeightData',...
-    'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume', 'PeakStage'};
+    'PeakFrequency', 'Peakiness', 'PeakTime', 'SegmentNum', 'Volume', 'PeakStage'};
 addOptional(p, 'features', 'all', @(x) all(ismember(x, all_features)))
 
 %% Display progress bar during runSegmentedData()

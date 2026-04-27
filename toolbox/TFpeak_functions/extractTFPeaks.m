@@ -15,8 +15,8 @@ function [stats_table, regions, borders] = extractTFPeaks(img,x,y,features,num_s
 %       x:                [1 x N] double - x axis of image data (default: 1:size(img,2))
 %       y:                [1 x M] double - y axis of image data (default: 1:size(img,1))
 %       features:         cell or char - any subset of {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox',
-%                         'Duration', 'Height', 'HeightData', 'PeakFrequency', 'PeakTime', 'SegmentNum',
-%                         'Volume'} or 'all' (default: 'all')
+%                         'Duration', 'Height', 'HeightData', 'PeakFrequency', 'Peakiness', 'PeakTime',
+%                         'SegmentNum', 'Volume'} or 'all' (default: 'all')
 %       num_segment:      integer - segment index if img is a sub-segment of a larger image (default: 1)
 %       conn_wshed:       integer - pixel connectivity used in watershed labeling (default: 8)
 %       merge_thresh:     double - threshold weight at which merging stops (default: 8)
