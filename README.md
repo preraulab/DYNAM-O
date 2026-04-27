@@ -60,15 +60,12 @@ histograms.
 
 - [Installation](#installation)
 - [Quick Start](#quick-start)
-- [Backends and Performance](#backends-and-performance)
 - [Recipes (advanced usage)](#recipes-advanced-usage)
 - [Main Pipeline Functions](#main-pipeline-functions)
   - [runDYNAMO](#rundynamo)
   - [DYNAMO (OOP class)](#dynamo-oop-class)
   - [DYNAMOFileManager (GUI)](#dynamofilemanager-gui)
-- [Key Sub-Functions](#key-sub-functions)
-  - [computeTFPeaks](#computetfpeaks)
-  - [SOpowerphaseHistogram](#sopowerphasehistogram)
+  - [Key Sub-Functions](#key-sub-functions)
 - [Options](#options)
   - [Detection Options](#detection-options-detection_opts)
   - [Baseline Options](#baseline-options-baseline_opts)
@@ -78,8 +75,8 @@ histograms.
   - [SOPHs](#sophs--histogram-struct)
   - [timings](#timings--per-stage-wallclock)
 - [Repository Structure](#repository-structure)
-- [Included Submodules](#included-submodules)
-- [Required Toolboxes](#required-toolboxes)
+- [Backends and Performance](#backends-and-performance)
+- [Algorithm details and background](#algorithm-details-and-background)
 
 ---
 
@@ -89,7 +86,7 @@ histograms.
 
 - **MATLAB R2018a or newer** (MEX wrappers use the classic C MEX API).
 - **Memory:** 8 GB RAM is comfortable for full-night recordings; 4 GB works for shorter segments.
-- Required MATLAB toolboxes: see [Required Toolboxes](#required-toolboxes).
+- Required MATLAB toolboxes: see [Required MATLAB Toolboxes](#required-matlab-toolboxes).
 
 ### 1. Clone
 
@@ -252,90 +249,6 @@ settings via `d.updateOptions(...)` and `d.runDYNAMO()`.
 ```matlab
 DYNAMOFileManager();
 ```
-
----
-
-## Backends and Performance
-
-### Choice at a glance
-
-| Backend | Implementation | Parallelism | Peak count (night) | Wallclock |
-|---|---|---|---|---|
-| **`'rust'`** *(default)* | `dynamo_rs` via MEX | `rayon` inside MEX (no parpool) | 34 511 | ~30 s (M3) |
-| `'matlab'` | pure MATLAB | `parfor` over segments | 34 788 (truth) | ~125 s (M3) |
-
-Both produce visually indistinguishable SO-power / SO-phase histograms
-(cosine similarity 0.999 / 0.996). The −0.8 % peak-count gap is a subtle
-label-assignment detail in Rust merge that shifts ~270 peaks across the
-bandwidth/duration filter cutoffs; downstream histograms are unaffected.
-
-### Parallel pool (MATLAB backend only)
-
-The Rust backend ignores the parpool — it parallelises internally via
-`rayon`. The MATLAB backend uses a parpool over segments. Override the
-pool type via `detection_options.parallel_mode`:
-
-```matlab
-det = detection_opts();
-det.parallel_mode = 'Processes';   % default
-det.parallel_mode = 'Threads';     % thread-pool alternative
-det.parallel_mode = '';            % same as 'Processes'
-[stats_table, ~, ~, ~, ~, ~, ~, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, ...
-    baseline_opts(), det, 'backend', 'matlab');
-```
-
-Both pool types work for the MATLAB backend. On 8-core Apple Silicon
-(M2 / M3) `'Threads'` tends to be ~8 % faster than `'Processes'` at
-full-night scale; on other hosts `'Processes'` is the safer default.
-
-### Expected runtimes — bundled `'night'` example
-
-| Platform | `'rust'` | `'matlab'` |
-|---|---|---|
-| Apple M3 Mac (8 cores) | ~30-35 s | ~120-140 s |
-| Apple M4 Max (16 cores) | ~25-30 s | ~55-65 s |
-| Linux 24-core Threadripper | ~20-25 s | ~60-65 s |
-| Linux 32-core Threadripper | ~15-20 s | ~35-40 s |
-| Windows 6-core Ryzen | ~45-55 s | ~210-230 s |
-
-Single-run variance ±5–15 % from thermal / OS scheduling. For benchmarks, run 3–5× and take the median.
-
-### Recommended sampling frequency: 100 Hz
-
-DYNAM-O analyzes 0–30 Hz, so 100 Hz Nyquist is well above anything the pipeline cares about. Resampling higher-rate EDFs (128 / 200 / 256 / 500 / 1000 Hz) **down** to 100 Hz before analysis gives a ~2× end-to-end speedup with **zero analytical change** — the antialiased polyphase filter is lossless for sleep oscillations.
-
-The mechanism: multitaper NFFT = `2^nextpow2(Fs / mtm_dsfreqs)` (default `mtm_dsfreqs = 0.1`). The first NFFT-bucket boundary above 100 Hz sits at exactly **Fs = 102.4 Hz**. Anything above that doubles NFFT (1024 → 2048) and typically spills the spectrogram past CPU L3 cache, so every downstream stage (extract / baseline / mask / watershed) takes a further 2–3× memory-bandwidth hit on top.
-
-| Native Fs | NFFT | Spec stage cost vs 100 Hz |
-|---:|---:|---:|
-| ≤ 100 | 1024 | 1× |
-| 128, 200 | 2048 | ~2.2× |
-| 256 | 4096 | ~4.6× |
-| 500, 512 | 8192 | ~9.3× |
-| 1000 | 16384 | ~18× |
-
-The FileManager has Resample = ON at 100 Hz by default. For scripted callers (`runDYNAMO`, `DYNAMO` class):
-
-```matlab
-[p, q] = rat(100 / Fs);
-data   = resample(data, p, q);
-Fs     = 100;
-% then call runDYNAMO(data, Fs, ...) as usual
-```
-
-### Troubleshooting
-
-- **`backend='rust' requires compiled MEX files (missing: …)`** — you haven't built the Rust MEX yet. Follow [Installation step 3](#3-build-the-rust-backend-optional-for-speed), or pass `'backend', 'matlab'`.
-- **`dynamo_rs.h not found` during `build_rust_mex`** — run `cargo build --release` in `DYNAM-O_rs/rust` first.
-- **`mex: Compiler not configured`** — run `mex -setup C` in MATLAB and select a supported compiler (Xcode on macOS, gcc on Linux, MSVC/MinGW-w64 on Windows).
-- **MEX run gives subtly different peak counts after a fresh `cargo build`** — restart MATLAB. `libdynamo_rs` stays cached until the session exits; `clear mex` does not unload the dynamic library.
-- **Figures accumulate across repeated runs** — pass `'plot_on', false` or call `close all` between iterations.
-- **`Undefined function 'multitaper_spectrogram'`** — submodules weren't initialized. Run `git submodule update --init --recursive` in the repo root.
-- **NaN values in EEG** — the pipeline does not tolerate NaNs in `data`. Interpolate across NaN runs or mark them via the artifact detector.
-- **`stage_times` / `stage_vals` length mismatch** — both must be the same length; `stage_times` must be non-decreasing.
-- **Recording shorter than one `seg_time` window** (default 30 s) — reduce `detection_opts.seg_time` for very short recordings.
-- **Hypnogram starts at `t > 0`** — `stage_times` is interpreted in the same seconds-from-start frame as `data`. Shift `stage_times` to start at 0 or pass an explicit `time_range`.
-- **Histograms empty / "power histogram is empty" warnings** — often a staging-convention mismatch (see gotcha at top), or `time_range` too short for SOPH min-time-in-bin.
 
 ---
 
@@ -516,7 +429,7 @@ DYNAMOFileManager();
 
 ---
 
-## Key Sub-Functions
+### Key Sub-Functions
 
 ### `computeTFPeaks`
 
@@ -746,9 +659,7 @@ DYNAM-O_dev/
     └── helper_functions/            Multitaper, artifacts, EDF, plotting, tests, …
 ```
 
----
-
-## Included Submodules
+### Included Submodules
 
 DYNAM-O depends on several standalone libraries included as Git submodules under `toolbox/helper_functions/`. These are cloned automatically with `--recursive` (see [Installation](#installation)).
 
@@ -768,9 +679,7 @@ DYNAM-O depends on several standalone libraries included as Git submodules under
 > This updates the working trees only — `git add` and commit the bumped
 > submodule pointers in the parent repo to land them.
 
----
-
-## Required Toolboxes
+### Required MATLAB Toolboxes
 
 | Toolbox | Required For |
 |---|---|
@@ -798,6 +707,91 @@ See the parent meta-repo
 
 For in-depth algorithm documentation and video tutorials, visit the
 [Prerau Lab DYNAM-O page](https://prerau.bwh.harvard.edu/DYNAM-O/).
+
+<details>
+<summary><b>Expand to see performance benchmarks</summary>
+
+### Backends at a glance
+
+| Backend | Implementation | Parallelism | Peak count (night) | Wallclock |
+|---|---|---|---|---|
+| **`'rust'`** *(default)* | `dynamo_rs` via MEX | `rayon` inside MEX (no parpool) | 34 511 | ~30 s (M3) |
+| `'matlab'` | pure MATLAB | `parfor` over segments | 34 788 (truth) | ~125 s (M3) |
+
+Both produce visually indistinguishable SO-power / SO-phase histograms
+(cosine similarity 0.999 / 0.996). The −0.8 % peak-count gap is a subtle
+label-assignment detail in Rust merge that shifts ~270 peaks across the
+bandwidth/duration filter cutoffs; downstream histograms are unaffected.
+
+### Parallel pool (MATLAB backend only)
+
+The Rust backend ignores the parpool — it parallelises internally via
+`rayon`. The MATLAB backend uses a parpool over segments. Override the
+pool type via `detection_options.parallel_mode`:
+
+```matlab
+det = detection_opts();
+det.parallel_mode = 'Processes';   % default
+det.parallel_mode = 'Threads';     % thread-pool alternative
+det.parallel_mode = '';            % same as 'Processes'
+[stats_table, ~, ~, ~, ~, ~, ~, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, ...
+    baseline_opts(), det, 'backend', 'matlab');
+```
+
+Both pool types work for the MATLAB backend. On 8-core Apple Silicon
+(M2 / M3) `'Threads'` tends to be ~8 % faster than `'Processes'` at
+full-night scale; on other hosts `'Processes'` is the safer default.
+
+### Expected runtimes — bundled `'night'` example
+
+| Platform | `'rust'` | `'matlab'` |
+|---|---|---|
+| Apple M3 Mac (8 cores) | ~30-35 s | ~120-140 s |
+| Apple M4 Max (16 cores) | ~25-30 s | ~55-65 s |
+| Linux 24-core Threadripper | ~20-25 s | ~60-65 s |
+| Linux 32-core Threadripper | ~15-20 s | ~35-40 s |
+| Windows 6-core Ryzen | ~45-55 s | ~210-230 s |
+
+Single-run variance ±5–15 % from thermal / OS scheduling. For benchmarks, run 3–5× and take the median.
+
+</details>
+
+### Recommended sampling frequency: 100 Hz
+
+DYNAM-O analyzes 0–30 Hz, so 100 Hz Nyquist is well above anything the pipeline cares about. Resampling higher-rate EDFs (128 / 200 / 256 / 500 / 1000 Hz) **down** to 100 Hz before analysis gives a ~2× end-to-end speedup with **zero analytical change** — the antialiased polyphase filter is lossless for sleep oscillations.
+
+The mechanism: multitaper NFFT = `2^nextpow2(Fs / mtm_dsfreqs)` (default `mtm_dsfreqs = 0.1`). The first NFFT-bucket boundary above 100 Hz sits at exactly **Fs = 102.4 Hz**. Anything above that doubles NFFT (1024 → 2048) and typically spills the spectrogram past CPU L3 cache, so every downstream stage (extract / baseline / mask / watershed) takes a further 2–3× memory-bandwidth hit on top.
+
+| Native Fs | NFFT | Spec stage cost vs 100 Hz |
+|---:|---:|---:|
+| ≤ 100 | 1024 | 1× |
+| 128, 200 | 2048 | ~2.2× |
+| 256 | 4096 | ~4.6× |
+| 500, 512 | 8192 | ~9.3× |
+| 1000 | 16384 | ~18× |
+
+The FileManager has Resample = ON at 100 Hz by default. For scripted callers (`runDYNAMO`, `DYNAMO` class):
+
+```matlab
+[p, q] = rat(100 / Fs);
+data   = resample(data, p, q);
+Fs     = 100;
+% then call runDYNAMO(data, Fs, ...) as usual
+```
+
+### Troubleshooting
+
+- **`backend='rust' requires compiled MEX files (missing: …)`** — you haven't built the Rust MEX yet. Follow [Installation step 3](#3-build-the-rust-backend-optional-for-speed), or pass `'backend', 'matlab'`.
+- **`dynamo_rs.h not found` during `build_rust_mex`** — run `cargo build --release` in `DYNAM-O_rs/rust` first.
+- **`mex: Compiler not configured`** — run `mex -setup C` in MATLAB and select a supported compiler (Xcode on macOS, gcc on Linux, MSVC/MinGW-w64 on Windows).
+- **MEX run gives subtly different peak counts after a fresh `cargo build`** — restart MATLAB. `libdynamo_rs` stays cached until the session exits; `clear mex` does not unload the dynamic library.
+- **Figures accumulate across repeated runs** — pass `'plot_on', false` or call `close all` between iterations.
+- **`Undefined function 'multitaper_spectrogram'`** — submodules weren't initialized. Run `git submodule update --init --recursive` in the repo root.
+- **NaN values in EEG** — the pipeline does not tolerate NaNs in `data`. Interpolate across NaN runs or mark them via the artifact detector.
+- **`stage_times` / `stage_vals` length mismatch** — both must be the same length; `stage_times` must be non-decreasing.
+- **Recording shorter than one `seg_time` window** (default 30 s) — reduce `detection_opts.seg_time` for very short recordings.
+- **Hypnogram starts at `t > 0`** — `stage_times` is interpreted in the same seconds-from-start frame as `data`. Shift `stage_times` to start at 0 or pass an explicit `time_range`.
+- **Histograms empty / "power histogram is empty" warnings** — often a staging-convention mismatch (see gotcha at top), or `time_range` too short for SOPH min-time-in-bin.
 
 ---
 
