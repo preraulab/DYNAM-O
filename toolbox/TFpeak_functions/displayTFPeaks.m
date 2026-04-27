@@ -75,12 +75,20 @@ else
     hypn_spect_ax = figdesign(6, 1, 'PaperType', 'usletter', 'orient', 'landscape' , 'margins', [0.067917 0.05 0.083427 0.0456 0.08 0.0021714], 'merge', {[2 3 4 5 6]}, 'Position', [0.14041 0.19722 0.70262 0.61597]);
 end
 
-%% Plot hypnogram
+%% Plot hypnogram (only if stage data was supplied)
 if isgraphics(hypn_spect_ax(1))
-    axes(hypn_spect_ax(1));
-    hypnoplot(stage_times/3600, stage_vals, 'Artifacts', artifacts, 'ArtifactTimes', t_time_range/3600, 'TimesUnit', 'hours');
-    th(1) = title('EEG Spectrogram and Detected TF-peaks');
-    set(hypn_spect_ax(1), 'XTick', []);
+    if isempty(stage_times) || isempty(stage_vals)
+        % No staging passed in — drop the hypnogram axes so the
+        % spectrogram (axes 2) can claim the title (handled at line ~101)
+        % instead of leaving a blank panel and crashing inside hypnoplot's
+        % validateattributes('vector') check.
+        delete(hypn_spect_ax(1));
+    else
+        axes(hypn_spect_ax(1));
+        hypnoplot(stage_times/3600, stage_vals, 'Artifacts', artifacts, 'ArtifactTimes', t_time_range/3600, 'TimesUnit', 'hours');
+        th(1) = title('EEG Spectrogram and Detected TF-peaks');
+        set(hypn_spect_ax(1), 'XTick', []);
+    end
 end
 
 %% Plot spectrogram
