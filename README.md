@@ -75,7 +75,6 @@ histograms.
   - [SOPHs](#sophs--histogram-struct)
   - [timings](#timings--per-stage-wallclock)
 - [Repository Structure](#repository-structure)
-- [Backends and Performance](#backends-and-performance)
 - [Algorithm details and background](#algorithm-details-and-background)
 
 ---
@@ -709,7 +708,7 @@ For in-depth algorithm documentation and video tutorials, visit the
 [Prerau Lab DYNAM-O page](https://prerau.bwh.harvard.edu/DYNAM-O/).
 
 <details>
-<summary><b>Expand to see performance benchmarks</summary>
+<summary><b>Expand to see performance benchmarks</b></summary>
 
 ### Backends at a glance
 
