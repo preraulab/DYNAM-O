@@ -98,26 +98,16 @@ You can either clone this repo directly, or clone the parent meta-repo
 MATLAB, Python, and Rust together as pinned submodules.
 
 **Standalone (MATLAB-only):**
+
 ```bash
 git clone --recursive https://github.com/preraulab/DYNAM-O.git
 ```
 
-Submodule initialization is required (vendored helper repos for multitaper
-spectrogram, plotting, etc.).
-
 **Meta-repo (WIP: not functional yet):**
+
 ```bash
 git clone --recursive https://github.com/preraulab/DYNAM-O_toolbox.git
 ```
-
-> [!NOTE]
-> **Developers:** to fast-forward all submodules to the tip of their tracked
-> branch (`master`, per `.gitmodules`), run:
-> ```bash
-> git submodule update --recursive --remote
-> ```
-> This updates the working trees only — `git add` and commit the bumped
-> submodule pointers in the parent repo to land them.
 
 ### 2. Pick a backend
 
@@ -760,11 +750,13 @@ DYNAM-O depends on several standalone libraries included as Git submodules under
 | **Statistical Tests** | [preraulab/multicomp_test](https://github.com/preraulab/multicomp_test) | Permutation-based statistical tests and false discovery rate (FDR) correction for multi-dimensional data. Provides `permtest`, `gpermtest`, `FDR_1D`, and `FDR_2D`. |
 | **CSSuicontrols** | [preraulab/CSSuicontrols](https://github.com/preraulab/CSSuicontrols) | CSS-styled HTML-backed UI controls for MATLAB App Designer. Powers the progress bar, text areas, buttons, and other custom widgets in DYNAMOFileManager. |
 
-To update all submodules to their latest versions:
-
-```bash
-git submodule update --remote
-```
+> [!NOTE]
+> To update all submodules to their latest versions:
+> ```bash
+> git submodule update --recursive --remote
+> ```
+> This updates the working trees only — `git add` and commit the bumped
+> submodule pointers in the parent repo to land them.
 
 ---
 
