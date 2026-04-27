@@ -110,6 +110,15 @@ spectrogram, plotting, etc.).
 git clone --recursive https://github.com/preraulab/DYNAM-O_toolbox.git
 ```
 
+> [!NOTE]
+> **Developers:** to fast-forward all submodules to the tip of their tracked
+> branch (`master`, per `.gitmodules`), run:
+> ```bash
+> git submodule update --recursive --remote
+> ```
+> This updates the working trees only — `git add` and commit the bumped
+> submodule pointers in the parent repo to land them.
+
 ### 2. Pick a backend
 
 DYNAM-O ships two pipeline backends:
