@@ -118,6 +118,9 @@ DYNAM-O ships two pipeline backends:
 | **`'rust'`** *(default)* | **~30 s** | −0.8 % peak count vs MATLAB ground truth | Requires compiled MEX wrappers (step 3) |
 | `'matlab'` | ~125 s | authoritative | None — works out of the box with MATLAB only |
 
+<details>
+<summary><b>How to select the backend</b> — call site, options struct, or GUI</summary>
+
 Pick at call time:
 
 ```matlab
@@ -140,7 +143,10 @@ If you skip step 3, `'matlab'` backend works immediately. If you call
 `'rust'` without the MEX files built, you get a clear error with the
 build recipe.
 
-### Progress feedback
+</details>
+
+<details>
+<summary><b>Progress feedback</b> — per-pass tick on the MATLAB console (rust backend)</summary>
 
 With `'rust'` backend, each extract pass prints a single-line tick on the
 MATLAB console whenever 10 % of segments complete:
@@ -151,6 +157,8 @@ MATLAB console whenever 10 % of segments complete:
 
 Disable with `detection_opts('show_pbar', false)` if you're scripting batches
 and don't want the noise.
+
+</details>
 
 ### 3. Build the Rust backend (optional, for speed)
 
