@@ -172,7 +172,7 @@ if strcmp(backend, 'rust') && nargout <= 4 && exist('extract_tfpeaks_mex', 'file
         'freq_min',     -inf, ...
         'freq_max',      inf, ...
         'ht_db_min',    -inf, ...            % outer filterStatsTable will cap
-        'show_pbar',    logical(show_pbar)); % MEX runs extract on a background
+        'show_pbar',    logical(show_pbar) & f_verb > -1); % MEX runs extract on a background
     % pthread; main MATLAB thread polls
     % atomic counters and prints "10%
     % 20%..." ticks safely. See
@@ -360,7 +360,7 @@ if ~debug_mode
 
         % Signal completion to main-thread afterEach listener so it can
         % print a 10% console tick if this segment crossed a bucket.
-        if haspar
+        if haspar && (f_verb > -1)
             send(D, ii);
         end
     end
