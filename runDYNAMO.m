@@ -231,6 +231,25 @@ ttotal = datetime('now');
 detection_options = mergeOptsDefaults(detection_options, detection_opts());
 baseline_options  = mergeOptsDefaults(baseline_options,  baseline_opts());
 
+%Force data to be a column vector
+if isrow(data) %#ok<*NODEF>
+    data = data(:);
+end
+
+%Check sleep stages
+valid_stages = stage_vals > 0 & stage_vals < 6;
+assert(~isempty(valid_stages),'No valid stages found');
+
+%Set to range of valid scored data by default
+if isempty(time_range)
+    valid_stage_inds = find(valid_stages);
+    time_range = stage_times(valid_stage_inds([1, end]));
+end
+
+%Cast stage_vals to single for interpolations
+stage_vals = single(stage_vals);
+
+%% SETUP BACKEND
 % Resolve backend: explicit top-level override wins; otherwise inherit
 % from detection_options.backend (the GUI/options-struct source of truth).
 if isempty(backend)
@@ -306,24 +325,6 @@ else
     end
 end
 
-%Force data to be a column vector
-if isrow(data) %#ok<*NODEF>
-    data = data(:);
-end
-
-%Check sleep stages
-valid_stages = stage_vals > 0 & stage_vals < 6;
-assert(~isempty(valid_stages),'No valid stages found');
-
-%Set to range of valid scored data by default
-if isempty(time_range)
-    valid_stage_inds = find(valid_stages);
-    time_range = stage_times(valid_stage_inds([1, end]));
-end
-
-%Cast stage_vals to single for interpolations
-stage_vals = single(stage_vals);
-
 %% COMPUTE TIME-FREQUENCY PEAKS
 % See computeTFPeaks() for a full list of optional arguments for finer
 % control of watershed extraction of Time-Frequency Peaks
@@ -361,7 +362,7 @@ else
     timings.artifact = toc(t_stage);
 end
 
-%% COMPUTE ADDITIONAL PEAK FEATURES
+%% COMPUTE ADDITIONAL PEAK FEATURE PROPERTIES
 % Additional useful features that describe each detected TF peak in the
 % stats_table are computed here. Customized functions can be added in this
 % section to populate the table with other feature columns.
