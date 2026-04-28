@@ -205,16 +205,7 @@ addOptional(p, 'refinement', detection_options.refinement, @(x) validateattribut
 addOptional(p, 'show_pbar', detection_options.show_pbar, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'debug_mode', detection_options.debug_mode, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'parallel_mode', detection_options.parallel_mode, @(x) (ischar(x) || isstring(x)) && any(strcmp(x, {'', 'Processes', 'Threads'})));
-% Pipeline backend: 'rust' = MEX wrappers around dynamo_rs,
-% 'matlab' = pure MATLAB reference path. Default inherits from
-% detection_options.backend (which itself defaults to 'rust'). Propagated
-% to runSegmentedData (pass-1 + pass-2) and refinePeakFrequency.
-if isfield(detection_options, 'backend') && ~isempty(detection_options.backend)
-    default_backend = detection_options.backend;
-else
-    default_backend = 'rust';
-end
-addOptional(p, 'backend', default_backend, @(x) any(validatestring(lower(char(x)), {'matlab','rust'})));
+addOptional(p, 'backend', detection_options.backend, @(x) any(validatestring(lower(char(x)), {'matlab','rust'})));
 
 parse(p, data, Fs, stage_times, stage_vals, varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -338,12 +329,10 @@ if double_watershed
     % can use mask_spectrogram_mex. When backend='matlab', regions/borders
     % from the MATLAB path feed the pure-MATLAB maskSpectrogram.
     [stats_table, regions, borders, labels_img] = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
-        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), show_pbar, debug_mode, ...
-        'backend', backend);
+        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), show_pbar, debug_mode, 'backend', backend);
 else
     stats_table = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
-        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), show_pbar, debug_mode, ...
-        'backend', backend);
+        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), show_pbar, debug_mode, 'backend', backend);
 end
 
 tfp_timings.extract_pass1 = toc(tfp);
@@ -406,8 +395,7 @@ if double_watershed
     tfp = tic;
 
     stats_table = runSegmentedData(spect_masked, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
-        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), show_pbar, debug_mode, ...
-        'backend', backend);
+        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), show_pbar, debug_mode, 'backend', backend);
 
     tfp_timings.extract_pass2 = toc(tfp);
     if verbose
