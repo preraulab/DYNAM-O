@@ -632,6 +632,8 @@ end
 pow_ok = false; phase_ok = false;
 SOPHs.SOpower_paramfit = [];
 SOPHs.SOphase_paramfit = [];
+params_power = []; model_SOPH_power = [];
+params_phase = []; model_SOPH_phase = [];
 
 if valid_powerhist
     power_opts.plot_on = plot_each;
@@ -659,11 +661,13 @@ if valid_phasehist
     end
 end
 
-if plot_both && pow_ok && phase_ok
+if plot_both && (pow_ok || phase_ok)
+    if pow_ok,   pow_fitobj   = SOPHs.SOpower_paramfit.fitobj;   pow_wshed   = SOPHs.SOpower_paramfit.wshed_img;   else, pow_fitobj   = []; pow_wshed   = []; end
+    if phase_ok, phase_fitobj = SOPHs.SOphase_paramfit.fitobj;   phase_wshed = SOPHs.SOphase_paramfit.wshed_img;   else, phase_fitobj = []; phase_wshed = []; end
     plot_SOPH_paramfits( ...
-        SOPHs.SOpower_bins, SOPHs.SOpower_paramfit.wshed_img, SOPHs.SOpower_mat, model_SOPH_power, params_power, power_opts.SOPH_clim_prctiles, power_opts.power_limits, power_opts.freq_limits, ...
-        SOPHs.SOphase_bins, SOPHs.SOphase_paramfit.wshed_img, SOPHs.SOphase_mat, model_SOPH_phase, params_phase, phase_opts.SOPH_clim_prctiles, phase_opts.phase_limits, phase_opts.freq_limits, ...
-        SOPHs.freq_bins, SOPHs.SOpower_paramfit.fitobj, SOPHs.SOphase_paramfit.fitobj);
+        SOPHs.SOpower_bins, pow_wshed, SOPHs.SOpower_mat, model_SOPH_power, params_power, power_opts.SOPH_clim_prctiles, power_opts.power_limits, power_opts.freq_limits, ...
+        SOPHs.SOphase_bins, phase_wshed, SOPHs.SOphase_mat, model_SOPH_phase, params_phase, phase_opts.SOPH_clim_prctiles, phase_opts.phase_limits, phase_opts.freq_limits, ...
+        SOPHs.freq_bins, pow_fitobj, phase_fitobj);
 end
 end
 
@@ -676,6 +680,8 @@ end
 pow_ok = false; phase_ok = false;
 SOPHs.SOpower_splinefit = [];
 SOPHs.SOphase_splinefit = [];
+splinefit_power = []; coefs_power = []; knots_x_power = []; knots_y_power = [];
+splinefit_phase = []; coefs_phase = []; knots_x_phase = []; knots_y_phase = [];
 
 if valid_powerhist
     power_opts.plot_on = plot_each;
@@ -701,7 +707,7 @@ if valid_phasehist
     end
 end
 
-if plot_both && pow_ok && phase_ok
+if plot_both && (pow_ok || phase_ok)
     plot_SOPH_splinefits( ...
         SOPHs.SOpower_mat, SOPHs.SOpower_bins, splinefit_power, coefs_power, knots_x_power, knots_y_power, power_opts, ...
         SOPHs.SOphase_mat, SOPHs.SOphase_bins, splinefit_phase, coefs_phase, knots_x_phase, knots_y_phase, phase_opts, ...

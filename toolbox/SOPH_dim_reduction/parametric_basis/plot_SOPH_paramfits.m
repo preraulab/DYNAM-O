@@ -35,14 +35,42 @@ function plot_SOPH_paramfits(power_bins, power_wshed_img, SOPH_pow, model_SOPH_p
 % Hover distance threshold (fraction of axis diagonal). Tweak this value as desired.
 hover_dist_threshold = 0.05;  % 0.05 = 5% of axis diagonal
 
+% Power and phase rows are independent: an empty params_* signals "this
+% fit failed / wasn't computed", and the corresponding row is omitted.
+have_pow   = ~isempty(params_pow);
+have_phase = ~isempty(params_phase);
+nrows = double(have_pow) + double(have_phase);
+
+if nrows == 0
+    % Nothing to plot — produce an empty figure so callers grabbing gcf
+    % don't crash, and bail.
+    f = figure('Visible','off');
+    if strcmp(get(groot, 'DefaultFigureVisible'), 'on')
+        set(f, 'Visible', 'on');
+    end
+    return
+end
+
 % Create invisible; visibility restored at end for interactive callers.
 f = figure('Visible','off');
-ax = figdesign(f, 2, 3, ...
+ax = figdesign(f, nrows, 3, ...
     'type', 'usletter', ...
     'orient', 'landscape', ...
     'margins', [0.05 0.08 0.1 0.1 0.11 0.12]);
 set(f, 'units', 'inches')
-set(f, 'position', [0 0 10 6])
+set(f, 'position', [0 0 10 3*nrows])
+
+% Index into ax for whichever rows exist
+pow_ax_idx   = [];
+phase_ax_idx = [];
+if have_pow && have_phase
+    pow_ax_idx   = 1:3;
+    phase_ax_idx = 4:6;
+elseif have_pow
+    pow_ax_idx   = 1:3;
+elseif have_phase
+    phase_ax_idx = 1:3;
+end
 
 % Store all necessary data in the figure's application data
 setappdata(f, 'power_fitobj', power_fitobj);
@@ -50,8 +78,8 @@ setappdata(f, 'phase_fitobj', phase_fitobj);
 setappdata(f, 'power_bins', power_bins);
 setappdata(f, 'phase_bins', phase_bins);
 setappdata(f, 'freq_bins', freq_bins);
-setappdata(f, 'power_ax', ax(3));
-setappdata(f, 'phase_ax', ax(6));
+if have_pow,   setappdata(f, 'power_ax', ax(pow_ax_idx(3)));   end
+if have_phase, setappdata(f, 'phase_ax', ax(phase_ax_idx(3))); end
 
 % Helper function for one row
     function plot_paramfit(ax_handles, x_bins, freq_bins, wshed_img, hist_mat, model_mat, params, cmap, type_str, xlabel_str, fitLabel, clim_prctiles, x_limits, freq_limits, plot_type)
@@ -175,12 +203,16 @@ setappdata(f, 'phase_ax', ax(6));
     end
 
 % --- SO-Power row ---
-plot_paramfit(ax(1:3), power_bins, freq_bins, power_wshed_img, SOPH_pow, model_SOPH_pow, params_pow, ...
-    gouldian, 'Power', 'SO-Power (dB)', {'Density','(peaks/min in bin)'}, SOPH_clim_prctiles_pow, power_limits, freq_limits_pow, 'power');
+if have_pow
+    plot_paramfit(ax(pow_ax_idx), power_bins, freq_bins, power_wshed_img, SOPH_pow, model_SOPH_pow, params_pow, ...
+        gouldian, 'Power', 'SO-Power (dB)', {'Density','(peaks/min in bin)'}, SOPH_clim_prctiles_pow, power_limits, freq_limits_pow, 'power');
+end
 
 % --- SO-Phase row ---
-plot_paramfit(ax(4:6), phase_bins, freq_bins, phase_wshed_img(:,length(phase_bins)+1:end-length(phase_bins),:), SOPhH_phase, model_SOPhH_phase, params_phase, ...
-    magma, 'Phase', 'SO-Phase (rad)', {'Proportion'}, SOPH_clim_prctiles_phase, phase_limits, freq_limits_phase, 'phase');
+if have_phase
+    plot_paramfit(ax(phase_ax_idx), phase_bins, freq_bins, phase_wshed_img(:,length(phase_bins)+1:end-length(phase_bins),:), SOPhH_phase, model_SOPhH_phase, params_phase, ...
+        magma, 'Phase', 'SO-Phase (rad)', {'Proportion'}, SOPH_clim_prctiles_phase, phase_limits, freq_limits_phase, 'phase');
+end
 
 % --- Enable datacursor mode (so clicking markers produces the enhanced datatip) ---
 dcm = datacursormode(f);
