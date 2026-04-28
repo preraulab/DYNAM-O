@@ -174,14 +174,9 @@ for ii = 1:num_rgns
     i_full = i_sub+i_min-1;
     j_full = j_sub+j_min-1;
 
-    % Convert to linear indicies. Sort so downstream mergeRegions can use
-    % the flag-free ismembc (requires sorted 2nd arg) instead of
-    % ismember(...,'R2012a') which fires validatestring on every call.
-    % Subimage linear order != full-image linear order whenever subimage
-    % height differs from full-image height, so the remapped indices need
-    % an explicit sort. Borders are treated as sets by every consumer.
+    % Convert to linear indicies
     % Lborders{ii} = sub2ind([num_rows num_cols],i_full,j_full);
-    Lborders{ii} = sort(i_full + (j_full-1)*num_rows);
+    Lborders{ii} = i_full + (j_full-1)*num_rows;
 
     %******************************
     % Determine current neighbors *
