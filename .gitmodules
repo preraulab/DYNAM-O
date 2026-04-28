@@ -20,9 +20,9 @@
 	path = toolbox/helper_functions/artifact_detection
 	url = ../artifact_detection.git
 	branch = master
-[submodule "toolbox/helper_functions/read_EDF"]
-	path = toolbox/helper_functions/read_EDF
-	url = ../read_EDF.git
+[submodule "toolbox/helper_functions/EDF_toolbox"]
+	path = toolbox/helper_functions/EDF_toolbox
+	url = ../EDF_toolbox.git
 	branch = master
 [submodule "toolbox/helper_functions/CSSuicontrols"]
 	path = toolbox/helper_functions/CSSuicontrols
