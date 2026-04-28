@@ -226,15 +226,19 @@ if f_valid_inputs
                 % First column-major pixel of cc_mask is on the top of its
                 % column, so it's automatically a perimeter pixel and 'N' is
                 % a valid initial direction (the cell above it is empty).
+                seed_lin = find(cc_mask, 1);
+                [seed_r, seed_c] = ind2sub([num_sub_rows, num_sub_cols], seed_lin);
+
                 % Trace 8-connected (Moore) to match the Rust path and to
                 % avoid stalling on diagonal-only perimeter steps in concave
                 % shapes (L, U, …).
-                seed_lin = find(cc_mask, 1);
-                [seed_r, seed_c] = ind2sub([num_sub_rows, num_sub_cols], seed_lin);
                 tmp2 = bwtraceboundary(cc_mask, [seed_r, seed_c], 'N', 8);
 
+                % Convert row-col subimage boundaries to full image
                 tmp2(:,1) = tmp2(:,1) + (i_min-1);
                 tmp2(:,2) = tmp2(:,2) + (j_min-1);
+
+                % Convert row-col boundaries to linear pixel indices
                 trimmed_borders{ii} = sub2ind([num_rows num_cols], tmp2(:,1), tmp2(:,2));
 
                 if f_verb > 1
