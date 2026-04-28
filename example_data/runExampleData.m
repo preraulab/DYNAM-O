@@ -86,9 +86,23 @@ switch data_range
         end
     case 'night'
         % Use the full night from the example data
+        t_data = (0:length(data)-1)/Fs;
         wake_buffer = 5*60; % 5 minute buffer before/after first/last wake
-        start_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'first')) - wake_buffer;
-        end_time = stage_times(find(stage_vals < 5 & stage_vals > 0, 1, 'last')) + wake_buffer;
+        % Start: 5 min before the first sleep epoch
+        first_sleep_idx = find(stage_vals < 5 & stage_vals > 0, 1, 'first');
+        start_time = stage_times(first_sleep_idx) - wake_buffer;
+
+        % End: up to 5 min after the last sleep epoch ends
+        last_sleep_idx = find(stage_vals < 5 & stage_vals > 0, 1, 'last');
+        if last_sleep_idx < length(stage_vals)
+            % There's a stage after the last sleep epoch (wake or undefined).
+            % Its onset is the end of the last sleep stage.
+            next_stage_start = stage_times(last_sleep_idx + 1);
+            end_time = min(next_stage_start + wake_buffer, t_data(end));
+        else
+            % Last sleep stage is the last scored stage -> bounded by data length
+            end_time = t_data(end);
+        end
         time_range = [start_time end_time];
 
         if verbose
