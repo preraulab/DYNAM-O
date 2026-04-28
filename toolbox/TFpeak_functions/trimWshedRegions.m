@@ -218,7 +218,7 @@ if f_valid_inputs
                 sub_trim_cc = tmp_cc.PixelIdxList{idx};
                 trimmed_regions{ii} = subLidx2FullLidx(sub_trim_cc,[num_sub_rows num_sub_cols],[i_min j_min],[num_rows num_cols]);
 
-                % Inline 4-neighbor perimeter extraction on cc_mask.
+                % Get boundaries of trimmed region
                 cc_mask = false(num_sub_rows,num_sub_cols);
                 cc_mask(sub_trim_cc) = true;
                 padded = false(num_sub_rows+2, num_sub_cols+2);
@@ -226,10 +226,20 @@ if f_valid_inputs
                 bnd_mask = cc_mask & ~( ...
                     padded(1:end-2, 2:end-1) & padded(3:end, 2:end-1) & ...
                     padded(2:end-1, 1:end-2) & padded(2:end-1, 3:end));
-                [bi, bj] = find(bnd_mask);
-                bi = bi + (i_min-1);
-                bj = bj + (j_min-1);
-                trimmed_borders{ii} = sub2ind([num_rows num_cols], bi, bj);
+
+                % Find a border seed pixel (first true in bnd_mask, column-major)
+                seed_lin = find(bnd_mask, 1);
+                [seed_r, seed_c] = ind2sub([num_sub_rows, num_sub_cols], seed_lin);
+
+                % Trace contour — conn=4 → use 8-connected tracing direction set
+                tmp2 = bwtraceboundary(cc_mask, [seed_r, seed_c], 'N', conn);
+
+                % Convert row-col subimage boundaries to full image
+                tmp2(:,1) = tmp2(:,1) + (i_min-1);
+                tmp2(:,2) = tmp2(:,2) + (j_min-1);
+
+                % Convert row-col boundaries to linear pixel indices
+                trimmed_borders{ii} = sub2ind([num_rows num_cols], tmp2(:,1), tmp2(:,2));
 
                 if f_verb > 1
                     if mod(ii,50)==0
