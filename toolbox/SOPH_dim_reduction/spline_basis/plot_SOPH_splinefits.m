@@ -32,14 +32,39 @@ function plot_SOPH_splinefits(SOpower_mat, SOpower_bins, fit_pow, coefs_pow, kno
 %
 % =========================================================================
 
+% Power and phase rows are independent: an empty fit_* signals "this fit
+% failed / wasn't computed", and the corresponding row is omitted.
+have_pow   = ~isempty(fit_pow);
+have_phase = ~isempty(fit_phase);
+nrows = double(have_pow) + double(have_phase);
+
+if nrows == 0
+    f = figure('Visible','off');
+    if strcmp(get(groot, 'DefaultFigureVisible'), 'on')
+        set(f, 'Visible', 'on');
+    end
+    return
+end
+
 % Create invisible; visibility restored at end for interactive callers.
 f = figure('Visible','off');
-ax = figdesign(f, 2, 3, ...
+ax = figdesign(f, nrows, 3, ...
     'type', 'usletter', ...
     'orient', 'landscape', ...
     'margins', [0.05 0.08 0.1 0.1 0.11 0.12]);
 set(f, 'units', 'inches')
-set(f, 'position', [0 0 10 6])
+set(f, 'position', [0 0 10 3*nrows])
+
+pow_ax_idx   = [];
+phase_ax_idx = [];
+if have_pow && have_phase
+    pow_ax_idx   = 1:3;
+    phase_ax_idx = 4:6;
+elseif have_pow
+    pow_ax_idx   = 1:3;
+elseif have_phase
+    phase_ax_idx = 1:3;
+end
 
 % Helper: plot one set into 3 adjacent axes
     function plot_splinefit(ax_handles, hist_mat, x_bins, fit_mat, coefs, knots_x, knots_y, opts, freq_bins, cmap_hist, cmap_fit, labels)
@@ -95,14 +120,18 @@ set(f, 'position', [0 0 10 6])
     end
 
 % Top row: SO-Power
-plot_splinefit(ax(1:3), SOpower_mat, SOpower_bins, fit_pow, coefs_pow, knots_x_pow, knots_y_pow, ...
-    opts_pow, freq_bins, gouldian, gouldian, ...
-    struct('x', 'SO-Power (dB)', 'name','SO-Power', 'fitLabel', {{'Density','(peaks/min in bin)'}}));
+if have_pow
+    plot_splinefit(ax(pow_ax_idx), SOpower_mat, SOpower_bins, fit_pow, coefs_pow, knots_x_pow, knots_y_pow, ...
+        opts_pow, freq_bins, gouldian, gouldian, ...
+        struct('x', 'SO-Power (dB)', 'name','SO-Power', 'fitLabel', {{'Density','(peaks/min in bin)'}}));
+end
 
 % Bottom row: SO-Phase
-plot_splinefit(ax(4:6), SOphase_mat, SOphase_bins, fit_phase, coefs_phase, knots_x_phase, knots_y_phase, ...
-    opts_phase, freq_bins, magma, magma, ...
-    struct('x', 'SO-Phase (rad)', 'name','SO-Phase', 'fitLabel', {{'Proportion'}}));
+if have_phase
+    plot_splinefit(ax(phase_ax_idx), SOphase_mat, SOphase_bins, fit_phase, coefs_phase, knots_x_phase, knots_y_phase, ...
+        opts_phase, freq_bins, magma, magma, ...
+        struct('x', 'SO-Phase (rad)', 'name','SO-Phase', 'fitLabel', {{'Proportion'}}));
+end
 
 set(ax, 'fontsize', 10);
 

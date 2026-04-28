@@ -167,42 +167,48 @@ else
         merge_thresh, dur_min, bw_min, height_min, trim_vol, false, false);
 end
 
+% Watershed-derived initial conditions are best-effort: if any step
+% fails to yield a usable region set, fall through to the synthetic-seed
+% block below and let the fitter run without watershed priors.
+watershed_failed = false;
 if isempty(stats_table)
-    warning('No watershed results')
-    mode_params = [];
-    tmp_mat = SOPH(valid_freq_bins, valid_power_bins);
-    amp0 = tmp_mat(:);
+    watershed_failed = true;
 else
     % Exclude peaks with center outside peak frequency limits
     valid_fmean_idx = stats_table.PeakFrequency >= freq_limits(1) & stats_table.PeakFrequency <= freq_limits(2);
     stats_table = stats_table(valid_fmean_idx, :);
 
     if isempty(stats_table)
-        warning('Watershed found some peaks but none is valid')
-        mode_params = [];
-        tmp_mat = SOPH(valid_freq_bins, valid_power_bins);
-        amp0 = tmp_mat(:);
+        watershed_failed = true;
+    end
+end
+
+if watershed_failed
+    warning('param_basis_power:watershedFailure', ...
+        'Watershed Failure: Fitting without watershed initial conditions.');
+    mode_params = [];
+    tmp_mat = SOPH(valid_freq_bins, valid_power_bins);
+    amp0 = tmp_mat(:);
+else
+    % Sort peaks by height
+    stats_table = sortrows(stats_table, 'Height', 'descend');
+
+    % Extract the parameters from the watershed for initial conditions
+    if wshed_exp
+        amp0 = log(stats_table.Height);
     else
-        % Sort peaks by height
-        stats_table = sortrows(stats_table, 'Height', 'descend');
+        amp0 = stats_table.Height;
+    end
+    fmean0 = stats_table.PeakFrequency;
+    fstd0 = stats_table.Bandwidth / 1.96;
+    pmean0 = stats_table.SOFeature;
+    pstd0 = stats_table.Duration / 1.96;
+    theta0 = zeros(size(amp0));
 
-        % Extract the parameters from the watershed for initial conditions
-        if wshed_exp
-            amp0 = log(stats_table.Height);
-        else
-            amp0 = stats_table.Height;
-        end
-        fmean0 = stats_table.PeakFrequency;
-        fstd0 = stats_table.Bandwidth / 1.96;
-        pmean0 = stats_table.SOFeature;
-        pstd0 = stats_table.Duration / 1.96;
-        theta0 = zeros(size(amp0));
+    mode_params = [amp0, fmean0, fstd0, pmean0, pstd0, theta0];
 
-        mode_params = [amp0, fmean0, fstd0, pmean0, pstd0, theta0];
-
-        if verbose > 0
-            disp([num2str(size(mode_params, 1)) ' watershed modes found.'])
-        end
+    if verbose > 0
+        disp([num2str(size(mode_params, 1)) ' watershed modes found.'])
     end
 end
 
@@ -254,14 +260,31 @@ end
 % Update the number of modes with available parameters
 N_wshed_modes = size(mode_params, 1);
 
-% Adjust max_peaks if set to -1
-if max_peaks == -1 %#ok<*NODEF>
-    max_peaks = N_wshed_modes;
+% No watershed-derived initial conditions: seed a single synthetic mode
+% at the SOPH center so the fitting loop can still run. The existing
+% iteration-1 revert path will fall back to a baseline-only (plane) fit
+% if this synthetic mode doesn't produce a useful improvement.
+if N_wshed_modes < 1
+    valid_freq_axis  = freq_bins(valid_freq_bins);
+    valid_power_axis = power_bins(valid_power_bins);
+    fmean_seed = (max(valid_freq_axis)  + min(valid_freq_axis))  / 2;
+    fstd_seed  = (max(valid_freq_axis)  - min(valid_freq_axis))  / 4;
+    pmean_seed = (max(valid_power_axis) + min(valid_power_axis)) / 2;
+    pstd_seed  = (max(valid_power_axis) - min(valid_power_axis)) / 4;
+    pow_hist   = SOPH(valid_freq_bins, valid_power_bins);
+    if wshed_exp
+        amp_seed = log(max(pow_hist, [], 'all'));
+    else
+        amp_seed = max(pow_hist, [], 'all');
+    end
+    mode_params = [amp_seed, fmean_seed, fstd_seed, pmean_seed, pstd_seed, 0];
+    N_wshed_modes = 1;
 end
 
-if N_wshed_modes < 1
-    warning('No mode available to fit. Returning empty outputs')
-    return
+% Adjust max_peaks if set to -1 (after potentially synthesizing a seed
+% mode so max_peaks reflects the actual available count)
+if max_peaks == -1 %#ok<*NODEF>
+    max_peaks = N_wshed_modes;
 end
 
 %% Plot initial data and watershed regions
@@ -436,6 +459,8 @@ for ii = 1:max_peaks
             fitobj = fitfunc(SOPH(valid_freq_bins, valid_power_bins), power_bins(valid_power_bins), freq_bins(valid_freq_bins), [], LBi, UBi, false);
             model_SOPH = feval(fitobj, power_grid, freq_grid);
             params = [];
+            warning('param_basis_power:noModesFound', ...
+                'No modes found. Returning background fit only.');
             return;
         end
 

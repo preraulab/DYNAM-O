@@ -15,6 +15,8 @@ Helper utilities that are specific to DYNAM-O (not in any of the lab's public ut
 | `hmstext2seconds.m` | Parse 'HH:MM:SS' text into seconds |
 | `isShiftstr.m` | Check whether a string is a shift-key keyboard code |
 | `load_data.m` | DYNAMO-standard data loader |
+| `mergeOptsDefaults.m` | Backfill missing fields in an options struct from a defaults struct |
+| `printTimingSummary.m` | Pretty-print runDYNAMO per-stage wallclock timings as a sorted table |
 | `remove_subj.m` | Filter a subject list down to a working subset |
 | `verb_disp.m` | Verbose-conditional display wrapper |
 

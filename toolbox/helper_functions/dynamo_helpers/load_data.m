@@ -106,7 +106,7 @@ if ~all(valid)
     error(char(strcat('Invalid channels:',{' '},channels(~valid),' | Valid channels: ',{' '},sprintf('%s ',signalHeader.signal_labels))))
 end
 
-[header, signalHeader, data] = read_EDF(edf_fpath, 'channels', channels, 'forceMATLAB', true);
+[header, signalHeader, data] = read_EDF(edf_fpath, 'channels', channels);
 data = cell2mat(data);
 
 % signalHeader is now ordered to match channels (including any rereferenced

@@ -85,7 +85,8 @@
 %       % Fast iteration with precomputed stats_table (skips TF-peak extraction):
 %       [~, ~, ~, ~, ~, ~, ~, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, 'stats_table', stats_table);
 %
-%   See Also: DYNAMO, runSegmentedData, computeTFPeaks, SOpowerphaseHistogram, computePeakStage
+%   See Also: DYNAMO, runSegmentedData, computeTFPeaks, SOpowerphaseHistogram, computePeakStage,
+%             fitParamBasis, fitSplineBasis, printTimingSummary
 %
 % =========================================================================
 %    ██████╗ ██╗   ██╗███╗   ██╗ █████╗ ███╗   ███╗        ██████╗
@@ -230,6 +231,25 @@ ttotal = datetime('now');
 detection_options = mergeOptsDefaults(detection_options, detection_opts());
 baseline_options  = mergeOptsDefaults(baseline_options,  baseline_opts());
 
+%Force data to be a column vector
+if isrow(data) %#ok<*NODEF>
+    data = data(:);
+end
+
+%Check sleep stages
+valid_stages = stage_vals > 0 & stage_vals < 6;
+assert(~isempty(valid_stages),'No valid stages found');
+
+%Set to range of valid scored data by default
+if isempty(time_range)
+    valid_stage_inds = find(valid_stages);
+    time_range = stage_times(valid_stage_inds([1, end]));
+end
+
+%Cast stage_vals to single for interpolations
+stage_vals = single(stage_vals);
+
+%% SETUP BACKEND
 % Resolve backend: explicit top-level override wins; otherwise inherit
 % from detection_options.backend (the GUI/options-struct source of truth).
 if isempty(backend)
@@ -305,24 +325,6 @@ else
     end
 end
 
-%Force data to be a column vector
-if isrow(data) %#ok<*NODEF>
-    data = data(:);
-end
-
-%Check sleep stages
-valid_stages = stage_vals > 0 & stage_vals < 6;
-assert(~isempty(valid_stages),'No valid stages found');
-
-%Set to range of valid scored data by default
-if isempty(time_range)
-    valid_stage_inds = find(valid_stages);
-    time_range = stage_times(valid_stage_inds([1, end]));
-end
-
-%Cast stage_vals to single for interpolations
-stage_vals = single(stage_vals);
-
 %% COMPUTE TIME-FREQUENCY PEAKS
 % See computeTFPeaks() for a full list of optional arguments for finer
 % control of watershed extraction of Time-Frequency Peaks
@@ -360,7 +362,7 @@ else
     timings.artifact = toc(t_stage);
 end
 
-%% COMPUTE ADDITIONAL PEAK FEATURES
+%% COMPUTE ADDITIONAL PEAK FEATURE PROPERTIES
 % Additional useful features that describe each detected TF peak in the
 % stats_table are computed here. Customized functions can be added in this
 % section to populate the table with other feature columns.
@@ -474,207 +476,4 @@ if verbose
     printTimingSummary(timings);
 end
 
-end
-
-
-% ------------------------------------------------------------------------
-% printTimingSummary
-%   Pretty-prints the timings struct as a right-aligned, dot-leadered table
-%   with per-stage percentages of total wallclock. Any fields missing from
-%   the struct (stage didn't run — e.g., plot_on=false) are simply skipped.
-% ------------------------------------------------------------------------
-function printTimingSummary(timings)
-% Display: pipeline stages sorted by time (largest first) with
-% millisecond precision so small stages don't show as 0.0 s. Any
-% fields missing from the struct (stage didn't run — e.g.,
-% plot_on=false, single-watershed) are silently omitted.
-% timings.soph_histograms is the outer wall for the full SOpowerphaseHistogram
-% call; we list its sub-parts (soph_sopower_hist, soph_sophase_hist, and
-% the two optional compute stages) separately so the breakdown is visible.
-% We skip the outer total to avoid double-counting in the summary.
-order = { ...
-    'pool_setup',           'Parallel pool setup'; ...
-    'mex_build',            'MEX build / check'; ...
-    'spect_pass1',          'Spectrogram (pass 1)'; ...
-    'artifact',             'Artifact rejection'; ...
-    'baseline_pass1',       'Baseline (pass 1)'; ...
-    'extract_pass1',        'TF peak extraction (pass 1)'; ...
-    'spect_pass2',          'Spectrogram (pass 2)'; ...
-    'baseline_pass2',       'Baseline + mask (pass 2)'; ...
-    'extract_pass2',        'TF peak extraction (pass 2)'; ...
-    'refine',               'Peak refinement'; ...
-    'peak_stage',           'Peak stage assignment'; ...
-    'peak_sopower',         'Peak SO-power compute'; ...
-    'peak_sophase',         'Peak SO-phase compute'; ...
-    'soph_sopower_compute', 'SOPH: SO-power compute (if needed)'; ...
-    'soph_sophase_compute', 'SOPH: SO-phase compute (if needed)'; ...
-    'soph_sopower_hist',    'SOPH: SO-power histogram'; ...
-    'soph_sophase_hist',    'SOPH: SO-phase histogram'; ...
-    'plot_summary',         'Summary plot'; ...
-    'fit_param_basis',      'Parametric basis fit'; ...
-    'fit_spline_basis',     'Spline basis fit'};
-
-total = timings.total;
-if total <= 0, total = eps; end  % avoid /0 on degenerate runs
-
-% Collect present stages, sort descending by time. Skip rows with
-% exactly 0 value — treats "stage exists but didn't run" (e.g., the
-% soph_sopower_compute field when SOpower is precomputed upstream)
-% the same as "field never populated at all".
-keys   = order(:, 1);
-labels = order(:, 2);
-pres   = cellfun(@(k) isfield(timings, k) && timings.(k) > 0, keys);
-labels = labels(pres);
-times  = cellfun(@(k) timings.(k), keys(pres));
-[times_sorted, si] = sort(times, 'descend');
-labels_sorted = labels(si);
-
-width   = 70;
-bar_top = repmat(char(9552), 1, width);   % ═
-bar_sep = repmat(char(9472), 1, width);   % ─
-fprintf('\n%s\n', bar_top);
-fprintf(' %-*s\n', width-1, 'TIMING SUMMARY  (stages sorted by time, ms precision)');
-fprintf('%s\n', bar_top);
-
-sum_reported = 0;
-for k = 1:numel(labels_sorted)
-    t = times_sorted(k);
-    sum_reported = sum_reported + t;
-    pct = 100 * t / total;
-    left = sprintf(' %s ', labels_sorted{k});
-    right = sprintf(' %8.3f s   (%5.1f%%)', t, pct);
-    fill_len = width - numel(left) - numel(right);
-    if fill_len < 1, fill_len = 1; end
-    fprintf('%s%s%s\n', left, repmat('.', 1, fill_len), right);
-end
-
-% "Other" catches any time between stages (tic/toc boundaries, arg
-% parsing, unmeasured helpers). Printed only when it's non-trivial
-% (>100 ms) so clean runs stay clean.
-other = total - sum_reported;
-if other > 0.1
-    left = ' Other / overhead ';
-    right = sprintf(' %8.3f s   (%5.1f%%)', other, 100 * other / total);
-    fill_len = width - numel(left) - numel(right);
-    if fill_len < 1, fill_len = 1; end
-    fprintf('%s%s%s\n', left, repmat('.', 1, fill_len), right);
-end
-
-fprintf('%s\n', bar_sep);
-left = ' Total ';
-right = sprintf(' %8.3f s   (100.0%%)', total);
-fill_len = width - numel(left) - numel(right);
-if fill_len < 1, fill_len = 1; end
-fprintf('%s%s%s\n', left, repmat('.', 1, fill_len), right);
-fprintf('%s\n\n', bar_top);
-end
-
-
-%% Helper functions
-function opts = mergeOptsDefaults(opts, defaults)
-% Backfill any fields present in `defaults` but missing from `opts`. Fields
-% already in `opts` are preserved (user-supplied values win). Returns a
-% struct with the union of fields. No-op when opts already has every field.
-if ~isstruct(opts) || ~isstruct(defaults)
-    return
-end
-fns = fieldnames(defaults);
-for ii = 1:numel(fns)
-    if ~isfield(opts, fns{ii})
-        opts.(fns{ii}) = defaults.(fns{ii});
-    end
-end
-end
-
-
-function [SOPHs] = createSOPHsStruct(SOpower_mat, SOphase_mat, SOpower_bins, SOpower_norm, SOpower_times, SOphase_bins, freq_bins, num_peaks_at_freq, SOpower_TIB, SOphase_TIB)
-SOPHs = struct;
-SOPHs.SOpower_mat = SOpower_mat;
-SOPHs.SOphase_mat = SOphase_mat;
-SOPHs.SOpower_bins = SOpower_bins;
-SOPHs.SOphase_bins = SOphase_bins;
-SOPHs.freq_bins = freq_bins;
-SOPHs.num_peaks_at_freq = num_peaks_at_freq;
-SOPHs.SOpower_TIB = SOpower_TIB;
-SOPHs.SOphase_TIB = SOphase_TIB;
-SOPHs.SOpower_norm = SOpower_norm;
-SOPHs.SOpower_times = SOpower_times;
-end
-
-
-function [SOPH_paramfit] = createSOPHparamfitStruct(params, fitobj, gof, model_SOPH, wshed_img)
-SOPH_paramfit = struct;
-SOPH_paramfit.params = params; % Columns are: [amp0, fmean0, fstd0, pmean0, pstd0, theta0]
-SOPH_paramfit.fitobj = fitobj;
-SOPH_paramfit.gof = gof;
-SOPH_paramfit.model_SOPH = model_SOPH;
-SOPH_paramfit.wshed_img = wshed_img;
-end
-
-
-function [SOPH_splinefit] = createSOPHsplinefitStruct(splinefit, coefs, spline_obj, knots_x, knots_y)
-SOPH_splinefit = struct;
-SOPH_splinefit.splinefit = splinefit;
-SOPH_splinefit.coefs = coefs;
-SOPH_splinefit.spline_obj = spline_obj;
-SOPH_splinefit.knots_x = knots_x;
-SOPH_splinefit.knots_y = knots_y;
-end
-
-
-function [SOPHs] = fitParamBasis(SOPHs, power_opts, phase_opts, valid_powerhist, valid_phasehist, verbose, plot_each, plot_both)
-if verbose && (valid_powerhist || valid_phasehist)
-    disp('  Fitting parametric basis...');
-end
-
-% Parametric fit of SO-Power Histogram
-if valid_powerhist
-    power_opts.plot_on = plot_each;
-    power_opts.verbose = verbose-1;
-    [params_power, fitobj_power, gof_power, model_SOPH_power, wshed_img_power] = param_basis_power(SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins, power_opts);
-    SOPHs.SOpower_paramfit = createSOPHparamfitStruct(params_power, fitobj_power, gof_power, model_SOPH_power, wshed_img_power);
-end
-
-% Parametric fit of SO-Phase Histogram
-if valid_phasehist
-    phase_opts.plot_on = plot_each;
-    phase_opts.verbose = verbose-1;
-    [params_phase, fitobj_phase, gof_phase, model_SOPH_phase, wshed_img_phase] = param_basis_phase(SOPHs.SOphase_mat, SOPHs.SOphase_bins, SOPHs.freq_bins, phase_opts);
-    SOPHs.SOphase_paramfit = createSOPHparamfitStruct(params_phase, fitobj_phase, gof_phase, model_SOPH_phase, wshed_img_phase);
-end
-
-if plot_both
-    plot_SOPH_paramfits( ...
-        SOPHs.SOpower_bins, SOPHs.SOpower_paramfit.wshed_img, SOPHs.SOpower_mat, model_SOPH_power, params_power, power_opts.SOPH_clim_prctiles, power_opts.power_limits, power_opts.freq_limits, ...
-        SOPHs.SOphase_bins, SOPHs.SOphase_paramfit.wshed_img, SOPHs.SOphase_mat, model_SOPH_phase, params_phase, phase_opts.SOPH_clim_prctiles, phase_opts.phase_limits, phase_opts.freq_limits, ...
-        SOPHs.freq_bins, SOPHs.SOpower_paramfit.fitobj, SOPHs.SOphase_paramfit.fitobj);
-end
-end
-
-
-function [SOPHs] = fitSplineBasis(SOPHs, power_opts, phase_opts, valid_powerhist, valid_phasehist, verbose, plot_each, plot_both)
-if verbose && (valid_powerhist || valid_phasehist)
-    disp('  Fitting spline basis...');
-end
-
-% Spline fit of SO-Power Histogram
-if valid_powerhist
-    power_opts.plot_on = plot_each;
-    [splinefit_power, coefs_power, spline_obj_power, knots_x_power, knots_y_power] = spline_basis('power', SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins, power_opts);
-    SOPHs.SOpower_splinefit = createSOPHsplinefitStruct(splinefit_power, coefs_power, spline_obj_power, knots_x_power, knots_y_power);
-end
-
-% Spline fit of SO-Phase Histogram
-if valid_phasehist
-    phase_opts.plot_on = plot_each;
-    [splinefit_phase, coefs_phase, spline_obj_phase, knots_x_phase, knots_y_phase] = spline_basis('phase', SOPHs.SOphase_mat, SOPHs.SOphase_bins, SOPHs.freq_bins, phase_opts);
-    SOPHs.SOphase_splinefit = createSOPHsplinefitStruct(splinefit_phase, coefs_phase, spline_obj_phase, knots_x_phase, knots_y_phase);
-end
-
-if plot_both
-    plot_SOPH_splinefits( ...
-        SOPHs.SOpower_mat, SOPHs.SOpower_bins, splinefit_power, coefs_power, knots_x_power, knots_y_power, power_opts, ...
-        SOPHs.SOphase_mat, SOPHs.SOphase_bins, splinefit_phase, coefs_phase, knots_x_phase, knots_y_phase, phase_opts, ...
-        SOPHs.freq_bins);
-end
 end
