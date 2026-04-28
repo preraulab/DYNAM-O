@@ -222,18 +222,38 @@ else
                     cluster = current_idx(subIdxList{sj});
                     sub_angles = stats_table.SOFeature(cluster);
                     sub_valid = cluster(sub_angles >= -pi & sub_angles <= pi);
-                    assert(~isempty(sub_valid), 'After finer clustering, no valid region in subgroup %d.', sj)
-                    assert(isscalar(sub_valid), 'More than one valid regions found. Not possible with deterministic watershed.')
+                    if isempty(sub_valid)
+                        warning('param_basis_phase:noValidSubgroup', ...
+                            'After finer clustering, no valid region in subgroup %d. Returning empty outputs.', sj);
+                        params = []; fitobj = []; gof = []; model_SOPhH = []; phase_wshed_img = [];
+                        return
+                    end
+                    if ~isscalar(sub_valid)
+                        warning('param_basis_phase:nonScalarSubgroup', ...
+                            'More than one valid region found in subgroup %d (deterministic watershed expected one). Returning empty outputs.', sj);
+                        params = []; fitobj = []; gof = []; model_SOPhH = []; phase_wshed_img = [];
+                        return
+                    end
                     unique_regions_idx(end+1) = sub_valid;
                 end
             end
         end
     end
-    assert(numel(unique_regions_idx) == numel(unique(unique_regions_idx)), 'Duplicate entries found in unique_regions_idx.');
+    if numel(unique_regions_idx) ~= numel(unique(unique_regions_idx))
+        warning('param_basis_phase:duplicateRegionIdx', ...
+            'Duplicate entries found in unique_regions_idx. Returning empty outputs.');
+        params = []; fitobj = []; gof = []; model_SOPhH = []; phase_wshed_img = [];
+        return
+    end
 
     % Reduce to unique regions within -pi to pi
     stats_table = stats_table(unique_regions_idx, :);
-    assert(all(stats_table.SOFeature >= -pi & stats_table.SOFeature <= pi), 'SO-Phase for watershed regions out of [-pi, pi] bound. An error occured when selecting unique regions.')
+    if ~all(stats_table.SOFeature >= -pi & stats_table.SOFeature <= pi)
+        warning('param_basis_phase:regionOutOfRange', ...
+            'SO-Phase for watershed regions out of [-pi, pi] bound. Returning empty outputs.');
+        params = []; fitobj = []; gof = []; model_SOPhH = []; phase_wshed_img = [];
+        return
+    end
     % ----------------------------------
 
     % Exclude peaks with center outside peak frequency limits
