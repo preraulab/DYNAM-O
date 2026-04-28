@@ -83,8 +83,8 @@ end
 %Compute the stats table
 r_props = {'Area'};
 
-% Peakiness = Area*Height/Volume — needs BoundingBox, PixelValues for
-% Height and Volume.
+% Peakiness = 10*log10(Area*Height/Volume), in dB — needs BoundingBox and
+% PixelValues for Height and Volume.
 if any(strcmpi(features,'BoundingBox')) || any(strcmpi(features,'Bandwidth')) || any(strcmpi(features,'Duration'))
     r_props = cat(2,r_props,'BoundingBox');
 end
@@ -190,18 +190,18 @@ if any(strcmpi(features,'SegmentNum'))
     stats_table.Properties.VariableUnits{'SegmentNum'} = '#';
 end
 
-%Peakiness = log10(Area * Height / Volume). Recomputed from PixelValues so
-%this block is order-independent: stats_table.Area gets either rescaled
-%(line 127) or emptied (line 131) above depending on whether 'Area' is
-%requested, and likewise stats_table.PixelValues will be renamed/dropped
-%below.
+%Peakiness = 10*log10(Area * Height / Volume), expressed in dB. Recomputed
+%from PixelValues so this block is order-independent: stats_table.Area gets
+%either rescaled (line 127) or emptied (line 131) above depending on whether
+%'Area' is requested, and likewise stats_table.PixelValues will be
+%renamed/dropped below.
 if any(strcmpi(features,'Peakiness'))
     pk_area   = cellfun(@numel, stats_table.PixelValues) * dx * dy;       % sec*Hz
     pk_height = cellfun(@max, stats_table.PixelValues) - cellfun(@min, stats_table.PixelValues);
     pk_volume = cellfun(@(x) sum(x) * dx * dy, stats_table.PixelValues);  % sec*μV^2
-    stats_table.Peakiness = log10(pk_area .* pk_height ./ pk_volume);
-    stats_table.Properties.VariableDescriptions{'Peakiness'} = 'Peakiness: log10(Area * Height / Volume)';
-    stats_table.Properties.VariableUnits{'Peakiness'} = 'log10(sec*Hz/μV^2)';
+    stats_table.Peakiness = 10 * log10(pk_area .* pk_height ./ pk_volume);
+    stats_table.Properties.VariableDescriptions{'Peakiness'} = 'Peakiness: 10*log10(Area * Height / Volume)';
+    stats_table.Properties.VariableUnits{'Peakiness'} = 'dB';
 end
 
 %Region data
