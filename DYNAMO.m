@@ -539,9 +539,11 @@ classdef DYNAMO < handle
                 [params_pow, fitobj_pow, gof_pow, model_SOPH_pow, power_wshed_img] = ...
                     param_basis_power(obj.SOPHs.SOpower_mat, obj.SOPHs.SOpower_bins, obj.SOPHs.freq_bins, ...
                     opts_pow);
-                if isempty(params_pow) || isempty(fitobj_pow)
-                    % Soft-fail: param_basis_power returned empty after a
-                    % warning (e.g. no watershed modes). Treat as failure.
+                if isempty(fitobj_pow)
+                    % Soft-fail: no fit object at all. param_basis_power
+                    % normally produces at least a background-only fit
+                    % (params=[], fitobj=plane); reaching here means
+                    % something else went wrong upstream.
                     obj.SOPHs.SOpower_paramfit = [];
                     fprintf(2, '   [WARN] param_basis_power returned no fit (see warning above).\n');
                 else
@@ -558,7 +560,7 @@ classdef DYNAMO < handle
                 [params_phase, fitobj_phase, gof_phase, model_SOPhH_phase, phase_wshed_img] = ...
                     param_basis_phase(obj.SOPHs.SOphase_mat, obj.SOPHs.SOphase_bins, obj.SOPHs.freq_bins, ...
                     opts_phase);
-                if isempty(params_phase) || isempty(fitobj_phase)
+                if isempty(fitobj_phase)
                     obj.SOPHs.SOphase_paramfit = [];
                     fprintf(2, '   [WARN] param_basis_phase returned no fit (see warning above).\n');
                 else
