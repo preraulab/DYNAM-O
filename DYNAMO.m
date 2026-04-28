@@ -539,8 +539,15 @@ classdef DYNAMO < handle
                 [params_pow, fitobj_pow, gof_pow, model_SOPH_pow, power_wshed_img] = ...
                     param_basis_power(obj.SOPHs.SOpower_mat, obj.SOPHs.SOpower_bins, obj.SOPHs.freq_bins, ...
                     opts_pow);
-                obj.SOPHs.SOpower_paramfit = obj.createSOPHparamfitStruct(params_pow, fitobj_pow, gof_pow, model_SOPH_pow, power_wshed_img);
-                pow_ok = true;
+                if isempty(params_pow) || isempty(fitobj_pow)
+                    % Soft-fail: param_basis_power returned empty after a
+                    % warning (e.g. no watershed modes). Treat as failure.
+                    obj.SOPHs.SOpower_paramfit = [];
+                    fprintf(2, '   [WARN] param_basis_power returned no fit (see warning above).\n');
+                else
+                    obj.SOPHs.SOpower_paramfit = obj.createSOPHparamfitStruct(params_pow, fitobj_pow, gof_pow, model_SOPH_pow, power_wshed_img);
+                    pow_ok = true;
+                end
             catch ME_pow
                 obj.SOPHs.SOpower_paramfit = [];
                 fprintf(2, '   [ERROR] param_basis_power failed: %s\n', ME_pow.message);
@@ -551,8 +558,13 @@ classdef DYNAMO < handle
                 [params_phase, fitobj_phase, gof_phase, model_SOPhH_phase, phase_wshed_img] = ...
                     param_basis_phase(obj.SOPHs.SOphase_mat, obj.SOPHs.SOphase_bins, obj.SOPHs.freq_bins, ...
                     opts_phase);
-                obj.SOPHs.SOphase_paramfit = obj.createSOPHparamfitStruct(params_phase, fitobj_phase, gof_phase, model_SOPhH_phase, phase_wshed_img);
-                phase_ok = true;
+                if isempty(params_phase) || isempty(fitobj_phase)
+                    obj.SOPHs.SOphase_paramfit = [];
+                    fprintf(2, '   [WARN] param_basis_phase returned no fit (see warning above).\n');
+                else
+                    obj.SOPHs.SOphase_paramfit = obj.createSOPHparamfitStruct(params_phase, fitobj_phase, gof_phase, model_SOPhH_phase, phase_wshed_img);
+                    phase_ok = true;
+                end
             catch ME_phase
                 obj.SOPHs.SOphase_paramfit = [];
                 fprintf(2, '   [ERROR] param_basis_phase failed: %s\n', ME_phase.message);

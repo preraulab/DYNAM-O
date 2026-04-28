@@ -133,11 +133,14 @@ last_B0i = [];
 last_UBi = [];
 last_LBi = [];
 
-% Set up empty outputs in case the function fails
+% Set up empty outputs in case the function fails (soft-fail returns
+% leave all outputs at these empties so callers can detect failure with
+% a simple isempty(params) check).
 params = [];
 fitobj = [];
 gof = [];
 model_SOPhH = [];
+phase_wshed_img = [];
 f = [];
 
 % Locate the valid submatrix of SOPhH (non-Nan and non-infinite bins within limits)
@@ -196,7 +199,18 @@ else
             valid_idx = current_idx(is_in_range);
 
             if isempty(valid_idx)
-                error('Duplicate regions found but none within the -pi to pi range.');
+                % Soft-fail: the watershed-on-tripled-phase image returned
+                % a duplicate cluster with no member inside [-pi, pi]. Bail
+                % cleanly with empty outputs so the rest of the pipeline
+                % (e.g. the surviving SO-power parametric fit) keeps going.
+                warning('param_basis_phase:noValidDuplicate', ...
+                    'Duplicate regions found but none within the -pi to pi range. Returning empty outputs.');
+                params      = [];
+                fitobj      = [];
+                gof         = [];
+                model_SOPhH = [];
+                phase_wshed_img = [];
+                return
             elseif isscalar(valid_idx)
                 % exactly one valid peak
                 unique_regions_idx(end+1) = valid_idx;

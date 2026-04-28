@@ -640,8 +640,12 @@ if valid_powerhist
     power_opts.verbose = verbose-1;
     try
         [params_power, fitobj_power, gof_power, model_SOPH_power, wshed_img_power] = param_basis_power(SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins, power_opts);
-        SOPHs.SOpower_paramfit = createSOPHparamfitStruct(params_power, fitobj_power, gof_power, model_SOPH_power, wshed_img_power);
-        pow_ok = true;
+        if isempty(params_power) || isempty(fitobj_power)
+            fprintf(2, '  [WARN] param_basis_power returned no fit (see warning above).\n');
+        else
+            SOPHs.SOpower_paramfit = createSOPHparamfitStruct(params_power, fitobj_power, gof_power, model_SOPH_power, wshed_img_power);
+            pow_ok = true;
+        end
     catch ME_pow
         fprintf(2, '  [ERROR] param_basis_power failed: %s\n', ME_pow.message);
         warning('runDYNAMO:fitParamBasis:power', 'param_basis_power failed: %s', ME_pow.message);
@@ -653,8 +657,12 @@ if valid_phasehist
     phase_opts.verbose = verbose-1;
     try
         [params_phase, fitobj_phase, gof_phase, model_SOPH_phase, wshed_img_phase] = param_basis_phase(SOPHs.SOphase_mat, SOPHs.SOphase_bins, SOPHs.freq_bins, phase_opts);
-        SOPHs.SOphase_paramfit = createSOPHparamfitStruct(params_phase, fitobj_phase, gof_phase, model_SOPH_phase, wshed_img_phase);
-        phase_ok = true;
+        if isempty(params_phase) || isempty(fitobj_phase)
+            fprintf(2, '  [WARN] param_basis_phase returned no fit (see warning above).\n');
+        else
+            SOPHs.SOphase_paramfit = createSOPHparamfitStruct(params_phase, fitobj_phase, gof_phase, model_SOPH_phase, wshed_img_phase);
+            phase_ok = true;
+        end
     catch ME_phase
         fprintf(2, '  [ERROR] param_basis_phase failed: %s\n', ME_phase.message);
         warning('runDYNAMO:fitParamBasis:phase', 'param_basis_phase failed: %s', ME_phase.message);
