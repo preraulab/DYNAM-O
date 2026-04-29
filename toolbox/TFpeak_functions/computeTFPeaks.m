@@ -381,8 +381,7 @@ if double_watershed
     % MATLAB backend uses the regions/borders cell form via maskSpectrogram.
     if strcmp(backend, 'rust')
         % MEX ABI wants real double; multitaper_spectrogram returns single.
-        spect_masked = mask_spectrogram_mex( ...
-            double(spect), double(stimes(:)'), labels_img, double(stimes_first(:)'));
+        spect_masked = mask_spectrogram_mex(double(spect), double(stimes(:)'), labels_img, double(stimes_first(:)'));
     else
         spect_masked = maskSpectrogram(spect, stimes_first, stimes, regions, borders);
     end
