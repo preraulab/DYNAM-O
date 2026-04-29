@@ -88,6 +88,7 @@ switch data_range
         % Use the full night from the example data
         t_data = (0:length(data)-1)/Fs;
         wake_buffer = 5*60; % 5 minute buffer before/after first/last wake
+
         % Start: 5 min before the first sleep epoch
         first_sleep_idx = find(stage_vals < 5 & stage_vals > 0, 1, 'first');
         start_time = stage_times(first_sleep_idx) - wake_buffer;
