@@ -377,7 +377,7 @@ t_stage = tic;
 timings.peak_sopower = toc(t_stage);
 % Compute slow oscillation phase (SO-Phase) at each TF peak
 t_stage = tic;
-[stats_table, SOphase, SOphase_times, SO_filtered] = computePeakSOphase(stats_table, data_time_range, Fs, 'EEG_times', t_time_range, 'isexcluded', artifacts, SOPH_options);
+[stats_table, SOphase, SOphase_times, SOfiltered] = computePeakSOphase(stats_table, data_time_range, Fs, 'EEG_times', t_time_range, 'isexcluded', artifacts, SOPH_options);
 timings.peak_sophase = toc(t_stage);
 
 %% COMPUTE SO-POWER/PHASE HISTOGRAMS
@@ -401,7 +401,7 @@ if nargout > 7
     clear soph_timings fns
 
     %Create a SOPHs structure for output
-    SOPHs = createSOPHsStruct(SOpower_mat, SOphase_mat, SOpower_bins, SOpower_norm, SOpower_times, SOphase_bins, SOphase, SOphase_times, SO_filtered, freq_bins, num_peaks_at_freq, SOpower_TIB, SOphase_TIB);
+    SOPHs = createSOPHsStruct(SOpower_mat, SOphase_mat, SOpower_bins, SOpower_norm, SOpower_times, SOphase_bins, SOphase, SOphase_times, SOfiltered, freq_bins, num_peaks_at_freq, SOpower_TIB, SOphase_TIB);
 
     %Check for valid histogramas
     valid_powerhist = any(isfinite(SOPHs.SOpower_mat), 'all');

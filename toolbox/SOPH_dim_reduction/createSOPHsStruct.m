@@ -1,4 +1,4 @@
-function [SOPHs] = createSOPHsStruct(SOpower_mat, SOphase_mat, SOpower_bins, SOpower_norm, SOpower_times, SOphase_bins, SOphase, SOphase_times, SO_filtered, freq_bins, num_peaks_at_freq, SOpower_TIB, SOphase_TIB)
+function [SOPHs] = createSOPHsStruct(SOpower_mat, SOphase_mat, SOpower_bins, SOpower_norm, SOpower_times, SOphase_bins, SOphase, SOphase_times, SOfiltered, freq_bins, num_peaks_at_freq, SOpower_TIB, SOphase_TIB)
 %CREATESOPHSSTRUCT  Pack SO-power/phase histograms and bins into a struct.
 SOPHs = struct;
 SOPHs.SOpower_mat = SOpower_mat;
@@ -13,5 +13,5 @@ SOPHs.SOpower_norm = SOpower_norm;
 SOPHs.SOpower_times = SOpower_times;
 SOPHs.SOphase = SOphase;
 SOPHs.SOphase_times = SOphase_times;
-SOPHs.SO_filtered = SO_filtered;
+SOPHs.SO_filtered = SOfiltered;
 end
