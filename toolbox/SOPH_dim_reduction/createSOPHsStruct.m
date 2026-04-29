@@ -13,5 +13,5 @@ SOPHs.SOpower_norm = SOpower_norm;
 SOPHs.SOpower_times = SOpower_times;
 SOPHs.SOphase = SOphase;
 SOPHs.SOphase_times = SOphase_times;
-SOPHs.SO_filtered = SOfiltered;
+SOPHs.SOfiltered = SOfiltered;
 end
