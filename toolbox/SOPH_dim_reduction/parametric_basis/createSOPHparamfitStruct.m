@@ -10,11 +10,13 @@ function [SOPH_paramfit] = createSOPHparamfitStruct(type, params, fitobj, gof, m
 %     power: Amplitude (peaks/min/bin), FreqMean (Hz), FreqStd (Hz),
 %            SOpowerMean (dB), SOpowerStd (dB), Theta (rad),
 %            and (after fitParamBasis annotation) six additional columns:
-%            PrefPhaseArgmax (rad),  CouplingArgmax (peaks/min/bin),
+%            PrefPhaseArgmax (rad),  CouplingArgmax (proportion/phase-bin),
 %            PrefPhaseCirc   (rad),  CouplingCirc   ([0,1] MRL),
-%            PrefPhaseModel  (rad),  CouplingModel  (peaks/min/bin).
-%     phase: Amplitude (peaks/min/bin), FreqMean (Hz), FreqStd (Hz),
+%            PrefPhaseModel  (rad),  CouplingModel  (proportion/phase-bin).
+%     phase: Amplitude (proportion/phase-bin), FreqMean (Hz), FreqStd (Hz),
 %            SOphaseMean (rad), SOphaseStd (rad), Theta (rad).
+%
+%   NOTE: power Amplitude is peaks/min/bin; phase Amplitude and the argmax/model coupling columns are proportion/phase-bin (phase histogram is row-normalized upstream); CouplingCirc is dimensionless MRL in [0,1].
 %   Empty params produce an empty table with the right VariableNames so
 %   downstream isempty(...) checks still hold and column-name access
 %   (e.g. T.PrefPhaseModel) does not error on a zero-mode fit.

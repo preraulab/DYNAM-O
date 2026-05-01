@@ -1494,10 +1494,16 @@ classdef DYNAMO < handle
             %   params: N×6 numeric matrix [amp, fmean, fstd, pmean, pstd, theta]
             %
             %   .params is returned as a table.
-            %   power: {Amplitude, FreqMean, FreqStd, SOpowerMean, SOpowerStd, Theta} +
-            %          {PrefPhaseArgmax, CouplingArgmax, PrefPhaseCirc, CouplingCirc,
-            %           PrefPhaseModel, CouplingModel} (added by fitParamBasis)
-            %   phase: {Amplitude, FreqMean, FreqStd, SOphaseMean, SOphaseStd, Theta}
+            %   power: Amplitude (peaks/min/bin), FreqMean (Hz), FreqStd (Hz),
+            %          SOpowerMean (dB), SOpowerStd (dB), Theta (rad), plus
+            %          (added by fitParamBasis annotation):
+            %          PrefPhaseArgmax (rad),  CouplingArgmax (proportion/phase-bin),
+            %          PrefPhaseCirc   (rad),  CouplingCirc   ([0,1] MRL),
+            %          PrefPhaseModel  (rad),  CouplingModel  (proportion/phase-bin).
+            %   phase: Amplitude (proportion/phase-bin), FreqMean (Hz), FreqStd (Hz),
+            %          SOphaseMean (rad), SOphaseStd (rad), Theta (rad).
+            %
+            %   NOTE: power Amplitude is peaks/min/bin; phase Amplitude and the argmax/model coupling columns are proportion/phase-bin (phase histogram is row-normalized upstream); CouplingCirc is dimensionless MRL in [0,1].
             switch lower(type)
                 case 'power'
                     vn      = {'Amplitude','FreqMean','FreqStd','SOpowerMean','SOpowerStd','Theta'};
