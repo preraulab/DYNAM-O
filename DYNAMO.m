@@ -535,6 +535,26 @@ classdef DYNAMO < handle
             pow_ok = false; phase_ok = false;
             params_pow = []; model_SOPH_pow = []; power_wshed_img = [];
             params_phase = []; model_SOPhH_phase = []; phase_wshed_img = [];
+            % Phase fit runs first so its model surface
+            % (model_SOPhH_phase) is available when the power table is
+            % annotated with model-based preferred-phase columns.
+            try
+                [params_phase, fitobj_phase, gof_phase, model_SOPhH_phase, phase_wshed_img] = ...
+                    param_basis_phase(obj.SOPHs.SOphase_mat, obj.SOPHs.SOphase_bins, obj.SOPHs.freq_bins, ...
+                    opts_phase);
+                if isempty(fitobj_phase)
+                    obj.SOPHs.SOphase_paramfit = [];
+                    fprintf(2, '   [WARN] param_basis_phase returned no fit (see warning above).\n');
+                else
+                    obj.SOPHs.SOphase_paramfit = obj.createSOPHparamfitStruct('phase', params_phase, fitobj_phase, gof_phase, model_SOPhH_phase, phase_wshed_img);
+                    phase_ok = true;
+                end
+            catch ME_phase
+                obj.SOPHs.SOphase_paramfit = [];
+                fprintf(2, '   [ERROR] param_basis_phase failed: %s\n', ME_phase.message);
+                warning('DYNAMO:fitParamBasis:phase', 'param_basis_phase failed: %s', ME_phase.message);
+            end
+
             try
                 [params_pow, fitobj_pow, gof_pow, model_SOPH_pow, power_wshed_img] = ...
                     param_basis_power(obj.SOPHs.SOpower_mat, obj.SOPHs.SOpower_bins, obj.SOPHs.freq_bins, ...
@@ -547,30 +567,19 @@ classdef DYNAMO < handle
                     obj.SOPHs.SOpower_paramfit = [];
                     fprintf(2, '   [WARN] param_basis_power returned no fit (see warning above).\n');
                 else
-                    obj.SOPHs.SOpower_paramfit = obj.createSOPHparamfitStruct(params_pow, fitobj_pow, gof_pow, model_SOPH_pow, power_wshed_img);
+                    obj.SOPHs.SOpower_paramfit = obj.createSOPHparamfitStruct('power', params_pow, fitobj_pow, gof_pow, model_SOPH_pow, power_wshed_img);
                     pow_ok = true;
+
+                    if ~isempty(obj.SOPHs.SOpower_paramfit.params)
+                        obj.SOPHs.SOpower_paramfit.params = annotatePowerWithPreferredPhase( ...
+                            obj.SOPHs.SOpower_paramfit.params, obj.SOPHs.SOphase_mat, ...
+                            obj.SOPHs.freq_bins, obj.SOPHs.SOphase_bins, model_SOPhH_phase);
+                    end
                 end
             catch ME_pow
                 obj.SOPHs.SOpower_paramfit = [];
                 fprintf(2, '   [ERROR] param_basis_power failed: %s\n', ME_pow.message);
                 warning('DYNAMO:fitParamBasis:power', 'param_basis_power failed: %s', ME_pow.message);
-            end
-
-            try
-                [params_phase, fitobj_phase, gof_phase, model_SOPhH_phase, phase_wshed_img] = ...
-                    param_basis_phase(obj.SOPHs.SOphase_mat, obj.SOPHs.SOphase_bins, obj.SOPHs.freq_bins, ...
-                    opts_phase);
-                if isempty(fitobj_phase)
-                    obj.SOPHs.SOphase_paramfit = [];
-                    fprintf(2, '   [WARN] param_basis_phase returned no fit (see warning above).\n');
-                else
-                    obj.SOPHs.SOphase_paramfit = obj.createSOPHparamfitStruct(params_phase, fitobj_phase, gof_phase, model_SOPhH_phase, phase_wshed_img);
-                    phase_ok = true;
-                end
-            catch ME_phase
-                obj.SOPHs.SOphase_paramfit = [];
-                fprintf(2, '   [ERROR] param_basis_phase failed: %s\n', ME_phase.message);
-                warning('DYNAMO:fitParamBasis:phase', 'param_basis_phase failed: %s', ME_phase.message);
             end
 
             if plot_on && (pow_ok || phase_ok)
@@ -1477,10 +1486,36 @@ classdef DYNAMO < handle
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % createSOPHparamfitStruct
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function [SOPH_paramfit] = createSOPHparamfitStruct(params, fitobj, gof, model_SOPH, wshed_img)
+        function [SOPH_paramfit] = createSOPHparamfitStruct(type, params, fitobj, gof, model_SOPH, wshed_img)
             %CREATESOPHPARAMFITSTRUCT  Pack parametric fit outputs into struct
+            %
+            %   type: 'power' or 'phase' — selects column names of the
+            %         returned params table.
+            %   params: N×6 numeric matrix [amp, fmean, fstd, pmean, pstd, theta]
+            %
+            %   .params is returned as a table.
+            %   power: {Amplitude, FreqMean, FreqStd, SOpowerMean, SOpowerStd, Theta} +
+            %          {PrefPhaseArgmax, CouplingArgmax, PrefPhaseCirc, CouplingCirc,
+            %           PrefPhaseModel, CouplingModel} (added by fitParamBasis)
+            %   phase: {Amplitude, FreqMean, FreqStd, SOphaseMean, SOphaseStd, Theta}
+            switch lower(type)
+                case 'power'
+                    vn      = {'Amplitude','FreqMean','FreqStd','SOpowerMean','SOpowerStd','Theta'};
+                    vn_full = [vn, {'PrefPhaseArgmax','CouplingArgmax', ...
+                                    'PrefPhaseCirc','CouplingCirc', ...
+                                    'PrefPhaseModel','CouplingModel'}];
+                case 'phase'
+                    vn      = {'Amplitude','FreqMean','FreqStd','SOphaseMean','SOphaseStd','Theta'};
+                    vn_full = vn;
+                otherwise
+                    error('createSOPHparamfitStruct:badType','type must be ''power'' or ''phase''.');
+            end
             SOPH_paramfit = struct;
-            SOPH_paramfit.params = params;
+            if isempty(params)
+                SOPH_paramfit.params = array2table(zeros(0,numel(vn_full)),'VariableNames',vn_full);
+            else
+                SOPH_paramfit.params = array2table(params,'VariableNames',vn);
+            end
             SOPH_paramfit.fitobj = fitobj;
             SOPH_paramfit.gof = gof;
             SOPH_paramfit.model_SOPH = model_SOPH;
