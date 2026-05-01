@@ -676,7 +676,7 @@ DYNAM-O depends on several standalone libraries included as Git submodules under
 
 | Submodule | Repository | Description |
 |---|---|---|
-| **Multitaper Spectrogram** | [preraulab/multitaper](https://github.com/preraulab/multitaper) | Multitaper spectral estimation (MATLAB, Python, R). Provides the time-frequency decomposition underlying TF-peak detection and SO-power computation. Includes an optimized C MEX implementation. |
+| **Multitaper Spectrogram** | [preraulab/multitaper_toolbox](https://github.com/preraulab/multitaper_toolbox) | Multitaper spectral estimation (MATLAB, Python, R, Rust). Provides the time-frequency decomposition underlying TF-peak detection and SO-power computation. Includes an optimized C MEX implementation. |
 | **Artifact Detection** | [preraulab/artifact_detection](https://github.com/preraulab/artifact_detection) | Detects and removes artifacts in EEG time series using high-frequency and broadband filtering with adaptive z-score thresholding. Includes Hjorth feature-based detection. |
 | **Read EDF** | [preraulab/read_EDF](https://github.com/preraulab/read_EDF) | Reads European Data Format (EDF/EDF+) files with full metadata extraction, per-signal scaling, and optional MEX acceleration. Includes a GUI for exploring EDF headers. |
 | **Statistical Tests** | [preraulab/multicomp_test](https://github.com/preraulab/multicomp_test) | Permutation-based statistical tests and false discovery rate (FDR) correction for multi-dimensional data. Provides `permtest`, `gpermtest`, `FDR_1D`, and `FDR_2D`. |
