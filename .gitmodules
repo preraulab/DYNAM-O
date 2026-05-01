@@ -8,8 +8,8 @@
 ; If you already have a checkout from before this change, run once:
 ;     git submodule sync && git submodule update --init --recursive
 ; to flip existing .git/config entries to the new URL pattern.
-[submodule "toolbox/helper_functions/multitaper_spectrogram"]
-	path = toolbox/helper_functions/multitaper_spectrogram
+[submodule "toolbox/helper_functions/multitaper_toolbox"]
+	path = toolbox/helper_functions/multitaper_toolbox
 	url = ../multitaper_toolbox.git
 	branch = master
 [submodule "toolbox/helper_functions/statistical_tests"]
