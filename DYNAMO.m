@@ -1574,11 +1574,16 @@ classdef DYNAMO < handle
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % writeTiff
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function writeTiff(filename,data)
+        function writeTiff(filename,data,description)
+            % Optional `description` (char/string/struct) is embedded in
+            % the ImageDescription tag — used by SOPH writes to carry
+            % freq_bins / SO bins so downstream readers can label axes.
+
+            if nargin < 3, description = []; end
+            if isstruct(description), description = jsonencode(description); end
 
             t = Tiff(filename, 'w');
 
-            % Setup the tag structure
             tagstruct.ImageLength = size(data, 1);
             tagstruct.ImageWidth = size(data, 2);
             tagstruct.Photometric = Tiff.Photometric.MinIsBlack;
@@ -1586,8 +1591,10 @@ classdef DYNAMO < handle
             tagstruct.SamplesPerPixel = 1;
             tagstruct.SampleFormat = Tiff.SampleFormat.IEEEFP; % Key for negative/floats
             tagstruct.PlanarConfiguration = Tiff.PlanarConfiguration.Chunky;
+            if ~isempty(description)
+                tagstruct.ImageDescription = char(description);
+            end
 
-            % Write data
             t.setTag(tagstruct);
             t.write(data);
             t.close();
