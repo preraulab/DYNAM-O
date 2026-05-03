@@ -65,6 +65,18 @@ for ii = 1:numel(files)
             nDropped = nDropped + 1;
             continue
         end
+        % Skip non-result events. Some auxiliary tools (e.g. the paramfit
+        % migrator) write progress JSONL into the same _runs/ directory
+        % with their own (subject,channel) tags. Those events lack both
+        % `files` and `components`, so they cannot describe what's on
+        % disk — letting them win the per-key dedupe wipes the index.
+        % A "result-shaped" event is any event that carries either field.
+        hasFiles = isfield(ev,'files') && ~isempty(ev.files);
+        hasComps = isfield(ev,'components') && ~isempty(ev.components);
+        if ~hasFiles && ~hasComps
+            nDropped = nDropped + 1;
+            continue
+        end
         key   = sprintf('%s::%s', char(ev.subject), char(ev.channel));
         prev  = [];
         if isKey(byKey, key), prev = byKey(key); end
