@@ -1,0 +1,77 @@
+name: Bump submodules
+
+# Weekly: per active branch, advance every submodule pin to its remote tip
+# and open a PR against that branch with the resulting one-line gitlink
+# diffs. A human clicks merge — the bot never lands directly. Dormant
+# branches (UNet, history_profile) are intentionally not in the matrix.
+#
+# Manual trigger: Actions tab → "Bump submodules" → Run workflow.
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        branch:
+          - master
+          - main_public
+          - file-manager-overhaul
+          - rust-bridge
+
+    steps:
+      - name: Checkout ${{ matrix.branch }} with submodules
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.branch }}
+          submodules: recursive
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Advance every submodule pin to its remote tracking branch tip
+        run: |
+          git submodule update --init --recursive --remote
+          if git diff --quiet; then
+            echo "no_drift=1" >> "$GITHUB_ENV"
+            echo "All submodules already at remote tip — nothing to bump."
+          else
+            echo "Drift detected:"
+            git diff --submodule=log
+          fi
+
+      - name: Open PR with the bump
+        if: env.no_drift != '1'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          STAMP=$(date -u +%Y%m%d)
+          BR="bump-submodules/${{ matrix.branch }}-${STAMP}"
+
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          git checkout -b "$BR"
+          git add -A
+          git commit -m "Bump submodule pointers (auto, ${STAMP})"
+          git push -u origin "$BR"
+
+          # Build a PR body that lists each bumped submodule with its commit log range
+          BODY="$(printf 'Automated weekly submodule bump for %s.\n\n```\n' '${{ matrix.branch }}')"
+          BODY+="$(git diff --submodule=log "origin/${{ matrix.branch }}"...HEAD)"
+          BODY+="$(printf '\n```\n')"
+
+          gh pr create \
+            --base "${{ matrix.branch }}" \
+            --head "$BR" \
+            --title "Bump submodules on ${{ matrix.branch }} (${STAMP})" \
+            --body "$BODY"
