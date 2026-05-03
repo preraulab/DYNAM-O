@@ -3191,6 +3191,13 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             end
 
             app.logResultsBrowser(sprintf('Loading %s', root));
+
+            % Fast path: read the JSONL run index BEFORE the slow tree walk.
+            % The index reads in ~1s even on SMB mounts; surfacing it
+            % immediately tells the user "this folder already has a record
+            % of what's computed" without waiting for the walk to finish.
+            hadIndex = app.tryReadRunIndexEarly(root);
+
             app.logResultsBrowser('  Scanning directory tree…');
             app.ResultsBrowserTree.Data = ...
                 {struct('text','Loading directory tree…', ...
@@ -3215,12 +3222,13 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.refreshSOHistogramsAvailability();
             app.logResultsBrowser('Done.');
 
-            % Surface run-index status. The index is the cheap source of
-            % truth for "what's been computed" (one .jsonl per batch
-            % invocation, unioned at read time). If none exists yet,
-            % offer to seed one from the tree we just walked — no
-            % second disk pass needed.
-            app.maybePromptForRunIndex(root);
+            % If no index existed before the walk, offer to seed one from
+            % the in-memory cache — no second disk pass needed. The fast-
+            % path read above already logged the index summary if a JSONL
+            % was present.
+            if ~hadIndex
+                app.maybePromptForRunIndex(root);
+            end
 
             % Offer to aggregate per-subject outputs into per-channel
             % stacks. Skip the prompt if the user already has an
@@ -3242,40 +3250,47 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
         % ------------------------------------------------------------------
 
-        function maybePromptForRunIndex(app, root)
-            %MAYBEPROMPTFORRUNINDEX  Check <root>/_runs/ for batch-run JSONL
-            %   logs. If any are present, log a one-line summary and return.
-            %   If none exist, offer to seed one from the in-memory tree.
+        function found = tryReadRunIndexEarly(app, root)
+            %TRYREADRUNINDEXEARLY  Read <root>/_runs/*.jsonl and log a summary
+            %   BEFORE the directory walk runs. Returns true iff at least one
+            %   JSONL file was present (regardless of whether the read
+            %   succeeded). The caller uses the boolean to decide whether to
+            %   offer to seed a new index after the walk.
+            found = false;
             try
                 runsDir = fullfile(root, '_runs');
-                hasIndex = false;
-                if isfolder(runsDir)
-                    d = dir(fullfile(runsDir, '*.jsonl'));
-                    hasIndex = ~isempty(d);
+                if ~isfolder(runsDir), return, end
+                d = dir(fullfile(runsDir, '*.jsonl'));
+                if isempty(d), return, end
+                found = true;
+                nFiles = numel(d);
+                if nFiles == 1
+                    app.logResultsBrowser(sprintf( ...
+                        'Reading run index from 1 file (%s)...', d(1).name));
+                else
+                    app.logResultsBrowser(sprintf( ...
+                        'Reading run index from %d files...', nFiles));
                 end
-                if hasIndex
-                    try
-                        nFiles = numel(d);
-                        if nFiles == 1
-                            app.logResultsBrowser(sprintf( ...
-                                'Reading run index from 1 file (%s)...', d(1).name));
-                        else
-                            app.logResultsBrowser(sprintf( ...
-                                'Reading run index from %d files...', nFiles));
-                        end
-                        drawnow;
-                        t0 = tic;
-                        idx = dynamo_index_runs(root);
-                        app.logResultsBrowser(sprintf( ...
-                            'Run index: %d entries across %d subjects, %d channels (%d run files, %.2fs)', ...
-                            numel(idx.entries), numel(idx.subjects), ...
-                            numel(idx.channels), numel(idx.runFiles), toc(t0)));
-                    catch ME
-                        app.logResultsBrowser(['Run-index read failed: ', ME.message]);
-                    end
-                    return
-                end
+                drawnow;
+                t0 = tic;
+                idx = dynamo_index_runs(root);
+                app.logResultsBrowser(sprintf( ...
+                    'Run index: %d entries across %d subjects, %d channels (%d run files, %.2fs)', ...
+                    numel(idx.entries), numel(idx.subjects), ...
+                    numel(idx.channels), numel(idx.runFiles), toc(t0)));
+            catch ME
+                app.logResultsBrowser(['Run-index read failed: ', ME.message]);
+            end
+        end
 
+        function maybePromptForRunIndex(app, root)
+            %MAYBEPROMPTFORRUNINDEX  No JSONL in <root>/_runs/ — offer to
+            %   seed one from the in-memory cache (the tree walker already
+            %   visited every file, so no second disk pass is needed). Only
+            %   called from loadResultsBrowserTree when tryReadRunIndexEarly
+            %   returned false.
+            try
+                runsDir = fullfile(root, '_runs');
                 sel = uiconfirm(app.UIFigure, ...
                     sprintf(['No run index was found at:\n  %s\n\n' ...
                              'A run index catalogs every (subject, channel) so the ' ...
@@ -3291,7 +3306,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                     app.regenerateRunIndex(root);
                 end
             catch ME
-                app.logResultsBrowser(['Run-index check failed: ', ME.message]);
+                app.logResultsBrowser(['Run-index prompt failed: ', ME.message]);
             end
         end
 
