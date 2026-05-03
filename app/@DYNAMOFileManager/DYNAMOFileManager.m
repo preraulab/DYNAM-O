@@ -109,6 +109,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         SOHistogramsPlaceholderAxes     % uiaxes filling the panel when nothing is selected
         SOHist_ChannelInfo_      = []   % struct array: {name, hasPower, hasPhase, powerPath, phasePath}
         SOHist_SuppressFcn_      = false% reentry guard for listbox value change
+        SOHist_DirtyFlag_        = true % set whenever results root or aggregates change; tab activation re-runs availability refresh while dirty
 
         % --- Top-Level Layout Grids ---
         FullDYNAMOSetupGrid             matlab.ui.container.GridLayout  % Root grid inside DYNAMOSetupTab
@@ -1681,7 +1682,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             drawnow;
             app.AggregateOverwriteMode_ = '';   % reset standing answer
             app.aggregateOneChannel(channelDir, aggregatesRoot, categories);
-            app.loadResultsBrowserTree();
+            app.refreshAggregatesNodeInCache(root);
+            app.SOHist_DirtyFlag_ = true;
         end
 
         % ------------------------------------------------------------------
@@ -2839,6 +2841,17 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
         % ------------------------------------------------------------------
 
+        function onAnalysisTabSelected(app, evt)
+            % onAnalysisTabSelected  SelectionChangedFcn for the Analysis
+            %   tab group. Lazy-refreshes the SO Histograms availability
+            %   when the user lands on its tab and the dirty flag is set.
+            if isempty(evt) || ~isfield(struct(evt),'NewValue'), return, end
+            if evt.NewValue ~= app.SOHistogramsTab, return, end
+            if ~app.SOHist_DirtyFlag_, return, end
+            app.refreshSOHistogramsAvailability();
+            app.SOHist_DirtyFlag_ = false;
+        end
+
         function refreshSOHistogramsAvailability(app)
             % refreshSOHistogramsAvailability  Walk <root>/aggregates/<channel>/SOPHs_*/
             % to determine which channels have aggregate power & phase data.
@@ -3327,7 +3340,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % toggles display:none on <li> nodes — no disk I/O, no
             % MATLAB rebuilds).
             import results_browser.*
-            drawnow;
+            % Note: the entry-level drawnow that used to live here was a
+            % first-call hot spot (~4-5s on a freshly-constructed
+            % uifigure because it forced full layout before any work).
+            % The status-pane logs and overlay flips below already pump
+            % the event loop, so the eager flush isn't needed.
             root = strtrim(char(app.ResultsBrowserOutputDirField.Value));
 
             if isempty(root)
@@ -3409,7 +3426,12 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % Hide the loading overlay so the populated tree is visible.
             app.ResultsTreeLoadingOverlay.Visible = 'off';
             app.renderResultsBrowserPreviewPlaceholder();
-            app.refreshSOHistogramsAvailability();
+            % Mark the SO Histograms tab dirty rather than refreshing it
+            % eagerly. Refresh is ~3-4s on first call (creates uiaxes in
+            % the SO Histograms panel) — pointless cost if the user
+            % never visits that tab. The Analysis tab group's
+            % SelectionChangedFcn reads this flag and refreshes on demand.
+            app.SOHist_DirtyFlag_ = true;
             app.logResultsBrowser('Done.');
 
             % If no index existed at load time, offer to seed one from the
@@ -3809,9 +3831,57 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 app.aggregateOneChannel(chDir, aggregatesRoot, [], chFiles);
             end
 
-            app.logResultsBrowser('Aggregate: done. Refreshing tree...');
+            app.logResultsBrowser('Aggregate: done.');
             app.renderResultsBrowserPreviewPlaceholder('idle');
-            app.loadResultsBrowserTree();
+            % Surgical refresh: re-scan only aggregates/ and splice the
+            % new subtree into the existing cache. Avoids re-reading the
+            % JSONL and re-building the whole tree, which was O(N) in
+            % entries and slow on large trees (e.g. 730 subjects on SMB).
+            app.refreshAggregatesNodeInCache(root);
+            % Mark SO Histograms dirty so the next time the user lands
+            % on that tab, the listbox reflects the new aggregate files.
+            app.SOHist_DirtyFlag_ = true;
+        end
+
+        function refreshAggregatesNodeInCache(app, root)
+            %REFRESHAGGREGATESNODEINCACHE  Re-scan <root>/aggregates/ and
+            %   replace just that node in app.ResultsBrowserCache_, then
+            %   push the updated cache to the tree. The rest of the
+            %   cache (per-channel JSONL-driven entries) is untouched —
+            %   no JSONL re-read, no walk of the full tree.
+            import results_browser.*
+            if isempty(app.ResultsBrowserCache_), return, end
+            cache = app.ResultsBrowserCache_;
+
+            aggPath = fullfile(root, 'aggregates');
+            if ~isfolder(aggPath)
+                app.logResultsBrowser('  (no aggregates/ folder to splice)');
+                return
+            end
+
+            tScan = tic;
+            newNode = app.scanDirToCache(aggPath, 'aggregates', 0);
+            app.logResultsBrowser(sprintf( ...
+                '  Re-scanned aggregates/ in %.2fs (%d folder(s), %d file(s))', ...
+                toc(tScan), numel(newNode.dirs), numel(newNode.files)));
+
+            replaced = false;
+            for ii = 1:numel(cache.dirs)
+                if strcmp(cache.dirs{ii}.name, 'aggregates')
+                    cache.dirs{ii} = newNode;
+                    replaced = true;
+                    break
+                end
+            end
+            if ~replaced
+                cache.dirs{end+1} = newNode;
+            end
+            app.ResultsBrowserCache_ = cache;
+
+            tTree = tic;
+            app.ResultsBrowserTree.Data = cache_to_tree_node(cache);
+            app.logResultsBrowser(sprintf( ...
+                '  Tree updated in %.2fs', toc(tTree)));
         end
 
         function map = groupIndexFilesByChannel(~, root, idx)

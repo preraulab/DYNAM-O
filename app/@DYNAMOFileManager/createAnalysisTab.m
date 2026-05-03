@@ -12,6 +12,13 @@ function createAnalysisTab(app)
     app.AnalysisTabGroup = uitabgroup(analysisGrid);
     app.AnalysisTabGroup.Layout.Row    = 1;
     app.AnalysisTabGroup.Layout.Column = 1;
+    % Refresh the SO Histograms availability lazily — only when the
+    % user actually selects that tab AND the underlying data is marked
+    % dirty (results root reloaded, aggregation completed). This keeps
+    % the multi-second uiaxes-creation cost off the hot path of every
+    % tree load.
+    app.AnalysisTabGroup.SelectionChangedFcn = ...
+        @(src,evt) onAnalysisTabSelected(app, evt);
 
     app.SOHistogramsTab       = uitab(app.AnalysisTabGroup);
     app.SOHistogramsTab.Title = 'SO-Histograms';
