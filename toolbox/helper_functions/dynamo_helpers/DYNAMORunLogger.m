@@ -7,6 +7,13 @@ classdef DYNAMORunLogger < handle
     %   dynamo_index_runs) union the files at read time.
     %
     %
+    %   `files` paths are root-relative (under the results root), use
+    %   forward slashes regardless of platform, and are derived from
+    %   `components` via dynamo_files_for_components. Storing them
+    %   exhaustively at write time lets the GUI tree skip the recursive
+    %   filesystem walk on subsequent loads — the index becomes the
+    %   source of truth for "what's in this results folder".
+    %
     %   ∿∿∿  Prerau Laboratory MATLAB Codebase · sleepEEG.org  ∿∿∿
 
     properties (SetAccess = private)
@@ -77,6 +84,8 @@ classdef DYNAMORunLogger < handle
             evt.channel       = channel;
             evt.input_file    = opts.InputFile;
             evt.components    = opts.Components;
+            evt.files         = dynamo_files_for_components( ...
+                                    subject, channel, opts.Components);
             evt.status        = opts.Status;
             evt.failures      = opts.Failures;
             evt.duration_sec  = opts.DurationSec;

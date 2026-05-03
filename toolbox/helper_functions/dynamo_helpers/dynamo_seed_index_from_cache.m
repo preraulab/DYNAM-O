@@ -36,6 +36,7 @@ outPath = fullfile(runsDir, [runID '.jsonl']);
 
 skipDirs = {'aggregates','logs','settings'};
 keyToComps = containers.Map('KeyType','char','ValueType','any');
+keyToFiles = containers.Map('KeyType','char','ValueType','any');
 
 for ic = 1:numel(cache.dirs)
     chanNode = cache.dirs{ic};
@@ -56,11 +57,17 @@ for ic = 1:numel(cache.dirs)
             key = sprintf('%s::%s', subj, chanName);
             if isKey(keyToComps, key)
                 comps = keyToComps(key);
+                fpaths = keyToFiles(key);
             else
                 comps = {};
+                fpaths = {};
             end
             if ~ismember(comp, comps), comps{end+1} = comp; end %#ok<AGROW>
+            % Root-relative path with forward slashes (cross-platform stable).
+            relPath = sprintf('%s/%s/%s', chanName, catName, fname);
+            if ~ismember(relPath, fpaths), fpaths{end+1} = relPath; end %#ok<AGROW>
             keyToComps(key) = comps;
+            keyToFiles(key) = fpaths;
         end
     end
 end
@@ -75,6 +82,7 @@ ts = sprintf('%s', char(datetime(startTime,'Format','yyyy-MM-dd''T''HH:mm:ss''Z'
 for ii = 1:numel(keys)
     k = keys{ii};
     comps = keyToComps(k);
+    fpaths = sort(keyToFiles(k));
     parts = strsplit(k, '::');
     evt = struct();
     evt.ts            = ts;
@@ -87,6 +95,7 @@ for ii = 1:numel(keys)
     evt.channel       = parts{2};
     evt.input_file    = '';
     evt.components    = sort(comps);
+    evt.files         = fpaths;
     evt.status        = 'backfill';
     evt.failures      = {};
     evt.duration_sec  = NaN;

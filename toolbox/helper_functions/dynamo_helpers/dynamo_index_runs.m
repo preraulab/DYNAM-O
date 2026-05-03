@@ -80,6 +80,26 @@ subjects = cell(1, numel(keys));
 channels = cell(1, numel(keys));
 for ii = 1:numel(keys)
     e = byKey(keys{ii});
+    % Backfill `files` for legacy entries (pre-files-field schema). The
+    % fallback synthesizes paths from components+subj+chan via the shared
+    % naming convention. Newer entries already have `files` from the
+    % writer/seeder; they pass through unchanged.
+    if ~isfield(e, 'files') || isempty(e.files)
+        comps = {};
+        if isfield(e, 'components')
+            c = e.components;
+            if ischar(c)
+                comps = {c};
+            elseif iscell(c)
+                comps = c;
+            elseif isstring(c)
+                comps = cellstr(c);
+            end
+        end
+        e.files = dynamo_files_for_components( ...
+            char(e.subject), char(e.channel), comps);
+        byKey(keys{ii}) = e;
+    end
     entries{ii}  = e;
     subjects{ii} = char(e.subject);
     channels{ii} = char(e.channel);
