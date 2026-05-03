@@ -81,7 +81,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         ResultsBrowserOutputDirButton   % CSSuiButton   Browse for directory
         ResultsBrowserTree              CSSuiTree                       % HTML/JS directory tree (filterable)
         ResultsTreeLoadingOverlay       matlab.ui.control.HTML          % Dancing-bars animation, shown over the tree during load
-        PreviewProgressHtml_            matlab.ui.control.HTML          % Reusable progress-bar uihtml (avoids HTML re-render between ticks)
+        PreviewProgressBar_                                             % SmoothProgressBar (CSSuicontrols) — current aggregation bar
+        PreviewProgressBarN_            (1,1) double = 0                % Last N the bar was started with (so we can detect stage changes)
         ResultsBrowserStatusGrid        matlab.ui.container.GridLayout  % Status label + text-area sub-grid
         ResultsBrowserStatusLabel       % CSSuiLabel    'STATUS:' header
         ResultsBrowserTextArea          % CSSuiTextArea Aggregate / load console
@@ -1997,79 +1998,44 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                     '</body></html>'];
         end
 
-        function renderResultsBrowserPreviewProgress(app, label, frac, counter)
-            % renderResultsBrowserPreviewProgress  Render a smooth HTML
-            %   progress bar in the preview pane. Used by the aggregator
-            %   to show per-stage progress (paramPower-csv, sophsPhase-
-            %   tiff, …). `frac` is in [0,1]. `counter` is an optional
-            %   sub-label (e.g. "412 / 730").
-            %
-            %   First call builds the uihtml + embedded JS scaffold once.
-            %   Subsequent calls push a struct via uihtml's Data property
-            %   — the JS listener updates the DOM (width, textContent)
-            %   without re-rendering, and CSS transitions animate the
-            %   width change for a smooth fill. The handle is cached on
-            %   app.PreviewProgressHtml_; if the body's children get
-            %   cleared (e.g. by a file preview), the handle goes
-            %   invalid and we rebuild on the next tick.
-            if nargin < 4, counter = ''; end
-            pct = max(0, min(100, 100 * frac));
-            data = struct('pct', pct, 'label', label, 'counter', counter);
+        function setupResultsBrowserPreviewProgress(app, prefix, total)
+            % setupResultsBrowserPreviewProgress  Replace the preview body
+            %   with a fresh CSSuicontrols SmoothProgressBar configured for
+            %   one aggregation stage (N = total files). Called at the
+            %   start of every (category, stage) pair so each pass gets
+            %   its own browser-side animation cycle (rAF timing, ETA,
+            %   colormap-fill — all native to SmoothProgressBar).
+            delete(app.ResultsBrowserPreviewBody.Children);
+            app.PreviewProgressBar_  = [];
+            app.PreviewProgressBarN_ = 0;
+            if total <= 0, return, end
 
-            haveBar = ~isempty(app.PreviewProgressHtml_) ...
-                      && isvalid(app.PreviewProgressHtml_) ...
-                      && isgraphics(app.PreviewProgressHtml_);
-            if ~haveBar
-                delete(app.ResultsBrowserPreviewBody.Children);
-                g = uigridlayout(app.ResultsBrowserPreviewBody, [1 1]);
-                g.Padding     = [0 0 0 0];
-                g.RowHeight   = {'1x'};
-                g.ColumnWidth = {'1x'};
-                h = uihtml(g);
-                h.Layout.Row    = 1;
-                h.Layout.Column = 1;
-                h.HTMLSource    = app.progressBarHtml();
-                h.Data          = data;
-                app.PreviewProgressHtml_ = h;
-            else
-                app.PreviewProgressHtml_.Data = data;
-            end
+            g = uigridlayout(app.ResultsBrowserPreviewBody, [1 1]);
+            g.Padding     = [20 20 20 20];
+            g.RowHeight   = {'1x'};
+            g.ColumnWidth = {'1x'};
+            pb = SmoothProgressBar(g, total);
+            pb.LabelPrefix       = prefix;
+            pb.ShowPercentage    = true;
+            pb.ShowTimeRemaining = true;
+            pb.start();
+            app.PreviewProgressBar_  = pb;
+            app.PreviewProgressBarN_ = total;
         end
 
-        function html = progressBarHtml(~)
-            % progressBarHtml  Static HTML+JS for the smooth progress bar.
-            %   The embedded script subscribes to uihtml's DataChanged
-            %   event and updates the DOM in place, so MATLAB can stream
-            %   per-tick updates by writing h.Data = struct(...) without
-            %   the page re-rendering. CSS transitions animate the fill.
-            html = ['<!DOCTYPE html><html><head><style>', ...
-                'html,body{margin:0;padding:0;height:100%;background:white;', ...
-                'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}', ...
-                '.wrap{display:flex;flex-direction:column;justify-content:center;', ...
-                'height:100%;padding:0 32px;color:#414c57;}', ...
-                '#label{font-size:14px;font-weight:600;margin-bottom:10px;}', ...
-                '.bar{background:#e7e9ec;border-radius:6px;overflow:hidden;', ...
-                'height:18px;border:1px solid #d0d3d8;}', ...
-                '#fill{background:linear-gradient(90deg,#5c8cc7,#3b6fb8);', ...
-                'height:100%;width:0%;transition:width 0.18s linear;}', ...
-                '#counter{font-size:12px;color:#7a818a;margin-top:6px;min-height:14px;}', ...
-                '</style></head><body><div class="wrap">', ...
-                '<div id="label"></div>', ...
-                '<div class="bar"><div id="fill"></div></div>', ...
-                '<div id="counter"></div>', ...
-                '</div>', ...
-                '<script type="text/javascript">', ...
-                'function setup(htmlComponent){', ...
-                '  function apply(d){', ...
-                '    if(!d) return;', ...
-                '    if(typeof d.pct==="number") document.getElementById("fill").style.width=d.pct+"%";', ...
-                '    if(typeof d.label==="string") document.getElementById("label").innerHTML=d.label;', ...
-                '    if(typeof d.counter==="string") document.getElementById("counter").textContent=d.counter;', ...
-                '  }', ...
-                '  apply(htmlComponent.Data);', ...
-                '  htmlComponent.addEventListener("DataChanged",function(e){apply(htmlComponent.Data);});', ...
-                '}', ...
-                '</script></body></html>'];
+        function tickResultsBrowserPreviewProgress(app, k)
+            % tickResultsBrowserPreviewProgress  Advance the current
+            %   SmoothProgressBar to iteration k. Silently no-ops if the
+            %   bar was destroyed (e.g. by a file preview render that
+            %   cleared the preview body) — the next setup call will
+            %   rebuild on the next stage transition.
+            pb = app.PreviewProgressBar_;
+            if isempty(pb) || ~isvalid(pb), return, end
+            try
+                pb.updateIteration(k);
+            catch
+                % Bar may have been completed externally; ignore.
+            end
         end
 
         function renderResultsBrowserPreviewMessage(app, msg)
@@ -3882,25 +3848,21 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
         function aggProgressTick(app, state, chan, catName, stage, ii, total)
             % aggProgressTick  Per-file progress callback used by the
-            %   aggregator. Pushes a fresh fraction to the smooth-bar
-            %   uihtml on every tick — the JS side updates the DOM in
-            %   place, and the CSS transition animates between fractions,
-            %   so this is cheap even at hundreds of ticks per second.
-            %   `state` is a containers.Map used to detect stage
-            %   transitions so the status pane gets one header line per
-            %   (cat, stage).
+            %   aggregator. On each (cat, stage) transition, builds a
+            %   fresh SmoothProgressBar in the preview pane and logs a
+            %   header line in the status pane. Per-tick calls just
+            %   advance the bar's iteration; SmoothProgressBar's
+            %   browser-side rAF loop handles the smooth fill, ETA, and
+            %   colormap interpolation.
             key = sprintf('%s/%s', catName, stage);
             if ~strcmp(state('lastKey'), key)
                 app.logResultsBrowser(sprintf( ...
                     '  [%s] %s (%s): %d file(s)', chan, catName, stage, total));
                 state('lastKey') = key;
+                prefix = sprintf('[%s] %s · %s', chan, catName, stage);
+                app.setupResultsBrowserPreviewProgress(prefix, total);
             end
-            pct     = 100 * ii / max(total, 1);
-            label   = sprintf('[%s] %s &middot; %s', chan, catName, stage);
-            counter = sprintf('%d / %d (%.0f%%)', ii, total, pct);
-            app.renderResultsBrowserPreviewProgress( ...
-                label, ii/max(total,1), counter);
-            drawnow limitrate;
+            app.tickResultsBrowserPreviewProgress(ii);
         end
 
         function aggregateOneChannel(app, channelDir, aggregatesRoot, categories, files)
