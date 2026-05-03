@@ -1,11 +1,19 @@
-function result = aggregate_DYNAMO_outputs(channelDir)
+function result = aggregate_DYNAMO_outputs(channelDir, opts)
 %AGGREGATE_DYNAMO_OUTPUTS  Stack per-subject DYNAMO outputs in one channel folder.
 %
 %   result = aggregate_DYNAMO_outputs(channelDir)
+%   result = aggregate_DYNAMO_outputs(channelDir, 'Files', cellOfPaths)
 %
 %   Walks a DYNAMO channel directory (the parent of param_basis/, SOPHs/,
 %   etc.), dedupes per-subject filename variants, and returns in-memory
 %   stacked artifacts ready to be written to disk.
+%
+%   When 'Files' is provided (a cell array of absolute paths supplied by
+%   the JSONL run-index), the function uses that list as the source of
+%   truth and skips dir() entirely — eliminating the per-category
+%   filesystem scans that dominate aggregation cost on slow drives. When
+%   'Files' is empty (the default, or when the index has no record), the
+%   function falls back to dir()-based discovery as before.
 %
 %   The caller is responsible for serializing result.* to the appropriate
 %   files; this function does no I/O of its own beyond reads.
@@ -38,6 +46,11 @@ function result = aggregate_DYNAMO_outputs(channelDir)
 %   result.skipped is a cell array of {fbase, reason} pairs documenting
 %   files that were dropped (dedupe collisions or load errors).
 
+arguments
+    channelDir (1,:) char
+    opts.Files (1,:) cell = {}
+end
+
 result.paramPower  = empty_paramfit_struct();
 result.paramPhase  = empty_paramfit_struct();
 result.sophsPower  = empty_sophs_struct();
@@ -50,6 +63,13 @@ if ~isfolder(channelDir)
 end
 
 [~, channelName] = fileparts(channelDir);
+
+% When Files is provided, every list_*_files call below pulls from this
+% in-memory list instead of hitting the filesystem. The paths are kept as
+% absolute (caller passes them already resolved); each list_* helper
+% filters by directory + suffix to recover the same shape dir() would
+% have returned.
+useIndex = ~isempty(opts.Files);
 
 % Each category: directory + filename pattern (analysis tag) + format extensions
 cats(1) = struct( ...
@@ -83,8 +103,13 @@ for ci = 1:numel(cats)
     % and the *_SOPHs_{power,phase}_<channel>.tiff per-axis files.
     switch cat.kind
         case 'table'
-            csvList = list_paramfit_files(catDir, cat.tag, channelName, '.csv');
-            matList = list_paramfit_files(catDir, cat.tag, channelName, '.mat');
+            if useIndex
+                csvList = list_paramfit_from_index(opts.Files, catDir, cat.tag, channelName, '.csv');
+                matList = list_paramfit_from_index(opts.Files, catDir, cat.tag, channelName, '.mat');
+            else
+                csvList = list_paramfit_files(catDir, cat.tag, channelName, '.csv');
+                matList = list_paramfit_files(catDir, cat.tag, channelName, '.mat');
+            end
             [csvKept, csvDropped] = dedupe_by_subject(csvList);
             [matKept, matDropped] = dedupe_by_subject(matList);
             result.skipped = [result.skipped; csvDropped; matDropped];
@@ -99,8 +124,13 @@ for ci = 1:numel(cats)
         case {'sophs_power', 'sophs_phase'}
             axis = strrep(cat.kind, 'sophs_', '');     % 'power' or 'phase'
 
-            matList  = list_sophs_struct_files(catDir, channelName, '.mat');
-            tiffList = list_sophs_axis_files(catDir, channelName, axis, '.tiff');
+            if useIndex
+                matList  = list_sophs_struct_from_index(opts.Files, catDir, channelName);
+                tiffList = list_sophs_axis_from_index(opts.Files, catDir, channelName, axis);
+            else
+                matList  = list_sophs_struct_files(catDir, channelName, '.mat');
+                tiffList = list_sophs_axis_files(catDir, channelName, axis, '.tiff');
+            end
 
             [matKept,  matDrop]  = dedupe_by_subject(matList);
             [tiffKept, tiffDrop] = dedupe_by_subject(tiffList);
@@ -176,6 +206,64 @@ for ii = 1:numel(lst)
     if isfield(SOPHs,'freq_bins'), freqBins = SOPHs.freq_bins; end
     if isfield(SOPHs, binsField),  soBins   = SOPHs.(binsField); end
     if ~isempty(freqBins) || ~isempty(soBins), return, end
+end
+end
+
+function lst = list_paramfit_from_index(allFiles, dirPath, tag, channelName, ext)
+%LIST_PARAMFIT_FROM_INDEX  Filter the index file list for paramfit-shaped
+%   entries under dirPath. Same return shape as list_paramfit_files; no
+%   filesystem access.
+suffix = ['_' tag '_' channelName ext];
+lst = struct('fbase', {}, 'path', {});
+for ii = 1:numel(allFiles)
+    p = char(allFiles{ii});
+    [parent, base, e] = fileparts(p);
+    if ~strcmp([base e], '') && ~strcmp(parent, dirPath), continue, end
+    fname = [base e];
+    if ~endsWith(fname, suffix), continue, end
+    fbase = extractBefore(fname, length(fname) - length(suffix) + 1);
+    if isempty(fbase), continue, end
+    lst(end+1).fbase = fbase; %#ok<AGROW>
+    lst(end).path    = p;
+end
+end
+
+function lst = list_sophs_struct_from_index(allFiles, dirPath, channelName)
+%LIST_SOPHS_STRUCT_FROM_INDEX  Filter the index file list for whole-SOPHs
+%   .mat entries under dirPath, excluding the per-axis variants.
+suffix = ['_SOPHs_' channelName '.mat'];
+lst = struct('fbase', {}, 'path', {});
+for ii = 1:numel(allFiles)
+    p = char(allFiles{ii});
+    [parent, base, e] = fileparts(p);
+    if ~strcmp(parent, dirPath), continue, end
+    fname = [base e];
+    if contains(fname, '_SOPHs_power_') || contains(fname, '_SOPHs_phase_')
+        continue
+    end
+    if ~endsWith(fname, suffix), continue, end
+    fbase = extractBefore(fname, length(fname) - length(suffix) + 1);
+    if isempty(fbase), continue, end
+    lst(end+1).fbase = fbase; %#ok<AGROW>
+    lst(end).path    = p;
+end
+end
+
+function lst = list_sophs_axis_from_index(allFiles, dirPath, channelName, axis)
+%LIST_SOPHS_AXIS_FROM_INDEX  Filter the index file list for the
+%   per-axis SOPHs TIFFs under dirPath.
+suffix = ['_SOPHs_' axis '_' channelName '.tiff'];
+lst = struct('fbase', {}, 'path', {});
+for ii = 1:numel(allFiles)
+    p = char(allFiles{ii});
+    [parent, base, e] = fileparts(p);
+    if ~strcmp(parent, dirPath), continue, end
+    fname = [base e];
+    if ~endsWith(fname, suffix), continue, end
+    fbase = extractBefore(fname, length(fname) - length(suffix) + 1);
+    if isempty(fbase), continue, end
+    lst(end+1).fbase = fbase; %#ok<AGROW>
+    lst(end).path    = p;
 end
 end
 

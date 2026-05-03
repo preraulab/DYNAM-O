@@ -3488,9 +3488,13 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % ------------------------------------------------------------------
 
         function aggregateResultsRoot(app)
-            % aggregateResultsRoot  For each channel directory under the chosen
-            % results root, stack per-subject paramfit tables and SOPHs
-            % histograms into per-channel aggregates inside <channel>/aggregate/.
+            % aggregateResultsRoot  For each channel under the chosen results
+            % root, stack per-subject paramfit tables and SOPHs histograms
+            % into per-channel aggregates inside <root>/aggregates/<chan>/.
+            %
+            % Channels and per-channel file lists come from the JSONL run
+            % index, so the aggregator skips dir() entirely. Falls back to
+            % a one-shot dir() at root only if no index is present.
 
             drawnow;
             app.ResultsBrowserTextArea.Value = {''};   % clear previous
@@ -3501,51 +3505,132 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 return
             end
 
-            entries = dir(root);
-            channels = {};
-            for ii = 1:numel(entries)
-                if ~entries(ii).isdir, continue, end
-                if startsWith(entries(ii).name, '.'), continue, end
-                if ismember(entries(ii).name, {'settings','logs','aggregates'}), continue, end
-                ch = fullfile(root, entries(ii).name);
-                if isfolder(fullfile(ch, 'param_basis')) || isfolder(fullfile(ch, 'SOPHs'))
-                    channels{end+1} = ch; %#ok<AGROW>
+            % Index-driven discovery: channels come from the index, file
+            % lists come pre-grouped per (subject, channel). Synth fallback
+            % in dynamo_index_runs ensures legacy entries (components-only,
+            % no `files` field) still produce usable file paths.
+            idx = [];
+            try
+                runsDir = fullfile(root, '_runs');
+                if isfolder(runsDir) && ~isempty(dir(fullfile(runsDir,'*.jsonl')))
+                    idx = dynamo_index_runs(root);
                 end
+            catch ME
+                app.logResultsBrowser(['Aggregate: index read failed: ', ME.message]);
             end
-            if isempty(channels)
-                app.logResultsBrowser('Aggregate: no channel directories found under root.');
-                return
+
+            if ~isempty(idx) && ~isempty(idx.entries)
+                filesByChannel = app.groupIndexFilesByChannel(root, idx);
+                channels = sort(filesByChannel.keys);
+                app.logResultsBrowser(sprintf( ...
+                    'Aggregate: %d channel(s) from index; no directory scan needed', ...
+                    numel(channels)));
+            else
+                % No index — fall back to the single-level dir() at root
+                % to find candidate channel folders.
+                entries = dir(root);
+                channels = {};
+                for ii = 1:numel(entries)
+                    if ~entries(ii).isdir, continue, end
+                    if startsWith(entries(ii).name, '.'), continue, end
+                    if ismember(entries(ii).name, {'settings','logs','aggregates'}), continue, end
+                    ch = fullfile(root, entries(ii).name);
+                    if isfolder(fullfile(ch, 'param_basis')) || isfolder(fullfile(ch, 'SOPHs'))
+                        channels{end+1} = ch; %#ok<AGROW>
+                    end
+                end
+                if isempty(channels)
+                    app.logResultsBrowser('Aggregate: no channel directories found under root.');
+                    return
+                end
+                app.logResultsBrowser(sprintf( ...
+                    'Aggregate: %d channel(s) under %s (no index, scanning dirs)', ...
+                    numel(channels), root));
+                filesByChannel = containers.Map();
             end
-            app.logResultsBrowser(sprintf('Aggregate: %d channel(s) under %s', numel(channels), root));
 
             aggregatesRoot = fullfile(root, 'aggregates');
             for ci = 1:numel(channels)
-                app.aggregateOneChannel(channels{ci}, aggregatesRoot);
+                if ischar(channels) || iscell(channels)
+                    chSpec = channels{ci};
+                else
+                    chSpec = channels(ci);
+                end
+                if isKey(filesByChannel, chSpec)
+                    chDir   = fullfile(root, chSpec);
+                    chFiles = filesByChannel(chSpec);
+                else
+                    chDir   = chSpec;   % legacy path: full channel directory
+                    chFiles = {};
+                end
+                app.aggregateOneChannel(chDir, aggregatesRoot, [], chFiles);
             end
 
             app.logResultsBrowser('Aggregate: done. Refreshing tree...');
             app.loadResultsBrowserTree();
         end
 
+        function map = groupIndexFilesByChannel(~, root, idx)
+            %GROUPINDEXFILESBYCHANNEL  Bin idx.entries' files cell by channel,
+            %   resolving each entry's root-relative paths to absolute paths.
+            %   Returns a containers.Map of channel name → cell of absolute
+            %   paths (deduped). Used by aggregateResultsRoot to drive the
+            %   aggregator without any filesystem walk.
+            map = containers.Map('KeyType','char','ValueType','any');
+            for ii = 1:numel(idx.entries)
+                e = idx.entries{ii};
+                if ~isfield(e,'files') || isempty(e.files), continue, end
+                chan = char(e.channel);
+                if isKey(map, chan)
+                    fpaths = map(chan);
+                else
+                    fpaths = {};
+                end
+                for jj = 1:numel(e.files)
+                    rel = strrep(char(e.files{jj}), '/', filesep);
+                    fpaths{end+1} = fullfile(root, rel); %#ok<AGROW>
+                end
+                map(chan) = fpaths;
+            end
+            % Dedupe each channel's list (synth can produce duplicates when
+            % multiple components share a category subdir).
+            chKeys = map.keys;
+            for ii = 1:numel(chKeys)
+                map(chKeys{ii}) = unique(map(chKeys{ii}), 'stable');
+            end
+        end
+
         % ------------------------------------------------------------------
 
-        function aggregateOneChannel(app, channelDir, aggregatesRoot, categories)
+        function aggregateOneChannel(app, channelDir, aggregatesRoot, categories, files)
             % aggregateOneChannel  Build aggregates inside
             % <aggregatesRoot>/<channelName>/ from per-subject inputs in
             % channelDir. `categories` is an optional cell-array subset of
             % {'paramPower','paramPhase','sophsPower','sophsPhase'}; the
-            % default writes all four.
+            % default writes all four. `files` is an optional cell array
+            % of absolute paths from the JSONL index — when provided, the
+            % aggregator skips dir() entirely and pulls per-category lists
+            % from this in-memory list instead.
 
             if nargin < 4 || isempty(categories)
                 categories = {'paramPower','paramPhase','sophsPower','sophsPhase'};
             end
+            if nargin < 5
+                files = {};
+            end
             wants = @(c) any(strcmp(categories, c));
 
             [~, channelName] = fileparts(channelDir);
-            app.logResultsBrowser(sprintf('[%s] scanning...', channelName));
+            if isempty(files)
+                app.logResultsBrowser(sprintf('[%s] scanning (dir mode)...', channelName));
+            else
+                app.logResultsBrowser(sprintf( ...
+                    '[%s] aggregating %d cataloged file(s) from index...', ...
+                    channelName, numel(files)));
+            end
 
             try
-                R = aggregate_DYNAMO_outputs(channelDir);
+                R = aggregate_DYNAMO_outputs(channelDir, 'Files', files);
             catch ME
                 app.logResultsBrowser(sprintf('[%s] failed: %s', channelName, ME.message));
                 return

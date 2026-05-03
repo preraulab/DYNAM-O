@@ -12,11 +12,20 @@ function files = dynamo_files_for_components(subject, channel, components)
 %
 %       'aux'      → <chan>/auxiliary_data/<subj>_auxiliary_data_<chan>.mat
 %       'SOPHs'    → <chan>/SOPHs/<subj>_SOPHs_<chan>.mat
+%                  + <chan>/SOPHs/<subj>_SOPHs_power_<chan>.tiff
+%                  + <chan>/SOPHs/<subj>_SOPHs_phase_<chan>.tiff
 %       'TFpeaks'  → <chan>/TFpeaks/<subj>_stats_table_<chan>.mat
-%       'paramfit' → <chan>/param_basis/<subj>_SOpower_paramfit_<chan>.mat
-%                  → <chan>/param_basis/<subj>_SOphase_paramfit_<chan>.mat
-%       'spline'   → <chan>/spline_basis/<subj>_SOpower_splinefit_<chan>.mat
-%                  → <chan>/spline_basis/<subj>_SOphase_splinefit_<chan>.mat
+%                  + <chan>/TFpeaks/<subj>_stats_table_<chan>.csv
+%       'paramfit' → <chan>/param_basis/<subj>_SOpower_paramfit_<chan>.{mat,csv}
+%                  → <chan>/param_basis/<subj>_SOphase_paramfit_<chan>.{mat,csv}
+%       'spline'   → <chan>/spline_basis/<subj>_SOpower_splinefit_<chan>.{mat,csv}
+%                  → <chan>/spline_basis/<subj>_SOphase_splinefit_<chan>.{mat,csv}
+%
+%   The synth includes both .mat and .csv (or .tiff) companion files even
+%   though a given run may have saved only one format — downstream
+%   consumers that read these (the aggregator, the preview pane) tolerate
+%   load failures gracefully, and the alternative (omitting the companion)
+%   would force them back to dir() to find the actually-present file.
 %
 %   Unknown components are silently ignored. This is the single source of
 %   truth for the naming convention; DYNAMORunLogger consults it at write
@@ -44,18 +53,32 @@ function files = dynamo_files_for_components(subject, channel, components)
             case 'SOPHs'
                 files{end+1} = sprintf('%s/SOPHs/%s_SOPHs_%s.mat', ...
                     channel, subject, channel); %#ok<AGROW>
+                files{end+1} = sprintf('%s/SOPHs/%s_SOPHs_power_%s.tiff', ...
+                    channel, subject, channel); %#ok<AGROW>
+                files{end+1} = sprintf('%s/SOPHs/%s_SOPHs_phase_%s.tiff', ...
+                    channel, subject, channel); %#ok<AGROW>
             case 'TFpeaks'
                 files{end+1} = sprintf('%s/TFpeaks/%s_stats_table_%s.mat', ...
+                    channel, subject, channel); %#ok<AGROW>
+                files{end+1} = sprintf('%s/TFpeaks/%s_stats_table_%s.csv', ...
                     channel, subject, channel); %#ok<AGROW>
             case 'paramfit'
                 files{end+1} = sprintf('%s/param_basis/%s_SOpower_paramfit_%s.mat', ...
                     channel, subject, channel); %#ok<AGROW>
+                files{end+1} = sprintf('%s/param_basis/%s_SOpower_paramfit_%s.csv', ...
+                    channel, subject, channel); %#ok<AGROW>
                 files{end+1} = sprintf('%s/param_basis/%s_SOphase_paramfit_%s.mat', ...
+                    channel, subject, channel); %#ok<AGROW>
+                files{end+1} = sprintf('%s/param_basis/%s_SOphase_paramfit_%s.csv', ...
                     channel, subject, channel); %#ok<AGROW>
             case 'spline'
                 files{end+1} = sprintf('%s/spline_basis/%s_SOpower_splinefit_%s.mat', ...
                     channel, subject, channel); %#ok<AGROW>
+                files{end+1} = sprintf('%s/spline_basis/%s_SOpower_splinefit_%s.csv', ...
+                    channel, subject, channel); %#ok<AGROW>
                 files{end+1} = sprintf('%s/spline_basis/%s_SOphase_splinefit_%s.mat', ...
+                    channel, subject, channel); %#ok<AGROW>
+                files{end+1} = sprintf('%s/spline_basis/%s_SOphase_splinefit_%s.csv', ...
                     channel, subject, channel); %#ok<AGROW>
         end
     end
