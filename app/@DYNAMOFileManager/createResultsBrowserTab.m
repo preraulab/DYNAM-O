@@ -14,7 +14,7 @@ function createResultsBrowserTab(app)
     % 1x3 split: left column | draggable splitter (6 px) | right.
     % User-draggable splitter — see beginColumnResize().
     app.BrowserContentContainer                 = uigridlayout(app.ResultsBrowserGrid);
-    app.BrowserContentContainer.ColumnWidth     = {'1x', 6, '3x'};
+    app.BrowserContentContainer.ColumnWidth     = {'1.2x', 6, '3x'};
     app.BrowserContentContainer.RowHeight       = {'1x'};
     app.BrowserContentContainer.ColumnSpacing   = 4;
     app.BrowserContentContainer.Padding         = [0 0 0 0];

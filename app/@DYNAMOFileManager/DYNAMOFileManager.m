@@ -1898,12 +1898,18 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             if strcmp(mode, 'loading')
                 % Render the same SVG animation that the RUN button uses
-                % when a batch is in flight (set_running). uihtml wraps
-                % the bare SVG in a centered flexbox so it scales with
-                % the preview pane.
-                h = uihtml(app.ResultsBrowserPreviewBody, ...
-                    'Units','normalized','Position',[0 0 1 1]);
-                h.HTMLSource = app.loadingAnimationHtml('Loading directory tree…');
+                % when a batch is in flight (set_running). uihtml only
+                % positions cleanly via a grid layout (it has no Units
+                % property), so we wrap it in a 1x1 grid that fills the
+                % preview body's uipanel.
+                g = uigridlayout(app.ResultsBrowserPreviewBody, [1 1]);
+                g.Padding     = [0 0 0 0];
+                g.RowHeight   = {'1x'};
+                g.ColumnWidth = {'1x'};
+                h = uihtml(g);
+                h.Layout.Row    = 1;
+                h.Layout.Column = 1;
+                h.HTMLSource    = app.loadingAnimationHtml('Loading directory tree…');
                 return
             end
 
