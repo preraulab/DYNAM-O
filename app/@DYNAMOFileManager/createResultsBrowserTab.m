@@ -114,6 +114,16 @@ function createResultsBrowserTab(app)
          'in the system app • right-click for context actions ' ...
          '(open, aggregate channel/paramfit/SOPHs)'];
 
+    % Loading overlay: a uihtml stacked in the same grid cell as the
+    % tree, hidden by default. While the tree loads, loadResultsBrowserTree
+    % flips Visible='on' and the dancing-bars animation appears in place
+    % of the tree contents. Stays in the same grid cell so layout doesn't
+    % reflow when toggled.
+    app.ResultsTreeLoadingOverlay = uihtml(app.ResultsLeftGrid, ...
+        'Visible', 'off');
+    app.ResultsTreeLoadingOverlay.Layout.Row    = 5;
+    app.ResultsTreeLoadingOverlay.Layout.Column = [1 2];
+
     % Horizontal splitter (drag to resize tree vs status heights).
     app.ResultsRowSplitter = uipanel(app.ResultsLeftGrid, ...
         'BorderType','line', ...
