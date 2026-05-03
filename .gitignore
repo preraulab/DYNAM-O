@@ -5,3 +5,4 @@ output_images/*
 tests/*
 *.asv
 .aider*
+.claude/
