@@ -1859,6 +1859,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.ResultsBrowserPreviewTitle.Text = upper([name, ext]);
 
             ext = lower(ext);
+            % Show the dancing-bars animation while the renderer prepares
+            % the preview. Each renderer below replaces the body's
+            % children, which clears the spinner.
+            app.renderResultsBrowserPreviewPlaceholder('loading');
+            drawnow;
             try
                 switch ext
                     case {'.png','.jpg','.jpeg','.gif','.bmp'}
@@ -3329,7 +3334,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.ResultsTreeLoadingOverlay.HTMLSource = ...
                 app.loadingAnimationHtml('Loading…');
             app.ResultsTreeLoadingOverlay.Visible = 'on';
-            app.renderResultsBrowserPreviewPlaceholder('loading');
             drawnow;
 
             if haveIndex
@@ -3510,12 +3514,22 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 % their contents populate lazily on user click in a
                 % future enhancement; for now they show as empty folders
                 % so the user knows they exist.
+                % Channel-level extras (figures/, etc.) stay as
+                % shallow placeholders. These can be huge (e.g. one
+                % figure per subject) and recursive scanning over SMB
+                % would re-introduce the very latency the JSONL was
+                % designed to avoid. The JSONL covers everything
+                % under per-channel category folders we care about.
                 extraDirs = app.shallowDirsExcept( ...
                     chanPath, [{'.','..','_runs'}, catNames]);
                 for ie = 1:numel(extraDirs)
                     extraName = extraDirs{ie};
-                    catDirs{end+1} = app.scanDirToCache( ...
-                        fullfile(chanPath, extraName), extraName); %#ok<AGROW>
+                    catDirs{end+1} = struct( ...
+                        'name', extraName, ...
+                        'path', fullfile(chanPath, extraName), ...
+                        'isDir', true, ...
+                        'dirs', {{}}, ...
+                        'files', struct('name',{},'path',{})); %#ok<AGROW>
                 end
 
                 chanDirs{ic} = struct( ...
@@ -3532,8 +3546,13 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             allRootDirs = [chanDirs, cell(1, numel(extraRootDirs))];
             for ie = 1:numel(extraRootDirs)
                 extraName = extraRootDirs{ie};
+                app.logResultsBrowser(sprintf( ...
+                    'Scanning %s/ ...', extraName));
+                tScan = tic;
                 allRootDirs{numel(chanDirs)+ie} = app.scanDirToCache( ...
-                    fullfile(root, extraName), extraName);
+                    fullfile(root, extraName), extraName, 0);
+                app.logResultsBrowser(sprintf( ...
+                    'Scanning %s/ ... done (%.2fs)', extraName, toc(tScan)));
             end
             cache.dirs = allRootDirs;
         end
@@ -3558,14 +3577,21 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             names = sort(allNames(keep));
         end
 
-        function node = scanDirToCache(app, dirPath, displayName)
-            %SCANDIRTOCACHE  Recursively walk a small folder into a
-            %   walk_to_cache-shaped node. Used for the JSONL-uncataloged
-            %   roots (aggregates/, _logs/, _settings/, per-channel
-            %   figures/, …). These folders hold few, small files, so a
-            %   full recursive dir() pass is cheap — far cheaper than
-            %   leaving them as empty placeholders that the user has to
-            %   open in the OS to inspect.
+        function node = scanDirToCache(app, dirPath, displayName, depth)
+            %SCANDIRTOCACHE  Recursively walk a JSONL-uncataloged root
+            %   folder (aggregates/, logs/, settings/) into a
+            %   walk_to_cache-shaped node. Caps protect against
+            %   accidentally diving into a deep or huge tree on slow
+            %   network shares — when a cap trips, the offending subdir
+            %   becomes an empty placeholder the user can still open in
+            %   the OS.
+            %
+            %   Caps:
+            %     MaxDepth   = 4  (root → channel → axis → bin/file)
+            %     MaxEntries = 500 entries per folder
+            MaxDepth   = 4;
+            MaxEntries = 500;
+
             node = struct('name', displayName, 'path', dirPath, ...
                           'isDir', true, ...
                           'dirs', {{}}, ...
@@ -3576,6 +3602,13 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 return
             end
             if isempty(entries), return, end
+            if numel(entries) > MaxEntries
+                app.logResultsBrowser(sprintf( ...
+                    '  (skipping %s - %d entries exceeds cap of %d; %s)', ...
+                    displayName, numel(entries), MaxEntries, ...
+                    'shown as a folder placeholder'));
+                return
+            end
             isDirFlag = [entries.isdir];
             allNames  = {entries.name};
             keepDir   = isDirFlag & ~ismember(allNames, {'.','..'}) ...
@@ -3585,8 +3618,17 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             subDirNames = sort(allNames(keepDir));
             subDirs = cell(1, numel(subDirNames));
             for ii = 1:numel(subDirNames)
-                subDirs{ii} = app.scanDirToCache( ...
-                    fullfile(dirPath, subDirNames{ii}), subDirNames{ii});
+                subPath = fullfile(dirPath, subDirNames{ii});
+                if depth + 1 >= MaxDepth
+                    subDirs{ii} = struct( ...
+                        'name', subDirNames{ii}, 'path', subPath, ...
+                        'isDir', true, ...
+                        'dirs', {{}}, ...
+                        'files', struct('name',{},'path',{}));
+                else
+                    subDirs{ii} = app.scanDirToCache( ...
+                        subPath, subDirNames{ii}, depth + 1);
+                end
             end
             node.dirs = subDirs;
 
