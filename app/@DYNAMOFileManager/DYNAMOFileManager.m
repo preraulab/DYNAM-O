@@ -3255,12 +3255,23 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 end
                 if hasIndex
                     try
+                        nFiles = numel(d);
+                        if nFiles == 1
+                            app.logResultsBrowser(sprintf( ...
+                                'Reading run index from 1 file (%s)...', d(1).name));
+                        else
+                            app.logResultsBrowser(sprintf( ...
+                                'Reading run index from %d files...', nFiles));
+                        end
+                        drawnow;
+                        t0 = tic;
                         idx = dynamo_index_runs(root);
                         app.logResultsBrowser(sprintf( ...
-                            'Run index: %d entries across %d subjects, %d channels (%d run files)', ...
+                            'Run index: %d entries across %d subjects, %d channels (%d run files, %.2fs)', ...
                             numel(idx.entries), numel(idx.subjects), ...
-                            numel(idx.channels), numel(idx.runFiles)));
-                    catch
+                            numel(idx.channels), numel(idx.runFiles), toc(t0)));
+                    catch ME
+                        app.logResultsBrowser(['Run-index read failed: ', ME.message]);
                     end
                     return
                 end
