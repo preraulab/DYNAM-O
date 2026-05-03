@@ -1996,6 +1996,53 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                     '</body></html>'];
         end
 
+        function renderResultsBrowserPreviewProgress(app, label, frac, counter)
+            % renderResultsBrowserPreviewProgress  Render an HTML progress
+            %   bar in the preview pane. Used by the aggregator to show
+            %   per-stage progress (paramPower-csv, sophsPhase-tiff, …).
+            %   `frac` is in [0,1]. `counter` is an optional sub-label
+            %   (e.g. "412 / 730").
+            %
+            %   The bar is built as a uihtml inside a 1x1 uigridlayout so
+            %   it fills the preview body without tripping uihtml's "no
+            %   Units property" warning. Each call replaces the body's
+            %   children — fine for low-frequency updates (we throttle
+            %   the callback in aggregateOneChannel to ~5% steps).
+            if nargin < 4, counter = ''; end
+            pct = max(0, min(100, round(100 * frac)));
+            if isempty(counter)
+                counterHtml = '';
+            else
+                counterHtml = sprintf( ...
+                    '<div style="font-size:12px;color:#7a818a;margin-top:6px;">%s</div>', ...
+                    counter);
+            end
+            html = ['<!DOCTYPE html><html><head><style>', ...
+                'html,body{margin:0;padding:0;height:100%;background:white;', ...
+                'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}', ...
+                '.wrap{display:flex;flex-direction:column;justify-content:center;', ...
+                'height:100%;padding:0 32px;color:#414c57;}', ...
+                '.label{font-size:14px;font-weight:600;margin-bottom:10px;}', ...
+                '.bar{background:#e7e9ec;border-radius:6px;overflow:hidden;', ...
+                'height:18px;border:1px solid #d0d3d8;}', ...
+                '.fill{background:linear-gradient(90deg,#5c8cc7,#3b6fb8);', ...
+                'height:100%;transition:width 0.1s ease;}', ...
+                '</style></head><body><div class="wrap">', ...
+                sprintf('<div class="label">%s</div>', label), ...
+                sprintf('<div class="bar"><div class="fill" style="width:%d%%;"></div></div>', pct), ...
+                counterHtml, ...
+                '</div></body></html>'];
+            delete(app.ResultsBrowserPreviewBody.Children);
+            g = uigridlayout(app.ResultsBrowserPreviewBody, [1 1]);
+            g.Padding     = [0 0 0 0];
+            g.RowHeight   = {'1x'};
+            g.ColumnWidth = {'1x'};
+            h = uihtml(g);
+            h.Layout.Row    = 1;
+            h.Layout.Column = 1;
+            h.HTMLSource    = html;
+        end
+
         function renderResultsBrowserPreviewMessage(app, msg)
             % renderResultsBrowserPreviewMessage  Render a centered text
             % message in the preview pane — used for "file not found",
@@ -3768,6 +3815,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             end
 
             app.logResultsBrowser('Aggregate: done. Refreshing tree...');
+            app.renderResultsBrowserPreviewPlaceholder('idle');
             app.loadResultsBrowserTree();
         end
 
@@ -3803,6 +3851,28 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
         % ------------------------------------------------------------------
 
+        function aggProgressTick(app, state, chan, catName, stage, ii, total)
+            % aggProgressTick  Throttled per-file progress callback used by
+            %   the aggregator. `state` is a containers.Map carrying
+            %   {'lastKey', 'lastPct'} so we can detect stage transitions
+            %   and avoid HTML re-render churn.
+            key = sprintf('%s/%s', catName, stage);
+            if ~strcmp(state('lastKey'), key)
+                app.logResultsBrowser(sprintf( ...
+                    '  [%s] %s (%s): %d file(s)', chan, catName, stage, total));
+                state('lastKey') = key;
+                state('lastPct') = -1;
+            end
+            pct = floor(100 * ii / max(total, 1));
+            if pct < state('lastPct') + 5 && ii ~= total, return, end
+            state('lastPct') = pct;
+            label   = sprintf('[%s] %s &middot; %s', chan, catName, stage);
+            counter = sprintf('%d / %d (%d%%)', ii, total, pct);
+            app.renderResultsBrowserPreviewProgress( ...
+                label, ii/max(total,1), counter);
+            drawnow limitrate;
+        end
+
         function aggregateOneChannel(app, channelDir, aggregatesRoot, categories, files)
             % aggregateOneChannel  Build aggregates inside
             % <aggregatesRoot>/<channelName>/ from per-subject inputs in
@@ -3830,8 +3900,21 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                     channelName, numel(files)));
             end
 
+            % Per-stage progress callback. Logs a header line on the first
+            % tick of each (cat, stage) and refreshes the preview-pane
+            % progress bar at most every ~5% to keep HTML re-render cost
+            % from dominating wall-clock. State lives in a containers.Map
+            % so the closure can mutate it across calls (Map is a handle).
+            stageState = containers.Map('KeyType','char','ValueType','any');
+            stageState('lastKey') = '';
+            stageState('lastPct') = -1;
+            progressCb = @(catName, stage, ii, total) ...
+                app.aggProgressTick(stageState, channelName, ...
+                                    catName, stage, ii, total);
+
             try
-                R = aggregate_DYNAMO_outputs(channelDir, 'Files', files);
+                R = aggregate_DYNAMO_outputs(channelDir, ...
+                    'Files', files, 'ProgressFcn', progressCb);
             catch ME
                 app.logResultsBrowser(sprintf('[%s] failed: %s', channelName, ME.message));
                 return

@@ -47,8 +47,15 @@ function result = aggregate_DYNAMO_outputs(channelDir, opts)
 %   files that were dropped (dedupe collisions or load errors).
 
 arguments
-    channelDir (1,:) char
-    opts.Files (1,:) cell = {}
+    channelDir  (1,:) char
+    opts.Files  (1,:) cell        = {}
+    opts.ProgressFcn               = []     % @(catName,stage,ii,total) -> []
+end
+
+if isempty(opts.ProgressFcn)
+    progress = @(varargin) [];
+else
+    progress = opts.ProgressFcn;
 end
 
 result.paramPower  = empty_paramfit_struct();
@@ -114,8 +121,11 @@ for ci = 1:numel(cats)
             [matKept, matDropped] = dedupe_by_subject(matList);
             result.skipped = [result.skipped; csvDropped; matDropped];
 
-            [csv_table, csv_ids, w1] = stack_table_files(csvKept, 'csv');
-            [mat_table, mat_ids, w2] = stack_table_files(matKept, 'mat');
+            catName = cat.name;
+            progCsv = @(ii,total) progress(catName, 'csv', ii, total);
+            progMat = @(ii,total) progress(catName, 'mat', ii, total);
+            [csv_table, csv_ids, w1] = stack_table_files(csvKept, 'csv', progCsv);
+            [mat_table, mat_ids, w2] = stack_table_files(matKept, 'mat', progMat);
             result.warnings = [result.warnings, w1, w2];
             result.(cat.name).csv_table  = csv_table;
             result.(cat.name).mat_table  = mat_table;
@@ -136,8 +146,11 @@ for ci = 1:numel(cats)
             [tiffKept, tiffDrop] = dedupe_by_subject(tiffList);
             result.skipped = [result.skipped; matDrop; tiffDrop];
 
-            [mat_struct, mat_ids, w3]              = stack_sophs_mat_files(matKept, axis);
-            [tiff_pages, tiff_ids, w4, fbT, sbT]   = stack_sophs_tiff_files(tiffKept, axis);
+            catName = cat.name;
+            progMat  = @(ii,total) progress(catName, 'mat',  ii, total);
+            progTiff = @(ii,total) progress(catName, 'tiff', ii, total);
+            [mat_struct, mat_ids, w3]              = stack_sophs_mat_files(matKept, axis, progMat);
+            [tiff_pages, tiff_ids, w4, fbT, sbT]   = stack_sophs_tiff_files(tiffKept, axis, progTiff);
             result.warnings = [result.warnings, w3, w4];
 
             % Capture freq + SO-axis bins for the aggregate. Prefer the
@@ -362,15 +375,18 @@ for ti = 1:numel(uniqTokens)
 end
 end
 
-function [T, ids, warnings_out] = stack_table_files(lst, fmt)
+function [T, ids, warnings_out] = stack_table_files(lst, fmt, progFcn)
 %STACK_TABLE_FILES  Vertically concatenate per-subject paramfit tables with an
 %ID column prepended (= fbase repeated for every mode row).
 T            = table.empty;
 ids          = {};
 warnings_out = {};
 if isempty(lst), return, end
+if nargin < 3 || isempty(progFcn), progFcn = @(varargin) []; end
 parts = cell(1, numel(lst));
-for ii = 1:numel(lst)
+total = numel(lst);
+for ii = 1:total
+    progFcn(ii, total);
     fbase = lst(ii).fbase;
     p     = lst(ii).path;
     try
@@ -410,19 +426,22 @@ for ii = 1:numel(fn)
 end
 end
 
-function [out, ids, warnings_out] = stack_sophs_mat_files(lst, axis)
+function [out, ids, warnings_out] = stack_sophs_mat_files(lst, axis, progFcn)
 %STACK_SOPHS_MAT_FILES  Stack 2-D SOpower_mat or SOphase_mat into a 3-D array.
 out          = struct();
 ids          = {};
 warnings_out = {};
 if isempty(lst), return, end
+if nargin < 3 || isempty(progFcn), progFcn = @(varargin) []; end
 
 field = ['SO' axis '_mat'];
 binsField = ['SO' axis '_bins'];
 
 stacks = {};
 freq_bins = []; bins = [];
-for ii = 1:numel(lst)
+total = numel(lst);
+for ii = 1:total
+    progFcn(ii, total);
     fbase = lst(ii).fbase;
     p     = lst(ii).path;
     try
@@ -471,7 +490,7 @@ for ii = 1:numel(fn)
 end
 end
 
-function [pages, ids, warnings_out, freq_bins, so_bins] = stack_sophs_tiff_files(lst, axis_kind)
+function [pages, ids, warnings_out, freq_bins, so_bins] = stack_sophs_tiff_files(lst, axis_kind, progFcn)
 %STACK_SOPHS_TIFF_FILES  Read each per-subject single-page TIFF as a 2-D
 %matrix; return as a cell array (one page per subject). If a TIFF carries
 %an ImageDescription tag with bin metadata (newer DYNAMO writes), the bins
@@ -482,11 +501,14 @@ warnings_out = {};
 freq_bins    = [];
 so_bins      = [];
 if nargin < 2, axis_kind = ''; end
+if nargin < 3 || isempty(progFcn), progFcn = @(varargin) []; end
 if isempty(lst), return, end
 canon = [];
 binsField = '';
 if ~isempty(axis_kind), binsField = ['SO' axis_kind '_bins']; end
-for ii = 1:numel(lst)
+total = numel(lst);
+for ii = 1:total
+    progFcn(ii, total);
     fbase = lst(ii).fbase;
     p     = lst(ii).path;
     try
