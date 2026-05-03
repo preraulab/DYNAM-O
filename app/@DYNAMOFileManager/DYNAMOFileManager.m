@@ -2091,23 +2091,19 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             end
 
             % --- model SOPH heatmap ---
+            % Reuse the canonical SOPHs rendering (styleSOPHAxes) so the
+            % parametric model gets the same transpose, colormap, freq
+            % window, robust color limits, and binned axes as the per-
+            % subject SOPHs view. Without this the imagesc came out with
+            % integer bin indices instead of actual frequency / SO-axis
+            % values, which made comparing the parametric model to the
+            % data SOPH visually impossible.
             if isfield(PF, 'model_SOPH') && ~isempty(PF.model_SOPH)
                 tM = uitab(tg, 'Title','model SOPH');
                 axM = uiaxes(tM, 'Units','normalized','Position',[0 0 1 1], ...
                     'BackgroundColor','white');
-                imagesc(axM, PF.model_SOPH.');
-                axis(axM, 'xy');
-                pbaspect(axM, app.SOPHPlotBoxAspectRatio_);
-                switch axis_kind
-                    case 'power'
-                        try, colormap(axM, gouldian); catch, colormap(axM, parula); end
-                        xlabel(axM, 'SO-Power bin');
-                    case 'phase'
-                        try, colormap(axM, magma); catch, colormap(axM, hot); end
-                        xlabel(axM, 'SO-Phase bin');
-                end
-                ylabel(axM, 'Frequency bin');
-                colorbar(axM);
+                [freq_bins, so_bins] = app.bins_for_paramfit(PF, p, axis_kind);
+                app.styleSOPHAxes(axM, PF.model_SOPH, freq_bins, so_bins, axis_kind);
                 title(axM, 'Parametric model SOPH');
             end
 
@@ -2156,10 +2152,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 tS = uitab(tg, 'Title','splinefit');
                 axS = uiaxes(tS, 'Units','normalized','Position',[0 0 1 1], ...
                     'BackgroundColor','white');
-                imagesc(axS, SF.splinefit.');
-                axis(axS, 'xy');
-                pbaspect(axS, app.SOPHPlotBoxAspectRatio_);
-                colormap(axS, parula); colorbar(axS);
+                % Same canonical SOPH rendering as the parametric preview —
+                % gives the spline fit real frequency / SO-axis values
+                % instead of bin indices.
+                if startsWith(varName, 'SOpower'), axis_kind = 'power';
+                else,                              axis_kind = 'phase';
+                end
+                [freq_bins, so_bins] = app.bins_for_paramfit(SF, p, axis_kind);
+                app.styleSOPHAxes(axS, SF.splinefit, freq_bins, so_bins, axis_kind);
                 title(axS, 'Spline-fitted SOPH');
             end
 
@@ -3101,6 +3101,44 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 axis(ax,'off');
                 text(ax, 0.5, 0.5, sprintf('load failed: %s', ME.message), ...
                     'HorizontalAlignment','center','Color','red');
+            end
+        end
+
+        function [freq_bins, so_bins] = bins_for_paramfit(~, S, p, axis_kind)
+            %BINS_FOR_PARAMFIT  Recover (freq_bins, SO<axis>_bins) for a
+            %   paramfit / splinefit struct preview. Order:
+            %     1. Direct fields on the struct (freq_bins, SO<axis>_bins).
+            %     2. Embedded SOPH metadata (some saves stash a copy under
+            %        a sub-struct called 'SOPH_options' or 'SOPHs').
+            %     3. peek_bins_from_settings_walk on the file path —
+            %        same fallback the SOPH TIFF preview uses, walks up
+            %        to find run_settings_*.txt and reconstructs the bin
+            %        centers from the recorded ranges.
+            %   Returns [] for whichever can't be recovered; the caller
+            %   (styleSOPHAxes) treats [] as "use bin indices" so the
+            %   image still renders, just with integer ticks.
+            import results_browser.*
+            freq_bins = [];
+            so_bins   = [];
+            binsField = ['SO' axis_kind '_bins'];
+            if isfield(S, 'freq_bins') && ~isempty(S.freq_bins)
+                freq_bins = S.freq_bins(:);
+            end
+            if isfield(S, binsField) && ~isempty(S.(binsField))
+                so_bins = S.(binsField)(:);
+            end
+            if isfield(S, 'SOPHs') && isstruct(S.SOPHs)
+                if isempty(freq_bins) && isfield(S.SOPHs, 'freq_bins')
+                    freq_bins = S.SOPHs.freq_bins(:);
+                end
+                if isempty(so_bins) && isfield(S.SOPHs, binsField)
+                    so_bins = S.SOPHs.(binsField)(:);
+                end
+            end
+            if isempty(freq_bins) || isempty(so_bins)
+                [fb, sb] = peek_bins_from_settings_walk(p, axis_kind);
+                if isempty(freq_bins), freq_bins = fb; end
+                if isempty(so_bins),   so_bins   = sb; end
             end
         end
 
