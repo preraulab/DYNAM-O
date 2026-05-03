@@ -2012,11 +2012,23 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.PreviewProgressBarN_ = 0;
             if total <= 0, return, end
 
-            g = uigridlayout(app.ResultsBrowserPreviewBody, [1 1]);
-            g.Padding     = [20 20 20 20];
-            g.RowHeight   = {'1x'};
+            % Two-row layout: a fixed-pixel row hosts the bar with the
+            % same proportions as the batch run progress bar at the
+            % bottom of the window (createBottomBar.m: BarHeight=0.35,
+            % pill BorderRadius). The remaining row is empty so the bar
+            % sits near the top of the preview pane and doesn't stretch
+            % vertically across the entire preview area.
+            g = uigridlayout(app.ResultsBrowserPreviewBody, [2 1]);
+            g.Padding     = [24 24 24 24];
+            g.RowHeight   = {80, '1x'};
             g.ColumnWidth = {'1x'};
-            pb = SmoothProgressBar(g, total);
+            pb = SmoothProgressBar(g, total, ...
+                'BarHeight',       0.35, ...
+                'BarBorderRadius', '999px', ...
+                'BorderRadius',    '999px', ...
+                'TextPosition',    'above');
+            pb.Layout.Row    = 1;
+            pb.Layout.Column = 1;
             pb.LabelPrefix       = prefix;
             pb.ShowPercentage    = true;
             pb.ShowTimeRemaining = true;
