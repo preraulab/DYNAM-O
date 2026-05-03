@@ -3514,12 +3514,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                     chanPath, [{'.','..','_runs'}, catNames]);
                 for ie = 1:numel(extraDirs)
                     extraName = extraDirs{ie};
-                    catDirs{end+1} = struct( ...
-                        'name', extraName, ...
-                        'path', fullfile(chanPath, extraName), ...
-                        'isDir', true, ...
-                        'dirs', {{}}, ...
-                        'files', struct('name',{},'path',{})); %#ok<AGROW>
+                    catDirs{end+1} = app.scanDirToCache( ...
+                        fullfile(chanPath, extraName), extraName); %#ok<AGROW>
                 end
 
                 chanDirs{ic} = struct( ...
@@ -3536,12 +3532,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             allRootDirs = [chanDirs, cell(1, numel(extraRootDirs))];
             for ie = 1:numel(extraRootDirs)
                 extraName = extraRootDirs{ie};
-                allRootDirs{numel(chanDirs)+ie} = struct( ...
-                    'name', extraName, ...
-                    'path', fullfile(root, extraName), ...
-                    'isDir', true, ...
-                    'dirs', {{}}, ...
-                    'files', struct('name',{},'path',{}));
+                allRootDirs{numel(chanDirs)+ie} = app.scanDirToCache( ...
+                    fullfile(root, extraName), extraName);
             end
             cache.dirs = allRootDirs;
         end
@@ -3564,6 +3556,47 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             keep = isDir & ~ismember(allNames, excludeList) ...
                 & ~startsWith(allNames, '.');
             names = sort(allNames(keep));
+        end
+
+        function node = scanDirToCache(app, dirPath, displayName)
+            %SCANDIRTOCACHE  Recursively walk a small folder into a
+            %   walk_to_cache-shaped node. Used for the JSONL-uncataloged
+            %   roots (aggregates/, _logs/, _settings/, per-channel
+            %   figures/, …). These folders hold few, small files, so a
+            %   full recursive dir() pass is cheap — far cheaper than
+            %   leaving them as empty placeholders that the user has to
+            %   open in the OS to inspect.
+            node = struct('name', displayName, 'path', dirPath, ...
+                          'isDir', true, ...
+                          'dirs', {{}}, ...
+                          'files', struct('name',{},'path',{}));
+            try
+                entries = dir(dirPath);
+            catch
+                return
+            end
+            if isempty(entries), return, end
+            isDirFlag = [entries.isdir];
+            allNames  = {entries.name};
+            keepDir   = isDirFlag & ~ismember(allNames, {'.','..'}) ...
+                                  & ~startsWith(allNames, '.');
+            keepFile  = ~isDirFlag & ~startsWith(allNames, '.');
+
+            subDirNames = sort(allNames(keepDir));
+            subDirs = cell(1, numel(subDirNames));
+            for ii = 1:numel(subDirNames)
+                subDirs{ii} = app.scanDirToCache( ...
+                    fullfile(dirPath, subDirNames{ii}), subDirNames{ii});
+            end
+            node.dirs = subDirs;
+
+            fileNames = sort(allNames(keepFile));
+            if ~isempty(fileNames)
+                filePaths = cellfun( ...
+                    @(n) fullfile(dirPath, n), fileNames, ...
+                    'UniformOutput', false);
+                node.files = struct('name', fileNames, 'path', filePaths);
+            end
         end
 
         function maybePromptForRunIndex(app, root)
