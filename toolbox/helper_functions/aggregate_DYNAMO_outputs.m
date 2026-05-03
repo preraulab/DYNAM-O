@@ -392,7 +392,7 @@ for ii = 1:total
     try
         switch fmt
             case 'csv'
-                Ti = readtable(p);
+                Ti = readtable(p, 'VariableNamingRule', 'preserve');
             case 'mat'
                 S  = load(p);
                 Ti = locate_paramfit_table(S);
