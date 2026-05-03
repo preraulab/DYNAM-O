@@ -27,7 +27,7 @@ executables for macOS, Windows, and Linux are in development; until those
 ship, the File Manager runs inside MATLAB.
 
 - **File Manager guide:** [`DYNAMOFileManager_README.md`](DYNAMOFileManager_README.md)
-- **Launch from MATLAB:** `DYNAMOFileManager();`
+- **Launch from MATLAB:** `dynamo_app` (sets up the path, then opens the File Manager)
 
 Most users should start with the File Manager. The rest of this README
 covers the **MATLAB DYNAM-O API** — `runDYNAMO`, the `DYNAMO` class, and
@@ -248,7 +248,7 @@ settings via `d.updateOptions(...)` and `d.runDYNAMO()`.
 ### GUI batch processing
 
 ```matlab
-DYNAMOFileManager();
+dynamo_app
 ```
 
 <p align="right"><sub><a href="#table-of-contents">↑ Back to Table of Contents</a></sub></p>
@@ -423,7 +423,7 @@ fh = d.displaySummaryPlot();
 App Designer application for batch processing EDF polysomnography files.
 
 ```matlab
-DYNAMOFileManager();
+dynamo_app
 ```
 
 - Add / remove EDF and staging file pairs
@@ -634,7 +634,8 @@ Optional 9th output. Struct with per-stage wallclock seconds.
 DYNAM-O_dev/
 ├── DYNAMO.m                         OOP pipeline class
 ├── runDYNAMO.m                      Functional pipeline entry point
-├── DYNAMOFileManager.m              GUI batch processing app
+├── dynamo_app.m                     GUI launcher (toolbox + app on path, opens FileManager)
+├── dynamo_addpath.m                 Headless path setup (toolbox only, no GUI)
 ├── example_data/
 │   ├── example_data.mat             Single-channel sleep EEG example
 │   └── runExampleData.m             Example data loader
@@ -646,7 +647,20 @@ DYNAM-O_dev/
 │   ├── refine_peaks_mex.c           Hann refinement MEX
 │   ├── tfpeak_histogram_mex.c       SOpower / SOphase histogram MEX
 │   └── *.mex{a64,maca64,maci64,w64} Platform-specific binaries
-└── toolbox/
+├── app/                             GUI lives here (compile target for mcc -m)
+│   ├── @DYNAMOFileManager/          Class folder (split-file methods)
+│   │   ├── DYNAMOFileManager.m      Properties + constructor + most methods
+│   │   ├── createUIFigureAndShell.m Builder: figure, File menu, outer tabs
+│   │   ├── createBatchSetupTab.m    Builder: File Selection + Runtime Options
+│   │   ├── createBottomBar.m        Builder: status, RUN/STOP, Help, progress
+│   │   ├── createResultsBrowserTab.m Builder: tree + preview pane
+│   │   ├── createAnalysisTab.m      Builder: SO-Histograms host
+│   │   └── finalizeUI.m             Builder: Help menu (rightmost), tooltips
+│   ├── +results_browser/            Package: 21 helpers for the Results Browser
+│   └── components/
+│       └── CSSuicontrols/           Submodule: HTML-backed UI controls
+└── toolbox/                         Pure science (importable headlessly via dynamo_addpath)
+    ├── dynamo_version.m             '1.0.0' release constant
     ├── TFpeak_functions/            Watershed TF-peak extraction
     │   ├── computeTFPeaks.m         Main detection function
     │   ├── runWatershed.m           MATLAB watershed segmentation
@@ -668,11 +682,30 @@ DYNAM-O_dev/
     ├── SOPH_dim_reduction/          Parametric and spline fitting
     ├── TFsigma_peak_detector/       Alternative sigma-band peak detector
     └── helper_functions/            Multitaper, artifacts, EDF, plotting, tests, …
+        └── dynamo_helpers/          Run-record infrastructure
+            ├── DYNAMORunLogger.m         Append-only JSONL writer
+            ├── dynamo_index_runs.m       Read+union JSONL files into a single index
+            ├── dynamo_walk_results.m     Pure recursive walker (CLI / scripts)
+            ├── dynamo_seed_index.m       CLI: walk + emit backfill JSONL
+            └── dynamo_seed_index_from_cache.m  Generic seeder (consumed by both walkers)
 ```
+
+The toolbox is GUI-free: a script that does `dynamo_addpath; runDYNAMO(...)`
+never sees `app/` on its path. The launcher (`dynamo_app.m`) layers `app/`
+and `app/components/` on top for the GUI flow. `app/` is the natural
+`mcc -m` compile target.
 
 ### Included Submodules
 
-DYNAM-O depends on several standalone libraries included as Git submodules under `toolbox/helper_functions/`. These are cloned automatically with `--recursive` (see [Installation](#installation)).
+DYNAM-O depends on several standalone libraries included as Git submodules. The toolbox-side submodules live under `toolbox/helper_functions/`; the GUI's UI-control library lives under `app/components/`. All are cloned automatically with `--recursive` (see [Installation](#installation)).
+
+> [!IMPORTANT]
+> If you already have a checkout from before the `app/components/CSSuicontrols`
+> path was introduced, run once after pulling:
+> ```bash
+> git submodule sync && git submodule update --init --recursive
+> ```
+> This flips your local `.git/config` to point CSSuicontrols at its new path.
 
 | Submodule | Repository | Description |
 |---|---|---|
@@ -680,7 +713,7 @@ DYNAM-O depends on several standalone libraries included as Git submodules under
 | **Artifact Detection** | [preraulab/artifact_detection](https://github.com/preraulab/artifact_detection) | Detects and removes artifacts in EEG time series using high-frequency and broadband filtering with adaptive z-score thresholding. Includes Hjorth feature-based detection. |
 | **Read EDF** | [preraulab/read_EDF](https://github.com/preraulab/read_EDF) | Reads European Data Format (EDF/EDF+) files with full metadata extraction, per-signal scaling, and optional MEX acceleration. Includes a GUI for exploring EDF headers. |
 | **Statistical Tests** | [preraulab/multicomp_test](https://github.com/preraulab/multicomp_test) | Permutation-based statistical tests and false discovery rate (FDR) correction for multi-dimensional data. Provides `permtest`, `gpermtest`, `FDR_1D`, and `FDR_2D`. |
-| **CSSuicontrols** | [preraulab/CSSuicontrols](https://github.com/preraulab/CSSuicontrols) | CSS-styled HTML-backed UI controls for MATLAB App Designer. Powers the progress bar, text areas, buttons, and other custom widgets in DYNAMOFileManager. |
+| **CSSuicontrols** | [preraulab/CSSuicontrols](https://github.com/preraulab/CSSuicontrols) | CSS-styled HTML-backed UI controls for MATLAB App Designer. Powers the progress bar, text areas, buttons, and other custom widgets in DYNAMOFileManager. Lives at `app/components/CSSuicontrols/`. |
 
 > [!NOTE]
 > To update all submodules to their latest versions:
