@@ -27,7 +27,7 @@ executables for macOS, Windows, and Linux are in development; until those
 ship, the File Manager runs inside MATLAB.
 
 - **File Manager guide:** [`DYNAMOFileManager_README.md`](DYNAMOFileManager_README.md)
-- **Launch from MATLAB:** `dynamo_app` (sets up the path, then opens the File Manager)
+- **Launch from MATLAB:** `runApp` (sets up the path, then opens the File Manager)
 
 Most users should start with the File Manager. The rest of this README
 covers the **MATLAB DYNAM-O API** — `runDYNAMO`, the `DYNAMO` class, and
@@ -248,7 +248,7 @@ settings via `d.updateOptions(...)` and `d.runDYNAMO()`.
 ### GUI batch processing
 
 ```matlab
-dynamo_app
+runApp
 ```
 
 <p align="right"><sub><a href="#table-of-contents">↑ Back to Table of Contents</a></sub></p>
@@ -423,7 +423,7 @@ fh = d.displaySummaryPlot();
 App Designer application for batch processing EDF polysomnography files.
 
 ```matlab
-dynamo_app
+runApp
 ```
 
 - Add / remove EDF and staging file pairs
@@ -634,8 +634,8 @@ Optional 9th output. Struct with per-stage wallclock seconds.
 DYNAM-O_dev/
 ├── DYNAMO.m                         OOP pipeline class
 ├── runDYNAMO.m                      Functional pipeline entry point
-├── dynamo_app.m                     GUI launcher (toolbox + app on path, opens FileManager)
-├── dynamo_addpath.m                 Headless path setup (toolbox only, no GUI)
+├── runApp.m                     GUI launcher (toolbox + app on path, opens FileManager)
+├── DYNAMO_addpath.m                 Headless path setup (toolbox only, no GUI)
 ├── example_data/
 │   ├── example_data.mat             Single-channel sleep EEG example
 │   └── runExampleData.m             Example data loader
@@ -659,7 +659,7 @@ DYNAM-O_dev/
 │   ├── +results_browser/            Package: 21 helpers for the Results Browser
 │   └── components/
 │       └── CSSuicontrols/           Submodule: HTML-backed UI controls
-└── toolbox/                         Pure science (importable headlessly via dynamo_addpath)
+└── toolbox/                         Pure science (importable headlessly via DYNAMO_addpath)
     ├── dynamo_version.m             '1.0.0' release constant
     ├── TFpeak_functions/            Watershed TF-peak extraction
     │   ├── computeTFPeaks.m         Main detection function
@@ -690,8 +690,8 @@ DYNAM-O_dev/
             └── dynamo_seed_index_from_cache.m  Generic seeder (consumed by both walkers)
 ```
 
-The toolbox is GUI-free: a script that does `dynamo_addpath; runDYNAMO(...)`
-never sees `app/` on its path. The launcher (`dynamo_app.m`) layers `app/`
+The toolbox is GUI-free: a script that does `DYNAMO_addpath; runDYNAMO(...)`
+never sees `app/` on its path. The launcher (`runApp.m`) layers `app/`
 and `app/components/` on top for the GUI flow. `app/` is the natural
 `mcc -m` compile target.
 

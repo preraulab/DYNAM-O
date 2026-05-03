@@ -1,4 +1,4 @@
-function dynamo_addpath()
+function DYNAMO_addpath()
 %DYNAMO_ADDPATH  Headless path setup for the DYNAM-O science toolbox.
 %
 %   Adds toolbox/ (and the repo root, so DYNAMO.m / runDYNAMO.m resolve)
@@ -6,7 +6,7 @@ function dynamo_addpath()
 %   carry the GUI and its CSSuicontrols submodule, which a headless run
 %   does not need on path.
 %
-%   For a GUI launch, use dynamo_app() instead.
+%   For a GUI launch, use runApp() instead.
 
     repo_root = fileparts(mfilename('fullpath'));
     if isempty(which('computeTFPeaks'))
