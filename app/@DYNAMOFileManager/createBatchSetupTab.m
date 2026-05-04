@@ -281,7 +281,7 @@ function createBatchSetupTab(app)
     % Three-row right column: channel options | staging options | saving options
     app.RuntimeOptionsGrid                  = uigridlayout(app.FileSelectionGrid);
     app.RuntimeOptionsGrid.ColumnWidth      = {'1x'};
-    app.RuntimeOptionsGrid.RowHeight        = {50, 35, 280, '1x', 270};
+    app.RuntimeOptionsGrid.RowHeight        = {50, 60, 280, '1x', 270};
     app.RuntimeOptionsGrid.ColumnSpacing    = 0;
     app.RuntimeOptionsGrid.RowSpacing       = 0;
     app.RuntimeOptionsGrid.Padding          = [0 6 0 0];
@@ -300,10 +300,13 @@ function createBatchSetupTab(app)
     app.RuntimeOptionsLabel.Layout.Column = 1;
 
     % ---- Channel Selection (Row 1) ----
+    % Two internal rows: editable channel field + read-only references
+    % summary populated by the channel composer dialog.
     app.ChannelInputGrid                   = uigridlayout(app.RuntimeOptionsGrid);
     app.ChannelInputGrid.ColumnWidth       = {'2x', '7x', '2x'};
-    app.ChannelInputGrid.RowHeight         = {'1x'};
+    app.ChannelInputGrid.RowHeight         = {'1x', '1x'};
     app.ChannelInputGrid.Padding           = [0 0 0 0];
+    app.ChannelInputGrid.RowSpacing        = 2;
     app.ChannelInputGrid.Layout.Row        = 2;
     app.ChannelInputGrid.Layout.Column     = 1;
 
@@ -329,6 +332,22 @@ function createBatchSetupTab(app)
     app.ViewChannelsButton.Row    = 1;
     app.ViewChannelsButton.Column = 3;
     app.ViewChannelsButton.ButtonPushedFcn = createCallbackFcn(app, @viewChannelsButtonPushed, true);
+
+    % References row: read-only summary of app.ReferenceList. The
+    % composer dialog (Select button) is the only writer.
+    app.ReferenceLabel = CSSuiLabel(app.ChannelInputGrid, ...
+        'Style', app.AppStyle, ...
+        'Text', 'References' ...
+        );
+    app.ReferenceLabel.Layout.Row    = 2;
+    app.ReferenceLabel.Layout.Column = 1;
+
+    app.ReferenceSummaryLabel = CSSuiLabel(app.ChannelInputGrid, ...
+        'Style', app.AppStyle, ...
+        'Text', '(none)' ...
+        );
+    app.ReferenceSummaryLabel.Layout.Row    = 2;
+    app.ReferenceSummaryLabel.Layout.Column = 2;
 
     % ---- Staging Options (Row 2) ----
     % Two-sub-column panel: left = stage label identifiers, right = file format inputs

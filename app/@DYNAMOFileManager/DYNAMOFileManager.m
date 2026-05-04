@@ -217,6 +217,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         ChannelEditField                % CSSuiEditField                % Comma-separated channel names to process
         ChannelEditFieldLabel           % CSSuiLabel
         ViewChannelsButton              % CSSuiButton                   % Opens dialog listing all EDF channels
+        ReferenceLabel                  % CSSuiLabel                    % "References" label
+        ReferenceSummaryLabel           % CSSuiLabel                    % Read-only summary of app.ReferenceList
 
         % --- File List Panels ---
         FileInputGrid                   matlab.ui.container.GridLayout  % Grid for both file list columns
@@ -284,6 +286,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         % -------------------------
         channel           % Currently active channel name (string)
         ChannelList       % Cell array of channel names parsed from ChannelEditField
+        ReferenceList     % Cell array of 'NAME = expr' strings forwarded to read_EDF as 'References'
         delimeter         % Delimiter character used when reading staging files (e.g. ',' '\t')
 
         % Sleep stage identifier lists (cell arrays of strings from edit fields)
@@ -427,6 +430,10 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % so each createXxxTab method can reference app.AppStyle in
             % place of a literal preset name.
             app.AppStyle = dynamoStyle();
+
+            % Default empty references list — populated by the channel
+            % composer dialog or programmatic callers.
+            app.ReferenceList = {};
 
             % Build all UI components
             createComponents(app, p.Results.Title, p.Results.Position);
@@ -1087,241 +1094,621 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 tableData{ii,3} = fileStr;
             end
 
-            % ===============================
-            % UI SELECTION DIALOG
-            % ===============================
-            % Fixed-size dialog: 520 w x 500 h, all positions calculated from
-            % bottom (MATLAB convention).  Layout (bottom→top):
-            %   12 pad | 42 accept/cancel | 8 gap | 40 add-rereference |
-            %   8 gap  | [table fills]    | 6 gap | 24 label | 12 pad
-            dW = 520; dH = 500; pad = 12;
-            btnH  = 42; rerefH = 40; lblH = 24;
+            % ============================================================
+            % CHANNEL & REFERENCE COMPOSER
+            % ============================================================
+            % Three-panel modal: available labels (read-only) + references
+            % (editable list) + output channels (editable list). On OK,
+            % writes app.ReferenceList, app.ChannelList, the channel edit
+            % field, and the references summary label. The Channels and
+            % References cells are passed verbatim to read_EDF, so all
+            % syntax that read_EDF supports — mean(), aliasing, '$LABEL$'
+            % escapes, '+' / '-' linear combinations, inline chaining —
+            % is accessible from the GUI.
 
-            btnY   = pad;
-            rerefY = btnY  + btnH  + 8;
-            tableY = rerefY + rerefH + 8;
-            lblY   = dH - pad - lblH;
-            tableH = lblY - 6 - tableY;
-            tableW = dW - 2*pad;
+            % Seed dialog state from current app properties so reopening
+            % preserves prior work.
+            refsState  = app.ReferenceList(:)';
+            if isempty(refsState), refsState = {}; end
+            chansState = app.ChannelList(:)';
+            if isempty(chansState), chansState = {}; end
+
+            % Track selections in each table for the +/- buttons.
+            availSelectedRows = [];
+            refSelectedRows   = [];
+            chanSelectedRows  = [];
 
             ss = get(0, 'ScreenSize');
-            d = uifigure('Name', 'Select Channels', ...
-                'Position', [(ss(3)-dW)/2, (ss(4)-dH)/2, dW, dH], ...
-                'WindowStyle', 'modal');
+            dW = 760; dH = 760;
+            % Non-modal so the user can adjust other parts of the batch
+            % (file list, output dir, staging columns) while the
+            % composer is open. The closure over `app` keeps the
+            % dialog wired to the live app instance regardless of
+            % focus changes.
+            d = uifigure('Name', 'Configure Channels & References', ...
+                'Position', [(ss(3)-dW)/2, (ss(4)-dH)/2, dW, dH]);
 
-            CSSuiLabel(d, 'Text', 'Select one or more channels:', ...
-                'Position', [pad, lblY, tableW, lblH]);
+            outer = uigridlayout(d);
+            outer.RowHeight = {'1.4x', '1.3x', '1.5x', 26, 44};
+            outer.ColumnWidth = {'1x'};
+            outer.Padding = [10 10 10 10];
+            outer.RowSpacing = 8;
 
-            % Channel col gets all remaining width after Fs (110) and Files (80)
-            % columns, minus ~16 px for the vertical scrollbar.
-            chanColW = tableW - 110 - 80 - 16;
-            t = CSSuiTable(d, ...
+            % ---- Panel 1: Available Channels (read-only) ----
+            p1 = uigridlayout(outer);
+            p1.Layout.Row = 1;
+            p1.RowHeight = {22, '1x'};
+            p1.ColumnWidth = {'1x'};
+            p1.Padding = [0 0 0 0];
+            p1.RowSpacing = 4;
+            CSSuiLabel(p1, 'Style', app.AppStyle, ...
+                'Text', 'Available Channels', 'FontWeight', '700');
+            availTable = CSSuiTable(p1, ...
                 'Data', tableData, ...
                 'ColumnName', {'Channel', 'Fs (Hz)', 'Files'}, ...
-                'ColumnWidth', [chanColW, 110, 80], ...
-                'Position', [pad, tableY, tableW, tableH], ...
+                'ColumnWidth', [500, 110, 80], ...
                 'Style', app.AppStyle, ...
                 'SelectionType', 'row', ...
-                'SelectionChangedFcn', @(src,evt) onCellSelect(evt));
+                'SelectionChangedFcn', @(s,e) onAvailSelect(e));
 
-            % Add Rereference — centered horizontally
-            rerefW = 175;
-            CSSuiButton(d, 'Style', app.AppStyle, 'Text', 'Add Rereference', ...
-                'Position', [(dW-rerefW)/2, rerefY, rerefW, rerefH], ...
-                'ButtonPushedFcn', @(btn,evt) addRereferenceCallback());
+            % ---- Panel 2: References (editable list) ----
+            p2 = uigridlayout(outer);
+            p2.Layout.Row = 2;
+            p2.RowHeight = {22, '1x', 36};
+            p2.ColumnWidth = {'1x'};
+            p2.Padding = [0 0 0 0];
+            p2.RowSpacing = 4;
+            CSSuiLabel(p2, 'Style', app.AppStyle, ...
+                'Text', 'References (helper definitions; ''NAME = expr'')', ...
+                'FontWeight', '700');
+            refTable = CSSuiTable(p2, ...
+                'Data', refRowsToTable(refsState), ...
+                'ColumnName', {'Name', 'Expression'}, ...
+                'ColumnWidth', [120, 580], ...
+                'Style', app.AppStyle, ...
+                'SelectionType', 'row', ...
+                'SelectionChangedFcn', @(s,e) onRefSelect(e));
+            refBtnRow = uigridlayout(p2);
+            refBtnRow.Layout.Row = 3;
+            refBtnRow.RowHeight = {'1x'};
+            refBtnRow.ColumnWidth = {'1x','1x','1x'};
+            refBtnRow.Padding = [0 0 0 0];
+            refBtnRow.ColumnSpacing = 6;
+            CSSuiButton(refBtnRow, 'Style', app.AppStyle, ...
+                'Text', '+ Mean of selected', ...
+                'ButtonPushedFcn', @(s,e) addRefMean());
+            CSSuiButton(refBtnRow, 'Style', app.AppStyle, ...
+                'Text', '+ Custom...', ...
+                'ButtonPushedFcn', @(s,e) addRefCustom());
+            CSSuiButton(refBtnRow, 'Style', app.AppStyle, ...
+                'Text', 'Remove selected', ...
+                'ButtonPushedFcn', @(s,e) removeRef());
 
-            % Accept / Cancel — centered as a pair
-            btnW = 165; gap = 10;
-            pairW = 2*btnW + gap;
-            btnX0 = (dW - pairW) / 2;
-            CSSuiButton(d, 'Style', app.AppStyle, 'Text', 'Add to Batch Run', ...
-                'Position', [btnX0,          btnY, btnW, btnH], ...
-                'ButtonPushedFcn', @(btn,evt) acceptCallback());
-            CSSuiButton(d, 'Style', app.AppStyle, 'Text', 'Cancel', ...
-                'Position', [btnX0+btnW+gap, btnY, btnW, btnH], ...
-                'ButtonPushedFcn', @(btn,evt) cancelCallback());
+            % ---- Panel 3: Output Channels (editable list) ----
+            p3 = uigridlayout(outer);
+            p3.Layout.Row = 3;
+            p3.RowHeight = {22, '1x', 36};
+            p3.ColumnWidth = {'1x'};
+            p3.Padding = [0 0 0 0];
+            p3.RowSpacing = 4;
+            CSSuiLabel(p3, 'Style', app.AppStyle, ...
+                'Text', 'Output Channels (one DYNAM-O run per row)', ...
+                'FontWeight', '700');
+            chanTable = CSSuiTable(p3, ...
+                'Data', chanRowsToTable(chansState), ...
+                'ColumnName', {'Output Name', 'Expression'}, ...
+                'ColumnWidth', [160, 540], ...
+                'Style', app.AppStyle, ...
+                'SelectionType', 'row', ...
+                'SelectionChangedFcn', @(s,e) onChanSelect(e));
+            chanBtnRow = uigridlayout(p3);
+            chanBtnRow.Layout.Row = 3;
+            chanBtnRow.RowHeight = {'1x'};
+            chanBtnRow.ColumnWidth = {'1x','1x','1x','1x','1x','1x'};
+            chanBtnRow.Padding = [0 0 0 0];
+            chanBtnRow.ColumnSpacing = 6;
+            CSSuiButton(chanBtnRow, 'Style', app.AppStyle, ...
+                'Text', '+ Passthrough', ...
+                'ButtonPushedFcn', @(s,e) addChanPassthrough());
+            CSSuiButton(chanBtnRow, 'Style', app.AppStyle, ...
+                'Text', '+ A - B...', ...
+                'ButtonPushedFcn', @(s,e) addChanReref());
+            CSSuiButton(chanBtnRow, 'Style', app.AppStyle, ...
+                'Text', '+ Mean...', ...
+                'ButtonPushedFcn', @(s,e) addChanMean());
+            CSSuiButton(chanBtnRow, 'Style', app.AppStyle, ...
+                'Text', '+ Rename...', ...
+                'ButtonPushedFcn', @(s,e) addChanRename());
+            CSSuiButton(chanBtnRow, 'Style', app.AppStyle, ...
+                'Text', '+ Custom...', ...
+                'ButtonPushedFcn', @(s,e) addChanCustom());
+            CSSuiButton(chanBtnRow, 'Style', app.AppStyle, ...
+                'Text', 'Remove selected', ...
+                'ButtonPushedFcn', @(s,e) removeChan());
 
-            selectedRows     = [];
-            selectedChannels = [];
-            rd_handle        = [];
-            ddA_handle       = [];
-            ddB_handle       = [];
+            % ---- Status line + OK/Cancel ----
+            statusLabel = CSSuiLabel(outer, ...
+                'Style', app.AppStyle, 'Text', '');
+            statusLabel.Layout.Row = 4;
 
-            uiwait(d);
+            bottomRow = uigridlayout(outer);
+            bottomRow.Layout.Row = 5;
+            bottomRow.RowHeight = {'1x'};
+            bottomRow.ColumnWidth = {'1x', 110, 110};
+            bottomRow.Padding = [0 0 0 0];
+            bottomRow.ColumnSpacing = 8;
+            uipanel(bottomRow, 'BorderType', 'none');  % spacer
+            okBtn = CSSuiButton(bottomRow, 'Style', app.AppStyle, ...
+                'Text', 'OK', 'ButtonPushedFcn', @(s,e) doOk());
+            CSSuiButton(bottomRow, 'Style', app.AppStyle, ...
+                'Text', 'Cancel', 'ButtonPushedFcn', @(s,e) doCancel());
 
-            if isempty(selectedChannels)
-                return
+            refresh();
+            return  % composer is non-modal; OK/Cancel callbacks finish the work
+
+            % ============================================================
+            % Nested helpers — table data, validation, callbacks
+            % ============================================================
+
+            function tbl = refRowsToTable(rows)
+                if isempty(rows), tbl = cell(0,2); return; end
+                tbl = cell(numel(rows), 2);
+                for r = 1:numel(rows)
+                    [n, e] = splitNameExpr(rows{r});
+                    tbl{r,1} = n;
+                    tbl{r,2} = e;
+                end
+            end
+            function tbl = chanRowsToTable(rows)
+                if isempty(rows), tbl = cell(0,2); return; end
+                tbl = cell(numel(rows), 2);
+                for r = 1:numel(rows)
+                    [n, e] = splitNameExpr(rows{r});
+                    if isempty(n), n = '(raw)'; end
+                    tbl{r,1} = n;
+                    tbl{r,2} = e;
+                end
+            end
+            function [nm, ex] = splitNameExpr(s)
+                eq = strfind(s, '=');
+                if isempty(eq)
+                    nm = '';
+                    ex = strtrim(s);
+                else
+                    nm = strtrim(s(1:eq(1)-1));
+                    ex = strtrim(s(eq(1)+1:end));
+                end
             end
 
-            % Warn if any selected channel's sampling rate is far above or
-            % below the frequency ranges DYNAMO actually analyzes.
-            checkChannelSamplingRates(app, selectedChannels, tableData);
-
-            % Append to existing channels, avoiding duplicates
-            existingStr = strtrim(app.ChannelEditField.Value);
-            if isempty(existingStr) || strcmpi(existingStr, 'Enter comma-separated channel labels')
-                existingChannels = {};
-            else
-                existingChannels = strtrim(strsplit(existingStr, ','));
-                existingChannels = existingChannels(~cellfun(@isempty, existingChannels));
+            function refresh()
+                refTable.Data  = refRowsToTable(refsState);
+                chanTable.Data = chanRowsToTable(chansState);
+                [okFlag, msg] = validateAll();
+                if okFlag
+                    statusLabel.Text = sprintf('OK: %d reference(s), %d output channel(s).', ...
+                        numel(refsState), numel(chansState));
+                else
+                    statusLabel.Text = ['Problem: ' msg];
+                end
+                okBtn.Enabled = okFlag;
             end
-            newChannels = selectedChannels(~ismember(selectedChannels, existingChannels));
-            allChannels = [existingChannels(:); newChannels(:)];
-            channelString = strjoin(allChannels, ', ');
-            app.ChannelEditField.IsError = false;
-            app.ChannelEditField.Value   = channelString;
-            disp(['Selected Channels: ' channelString]);
 
-            % ===============================
-            % Nested Callbacks
-            % ===============================
+            function [ok, msg] = validateAll()
+                ok = true; msg = '';
+                if isempty(chansState)
+                    ok = false; msg = 'add at least one output channel.';
+                    return
+                end
+                refNames = cell(1, numel(refsState));
+                for k = 1:numel(refsState)
+                    [n, e] = splitNameExpr(refsState{k});
+                    if isempty(n)
+                        ok = false; msg = sprintf('reference %d missing name (NAME = expr).', k); return
+                    end
+                    if isempty(e)
+                        ok = false; msg = sprintf('reference "%s" has empty expression.', n); return
+                    end
+                    if any(strcmpi(n, all_edf_labels))
+                        ok = false; msg = sprintf('reference name "%s" collides with an EDF label.', n); return
+                    end
+                    refNames{k} = n;
+                    augSoFar = [all_edf_labels, refNames(1:k-1)];
+                    [okk, mm] = checkLeaves(e, augSoFar);
+                    if ~okk
+                        ok = false; msg = sprintf('reference "%s": %s', n, mm); return
+                    end
+                end
+                aug = [all_edf_labels, refNames];
+                for k = 1:numel(chansState)
+                    [~, e] = splitNameExpr(chansState{k});
+                    if isempty(e)
+                        ok = false; msg = sprintf('output channel %d has empty expression.', k); return
+                    end
+                    [okk, mm] = checkLeaves(e, aug);
+                    if ~okk
+                        ok = false; msg = sprintf('channel "%s": %s', chansState{k}, mm); return
+                    end
+                end
+            end
 
-            function onCellSelect(evt)
-                % Handle both SelectionChangedFcn (uifigure) and CellSelectionCallback
+            function [ok, msg] = checkLeaves(expr, labels)
+                % Greedy longest-match against `labels` (case-insensitive).
+                % Skips operators and 'mean(' tokens. '$LABEL$' regions
+                % are extracted as explicit labels first; outside them
+                % the parser does prefix matching like read_EDF's
+                % preprocessor.
+                ok = true; msg = '';
+                rest = expr;
+                dollarTokens = regexp(rest, '\$([^$]*)\$', 'tokens');
+                for kk = 1:numel(dollarTokens)
+                    if ~any(strcmpi(dollarTokens{kk}{1}, labels))
+                        ok = false;
+                        msg = sprintf('unknown label "$%s$".', dollarTokens{kk}{1});
+                        return
+                    end
+                end
+                rest = regexprep(rest, '\$[^$]*\$', '');
+                i = 1; n = numel(rest);
+                while i <= n
+                    c = rest(i);
+                    if isspace(c) || any(c == '+-,()=')
+                        i = i + 1; continue
+                    end
+                    if i+4 <= n && strcmpi(rest(i:i+4), 'mean(')
+                        i = i + 5; continue
+                    end
+                    bestLen = 0;
+                    for kk = 1:numel(labels)
+                        L = labels{kk};
+                        nl = numel(L);
+                        if i+nl-1 <= n && strcmpi(rest(i:i+nl-1), L) && nl > bestLen
+                            bestLen = nl;
+                        end
+                    end
+                    if bestLen == 0
+                        j = i;
+                        while j <= n && ~isspace(rest(j)) && ~any(rest(j) == '+-,()=')
+                            j = j + 1;
+                        end
+                        ok = false;
+                        msg = sprintf('unknown label "%s".', strtrim(rest(i:j-1)));
+                        return
+                    end
+                    i = i + bestLen;
+                end
+            end
+
+            % ---- Selection trackers ----
+            function onAvailSelect(evt)
+                availSelectedRows = extractSelectedRows(evt);
+            end
+            function onRefSelect(evt)
+                refSelectedRows = extractSelectedRows(evt);
+            end
+            function onChanSelect(evt)
+                chanSelectedRows = extractSelectedRows(evt);
+            end
+            function rows = extractSelectedRows(evt)
+                rows = [];
                 try
                     if isfield(evt, 'Selection') && ~isempty(evt.Selection)
-                        selectedRows = unique(evt.Selection(:));
+                        rows = unique(evt.Selection(:));
                     elseif isfield(evt, 'Indices') && ~isempty(evt.Indices)
-                        selectedRows = unique(evt.Indices(:,1));
-                    else
-                        selectedRows = [];
+                        rows = unique(evt.Indices(:,1));
                     end
                 catch
-                    selectedRows = [];
                 end
             end
 
-            function addRereferenceCallback()
-                if numel(all_edf_labels) < 2
-                    uialert(d, ...
-                        'Need at least two EDF channels to create a rereference.', ...
-                        'Not Enough Channels', 'Icon', 'warning');
+            % ---- Reference button callbacks ----
+            function addRefMean()
+                if numel(availSelectedRows) < 2
+                    uialert(d, 'Select at least 2 rows in Available Channels first.', ...
+                        'Mean of selected', 'Icon', 'info');
                     return
                 end
+                lbls = tableData(availSelectedRows, 1);
+                nm = promptName('Name for the mean reference:', defaultMeanName(lbls));
+                if isempty(nm), return, end
+                if ~okNewRefName(nm), return, end
+                refsState{end+1} = sprintf('%s = mean(%s)', nm, strjoin(lbls, ', '));
+                refresh();
+            end
 
-                % Sub-dialog: 420 w x 170 h, position-based layout
-                rdW = 420; rdH = 170; rdPad = 12;
-                rdBtnH = 40; rdDdH = 36; rdLblH = 24;
-                rdBtnY = rdPad;
-                rdDdY  = rdBtnY + rdBtnH + 10;
-                rdLblY = rdDdY  + rdDdH  + 8;
+            function addRefCustom()
+                [nm, ex] = promptNameAndExpr('Add Custom Reference', '', '');
+                if isempty(nm) && isempty(ex), return, end
+                if isempty(nm), uialert(d, 'Reference name is required.', 'Custom', 'Icon', 'error'); return, end
+                if ~okNewRefName(nm), return, end
+                refsState{end+1} = sprintf('%s = %s', nm, ex);
+                refresh();
+            end
 
-                % Two equal dropdowns with dash in between
-                dashW = 28;
-                ddW   = (rdW - 2*rdPad - dashW - 8) / 2;  % 8 = 2x4px gaps
+            function removeRef()
+                if isempty(refSelectedRows), return, end
+                refsState(refSelectedRows) = [];
+                refSelectedRows = [];
+                refresh();
+            end
 
-                rd_handle = uifigure('Name', 'Add Rereference Channel', ...
-                    'Position', [(ss(3)-rdW)/2, (ss(4)-rdH)/2, rdW, rdH], ...
+            function tf = okNewRefName(nm)
+                tf = true;
+                if any(strcmpi(nm, all_edf_labels))
+                    uialert(d, sprintf('"%s" is already an EDF label.', nm), 'Name collision', 'Icon', 'error');
+                    tf = false; return
+                end
+                existing = cellfun(@(s) firstName(s), refsState, 'UniformOutput', false);
+                if any(strcmpi(nm, existing))
+                    uialert(d, sprintf('"%s" is already a reference name.', nm), 'Name collision', 'Icon', 'error');
+                    tf = false; return
+                end
+            end
+
+            function nm = firstName(s)
+                eq = strfind(s, '=');
+                if isempty(eq), nm = ''; else, nm = strtrim(s(1:eq(1)-1)); end
+            end
+
+            % ---- Output channel button callbacks ----
+            function addChanPassthrough()
+                if isempty(availSelectedRows)
+                    uialert(d, 'Select rows in Available Channels first.', ...
+                        'Passthrough', 'Icon', 'info');
+                    return
+                end
+                lbls = tableData(availSelectedRows, 1);
+                for kk = 1:numel(lbls)
+                    chansState{end+1} = lbls{kk};
+                end
+                refresh();
+            end
+
+            function addChanReref()
+                aug = augmentedLabels();
+                if numel(aug) < 2
+                    uialert(d, 'Need at least two labels (or labels + references).', ...
+                        'A - B', 'Icon', 'info');
+                    return
+                end
+                [chA, chB, alias] = promptABMinus(aug);
+                if isempty(chA), return, end
+                if isempty(alias)
+                    chansState{end+1} = sprintf('%s-%s', chA, chB);
+                else
+                    chansState{end+1} = sprintf('%s = %s-%s', alias, chA, chB);
+                end
+                refresh();
+            end
+
+            function addChanMean()
+                if numel(availSelectedRows) < 2
+                    uialert(d, 'Select at least 2 rows in Available Channels first.', ...
+                        'Mean', 'Icon', 'info');
+                    return
+                end
+                lbls = tableData(availSelectedRows, 1);
+                alias = promptName('Optional alias (leave blank to use the raw expression):', '');
+                expr = sprintf('mean(%s)', strjoin(lbls, ', '));
+                if isempty(alias)
+                    chansState{end+1} = expr;
+                else
+                    chansState{end+1} = sprintf('%s = %s', alias, expr);
+                end
+                refresh();
+            end
+
+            function addChanRename()
+                aug = augmentedLabels();
+                [src, alias] = promptRename(aug);
+                if isempty(src) || isempty(alias), return, end
+                chansState{end+1} = sprintf('%s = %s', alias, src);
+                refresh();
+            end
+
+            function addChanCustom()
+                [alias, ex] = promptNameAndExpr('Add Custom Output Channel', '', '');
+                if isempty(alias) && isempty(ex), return, end
+                if isempty(ex), uialert(d, 'Expression required.', 'Custom', 'Icon', 'error'); return, end
+                if isempty(alias)
+                    chansState{end+1} = ex;
+                else
+                    chansState{end+1} = sprintf('%s = %s', alias, ex);
+                end
+                refresh();
+            end
+
+            function removeChan()
+                if isempty(chanSelectedRows), return, end
+                chansState(chanSelectedRows) = [];
+                chanSelectedRows = [];
+                refresh();
+            end
+
+            function aug = augmentedLabels()
+                aug = all_edf_labels;
+                for kk = 1:numel(refsState)
+                    nm = firstName(refsState{kk});
+                    if ~isempty(nm), aug{end+1} = nm; end
+                end
+            end
+
+            function nm = defaultMeanName(lbls)
+                if numel(lbls) == 2
+                    nm = sprintf('M_%s_%s', sanitize(lbls{1}), sanitize(lbls{2}));
+                else
+                    nm = sprintf('M_%dch', numel(lbls));
+                end
+            end
+            function s = sanitize(s)
+                s = regexprep(s, '[^A-Za-z0-9]', '');
+            end
+
+            % ---- Sub-prompts (small modal helpers) ----
+            function nm = promptName(label, defaultVal)
+                pdW = 380; pdH = 150; pdPad = 12;
+                pd = uifigure('Name', 'Enter Name', ...
+                    'Position', [(ss(3)-pdW)/2, (ss(4)-pdH)/2, pdW, pdH], ...
                     'WindowStyle', 'modal');
-
-                CSSuiLabel(rd_handle, 'Text', 'Select channels to rereference:', ...
-                    'Position', [rdPad, rdLblY, rdW-2*rdPad, rdLblH]);
-
-                ddA_handle = CSSuiDropdown(rd_handle, 'Style', app.AppStyle, ...
-                    'Items', all_edf_labels, ...
-                    'Position', [rdPad, rdDdY, ddW, rdDdH]);
-
-                CSSuiLabel(rd_handle, 'Text', '-', ...
-                    'FontSize', '18px', 'FontWeight', '700', 'HorizontalAlignment', 'center', ...
-                    'Position', [rdPad+ddW+4, rdDdY, dashW, rdDdH]);
-
-                ddB_handle = CSSuiDropdown(rd_handle, 'Style', app.AppStyle, ...
-                    'Items', all_edf_labels, ...
-                    'Position', [rdPad+ddW+4+dashW+4, rdDdY, ddW, rdDdH]);
-
-                % OK / Cancel centered as a pair
-                rdBtnW = 90; rdBtnGap = 10;
-                rdPairW = 2*rdBtnW + rdBtnGap;
-                rdBtnX0 = (rdW - rdPairW) / 2;
-                CSSuiButton(rd_handle, 'Style', app.AppStyle, 'Text', 'OK', ...
-                    'Position', [rdBtnX0,                  rdBtnY, rdBtnW, rdBtnH], ...
-                    'ButtonPushedFcn', @(btn,evt) doOkReref());
-                CSSuiButton(rd_handle, 'Style', app.AppStyle, 'Text', 'Cancel', ...
-                    'Position', [rdBtnX0+rdBtnW+rdBtnGap,  rdBtnY, rdBtnW, rdBtnH], ...
-                    'ButtonPushedFcn', @(btn,evt) doCancelReref());
-
-                uiwait(rd_handle);
+                CSSuiLabel(pd, 'Style', app.AppStyle, 'Text', label, ...
+                    'Position', [pdPad, pdH-pdPad-22, pdW-2*pdPad, 22]);
+                ef = CSSuiEditField(pd, 'Style', app.AppStyle, ...
+                    'Value', defaultVal, ...
+                    'Position', [pdPad, pdH-pdPad-22-36-6, pdW-2*pdPad, 36]);
+                nm = '';
+                CSSuiButton(pd, 'Style', app.AppStyle, 'Text', 'OK', ...
+                    'Position', [pdW-2*90-pdPad-8, pdPad, 90, 36], ...
+                    'ButtonPushedFcn', @(s,e) doOk());
+                CSSuiButton(pd, 'Style', app.AppStyle, 'Text', 'Cancel', ...
+                    'Position', [pdW-90-pdPad, pdPad, 90, 36], ...
+                    'ButtonPushedFcn', @(s,e) doCan());
+                uiwait(pd);
+                function doOk()
+                    nm = strtrim(ef.Value);
+                    if isvalid(pd), delete(pd); end
+                end
+                function doCan()
+                    nm = '';
+                    if isvalid(pd), delete(pd); end
+                end
             end
 
-            function doOkReref()
-                chA = ddA_handle.Value;
-                chB = ddB_handle.Value;
-
-                if strcmp(chA, chB)
-                    msgbox('Cannot rereference a channel with itself.', 'Invalid Selection', 'error');
-                    return
+            function [nm, ex] = promptNameAndExpr(title, defNm, defEx)
+                pdW = 480; pdH = 200; pdPad = 12;
+                pd = uifigure('Name', title, ...
+                    'Position', [(ss(3)-pdW)/2, (ss(4)-pdH)/2, pdW, pdH], ...
+                    'WindowStyle', 'modal');
+                CSSuiLabel(pd, 'Style', app.AppStyle, 'Text', 'Name (optional for output channels):', ...
+                    'Position', [pdPad, pdH-pdPad-22, pdW-2*pdPad, 22]);
+                efN = CSSuiEditField(pd, 'Style', app.AppStyle, 'Value', defNm, ...
+                    'Position', [pdPad, pdH-pdPad-22-32, pdW-2*pdPad, 32]);
+                CSSuiLabel(pd, 'Style', app.AppStyle, 'Text', 'Expression (e.g. mean(A1, A2) or C3 - LM):', ...
+                    'Position', [pdPad, pdH-pdPad-22-32-6-22, pdW-2*pdPad, 22]);
+                efE = CSSuiEditField(pd, 'Style', app.AppStyle, 'Value', defEx, ...
+                    'Position', [pdPad, pdH-pdPad-22-32-6-22-32, pdW-2*pdPad, 32]);
+                nm = ''; ex = '';
+                CSSuiButton(pd, 'Style', app.AppStyle, 'Text', 'OK', ...
+                    'Position', [pdW-2*90-pdPad-8, pdPad, 90, 36], ...
+                    'ButtonPushedFcn', @(s,e) doOk());
+                CSSuiButton(pd, 'Style', app.AppStyle, 'Text', 'Cancel', ...
+                    'Position', [pdW-90-pdPad, pdPad, 90, 36], ...
+                    'ButtonPushedFcn', @(s,e) doCan());
+                uiwait(pd);
+                function doOk()
+                    nm = strtrim(efN.Value);
+                    ex = strtrim(efE.Value);
+                    if isvalid(pd), delete(pd); end
                 end
-
-                rerefLabel = [chA '-' chB];
-
-                if any(strcmp(tableData(:,1), rerefLabel))
-                    msgbox(sprintf('"%s" is already in the channel list.', rerefLabel), 'Duplicate', 'warn');
-                    return
+                function doCan()
+                    nm = ''; ex = '';
+                    if isvalid(pd), delete(pd); end
                 end
+            end
 
-                entryA = chan_map(chA);
-                entryB = chan_map(chB);
-                [both_files, iA, iB] = intersect(entryA{1}, entryB{1});
-
-                if isempty(both_files)
-                    msgbox(sprintf('No files contain both "%s" and "%s".', chA, chB), 'No Overlap', 'warn');
-                    return
-                end
-
-                fsA_both     = entryA{2}(iA);
-                fsB_both     = entryB{2}(iB);
-                mismatch_idx = find(fsA_both ~= fsB_both);
-
-                if ~isempty(mismatch_idx)
-                    msgLines = cell(1, numel(mismatch_idx));
-                    for mm = 1:numel(mismatch_idx)
-                        fi = both_files(mismatch_idx(mm));
-                        [~, fname] = fileparts(app.DataList{fi});
-                        msgLines{mm} = sprintf('  %s: %g Hz vs %g Hz', ...
-                            fname, fsA_both(mismatch_idx(mm)), fsB_both(mismatch_idx(mm)));
+            function [chA, chB, alias] = promptABMinus(labels)
+                pdW = 540; pdH = 220; pdPad = 12;
+                pd = uifigure('Name', 'Add A − B Channel', ...
+                    'Position', [(ss(3)-pdW)/2, (ss(4)-pdH)/2, pdW, pdH], ...
+                    'WindowStyle', 'modal');
+                CSSuiLabel(pd, 'Style', app.AppStyle, 'Text', 'A:', ...
+                    'Position', [pdPad, pdH-pdPad-22, 30, 22]);
+                ddA = CSSuiDropdown(pd, 'Style', app.AppStyle, ...
+                    'Items', labels, ...
+                    'Position', [pdPad+30, pdH-pdPad-32, (pdW-2*pdPad-60)/2, 32]);
+                CSSuiLabel(pd, 'Style', app.AppStyle, 'Text', 'B:', ...
+                    'Position', [pdPad+30+(pdW-2*pdPad-60)/2+10, pdH-pdPad-22, 30, 22]);
+                ddB = CSSuiDropdown(pd, 'Style', app.AppStyle, ...
+                    'Items', labels, ...
+                    'Position', [pdPad+60+(pdW-2*pdPad-60)/2+10, pdH-pdPad-32, (pdW-2*pdPad-60)/2-10, 32]);
+                CSSuiLabel(pd, 'Style', app.AppStyle, 'Text', 'Optional alias (output name):', ...
+                    'Position', [pdPad, pdH-pdPad-32-32-6-22, pdW-2*pdPad, 22]);
+                efAlias = CSSuiEditField(pd, 'Style', app.AppStyle, 'Value', '', ...
+                    'Position', [pdPad, pdH-pdPad-32-32-6-22-32, pdW-2*pdPad, 32]);
+                chA = ''; chB = ''; alias = '';
+                CSSuiButton(pd, 'Style', app.AppStyle, 'Text', 'OK', ...
+                    'Position', [pdW-2*90-pdPad-8, pdPad, 90, 36], ...
+                    'ButtonPushedFcn', @(s,e) doOk());
+                CSSuiButton(pd, 'Style', app.AppStyle, 'Text', 'Cancel', ...
+                    'Position', [pdW-90-pdPad, pdPad, 90, 36], ...
+                    'ButtonPushedFcn', @(s,e) doCan());
+                uiwait(pd);
+                function doOk()
+                    chA = ddA.Value; chB = ddB.Value; alias = strtrim(efAlias.Value);
+                    if strcmp(chA, chB)
+                        uialert(pd, 'A and B must be different.', 'Invalid', 'Icon', 'error');
+                        chA = ''; chB = ''; return
                     end
-                    msgbox(['Sampling rate mismatch between channels:' newline strjoin(msgLines, newline)], ...
-                        'Sampling Rate Mismatch', 'error');
+                    if isvalid(pd), delete(pd); end
+                end
+                function doCan()
+                    chA = ''; chB = ''; alias = '';
+                    if isvalid(pd), delete(pd); end
+                end
+            end
+
+            function [src, alias] = promptRename(labels)
+                pdW = 540; pdH = 200; pdPad = 12;
+                pd = uifigure('Name', 'Rename Channel', ...
+                    'Position', [(ss(3)-pdW)/2, (ss(4)-pdH)/2, pdW, pdH], ...
+                    'WindowStyle', 'modal');
+                CSSuiLabel(pd, 'Style', app.AppStyle, 'Text', 'Source channel:', ...
+                    'Position', [pdPad, pdH-pdPad-22, pdW-2*pdPad, 22]);
+                ddSrc = CSSuiDropdown(pd, 'Style', app.AppStyle, ...
+                    'Items', labels, ...
+                    'Position', [pdPad, pdH-pdPad-22-32, pdW-2*pdPad, 32]);
+                CSSuiLabel(pd, 'Style', app.AppStyle, 'Text', 'New output name:', ...
+                    'Position', [pdPad, pdH-pdPad-22-32-6-22, pdW-2*pdPad, 22]);
+                efAlias = CSSuiEditField(pd, 'Style', app.AppStyle, 'Value', '', ...
+                    'Position', [pdPad, pdH-pdPad-22-32-6-22-32, pdW-2*pdPad, 32]);
+                src = ''; alias = '';
+                CSSuiButton(pd, 'Style', app.AppStyle, 'Text', 'OK', ...
+                    'Position', [pdW-2*90-pdPad-8, pdPad, 90, 36], ...
+                    'ButtonPushedFcn', @(s,e) doOk());
+                CSSuiButton(pd, 'Style', app.AppStyle, 'Text', 'Cancel', ...
+                    'Position', [pdW-90-pdPad, pdPad, 90, 36], ...
+                    'ButtonPushedFcn', @(s,e) doCan());
+                uiwait(pd);
+                function doOk()
+                    src = ddSrc.Value;
+                    alias = strtrim(efAlias.Value);
+                    if isempty(alias)
+                        uialert(pd, 'New name is required.', 'Rename', 'Icon', 'error');
+                        return
+                    end
+                    if isvalid(pd), delete(pd); end
+                end
+                function doCan()
+                    src = ''; alias = '';
+                    if isvalid(pd), delete(pd); end
+                end
+            end
+
+            % ---- OK / Cancel ----
+            function doOk()
+                [okFlag, msg] = validateAll();
+                if ~okFlag
+                    uialert(d, msg, 'Cannot accept', 'Icon', 'error');
                     return
                 end
-
-                ufreqs  = unique(fsA_both);
-                freqStr = [strjoin(arrayfun(@(f) sprintf('%g', f), ufreqs, 'UniformOutput', false), ' / ') ' Hz'];
-                fileStr = sprintf('%d / %d', numel(both_files), nFiles);
-
-                tableData(end+1,:) = {rerefLabel, freqStr, fileStr};
-                t.Data = tableData;
-
-                if isvalid(rd_handle)
-                    uiresume(rd_handle);
-                    delete(rd_handle);
+                app.ReferenceList = refsState;
+                app.ChannelList   = chansState;
+                if isempty(chansState)
+                    chanText = '';
+                else
+                    chanText = strjoin(chansState, ', ');
                 end
+                app.ChannelEditField.IsError = false;
+                app.ChannelEditField.Value   = chanText;
+                if isempty(refsState)
+                    app.ReferenceSummaryLabel.Text = '(none)';
+                else
+                    app.ReferenceSummaryLabel.Text = strjoin(refsState, '; ');
+                end
+                checkChannelSamplingRates(app, chansState, tableData);
+                if isvalid(d), delete(d); end
             end
 
-            function doCancelReref()
-                if isvalid(rd_handle)
-                    uiresume(rd_handle);
-                    delete(rd_handle);
-                end
-            end
-
-            function acceptCallback()
-                % Use selectedRows tracked by onCellSelect (most reliable —
-                % t.Selection may be stale after button click shifts focus).
-                rows = selectedRows;
-                if isempty(rows)
-                    uialert(d, ...
-                        'Please select at least one channel or press Cancel.', ...
-                        'No Selection', 'Icon', 'warning');
-                    return
-                end
-                selectedChannels = tableData(rows, 1);
-                delete(d);  % deleting the uifigure auto-resumes uiwait
-            end
-
-            function cancelCallback()
-                selectedChannels = [];
-                delete(d);
+            function doCancel()
+                if isvalid(d), delete(d); end
             end
 
         end
@@ -4546,10 +4933,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % updateChannelInput  Parse the channel edit field into a cell array of names.
             %
             %   Splits the comma-separated string in ChannelEditField and stores
-            %   the result in app.ChannelList.
+            %   the result in app.ChannelList. Commas inside parentheses
+            %   ('mean(A1, A2)') and inside '$LABEL$' escape regions are
+            %   ignored — only top-level commas separate channel specs.
 
-            app.ChannelList = textscan(app.ChannelEditField.Value, '%s', 'Delimiter', ',');
-            app.ChannelList = app.ChannelList{1,1};
+            app.ChannelList = app.splitTopLevelCommas(app.ChannelEditField.Value);
         end
 
         % ------------------------------------------------------------------
@@ -5339,10 +5727,21 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             % list of filesystem-safe names (used by analysis runners for paths).
             % Sanitising once up front avoids O(N_channels x N_runners)
             % redundant fixFilename calls during the loop.
+            % For aliased channel specs ('NAME = expr') the output dir
+            % name is the alias — never the raw expression — so that a
+            % rereferenced or mean-derived channel writes to a clean
+            % directory like CFS_LM/ instead of CFS_C3 - mean(A1,A2)/.
             channelList      = app.ChannelList;
             channelListSafe  = cell(size(channelList));
             for ii = 1:numel(channelList)
-                channelListSafe{ii} = app.fixFilename(channelList{ii},'');
+                spec = channelList{ii};
+                eq = strfind(spec, '=');
+                if isempty(eq)
+                    outname = strtrim(spec);
+                else
+                    outname = strtrim(spec(1:eq(1)-1));
+                end
+                channelListSafe{ii} = app.fixFilename(outname,'');
             end
 
             % Pre-create every output subdirectory that enabled analysis steps
@@ -5448,6 +5847,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                             app.StagesColumnEditField.Value, ...
                             app.TimesColumnEditField.Value, ...
                             app.channel, ...
+                            'References',  app.ReferenceList, ...
                             'header_lines', app.HeaderRowsEditField.Value, ...
                             'delimiter',    app.delimeter, ...
                             'stage_vals_in', { app.ArtifactUserInput, app.WakeUserInput, ...
@@ -5840,6 +6240,42 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             end
 
             filename = [name ext];
+        end
+
+        function out = splitTopLevelCommas(s)
+            % splitTopLevelCommas  Split a string on top-level commas.
+            %
+            %   Treats commas inside parentheses (mean(A1, A2)) and
+            %   inside '$LABEL$' escape regions as literal — only
+            %   commas at paren depth 0 outside any '$...$' separate
+            %   tokens. Each token is trimmed; empty tokens dropped.
+            s = char(s);
+            out = {};
+            depth = 0;
+            inDollar = false;
+            start = 1;
+            for k = 1:numel(s)
+                c = s(k);
+                if c == '$'
+                    inDollar = ~inDollar;
+                elseif ~inDollar
+                    if c == '('
+                        depth = depth + 1;
+                    elseif c == ')'
+                        depth = max(0, depth - 1);
+                    elseif c == ',' && depth == 0
+                        tok = strtrim(s(start:k-1));
+                        if ~isempty(tok)
+                            out{end+1} = tok; %#ok<AGROW>
+                        end
+                        start = k + 1;
+                    end
+                end
+            end
+            tok = strtrim(s(start:end));
+            if ~isempty(tok)
+                out{end+1} = tok;
+            end
         end
     end % static methods
 

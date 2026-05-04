@@ -66,6 +66,11 @@ addOptional(p, 'epoch_dur', 30, @(x) isnumeric(x) && isscalar(x) && x>0);
 addOptional(p, 'plot_on', false, @(x) islogical(x) && isscalar(x));
 % Optional inputs for the batch function
 addOptional(p, 'resample_freq', [], @(x) validateattributes(x,{'double'},{'real','positive'}));
+% read_EDF derived-channels passthrough — when set, references are
+% defined-name-bindings (e.g. 'LM = mean(A1,A2)') available to any
+% expression in `channels`. read_EDF does the validation; we just
+% forward the cell.
+addParameter(p, 'References', {}, @iscell);
 
 parse(p,varargin{:});
 input_arguments = struct2cell(p.Results); %#ok<NASGU>
@@ -81,32 +86,52 @@ end
 all_labels       = {signalHeader.signal_labels};
 all_labels_lower = lower(cellfun(@strtrim, all_labels, 'UniformOutput', false));
 
-% Validate channels — accept plain labels and valid A-B rereferences.
-% Uses the same leftmost-dash split logic as read_EDF's parse_channel_plan.
-valid = false(size(channels));
-for k = 1:numel(channels)
-    ch = strtrim(channels{k});
-    if ismember(lower(ch), all_labels_lower)
-        valid(k) = true;
-    else
-        dashes = strfind(ch, '-');
-        for di = dashes
-            chA = strtrim(ch(1:di-1));
-            chB = strtrim(ch(di+1:end));
-            if ~isempty(chA) && ~isempty(chB) && ...
-                    ismember(lower(chA), all_labels_lower) && ...
-                    ismember(lower(chB), all_labels_lower)
-                valid(k) = true;
-                break
-            end
+% When References are defined OR any channel uses derived-syntax
+% markers, defer validation to read_EDF's own parser (which understands
+% mean(...), aliasing, $LABEL$ escapes, etc.). The local A-B validator
+% only handles plain labels and 'A-B' strings, so applying it here
+% would reject perfectly valid expressions like 'C3 - mean(A1,A2)'.
+has_derived = ~isempty(References);
+if ~has_derived
+    for k = 1:numel(channels)
+        s = channels{k};
+        if contains(s, 'mean(', 'IgnoreCase', true) || contains(s, '=') ...
+                || contains(s, '+') || contains(s, '$')
+            has_derived = true;
+            break
         end
     end
 end
-if ~all(valid)
-    error(char(strcat('Invalid channels:',{' '},channels(~valid),' | Valid channels: ',{' '},sprintf('%s ',signalHeader.signal_labels))))
+
+if ~has_derived
+    % Validate channels — accept plain labels and valid A-B rereferences.
+    % Uses the same leftmost-dash split logic as read_EDF's parse_channel_plan.
+    valid = false(size(channels));
+    for k = 1:numel(channels)
+        ch = strtrim(channels{k});
+        if ismember(lower(ch), all_labels_lower)
+            valid(k) = true;
+        else
+            dashes = strfind(ch, '-');
+            for di = dashes
+                chA = strtrim(ch(1:di-1));
+                chB = strtrim(ch(di+1:end));
+                if ~isempty(chA) && ~isempty(chB) && ...
+                        ismember(lower(chA), all_labels_lower) && ...
+                        ismember(lower(chB), all_labels_lower)
+                    valid(k) = true;
+                    break
+                end
+            end
+        end
+    end
+    if ~all(valid)
+        error(char(strcat('Invalid channels:',{' '},channels(~valid),' | Valid channels: ',{' '},sprintf('%s ',signalHeader.signal_labels))))
+    end
 end
 
-[header, signalHeader, data] = read_EDF(edf_fpath, 'channels', channels);
+[header, signalHeader, data] = read_EDF(edf_fpath, ...
+    'Channels', channels, 'References', References);
 data = cell2mat(data);
 
 % signalHeader is now ordered to match channels (including any rereferenced
