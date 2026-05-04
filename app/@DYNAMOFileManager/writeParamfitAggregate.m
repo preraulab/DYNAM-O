@@ -8,14 +8,14 @@ function writeParamfitAggregate(app, partial, outDir, channelName, tag, label)
 
     base = fullfile(outDir, [channelName '_aggregate_' tag]);
     if ~app.confirmAggregateOverwrite(base, {'.csv','.mat'}, channelName, label)
-        app.logResultsBrowser(sprintf('  [%s] %s: kept existing (skipped)', channelName, label));
+        app.appendResultsBrowserLog(sprintf('  [%s] %s: kept existing (skipped)', channelName, label));
         return
     end
     if ~isfolder(outDir), mkdir(outDir); end
 
     if hasCsv
         writetable(partial.csv_table, [base '.csv']);
-        app.logResultsBrowser(sprintf('  [%s] wrote %s.csv (%d rows)', ...
+        app.appendResultsBrowserLog(sprintf('  [%s] wrote %s.csv (%d rows)', ...
             channelName, [channelName '_aggregate_' tag], height(partial.csv_table)));
     end
     if hasMat
@@ -23,7 +23,7 @@ function writeParamfitAggregate(app, partial, outDir, channelName, tag, label)
             'params',     partial.mat_table, ...
             'subjectIDs', {partial.subjectIDs}); %#ok<NASGU>
         save([base '.mat'], 'aggregate');
-        app.logResultsBrowser(sprintf('  [%s] wrote %s.mat (%d rows)', ...
+        app.appendResultsBrowserLog(sprintf('  [%s] wrote %s.mat (%d rows)', ...
             channelName, [channelName '_aggregate_' tag], height(partial.mat_table)));
     end
 end

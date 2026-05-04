@@ -43,11 +43,11 @@ function ok = confirmAggregateOverwrite(app, baseStem, exts, channelName, label)
     switch sel
         case 'Overwrite All'
             app.AggregateOverwriteMode_ = 'all';
-            app.logResultsBrowser('  user chose: Overwrite All for this Aggregate run');
+            app.appendResultsBrowserLog('  user chose: Overwrite All for this Aggregate run');
             ok = true;
         case 'Skip All'
             app.AggregateOverwriteMode_ = 'none';
-            app.logResultsBrowser('  user chose: Skip All for this Aggregate run');
+            app.appendResultsBrowserLog('  user chose: Skip All for this Aggregate run');
             ok = false;
         case 'Overwrite'
             ok = true;

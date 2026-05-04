@@ -12,7 +12,7 @@ function aggregateResultsRoot(app)
     app.AggregateOverwriteMode_ = '';          % reset standing answer
     root = strtrim(char(app.ResultsBrowserOutputDirField.Value));
     if isempty(root) || ~isfolder(root)
-        app.logResultsBrowser(sprintf('Aggregate: invalid root: %s', root));
+        app.appendResultsBrowserLog(sprintf('Aggregate: invalid root: %s', root));
         return
     end
 
@@ -27,13 +27,13 @@ function aggregateResultsRoot(app)
             idx = dynamo_index_runs(root);
         end
     catch ME
-        app.logResultsBrowser(['Aggregate: index read failed: ', ME.message]);
+        app.appendResultsBrowserLog(['Aggregate: index read failed: ', ME.message]);
     end
 
     if ~isempty(idx) && ~isempty(idx.entries)
         filesByChannel = app.groupIndexFilesByChannel(root, idx);
         channels = sort(filesByChannel.keys);
-        app.logResultsBrowser(sprintf( ...
+        app.appendResultsBrowserLog(sprintf( ...
             'Aggregate: %d channel(s) from index; no directory scan needed', ...
             numel(channels)));
     else
@@ -51,10 +51,10 @@ function aggregateResultsRoot(app)
             end
         end
         if isempty(channels)
-            app.logResultsBrowser('Aggregate: no channel directories found under root.');
+            app.appendResultsBrowserLog('Aggregate: no channel directories found under root.');
             return
         end
-        app.logResultsBrowser(sprintf( ...
+        app.appendResultsBrowserLog(sprintf( ...
             'Aggregate: %d channel(s) under %s (no index, scanning dirs)', ...
             numel(channels), root));
         filesByChannel = containers.Map();
@@ -85,15 +85,15 @@ function aggregateResultsRoot(app)
                 % Overwrite, but keep per-file prompting so the
                 % user can still skip individual conflicts.
                 app.AggregateOverwriteMode_ = '';
-                app.logResultsBrowser('  user chose: Yes — overwrite (with per-file prompts)');
+                app.appendResultsBrowserLog('  user chose: Yes — overwrite (with per-file prompts)');
             case 'No'
                 app.AggregateOverwriteMode_ = 'none';
-                app.logResultsBrowser('  user chose: No — keep all existing aggregates');
+                app.appendResultsBrowserLog('  user chose: No — keep all existing aggregates');
             case 'All'
                 app.AggregateOverwriteMode_ = 'all';
-                app.logResultsBrowser('  user chose: All — overwrite everything without prompts');
+                app.appendResultsBrowserLog('  user chose: All — overwrite everything without prompts');
             otherwise
-                app.logResultsBrowser('Aggregate: cancelled by user.');
+                app.appendResultsBrowserLog('Aggregate: cancelled by user.');
                 app.renderResultsBrowserPreviewPlaceholder('idle');
                 return
         end
@@ -135,7 +135,7 @@ function aggregateResultsRoot(app)
     end
 
     app.destroyAggregateProgressGrid();
-    app.logResultsBrowser('Aggregate: done.');
+    app.appendResultsBrowserLog('Aggregate: done.');
     app.renderResultsBrowserPreviewPlaceholder('idle');
     % Surgical refresh: re-scan only aggregates/ and splice the
     % new subtree into the existing cache. Avoids re-reading the

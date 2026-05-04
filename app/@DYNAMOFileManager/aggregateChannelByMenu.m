@@ -3,7 +3,7 @@ function aggregateChannelByMenu(app, channelDir, categories)
     % then refresh the tree so the new aggregates folder shows
     % up. Mirrors aggregateResultsRoot's surrounding scaffolding.
     if isempty(channelDir) || ~isfolder(channelDir)
-        app.logResultsBrowser(sprintf('Aggregate: invalid channel dir: %s', channelDir));
+        app.appendResultsBrowserLog(sprintf('Aggregate: invalid channel dir: %s', channelDir));
         return
     end
     root = strtrim(char(app.ResultsBrowserOutputDirField.Value));

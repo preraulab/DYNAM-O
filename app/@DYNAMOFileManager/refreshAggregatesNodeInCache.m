@@ -10,13 +10,13 @@ function refreshAggregatesNodeInCache(app, root)
 
     aggPath = fullfile(root, 'aggregates');
     if ~isfolder(aggPath)
-        app.logResultsBrowser('  (no aggregates/ folder to splice)');
+        app.appendResultsBrowserLog('  (no aggregates/ folder to splice)');
         return
     end
 
     tScan = tic;
     newNode = app.scanDirIntoCache(aggPath, 'aggregates', 0);
-    app.logResultsBrowser(sprintf( ...
+    app.appendResultsBrowserLog(sprintf( ...
         '  Re-scanned aggregates/ in %.2fs (%d folder(s), %d file(s))', ...
         toc(tScan), numel(newNode.dirs), numel(newNode.files)));
 
@@ -35,6 +35,6 @@ function refreshAggregatesNodeInCache(app, root)
 
     tTree = tic;
     app.ResultsBrowserTree.Data = cache_to_tree_node(cache);
-    app.logResultsBrowser(sprintf( ...
+    app.appendResultsBrowserLog(sprintf( ...
         '  Tree updated in %.2fs', toc(tTree)));
 end

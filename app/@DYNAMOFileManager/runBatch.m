@@ -157,12 +157,12 @@ function runBatch(app, dataList, stagingList)
         if app.isStopBatchButtonPushed == true
             haltMsg = sprintf('Run halted by user before subject %d/%d (%s).', ...
                 jj, nFiles, app.input_fbase);
-            try, app.writeLog([haltMsg, newline]); catch, end
+            try, app.appendRunLog([haltMsg, newline]); catch, end
             try, fprintf('\n%s\n', haltMsg); catch, end
             warning(warnState);
             set(0, 'DefaultFigureVisible', 'on');
             app.stopLogConsoleTimer();
-            app.updateLogConsole();
+            app.refreshLogConsole();
             if ~isempty(app.consolelog_fid) && app.consolelog_fid > 0, fclose(app.consolelog_fid); app.consolelog_fid = []; end
             diary off;
             if ~isempty(app.runlog_fid) && app.runlog_fid > 0, fclose(app.runlog_fid); app.runlog_fid = []; end
@@ -258,7 +258,7 @@ function runBatch(app, dataList, stagingList)
                     nChannels);
                 app.TextArea.addnl(['   ' msg]);
                 fprintf('\n%s\n', msg);
-                try, app.writeLog([msg, newline]); catch, end
+                try, app.appendRunLog([msg, newline]); catch, end
                 drawnow;
 
                 % Free anything the failed bulk read may have
@@ -306,7 +306,7 @@ function runBatch(app, dataList, stagingList)
                             channelList{ii_fb}, e_ch.message);
                         app.TextArea.addnl(['   ' chFailMsg]);
                         fprintf('   %s\n', chFailMsg);
-                        try, app.writeLog([chFailMsg, newline]); catch, end
+                        try, app.appendRunLog([chFailMsg, newline]); catch, end
                     end
                 end
 
@@ -323,7 +323,7 @@ function runBatch(app, dataList, stagingList)
                         app.input_fbase, nChannels);
                     app.TextArea.addnl(allFailMsg);
                     fprintf('\nERROR — %s\n', allFailMsg);
-                    try, app.writeLog([allFailMsg, newline]); catch, end
+                    try, app.appendRunLog([allFailMsg, newline]); catch, end
                 end
             else
                 loadFailMsg = sprintf( ...
@@ -331,7 +331,7 @@ function runBatch(app, dataList, stagingList)
                     app.input_fbase, nChannels);
                 app.TextArea.addnl(loadFailMsg);
                 fprintf('\nERROR — %s\n%s\n', loadFailMsg, getReport(e_load, 'basic'));
-                app.writeLog(sprintf('%s\n%s\n', loadFailMsg, e_load.message));
+                app.appendRunLog(sprintf('%s\n%s\n', loadFailMsg, e_load.message));
             end
             drawnow;
         end
@@ -355,12 +355,12 @@ function runBatch(app, dataList, stagingList)
                 haltMsg = sprintf('Run halted by user before subject %d/%d, channel %d/%d (%s | %s).', ...
                     jj, nFiles, ii, nChannels, ...
                     app.input_fbase, app.channel);
-                try, app.writeLog([haltMsg, newline]); catch, end
+                try, app.appendRunLog([haltMsg, newline]); catch, end
                 try, fprintf('\n%s\n', haltMsg); catch, end
                 warning(warnState);
                 set(0, 'DefaultFigureVisible', 'on');
                 app.stopLogConsoleTimer();
-                app.updateLogConsole();
+                app.refreshLogConsole();
                 if ~isempty(app.consolelog_fid) && app.consolelog_fid > 0, fclose(app.consolelog_fid); app.consolelog_fid = []; end
                 diary off;
                 if ~isempty(app.runlog_fid) && app.runlog_fid > 0, fclose(app.runlog_fid); app.runlog_fid = []; end
@@ -455,7 +455,7 @@ function runBatch(app, dataList, stagingList)
                     fprintf('\nERROR — Subject %s, channel %s, stage "%s": %s\n', ...
                         app.input_fbase, app.channel, stages{ss}.name, ...
                         getReport(e_stage, 'basic'));
-                    app.writeLog(sprintf( ...
+                    app.appendRunLog(sprintf( ...
                         'Subject %s, channel %s: stage "%s" failed: %s\n', ...
                         app.input_fbase, app.channel, stages{ss}.name, e_stage.message));
                 end
@@ -470,11 +470,11 @@ function runBatch(app, dataList, stagingList)
                 if app.anything_run
                     app.TextArea.addnl([   'Successfully run subject ', ...
                         app.input_fbase,', channel ',app.channel,'.']);
-                    app.writeLog(sprintf('Subject %s, channel %s: run successfully.\n', ...
+                    app.appendRunLog(sprintf('Subject %s, channel %s: run successfully.\n', ...
                         app.input_fbase, app.channel));
                 else
                     % Nothing new to compute: all outputs already existed
-                    app.writeLog(sprintf( ...
+                    app.appendRunLog(sprintf( ...
                         'Subject %s, channel %s: all files already exist. Subject skipped.\n', ...
                         app.input_fbase, app.channel));
                 end
@@ -482,7 +482,7 @@ function runBatch(app, dataList, stagingList)
                 failed_str = strjoin(all_failures, ', ');
                 app.TextArea.addnl(['Subject ',app.input_fbase, ...
                     ', channel ',app.channel,' partially run. Failed: ',failed_str,'.']);
-                app.writeLog(sprintf( ...
+                app.appendRunLog(sprintf( ...
                     'Subject %s, channel %s: partially run. Failed: %s.\n', ...
                     app.input_fbase, app.channel, failed_str));
             end
@@ -539,7 +539,7 @@ function runBatch(app, dataList, stagingList)
                 set(0, 'DefaultFigureVisible', 'on');
                 disp(e);
                 app.stopLogConsoleTimer();
-                app.updateLogConsole();
+                app.refreshLogConsole();
                 if ~isempty(app.consolelog_fid) && app.consolelog_fid > 0, fclose(app.consolelog_fid); app.consolelog_fid = []; end
                 diary off;
                 if ~isempty(app.runlog_fid) && app.runlog_fid > 0, fclose(app.runlog_fid); app.runlog_fid = []; end
@@ -591,11 +591,11 @@ function runBatch(app, dataList, stagingList)
         'Batch run complete. Total time: %s (%d subject(s) x %d channel(s) = %d run unit(s)).', ...
         batchTimeStr, nFiles, nChannels, nFiles * nChannels);
     app.TextArea.addnl(totalMsg);
-    try, app.writeLog([totalMsg, newline]); catch, end
+    try, app.appendRunLog([totalMsg, newline]); catch, end
     fprintf('\n%s\n', totalMsg);
     drawnow;
     app.stopLogConsoleTimer();
-    app.updateLogConsole();  % final capture of any remaining diary output
+    app.refreshLogConsole();  % final capture of any remaining diary output
     if ~isempty(app.consolelog_fid) && app.consolelog_fid > 0, fclose(app.consolelog_fid); app.consolelog_fid = []; end
     diary off;
     if ~isempty(app.runlog_fid) && app.runlog_fid > 0, fclose(app.runlog_fid); app.runlog_fid = []; end

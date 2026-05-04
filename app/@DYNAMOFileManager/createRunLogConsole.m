@@ -14,8 +14,8 @@ function createRunLogConsole(app)
     app.runlog_fpath = strcat(app.OutputDirEditField.Value, '/logs/');
     app.runlog_fid   = fopen(fullfile(app.runlog_fpath, app.runlog_fname), 'w');
 
-    app.writeLog(sprintf('Date and time of run start: %s\n', app.curr_datetime));
-    app.writeLog(sprintf('Run with settings file: %s\n\n', ...
+    app.appendRunLog(sprintf('Date and time of run start: %s\n', app.curr_datetime));
+    app.appendRunLog(sprintf('Run with settings file: %s\n\n', ...
         strcat('run_settings_', app.curr_datetime, '.txt')));
-    app.writeLog(sprintf('Files run: \n\n'));
+    app.appendRunLog(sprintf('Files run: \n\n'));
 end

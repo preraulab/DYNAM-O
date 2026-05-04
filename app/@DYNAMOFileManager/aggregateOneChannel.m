@@ -18,9 +18,9 @@ function aggregateOneChannel(app, channelDir, aggregatesRoot, categories, files)
 
     [~, channelName] = fileparts(channelDir);
     if isempty(files)
-        app.logResultsBrowser(sprintf('[%s] scanning (dir mode)...', channelName));
+        app.appendResultsBrowserLog(sprintf('[%s] scanning (dir mode)...', channelName));
     else
-        app.logResultsBrowser(sprintf( ...
+        app.appendResultsBrowserLog(sprintf( ...
             '[%s] aggregating %d cataloged file(s) from index...', ...
             channelName, numel(files)));
     end
@@ -41,16 +41,16 @@ function aggregateOneChannel(app, channelDir, aggregatesRoot, categories, files)
         R = aggregate_DYNAMO_outputs(channelDir, ...
             'Files', files, 'ProgressFcn', progressCb);
     catch ME
-        app.logResultsBrowser(sprintf('[%s] failed: %s', channelName, ME.message));
+        app.appendResultsBrowserLog(sprintf('[%s] failed: %s', channelName, ME.message));
         return
     end
 
     for ii = 1:size(R.skipped, 1)
-        app.logResultsBrowser(sprintf('  dedupe-skip: %s — %s', R.skipped{ii,1}, R.skipped{ii,2}));
+        app.appendResultsBrowserLog(sprintf('  dedupe-skip: %s — %s', R.skipped{ii,1}, R.skipped{ii,2}));
     end
     if isfield(R, 'warnings')
         for ii = 1:numel(R.warnings)
-            app.logResultsBrowser(sprintf('  warning: %s', R.warnings{ii}));
+            app.appendResultsBrowserLog(sprintf('  warning: %s', R.warnings{ii}));
         end
     end
 

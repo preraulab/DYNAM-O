@@ -36,7 +36,7 @@ function loadResultsBrowserTree(app)
         % on slow shares.
         cand = local_findResultsDir(root);
         if ~isempty(cand) && is_dynamo_results_dir(cand)
-            app.logResultsBrowser(sprintf( ...
+            app.appendResultsBrowserLog(sprintf( ...
                 'Auto-corrected to DYNAM-O_results subfolder: %s', cand));
             app.ResultsBrowserOutputDirField.Value = cand;
             root = cand;
@@ -46,12 +46,12 @@ function loadResultsBrowserTree(app)
                 {struct('text','Invalid DYNAM-O_results folder — see preview pane.', ...
                         'data','', 'isLeaf', true, 'children', {{}})};
             app.renderResultsBrowserPreviewError(root);
-            app.logResultsBrowser(sprintf('Load aborted: not a DYNAM-O_results folder: %s', root));
+            app.appendResultsBrowserLog(sprintf('Load aborted: not a DYNAM-O_results folder: %s', root));
             return
         end
     end
 
-    app.logResultsBrowser(sprintf('Loading %s', root));
+    app.appendResultsBrowserLog(sprintf('Loading %s', root));
 
     % Fast path: read the JSONL run index FIRST. If non-empty, the
     % tree is built directly from the index — every (subject,
@@ -79,7 +79,7 @@ function loadResultsBrowserTree(app)
         tBuild = tic;
         app.ResultsBrowserCache_ = app.buildCacheFromIndex(root, idx);
         [nDirs, nFiles] = count_cache(app.ResultsBrowserCache_);
-        app.logResultsBrowser(sprintf( ...
+        app.appendResultsBrowserLog(sprintf( ...
             '  Built tree from index: %d folder(s), %d file(s) in %.2fs', ...
             nDirs, nFiles, toc(tBuild)));
         app.ResultsBrowserTree.Data = cache_to_tree_node(app.ResultsBrowserCache_);
@@ -87,20 +87,20 @@ function loadResultsBrowserTree(app)
         % No index — fall back to the recursive walk + offer to
         % seed an index afterwards. Slow on SMB, but only on the
         % first load of a freshly-populated results folder.
-        app.logResultsBrowser('  Scanning directory tree…');
+        app.appendResultsBrowserLog('  Scanning directory tree…');
         tStart = tic;
         app.ResultsBrowserCache_ = walk_to_cache_progress(root, ...
-            @(msg) app.logResultsBrowser(msg));
+            @(msg) app.appendResultsBrowserLog(msg));
         [nDirs, nFiles] = count_cache(app.ResultsBrowserCache_);
-        app.logResultsBrowser(sprintf( ...
+        app.appendResultsBrowserLog(sprintf( ...
             '  Scanned %d folder(s), %d file(s) in %.2f s', ...
             nDirs, nFiles, toc(tStart)));
 
-        app.logResultsBrowser('  Building tree…');
+        app.appendResultsBrowserLog('  Building tree…');
         drawnow;
         tBuild = tic;
         app.ResultsBrowserTree.Data = cache_to_tree_node(app.ResultsBrowserCache_);
-        app.logResultsBrowser(sprintf('  Tree built in %.2f s', toc(tBuild)));
+        app.appendResultsBrowserLog(sprintf('  Tree built in %.2f s', toc(tBuild)));
     end
 
     % Hide the loading overlay so the populated tree is visible.
@@ -113,7 +113,7 @@ function loadResultsBrowserTree(app)
     % the tab group's SelectionChangedFcn pick it up only if
     % the user actually clicks the tab.
     app.updateAggregateDataTabVisibility(false);
-    app.logResultsBrowser('Done.');
+    app.appendResultsBrowserLog('Done.');
 
     % If no index existed at load time, offer to seed one from the
     % in-memory cache the walk just produced — no second disk pass.

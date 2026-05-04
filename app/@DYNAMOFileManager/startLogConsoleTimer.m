@@ -1,0 +1,9 @@
+function startLogConsoleTimer(app)
+    % startLogConsoleTimer  Create and start the 0.3 s polling timer.
+    app.stopLogConsoleTimer();  % ensure no duplicate
+    app.LogConsoleTimer = timer( ...
+        'Period',        0.3, ...
+        'ExecutionMode', 'fixedRate', ...
+        'TimerFcn',      @(~,~) app.refreshLogConsole());
+    start(app.LogConsoleTimer);
+end

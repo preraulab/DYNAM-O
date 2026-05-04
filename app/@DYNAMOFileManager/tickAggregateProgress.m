@@ -12,7 +12,7 @@ function tickAggregateProgress(app, state, chan, catName, stage, ii, total)
     key = sprintf('%s/%s', catName, stage);
     isStageStart = ~strcmp(state('lastKey'), key);
     if isStageStart
-        app.logResultsBrowser(sprintf( ...
+        app.appendResultsBrowserLog(sprintf( ...
             '  [%s] %s (%s): %d file(s)', chan, catName, stage, total));
         state('lastKey') = key;
         state('lastPct') = -1;

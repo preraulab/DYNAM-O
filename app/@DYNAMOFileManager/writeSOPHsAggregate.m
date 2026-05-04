@@ -9,7 +9,7 @@ function writeSOPHsAggregate(app, partial, outDir, channelName, axis, label)
 
     base = fullfile(outDir, [channelName '_aggregate_SOPHs_' axis]);
     if ~app.confirmAggregateOverwrite(base, {'.mat','.tiff'}, channelName, label)
-        app.logResultsBrowser(sprintf('  [%s] %s: kept existing (skipped)', channelName, label));
+        app.appendResultsBrowserLog(sprintf('  [%s] %s: kept existing (skipped)', channelName, label));
         return
     end
     if ~isfolder(outDir), mkdir(outDir); end
@@ -18,7 +18,7 @@ function writeSOPHsAggregate(app, partial, outDir, channelName, axis, label)
         aggregate = partial.mat_struct; %#ok<NASGU>
         save([base '.mat'], 'aggregate');
         fld = ['SO' axis '_mat'];
-        app.logResultsBrowser(sprintf('  [%s] wrote %s.mat (size %s)', ...
+        app.appendResultsBrowserLog(sprintf('  [%s] wrote %s.mat (size %s)', ...
             channelName, [channelName '_aggregate_SOPHs_' axis], ...
             mat2str(size(partial.mat_struct.(fld)))));
     end
@@ -70,7 +70,7 @@ function writeSOPHsAggregate(app, partial, outDir, channelName, axis, label)
             fprintf(fid, '%s\n', ids{kk});
         end
         fclose(fid);
-        app.logResultsBrowser(sprintf('  [%s] wrote %s.tiff (%d pages)', ...
+        app.appendResultsBrowserLog(sprintf('  [%s] wrote %s.tiff (%d pages)', ...
             channelName, [channelName '_aggregate_SOPHs_' axis], ...
             numel(partial.tiff_pages)));
     end
@@ -90,10 +90,10 @@ function writeSOPHsAggregate(app, partial, outDir, channelName, axis, label)
         soColName = ['SO' axis];
         Tbins = table(fCol, sCol, 'VariableNames', {'freq', soColName});
         writetable(Tbins, [base '_bins.csv']);
-        app.logResultsBrowser(sprintf('  [%s] wrote %s_bins.csv (%d rows)', ...
+        app.appendResultsBrowserLog(sprintf('  [%s] wrote %s_bins.csv (%d rows)', ...
             channelName, [channelName '_aggregate_SOPHs_' axis], nMax));
     else
-        app.logResultsBrowser(sprintf('  [%s] no bins available — skipping bins.csv (re-run batch with .mat SOPHs to recover Hz/dB labels)', ...
+        app.appendResultsBrowserLog(sprintf('  [%s] no bins available — skipping bins.csv (re-run batch with .mat SOPHs to recover Hz/dB labels)', ...
             channelName));
     end
 end

@@ -21,6 +21,6 @@ function promptToSeedRunIndex(app, root)
             app.regenerateRunIndex(root);
         end
     catch ME
-        app.logResultsBrowser(['Run-index prompt failed: ', ME.message]);
+        app.appendResultsBrowserLog(['Run-index prompt failed: ', ME.message]);
     end
 end
