@@ -2,7 +2,7 @@ function createAggregateProgressGrid(app, channelNames)
     % createAggregateProgressGrid  Replace the preview body with
     %   one SmoothProgressBar per channel, stacked vertically,
     %   each titled with the channel name. Each bar is reused
-    %   across that channel's stages; aggProgressTick swaps
+    %   across that channel's stages; tickAggregateProgress swaps
     %   the bar's `N` and `LabelPrefix` whenever a new (cat,
     %   stage) starts. Bars are stored in
     %   app.AggregateProgressBars_ (containers.Map) so the
