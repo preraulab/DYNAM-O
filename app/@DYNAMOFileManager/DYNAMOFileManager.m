@@ -1180,7 +1180,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Data', refRowsToTable(refsState), ...
                 'ColumnName', {'Name', 'Expression'}, ...
                 'ColumnWidth', [120, 380], ...
-                'ColumnEditable', [true true], ...
+                'ColumnEditable', [true false], ...
                 'CellEditCallback', @(s,e) onRefCellEdit(e), ...
                 'Style', app.AppStyle, ...
                 'SelectionType', 'row', ...
@@ -1208,7 +1208,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             midCol = uigridlayout(outer);
             midCol.Layout.Row    = 1;
             midCol.Layout.Column = 2;
-            midCol.RowHeight     = {'1x', 44, 44, 16, 44, 44, 16, 44, '1x'};
+            midCol.RowHeight     = {'1x', 44, 44, 44, 16, 44, 44, 16, 44, '1x'};
             midCol.ColumnWidth   = {'1x'};
             midCol.Padding       = [0 0 0 0];
             midCol.RowSpacing    = 6;
@@ -1219,6 +1219,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             CSSuiButton(midCol, 'Style', app.AppStyle, ...
                 'Text', '−', ...
                 'ButtonPushedFcn', @(s,e) removeChan());
+            CSSuiButton(midCol, 'Style', app.AppStyle, ...
+                'Text', 'A − B...', ...
+                'ButtonPushedFcn', @(s,e) addDifference());
             uipanel(midCol, 'BorderType', 'none');   % gap
             CSSuiButton(midCol, 'Style', app.AppStyle, ...
                 'Text', 'Reference...', ...
@@ -1247,7 +1250,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Data', chanRowsToTable(chansState), ...
                 'ColumnName', {'Output Name', 'Expression'}, ...
                 'ColumnWidth', [160, 420], ...
-                'ColumnEditable', [true true], ...
+                'ColumnEditable', [true false], ...
                 'CellEditCallback', @(s,e) onChanCellEdit(e), ...
                 'Style', app.AppStyle, ...
                 'SelectionType', 'row', ...
@@ -1293,8 +1296,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 tbl = cell(numel(rows), 2);
                 for r = 1:numel(rows)
                     [n, e] = splitNameExpr(rows{r});
-                    if isempty(n), n = '(raw)'; end
-                    tbl{r,1} = n;
+                    tbl{r,1} = n;     % empty string when no alias yet
                     tbl{r,2} = e;
                 end
             end
@@ -1319,7 +1321,10 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 else
                     statusLabel.Text = ['Problem: ' msg];
                 end
-                okBtn.Enabled = okFlag;
+                % OK button stays clickable; doOk() runs validateAll
+                % again on click and alerts if invalid. Gating the
+                % button visually was unreliable across uihtml refreshes
+                % and confused users into thinking the dialog was stuck.
             end
 
             function [ok, msg] = validateAll()
@@ -1442,18 +1447,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 end
             end
 
-            % ---- References table: inline edit + add/remove rows ----
+            % ---- References table: inline Name edit + add/remove rows ----
+            % Only the Name column is editable; Expression is fixed by
+            % the originating button (Add Channel / Create Mean / Custom).
             function onRefCellEdit(evt)
                 r = evt.Indices(1);
-                c = evt.Indices(2);
                 if r < 1 || r > numel(refsState), return, end
-                [n, e] = splitNameExpr(refsState{r});
-                newVal = strtrim(char(evt.NewData));
-                if c == 1
-                    n = newVal;
-                else
-                    e = newVal;
-                end
+                [~, e] = splitNameExpr(refsState{r});
+                n = strtrim(char(evt.NewData));
                 if isempty(n) && isempty(e)
                     refsState(r) = [];
                 else
@@ -1493,15 +1494,13 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             end
 
             function addRefCustom()
-                % "Custom" — free-text reference. Name is required (refs
-                % cannot be anonymous); the validator catches an empty
-                % name on commit.
-                [nm, ex] = promptNameAndExpr('Add Custom Reference', '', '');
+                % "Custom" — free-text reference. Name is required.
+                % Expression is validated (lexically) before the prompt
+                % closes, so by the time we get here both are good.
+                % Refs validate against EDF labels only — a ref can't
+                % reference a later ref, mirroring read_EDF semantics.
+                [nm, ex] = promptCustom('Add Custom Reference', true, all_edf_labels);
                 if isempty(nm) && isempty(ex), return, end
-                if isempty(nm)
-                    uialert(d, 'Reference name is required.', 'Custom', 'Icon', 'error');
-                    return
-                end
                 refsState{end+1} = sprintf('%s = %s', nm, ex);
                 refresh();
             end
@@ -1513,18 +1512,14 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 refresh();
             end
 
-            % ---- Output Channels: inline edit + middle-column ops ----
+            % ---- Output Channels: inline Output-Name edit + middle-column ops ----
+            % Only the Output Name column is editable; Expression is set
+            % by the originating button (+ / A−B / Reference / Custom).
             function onChanCellEdit(evt)
                 r = evt.Indices(1);
-                c = evt.Indices(2);
                 if r < 1 || r > numel(chansState), return, end
-                [n, e] = splitNameExpr(chansState{r});
-                newVal = strtrim(char(evt.NewData));
-                if c == 1
-                    n = newVal;
-                else
-                    e = newVal;
-                end
+                [~, e] = splitNameExpr(chansState{r});
+                n = strtrim(char(evt.NewData));
                 if isempty(n) && isempty(e)
                     chansState(r) = [];
                 elseif isempty(n)
@@ -1580,16 +1575,33 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             end
 
             function addCustomChannel()
-                [alias, ex] = promptNameAndExpr('Add Custom Output Channel', '', '');
+                % Output channel: name optional. Expression validated
+                % against EDF labels + already-defined references.
+                [alias, ex] = promptCustom('Add Custom Output Channel', false, augmentedLabels());
                 if isempty(alias) && isempty(ex), return, end
-                if isempty(ex)
-                    uialert(d, 'Expression required.', 'Custom', 'Icon', 'error');
-                    return
-                end
                 if isempty(alias)
                     chansState{end+1} = ex;
                 else
                     chansState{end+1} = sprintf('%s = %s', alias, ex);
+                end
+                refresh();
+            end
+
+            function addDifference()
+                % "A − B" — pick two channels (or refs) from the
+                % augmented label set; optional alias names the output.
+                aug = augmentedLabels();
+                if numel(aug) < 2
+                    uialert(d, 'Need at least two labels (channels or references).', ...
+                        'A − B', 'Icon', 'info');
+                    return
+                end
+                [chA, chB, alias] = promptDifference(aug);
+                if isempty(chA), return, end
+                if isempty(alias)
+                    chansState{end+1} = sprintf('%s-%s', chA, chB);
+                else
+                    chansState{end+1} = sprintf('%s = %s-%s', alias, chA, chB);
                 end
                 refresh();
             end
@@ -1612,6 +1624,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                     '    +              Add each selected available channel as a\n' ...
                     '                   passthrough output (no math).\n' ...
                     '    -              Remove selected output rows.\n' ...
+                    '    A - B...       Pick two channels (or references) and\n' ...
+                    '                   produce one A-B output row, with an\n' ...
+                    '                   optional alias.\n' ...
                     '    Reference...   Subtract a chosen reference (or another\n' ...
                     '                   channel) from each selected available\n' ...
                     '                   channel. Produces N output rows.\n' ...
@@ -1619,6 +1634,9 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                     '                   (output name). Use $LABEL$ to escape\n' ...
                     '                   labels containing operator characters.\n' ...
                     '    Help           This dialog.\n\n' ...
+                    'Output Channels and References tables: only the Name\n' ...
+                    'column is editable in place. To change an expression,\n' ...
+                    'remove the row and re-add via the appropriate button.\n\n' ...
                     'RIGHT — Output Channels: one DYNAM-O run per row. Both\n' ...
                     'columns editable in place. The Output Name (left column)\n' ...
                     'becomes the output directory name; the Expression (right)\n' ...
@@ -1663,18 +1681,30 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 end
             end
 
-            function [nm, ex] = promptNameAndExpr(title, defNm, defEx)
-                pdW = 480; pdH = 200; pdPad = 12;
+            function [nm, ex] = promptCustom(title, nameRequired, augLabels)
+                % Custom name + expression dialog. Validates the
+                % expression (via checkLeaves) against augLabels before
+                % closing; if the user supplies an unknown label, the
+                % dialog stays open with a uialert. The name is either
+                % marked '(required)' or '(optional)' in the label and
+                % enforced at the OK handler.
+                pdW = 520; pdH = 220; pdPad = 12;
                 pd = uifigure('Name', title, ...
                     'Position', [(ss(3)-pdW)/2, (ss(4)-pdH)/2, pdW, pdH], ...
                     'WindowStyle', 'modal');
-                CSSuiLabel(pd, 'Style', app.AppStyle, 'Text', 'Output name (optional):', ...
+                if nameRequired
+                    nameLabelText = 'Reference name (required):';
+                else
+                    nameLabelText = 'Output name (optional):';
+                end
+                CSSuiLabel(pd, 'Style', app.AppStyle, 'Text', nameLabelText, ...
                     'Position', [pdPad, pdH-pdPad-22, pdW-2*pdPad, 22]);
-                efN = CSSuiEditField(pd, 'Style', app.AppStyle, 'Value', defNm, ...
+                efN = CSSuiEditField(pd, 'Style', app.AppStyle, 'Value', '', ...
                     'Position', [pdPad, pdH-pdPad-22-32, pdW-2*pdPad, 32]);
-                CSSuiLabel(pd, 'Style', app.AppStyle, 'Text', 'Expression (e.g. mean(A1, A2) or C3 - LM):', ...
+                CSSuiLabel(pd, 'Style', app.AppStyle, ...
+                    'Text', 'Expression (e.g. mean(A1, A2) or C3 - LM):', ...
                     'Position', [pdPad, pdH-pdPad-22-32-6-22, pdW-2*pdPad, 22]);
-                efE = CSSuiEditField(pd, 'Style', app.AppStyle, 'Value', defEx, ...
+                efE = CSSuiEditField(pd, 'Style', app.AppStyle, 'Value', '', ...
                     'Position', [pdPad, pdH-pdPad-22-32-6-22-32, pdW-2*pdPad, 32]);
                 nm = ''; ex = '';
                 CSSuiButton(pd, 'Style', app.AppStyle, 'Text', 'OK', ...
@@ -1685,12 +1715,73 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                     'ButtonPushedFcn', @(s,e) doCan());
                 uiwait(pd);
                 function doOk()
-                    nm = strtrim(efN.Value);
-                    ex = strtrim(efE.Value);
+                    candNm = strtrim(efN.Value);
+                    candEx = strtrim(efE.Value);
+                    if nameRequired && isempty(candNm)
+                        uialert(pd, 'Name is required.', 'Missing name', 'Icon', 'error');
+                        return
+                    end
+                    if isempty(candEx)
+                        uialert(pd, 'Expression is required.', 'Missing expression', 'Icon', 'error');
+                        return
+                    end
+                    [okk, mm] = checkLeaves(candEx, augLabels);
+                    if ~okk
+                        uialert(pd, mm, 'Invalid expression', 'Icon', 'error');
+                        return
+                    end
+                    nm = candNm; ex = candEx;
                     if isvalid(pd), delete(pd); end
                 end
                 function doCan()
                     nm = ''; ex = '';
+                    if isvalid(pd), delete(pd); end
+                end
+            end
+
+            function [chA, chB, alias] = promptDifference(labels)
+                % "A − B" picker: two dropdowns + optional alias.
+                % Validates A != B; the resulting 'CHA-CHB' string is
+                % already lexically valid by construction (both leaves
+                % are members of the augmented label set).
+                pdW = 540; pdH = 220; pdPad = 12;
+                pd = uifigure('Name', 'A − B Channel', ...
+                    'Position', [(ss(3)-pdW)/2, (ss(4)-pdH)/2, pdW, pdH], ...
+                    'WindowStyle', 'modal');
+                CSSuiLabel(pd, 'Style', app.AppStyle, 'Text', 'A:', ...
+                    'Position', [pdPad, pdH-pdPad-22, 30, 22]);
+                ddA = CSSuiDropdown(pd, 'Style', app.AppStyle, ...
+                    'Items', labels, ...
+                    'Position', [pdPad+30, pdH-pdPad-32, (pdW-2*pdPad-60)/2, 32]);
+                CSSuiLabel(pd, 'Style', app.AppStyle, 'Text', 'B:', ...
+                    'Position', [pdPad+30+(pdW-2*pdPad-60)/2+10, pdH-pdPad-22, 30, 22]);
+                ddB = CSSuiDropdown(pd, 'Style', app.AppStyle, ...
+                    'Items', labels, ...
+                    'Position', [pdPad+60+(pdW-2*pdPad-60)/2+10, pdH-pdPad-32, (pdW-2*pdPad-60)/2-10, 32]);
+                CSSuiLabel(pd, 'Style', app.AppStyle, 'Text', 'Optional alias (output name):', ...
+                    'Position', [pdPad, pdH-pdPad-32-32-6-22, pdW-2*pdPad, 22]);
+                efAlias = CSSuiEditField(pd, 'Style', app.AppStyle, 'Value', '', ...
+                    'Position', [pdPad, pdH-pdPad-32-32-6-22-32, pdW-2*pdPad, 32]);
+                chA = ''; chB = ''; alias = '';
+                CSSuiButton(pd, 'Style', app.AppStyle, 'Text', 'OK', ...
+                    'Position', [pdW-2*90-pdPad-8, pdPad, 90, 36], ...
+                    'ButtonPushedFcn', @(s,e) doOk());
+                CSSuiButton(pd, 'Style', app.AppStyle, 'Text', 'Cancel', ...
+                    'Position', [pdW-90-pdPad, pdPad, 90, 36], ...
+                    'ButtonPushedFcn', @(s,e) doCan());
+                uiwait(pd);
+                function doOk()
+                    candA = char(ddA.Value);
+                    candB = char(ddB.Value);
+                    if strcmpi(candA, candB)
+                        uialert(pd, 'A and B must be different.', 'Invalid', 'Icon', 'error');
+                        return
+                    end
+                    chA = candA; chB = candB; alias = strtrim(efAlias.Value);
+                    if isvalid(pd), delete(pd); end
+                end
+                function doCan()
+                    chA = ''; chB = ''; alias = '';
                     if isvalid(pd), delete(pd); end
                 end
             end
