@@ -27,7 +27,7 @@ function runBatch(app, dataList, stagingList)
     % Build DYNAMO options struct from current GUI settings
     app.TextArea.Value = 'Updating advanced options...';
     drawnow;
-    createOptionsStruct(app)
+    buildOptionsStruct(app)
 
     % Create required output subdirectories and initialise logs (if enabled)
     if app.SaveLogsSwitch.Value

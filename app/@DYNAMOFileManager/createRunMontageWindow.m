@@ -1212,8 +1212,8 @@ function createRunMontageWindow(app)
         else
             app.ReferenceEditField.Value = strjoin(refsState, ', ');
         end
-        checkChannelSamplingRates(app, chansState, tableData);
-        app.updateChannelTooltips();
+        validateChannelSamplingRates(app, chansState, tableData);
+        app.refreshChannelTooltips();
         if isvalid(d), delete(d); end
     end
 

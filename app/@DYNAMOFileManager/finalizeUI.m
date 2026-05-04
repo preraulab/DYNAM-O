@@ -26,8 +26,8 @@ function finalizeUI(app)
     % ============================================================
 
     % Channel + reference tooltips reflect current state and are
-    % refreshed from updateChannelTooltips on every composer commit.
-    app.updateChannelTooltips();
+    % refreshed from refreshChannelTooltips on every composer commit.
+    app.refreshChannelTooltips();
     app.DelimeterOptionField.HTMLComponent.Tooltip       = 'Select delimiter used in the staging file';
 
     % Apply tooltips to all stage label fields programmatically
