@@ -5,7 +5,7 @@ function renderResultsBrowserPreviewError(app, root)
     app.ResultsBrowserPreviewTitle.Text = 'INVALID RESULTS FOLDER';
     delete(app.ResultsBrowserPreviewBody.Children);
 
-    ta = app.makeFillTextArea(app.ResultsBrowserPreviewBody);
+    ta = app.createFillTextArea(app.ResultsBrowserPreviewBody);
     ta.FontName        = 'Helvetica';
     ta.FontSize        = 13;
     ta.FontColor       = [0.30 0.34 0.40];

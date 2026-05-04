@@ -3,7 +3,7 @@ function renderResultsBrowserPreviewText(app, p)
     % read-only uitextarea. Truncates to 5000 lines so very
     % large logs/CSVs don't lock up the UI.
     delete(app.ResultsBrowserPreviewBody.Children);
-    ta = app.makeFillTextArea(app.ResultsBrowserPreviewBody);
+    ta = app.createFillTextArea(app.ResultsBrowserPreviewBody);
     try
         txt = fileread(p);
         lines = strsplit(txt, newline);

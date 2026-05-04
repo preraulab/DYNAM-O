@@ -29,7 +29,7 @@ function previewMatSplinefit(app, p, names)
     end
 
     tI = uitab(tg, 'Title','knots / coefs');
-    ta = app.makeFillTextArea(tI);
+    ta = app.createFillTextArea(tI);
     lines = {};
     for fld = {'knots_x','knots_y','coefs','spline_obj'}
         if isfield(SF, fld{1})

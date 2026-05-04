@@ -60,7 +60,7 @@ function previewMatParamfit(app, p, names)
     % --- gof / fitobj summary ---
     if isfield(PF, 'gof') || isfield(PF, 'fitobj')
         tG = uitab(tg, 'Title','fit info');
-        ta = app.makeFillTextArea(tG);
+        ta = app.createFillTextArea(tG);
         lines = {};
         if isfield(PF, 'gof')
             lines = [lines; {'--- gof ---'}; ...

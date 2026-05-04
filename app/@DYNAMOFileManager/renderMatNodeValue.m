@@ -10,13 +10,13 @@ function renderMatNodeValue(app, parent, val, label)
     end
 
     if ischar(val) || isstring(val)
-        ta = app.makeFillTextArea(parent);
+        ta = app.createFillTextArea(parent);
         ta.Value = cellstr(string(val));
         return
     end
 
     if isstruct(val) || iscell(val)
-        ta = app.makeFillTextArea(parent);
+        ta = app.createFillTextArea(parent);
         ta.Value = cellstr(splitlines(string(evalc('disp(val)'))));
         return
     end
@@ -63,14 +63,14 @@ function renderMatNodeValue(app, parent, val, label)
             sl.Layout.Column = 2;
             uilabel(sliderRow, 'Text', sprintf('of %d', nP), ...
                 'HorizontalAlignment','right');
-            app.drawMatVolumePage(ax, sliderRow, val, label, 1);
+            app.renderMatVolumePage(ax, sliderRow, val, label, 1);
             sl.ValueChangedFcn = @(s,e) ...
-                app.drawMatVolumePage(ax, sliderRow, val, label, round(s.Value));
+                app.renderMatVolumePage(ax, sliderRow, val, label, round(s.Value));
             return
         end
     end
 
     % Fallback: text dump.
-    ta = app.makeFillTextArea(parent);
+    ta = app.createFillTextArea(parent);
     ta.Value = cellstr(splitlines(string(evalc('disp(val)'))));
 end

@@ -31,7 +31,7 @@ function renderResultsBrowserPreviewCsv(app, p)
 
         % --- fit info tab (text dump, matches the .mat preview) ---
         tG = uitab(tg, 'Title', 'fit info');
-        ta = app.makeFillTextArea(tG);
+        ta = app.createFillTextArea(tG);
         ta.Value = local_buildFitInfoLines(hdr);
     else
         T = readtable(p);

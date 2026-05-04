@@ -47,7 +47,7 @@ function renderSplinefitTiffPreview(app, p, axis_kind)
     %     from page 1 of the TIFF). Mirrors the .mat preview's
     %     text dump so the two views agree.
     tI = uitab(tg, 'Title','knots / coefs');
-    ta = app.makeFillTextArea(tI);
+    ta = app.createFillTextArea(tI);
     lines = {};
     if isfield(meta, 'knots_x')
         lines = [lines; {'--- knots_x ---'}; ...

@@ -14,7 +14,7 @@ function createConsoleLogPanel(app)
     % appends unreliable on macOS (silent failure with empty log).
     fid = fopen(fullpath, 'w');
     if fid < 0
-        warning('createConsoleLog:fopen', ...
+        warning('createConsoleLogPanel:fopen', ...
             'Could not open console log at %s; diary not started.', fullpath);
         app.consolelog_fid = [];
         return
@@ -29,7 +29,7 @@ function createConsoleLogPanel(app)
         diary off
         diary(fullpath)
     catch diaryErr
-        warning('createConsoleLog:diary', ...
+        warning('createConsoleLogPanel:diary', ...
             'diary(%s) failed: %s', fullpath, diaryErr.message);
     end
 

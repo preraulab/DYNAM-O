@@ -21,7 +21,7 @@ function runBatch(app, dataList, stagingList)
 
     app.TextArea.Value = 'Beginning run...';
     app.curr_datetime   = char(datetime('now','Format','yyMMdd_HHmmSS'));
-    app.set_running;
+    app.setRunningState;
     drawnow;
 
     % Build DYNAMO options struct from current GUI settings
@@ -173,7 +173,7 @@ function runBatch(app, dataList, stagingList)
             app.RunLogger_ = [];
             app.RunBatchButton.Enabled  = true;
             app.StopBatchButton.Enabled = false;
-            app.set_rundefault;
+            app.resetRunUiState;
             app.ProgressBar.reset();
             app.ProgressBar.Enabled = false;
             return
@@ -371,7 +371,7 @@ function runBatch(app, dataList, stagingList)
                 app.RunLogger_ = [];
                 app.RunBatchButton.Enabled  = true;
                 app.StopBatchButton.Enabled = false;
-                app.set_rundefault;
+                app.resetRunUiState;
                 app.ProgressBar.reset();
                 app.ProgressBar.Enabled = false;
                 return
@@ -548,7 +548,7 @@ function runBatch(app, dataList, stagingList)
                 catch
                 end
                 app.RunLogger_ = [];
-                app.set_rundefault;
+                app.resetRunUiState;
                 app.ProgressBar.reset();
                 app.ProgressBar.Enabled = false;
                 % Restore the run/stop button state so the user can
@@ -606,6 +606,6 @@ function runBatch(app, dataList, stagingList)
     app.RunLogger_ = [];
     app.RunBatchButton.Enabled  = true;
     app.StopBatchButton.Enabled = false;
-    app.set_rundefault;
+    app.resetRunUiState;
     drawnow
 end % runBatch
