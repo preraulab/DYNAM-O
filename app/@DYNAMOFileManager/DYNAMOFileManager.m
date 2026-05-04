@@ -1095,15 +1095,22 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             end
 
             % ============================================================
-            % CHANNEL & REFERENCE COMPOSER
+            % CHANNEL & REFERENCE COMPOSER (three-column layout)
             % ============================================================
-            % Three-panel modal: available labels (read-only) + references
-            % (editable list) + output channels (editable list). On OK,
-            % writes app.ReferenceList, app.ChannelList, the channel edit
-            % field, and the references summary label. The Channels and
-            % References cells are passed verbatim to read_EDF, so all
-            % syntax that read_EDF supports — mean(), aliasing, '$LABEL$'
-            % escapes, '+' / '-' linear combinations, inline chaining —
+            % LEFT  : Available Channels (top, read-only) + References
+            %         (bottom, editable Name/Expression).
+            % MID   : button stack — +, −, Reference, Custom, Help.
+            % RIGHT : Output Channels (editable Output Name/Expression).
+            %
+            % Both editable tables use CSSuiTable's ColumnEditable +
+            % CellEditCallback. References and Output Channels are
+            % rebuilt from the table cell values on every edit so the
+            % underlying cell-of-strings (refsState / chansState) stays
+            % canonical and validation runs on every keystroke commit.
+            % The Channels and References cells are passed verbatim to
+            % read_EDF, so all syntax it supports — mean(), aliasing,
+            % '$LABEL$' escapes, '+' / '-' linear combinations,
+            % inline chaining —
             % is accessible from the GUI.
 
             % Seed dialog state from current app properties so reopening
@@ -1119,7 +1126,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             chanSelectedRows  = [];
 
             ss = get(0, 'ScreenSize');
-            dW = 760; dH = 760;
+            dW = 1100; dH = 720;
             % Non-modal so the user can adjust other parts of the batch
             % (file list, output dir, staging columns) while the
             % composer is open. The closure over `app` keeps the
@@ -1129,113 +1136,127 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Position', [(ss(3)-dW)/2, (ss(4)-dH)/2, dW, dH]);
 
             outer = uigridlayout(d);
-            outer.RowHeight = {'1.4x', '1.3x', '1.5x', 26, 44};
-            outer.ColumnWidth = {'1x'};
-            outer.Padding = [10 10 10 10];
-            outer.RowSpacing = 8;
+            outer.RowHeight    = {'1x', 26, 44};
+            outer.ColumnWidth  = {'1.2x', 130, '1.5x'};
+            outer.Padding      = [10 10 10 10];
+            outer.RowSpacing   = 8;
+            outer.ColumnSpacing= 10;
 
-            % ---- Panel 1: Available Channels (read-only) ----
-            p1 = uigridlayout(outer);
-            p1.Layout.Row = 1;
-            p1.RowHeight = {22, '1x'};
-            p1.ColumnWidth = {'1x'};
-            p1.Padding = [0 0 0 0];
-            p1.RowSpacing = 4;
-            CSSuiLabel(p1, 'Style', app.AppStyle, ...
+            % ---- LEFT column: Available Channels (top) + References (bottom) ----
+            leftCol = uigridlayout(outer);
+            leftCol.Layout.Row    = 1;
+            leftCol.Layout.Column = 1;
+            leftCol.RowHeight     = {'1x', '1x'};
+            leftCol.ColumnWidth   = {'1x'};
+            leftCol.Padding       = [0 0 0 0];
+            leftCol.RowSpacing    = 8;
+
+            availPanel = uigridlayout(leftCol);
+            availPanel.Layout.Row = 1;
+            availPanel.RowHeight  = {22, '1x'};
+            availPanel.ColumnWidth= {'1x'};
+            availPanel.Padding    = [0 0 0 0];
+            availPanel.RowSpacing = 4;
+            CSSuiLabel(availPanel, 'Style', app.AppStyle, ...
                 'Text', 'Available Channels', 'FontWeight', '700');
-            availTable = CSSuiTable(p1, ...
+            availTable = CSSuiTable(availPanel, ...
                 'Data', tableData, ...
                 'ColumnName', {'Channel', 'Fs (Hz)', 'Files'}, ...
-                'ColumnWidth', [500, 110, 80], ...
+                'ColumnWidth', [320, 110, 80], ...
                 'Style', app.AppStyle, ...
                 'SelectionType', 'row', ...
                 'SelectionChangedFcn', @(s,e) onAvailSelect(e));
 
-            % ---- Panel 2: References (editable list) ----
-            p2 = uigridlayout(outer);
-            p2.Layout.Row = 2;
-            p2.RowHeight = {22, '1x', 36};
-            p2.ColumnWidth = {'1x'};
-            p2.Padding = [0 0 0 0];
-            p2.RowSpacing = 4;
-            CSSuiLabel(p2, 'Style', app.AppStyle, ...
-                'Text', 'References (helper definitions; ''NAME = expr'')', ...
+            refPanel = uigridlayout(leftCol);
+            refPanel.Layout.Row = 2;
+            refPanel.RowHeight  = {22, '1x', 36};
+            refPanel.ColumnWidth= {'1x'};
+            refPanel.Padding    = [0 0 0 0];
+            refPanel.RowSpacing = 4;
+            CSSuiLabel(refPanel, 'Style', app.AppStyle, ...
+                'Text', 'References (edit Name and Expression in place)', ...
                 'FontWeight', '700');
-            refTable = CSSuiTable(p2, ...
+            refTable = CSSuiTable(refPanel, ...
                 'Data', refRowsToTable(refsState), ...
                 'ColumnName', {'Name', 'Expression'}, ...
-                'ColumnWidth', [120, 580], ...
+                'ColumnWidth', [120, 380], ...
+                'ColumnEditable', [true true], ...
+                'CellEditCallback', @(s,e) onRefCellEdit(e), ...
                 'Style', app.AppStyle, ...
                 'SelectionType', 'row', ...
                 'SelectionChangedFcn', @(s,e) onRefSelect(e));
-            refBtnRow = uigridlayout(p2);
-            refBtnRow.Layout.Row = 3;
-            refBtnRow.RowHeight = {'1x'};
-            refBtnRow.ColumnWidth = {'1x','1x','1x'};
-            refBtnRow.Padding = [0 0 0 0];
+            refBtnRow = uigridlayout(refPanel);
+            refBtnRow.Layout.Row    = 3;
+            refBtnRow.RowHeight     = {'1x'};
+            refBtnRow.ColumnWidth   = {'1x', '1x'};
+            refBtnRow.Padding       = [0 0 0 0];
             refBtnRow.ColumnSpacing = 6;
             CSSuiButton(refBtnRow, 'Style', app.AppStyle, ...
-                'Text', '+ Mean of selected', ...
-                'ButtonPushedFcn', @(s,e) addRefMean());
-            CSSuiButton(refBtnRow, 'Style', app.AppStyle, ...
-                'Text', '+ Custom...', ...
-                'ButtonPushedFcn', @(s,e) addRefCustom());
+                'Text', 'Add row', ...
+                'ButtonPushedFcn', @(s,e) addRefRow());
             CSSuiButton(refBtnRow, 'Style', app.AppStyle, ...
                 'Text', 'Remove selected', ...
                 'ButtonPushedFcn', @(s,e) removeRef());
 
-            % ---- Panel 3: Output Channels (editable list) ----
-            p3 = uigridlayout(outer);
-            p3.Layout.Row = 3;
-            p3.RowHeight = {22, '1x', 36};
-            p3.ColumnWidth = {'1x'};
-            p3.Padding = [0 0 0 0];
-            p3.RowSpacing = 4;
-            CSSuiLabel(p3, 'Style', app.AppStyle, ...
-                'Text', 'Output Channels (one DYNAM-O run per row)', ...
+            % ---- MIDDLE column: button stack ----
+            midCol = uigridlayout(outer);
+            midCol.Layout.Row    = 1;
+            midCol.Layout.Column = 2;
+            midCol.RowHeight     = {44, 44, 16, 44, 44, 16, 44, '1x'};
+            midCol.ColumnWidth   = {'1x'};
+            midCol.Padding       = [0 30 0 0];
+            midCol.RowSpacing    = 6;
+            CSSuiButton(midCol, 'Style', app.AppStyle, ...
+                'Text', '+', ...
+                'ButtonPushedFcn', @(s,e) addPassthrough());
+            CSSuiButton(midCol, 'Style', app.AppStyle, ...
+                'Text', '−', ...
+                'ButtonPushedFcn', @(s,e) removeChan());
+            uipanel(midCol, 'BorderType', 'none');   % spacer
+            CSSuiButton(midCol, 'Style', app.AppStyle, ...
+                'Text', 'Reference...', ...
+                'ButtonPushedFcn', @(s,e) addReferenceSubtraction());
+            CSSuiButton(midCol, 'Style', app.AppStyle, ...
+                'Text', 'Custom...', ...
+                'ButtonPushedFcn', @(s,e) addCustomChannel());
+            uipanel(midCol, 'BorderType', 'none');   % spacer
+            CSSuiButton(midCol, 'Style', app.AppStyle, ...
+                'Text', 'Help', ...
+                'ButtonPushedFcn', @(s,e) showHelp());
+
+            % ---- RIGHT column: Output Channels ----
+            outPanel = uigridlayout(outer);
+            outPanel.Layout.Row    = 1;
+            outPanel.Layout.Column = 3;
+            outPanel.RowHeight     = {22, '1x'};
+            outPanel.ColumnWidth   = {'1x'};
+            outPanel.Padding       = [0 0 0 0];
+            outPanel.RowSpacing    = 4;
+            CSSuiLabel(outPanel, 'Style', app.AppStyle, ...
+                'Text', 'Output Channels (one DYNAM-O run per row; edit in place)', ...
                 'FontWeight', '700');
-            chanTable = CSSuiTable(p3, ...
+            chanTable = CSSuiTable(outPanel, ...
                 'Data', chanRowsToTable(chansState), ...
                 'ColumnName', {'Output Name', 'Expression'}, ...
-                'ColumnWidth', [160, 540], ...
+                'ColumnWidth', [160, 420], ...
+                'ColumnEditable', [true true], ...
+                'CellEditCallback', @(s,e) onChanCellEdit(e), ...
                 'Style', app.AppStyle, ...
                 'SelectionType', 'row', ...
                 'SelectionChangedFcn', @(s,e) onChanSelect(e));
-            chanBtnRow = uigridlayout(p3);
-            chanBtnRow.Layout.Row = 3;
-            chanBtnRow.RowHeight = {'1x'};
-            chanBtnRow.ColumnWidth = {'1x','1x','1x','1x','1x','1x'};
-            chanBtnRow.Padding = [0 0 0 0];
-            chanBtnRow.ColumnSpacing = 6;
-            CSSuiButton(chanBtnRow, 'Style', app.AppStyle, ...
-                'Text', '+ Passthrough', ...
-                'ButtonPushedFcn', @(s,e) addChanPassthrough());
-            CSSuiButton(chanBtnRow, 'Style', app.AppStyle, ...
-                'Text', '+ A - B...', ...
-                'ButtonPushedFcn', @(s,e) addChanReref());
-            CSSuiButton(chanBtnRow, 'Style', app.AppStyle, ...
-                'Text', '+ Mean...', ...
-                'ButtonPushedFcn', @(s,e) addChanMean());
-            CSSuiButton(chanBtnRow, 'Style', app.AppStyle, ...
-                'Text', '+ Rename...', ...
-                'ButtonPushedFcn', @(s,e) addChanRename());
-            CSSuiButton(chanBtnRow, 'Style', app.AppStyle, ...
-                'Text', '+ Custom...', ...
-                'ButtonPushedFcn', @(s,e) addChanCustom());
-            CSSuiButton(chanBtnRow, 'Style', app.AppStyle, ...
-                'Text', 'Remove selected', ...
-                'ButtonPushedFcn', @(s,e) removeChan());
 
             % ---- Status line + OK/Cancel ----
             statusLabel = CSSuiLabel(outer, ...
                 'Style', app.AppStyle, 'Text', '');
-            statusLabel.Layout.Row = 4;
+            statusLabel.Layout.Row    = 2;
+            statusLabel.Layout.Column = [1 3];
 
             bottomRow = uigridlayout(outer);
-            bottomRow.Layout.Row = 5;
-            bottomRow.RowHeight = {'1x'};
-            bottomRow.ColumnWidth = {'1x', 110, 110};
-            bottomRow.Padding = [0 0 0 0];
+            bottomRow.Layout.Row    = 3;
+            bottomRow.Layout.Column = [1 3];
+            bottomRow.RowHeight     = {'1x'};
+            bottomRow.ColumnWidth   = {'1x', 110, 110};
+            bottomRow.Padding       = [0 0 0 0];
             bottomRow.ColumnSpacing = 8;
             uipanel(bottomRow, 'BorderType', 'none');  % spacer
             okBtn = CSSuiButton(bottomRow, 'Style', app.AppStyle, ...
@@ -1400,27 +1421,41 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 end
             end
 
-            % ---- Reference button callbacks ----
-            function addRefMean()
-                if numel(availSelectedRows) < 2
-                    uialert(d, 'Select at least 2 rows in Available Channels first.', ...
-                        'Mean of selected', 'Icon', 'info');
-                    return
+            function nm = firstName(s)
+                eq = strfind(s, '=');
+                if isempty(eq), nm = ''; else, nm = strtrim(s(1:eq(1)-1)); end
+            end
+
+            function aug = augmentedLabels()
+                aug = all_edf_labels;
+                for kk = 1:numel(refsState)
+                    nm = firstName(refsState{kk});
+                    if ~isempty(nm), aug{end+1} = nm; end
                 end
-                lbls = tableData(availSelectedRows, 1);
-                nm = promptName('Name for the mean reference:', defaultMeanName(lbls));
-                if isempty(nm), return, end
-                if ~okNewRefName(nm), return, end
-                refsState{end+1} = sprintf('%s = mean(%s)', nm, strjoin(lbls, ', '));
+            end
+
+            % ---- References table: inline edit + add/remove rows ----
+            function onRefCellEdit(evt)
+                r = evt.Indices(1);
+                c = evt.Indices(2);
+                if r < 1 || r > numel(refsState), return, end
+                [n, e] = splitNameExpr(refsState{r});
+                newVal = strtrim(char(evt.NewData));
+                if c == 1
+                    n = newVal;
+                else
+                    e = newVal;
+                end
+                if isempty(n) && isempty(e)
+                    refsState(r) = [];
+                else
+                    refsState{r} = sprintf('%s = %s', n, e);
+                end
                 refresh();
             end
 
-            function addRefCustom()
-                [nm, ex] = promptNameAndExpr('Add Custom Reference', '', '');
-                if isempty(nm) && isempty(ex), return, end
-                if isempty(nm), uialert(d, 'Reference name is required.', 'Custom', 'Icon', 'error'); return, end
-                if ~okNewRefName(nm), return, end
-                refsState{end+1} = sprintf('%s = %s', nm, ex);
+            function addRefRow()
+                refsState{end+1} = ' = ';
                 refresh();
             end
 
@@ -1431,88 +1466,37 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 refresh();
             end
 
-            function tf = okNewRefName(nm)
-                tf = true;
-                if any(strcmpi(nm, all_edf_labels))
-                    uialert(d, sprintf('"%s" is already an EDF label.', nm), 'Name collision', 'Icon', 'error');
-                    tf = false; return
+            % ---- Output Channels: inline edit + middle-column ops ----
+            function onChanCellEdit(evt)
+                r = evt.Indices(1);
+                c = evt.Indices(2);
+                if r < 1 || r > numel(chansState), return, end
+                [n, e] = splitNameExpr(chansState{r});
+                newVal = strtrim(char(evt.NewData));
+                if c == 1
+                    n = newVal;
+                else
+                    e = newVal;
                 end
-                existing = cellfun(@(s) firstName(s), refsState, 'UniformOutput', false);
-                if any(strcmpi(nm, existing))
-                    uialert(d, sprintf('"%s" is already a reference name.', nm), 'Name collision', 'Icon', 'error');
-                    tf = false; return
+                if isempty(n) && isempty(e)
+                    chansState(r) = [];
+                elseif isempty(n)
+                    chansState{r} = e;
+                else
+                    chansState{r} = sprintf('%s = %s', n, e);
                 end
+                refresh();
             end
 
-            function nm = firstName(s)
-                eq = strfind(s, '=');
-                if isempty(eq), nm = ''; else, nm = strtrim(s(1:eq(1)-1)); end
-            end
-
-            % ---- Output channel button callbacks ----
-            function addChanPassthrough()
+            function addPassthrough()
                 if isempty(availSelectedRows)
                     uialert(d, 'Select rows in Available Channels first.', ...
-                        'Passthrough', 'Icon', 'info');
+                        'Add Passthrough', 'Icon', 'info');
                     return
                 end
                 lbls = tableData(availSelectedRows, 1);
                 for kk = 1:numel(lbls)
                     chansState{end+1} = lbls{kk};
-                end
-                refresh();
-            end
-
-            function addChanReref()
-                aug = augmentedLabels();
-                if numel(aug) < 2
-                    uialert(d, 'Need at least two labels (or labels + references).', ...
-                        'A - B', 'Icon', 'info');
-                    return
-                end
-                [chA, chB, alias] = promptABMinus(aug);
-                if isempty(chA), return, end
-                if isempty(alias)
-                    chansState{end+1} = sprintf('%s-%s', chA, chB);
-                else
-                    chansState{end+1} = sprintf('%s = %s-%s', alias, chA, chB);
-                end
-                refresh();
-            end
-
-            function addChanMean()
-                if numel(availSelectedRows) < 2
-                    uialert(d, 'Select at least 2 rows in Available Channels first.', ...
-                        'Mean', 'Icon', 'info');
-                    return
-                end
-                lbls = tableData(availSelectedRows, 1);
-                alias = promptName('Optional alias (leave blank to use the raw expression):', '');
-                expr = sprintf('mean(%s)', strjoin(lbls, ', '));
-                if isempty(alias)
-                    chansState{end+1} = expr;
-                else
-                    chansState{end+1} = sprintf('%s = %s', alias, expr);
-                end
-                refresh();
-            end
-
-            function addChanRename()
-                aug = augmentedLabels();
-                [src, alias] = promptRename(aug);
-                if isempty(src) || isempty(alias), return, end
-                chansState{end+1} = sprintf('%s = %s', alias, src);
-                refresh();
-            end
-
-            function addChanCustom()
-                [alias, ex] = promptNameAndExpr('Add Custom Output Channel', '', '');
-                if isempty(alias) && isempty(ex), return, end
-                if isempty(ex), uialert(d, 'Expression required.', 'Custom', 'Icon', 'error'); return, end
-                if isempty(alias)
-                    chansState{end+1} = ex;
-                else
-                    chansState{end+1} = sprintf('%s = %s', alias, ex);
                 end
                 refresh();
             end
@@ -1524,37 +1508,97 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 refresh();
             end
 
-            function aug = augmentedLabels()
-                aug = all_edf_labels;
-                for kk = 1:numel(refsState)
-                    nm = firstName(refsState{kk});
-                    if ~isempty(nm), aug{end+1} = nm; end
+            function addReferenceSubtraction()
+                if isempty(availSelectedRows)
+                    uialert(d, 'Select one or more rows in Available Channels first.', ...
+                        'Reference', 'Icon', 'info');
+                    return
                 end
+                refNames = cellfun(@firstName, refsState, 'UniformOutput', false);
+                refNames = refNames(~cellfun(@isempty, refNames));
+                pickList = [refNames(:)' all_edf_labels(:)'];
+                if isempty(pickList)
+                    uialert(d, 'No references or labels available to subtract.', ...
+                        'Reference', 'Icon', 'info');
+                    return
+                end
+                pick = promptPickFromList( ...
+                    'Subtract from each selected channel:', pickList);
+                if isempty(pick), return, end
+                lbls = tableData(availSelectedRows, 1);
+                for kk = 1:numel(lbls)
+                    chansState{end+1} = sprintf('%s-%s', lbls{kk}, pick);
+                end
+                refresh();
             end
 
-            function nm = defaultMeanName(lbls)
-                if numel(lbls) == 2
-                    nm = sprintf('M_%s_%s', sanitize(lbls{1}), sanitize(lbls{2}));
+            function addCustomChannel()
+                [alias, ex] = promptNameAndExpr('Add Custom Output Channel', '', '');
+                if isempty(alias) && isempty(ex), return, end
+                if isempty(ex)
+                    uialert(d, 'Expression required.', 'Custom', 'Icon', 'error');
+                    return
+                end
+                if isempty(alias)
+                    chansState{end+1} = ex;
                 else
-                    nm = sprintf('M_%dch', numel(lbls));
+                    chansState{end+1} = sprintf('%s = %s', alias, ex);
                 end
-            end
-            function s = sanitize(s)
-                s = regexprep(s, '[^A-Za-z0-9]', '');
+                refresh();
             end
 
-            % ---- Sub-prompts (small modal helpers) ----
-            function nm = promptName(label, defaultVal)
-                pdW = 380; pdH = 150; pdPad = 12;
-                pd = uifigure('Name', 'Enter Name', ...
+            function showHelp()
+                msg = sprintf([ ...
+                    'CHANNEL & REFERENCE COMPOSER\n\n' ...
+                    'LEFT — Available Channels (read-only): all labels found in the\n' ...
+                    'loaded EDF files. Select one or more rows to use them as inputs\n' ...
+                    'for the middle-column buttons.\n\n' ...
+                    'LEFT — References: helper definitions of the form\n' ...
+                    '    NAME = expression\n' ...
+                    'Both columns are editable in place. Press Add row to start a\n' ...
+                    'new reference. Defined references can be referenced by name\n' ...
+                    'inside any later reference or output channel expression.\n' ...
+                    'Examples:\n' ...
+                    '    LM = mean(A1, A2)\n' ...
+                    '    M  = (A1 + A2)\n\n' ...
+                    'MIDDLE — Action buttons:\n' ...
+                    '    +              Add each selected available channel as a\n' ...
+                    '                   passthrough output (no math).\n' ...
+                    '    -              Remove selected output rows.\n' ...
+                    '    Reference...   Subtract a chosen reference (or another\n' ...
+                    '                   channel) from each selected available\n' ...
+                    '                   channel. Produces N output rows.\n' ...
+                    '    Custom...      Free-text expression. Optional alias\n' ...
+                    '                   (output name). Use $LABEL$ to escape\n' ...
+                    '                   labels containing operator characters.\n' ...
+                    '    Help           This dialog.\n\n' ...
+                    'RIGHT — Output Channels: one DYNAM-O run per row. Both\n' ...
+                    'columns editable in place. The Output Name (left column)\n' ...
+                    'becomes the output directory name; the Expression (right)\n' ...
+                    'is what read_EDF actually loads.\n\n' ...
+                    'EXPRESSION SYNTAX (read_EDF):\n' ...
+                    '    Plain label:                C3\n' ...
+                    '    A − B reref:                C3-A2\n' ...
+                    '    Mean of N (N >= 2):         mean(A1, A2)\n' ...
+                    '    Linear combination:         C3 - mean(A1, A2)\n' ...
+                    '    Aliased output:             OUT = mean(C3, C4)\n' ...
+                    '    Reference passthrough:      C3-LM   (LM defined above)\n' ...
+                    '    Escape weird labels:        $EEG A+B$ - $A1$\n']);
+                uialert(d, msg, 'How the composer works', 'Icon', 'info');
+            end
+
+            % ---- Sub-prompts ----
+            function pick = promptPickFromList(label, items)
+                pdW = 460; pdH = 200; pdPad = 12;
+                pd = uifigure('Name', 'Choose', ...
                     'Position', [(ss(3)-pdW)/2, (ss(4)-pdH)/2, pdW, pdH], ...
                     'WindowStyle', 'modal');
                 CSSuiLabel(pd, 'Style', app.AppStyle, 'Text', label, ...
                     'Position', [pdPad, pdH-pdPad-22, pdW-2*pdPad, 22]);
-                ef = CSSuiEditField(pd, 'Style', app.AppStyle, ...
-                    'Value', defaultVal, ...
+                dd = CSSuiDropdown(pd, 'Style', app.AppStyle, ...
+                    'Items', items, ...
                     'Position', [pdPad, pdH-pdPad-22-36-6, pdW-2*pdPad, 36]);
-                nm = '';
+                pick = '';
                 CSSuiButton(pd, 'Style', app.AppStyle, 'Text', 'OK', ...
                     'Position', [pdW-2*90-pdPad-8, pdPad, 90, 36], ...
                     'ButtonPushedFcn', @(s,e) doOk());
@@ -1563,11 +1607,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                     'ButtonPushedFcn', @(s,e) doCan());
                 uiwait(pd);
                 function doOk()
-                    nm = strtrim(ef.Value);
+                    pick = char(dd.Value);
                     if isvalid(pd), delete(pd); end
                 end
                 function doCan()
-                    nm = '';
+                    pick = '';
                     if isvalid(pd), delete(pd); end
                 end
             end
@@ -1577,7 +1621,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 pd = uifigure('Name', title, ...
                     'Position', [(ss(3)-pdW)/2, (ss(4)-pdH)/2, pdW, pdH], ...
                     'WindowStyle', 'modal');
-                CSSuiLabel(pd, 'Style', app.AppStyle, 'Text', 'Name (optional for output channels):', ...
+                CSSuiLabel(pd, 'Style', app.AppStyle, 'Text', 'Output name (optional):', ...
                     'Position', [pdPad, pdH-pdPad-22, pdW-2*pdPad, 22]);
                 efN = CSSuiEditField(pd, 'Style', app.AppStyle, 'Value', defNm, ...
                     'Position', [pdPad, pdH-pdPad-22-32, pdW-2*pdPad, 32]);
@@ -1600,84 +1644,6 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 end
                 function doCan()
                     nm = ''; ex = '';
-                    if isvalid(pd), delete(pd); end
-                end
-            end
-
-            function [chA, chB, alias] = promptABMinus(labels)
-                pdW = 540; pdH = 220; pdPad = 12;
-                pd = uifigure('Name', 'Add A − B Channel', ...
-                    'Position', [(ss(3)-pdW)/2, (ss(4)-pdH)/2, pdW, pdH], ...
-                    'WindowStyle', 'modal');
-                CSSuiLabel(pd, 'Style', app.AppStyle, 'Text', 'A:', ...
-                    'Position', [pdPad, pdH-pdPad-22, 30, 22]);
-                ddA = CSSuiDropdown(pd, 'Style', app.AppStyle, ...
-                    'Items', labels, ...
-                    'Position', [pdPad+30, pdH-pdPad-32, (pdW-2*pdPad-60)/2, 32]);
-                CSSuiLabel(pd, 'Style', app.AppStyle, 'Text', 'B:', ...
-                    'Position', [pdPad+30+(pdW-2*pdPad-60)/2+10, pdH-pdPad-22, 30, 22]);
-                ddB = CSSuiDropdown(pd, 'Style', app.AppStyle, ...
-                    'Items', labels, ...
-                    'Position', [pdPad+60+(pdW-2*pdPad-60)/2+10, pdH-pdPad-32, (pdW-2*pdPad-60)/2-10, 32]);
-                CSSuiLabel(pd, 'Style', app.AppStyle, 'Text', 'Optional alias (output name):', ...
-                    'Position', [pdPad, pdH-pdPad-32-32-6-22, pdW-2*pdPad, 22]);
-                efAlias = CSSuiEditField(pd, 'Style', app.AppStyle, 'Value', '', ...
-                    'Position', [pdPad, pdH-pdPad-32-32-6-22-32, pdW-2*pdPad, 32]);
-                chA = ''; chB = ''; alias = '';
-                CSSuiButton(pd, 'Style', app.AppStyle, 'Text', 'OK', ...
-                    'Position', [pdW-2*90-pdPad-8, pdPad, 90, 36], ...
-                    'ButtonPushedFcn', @(s,e) doOk());
-                CSSuiButton(pd, 'Style', app.AppStyle, 'Text', 'Cancel', ...
-                    'Position', [pdW-90-pdPad, pdPad, 90, 36], ...
-                    'ButtonPushedFcn', @(s,e) doCan());
-                uiwait(pd);
-                function doOk()
-                    chA = ddA.Value; chB = ddB.Value; alias = strtrim(efAlias.Value);
-                    if strcmp(chA, chB)
-                        uialert(pd, 'A and B must be different.', 'Invalid', 'Icon', 'error');
-                        chA = ''; chB = ''; return
-                    end
-                    if isvalid(pd), delete(pd); end
-                end
-                function doCan()
-                    chA = ''; chB = ''; alias = '';
-                    if isvalid(pd), delete(pd); end
-                end
-            end
-
-            function [src, alias] = promptRename(labels)
-                pdW = 540; pdH = 200; pdPad = 12;
-                pd = uifigure('Name', 'Rename Channel', ...
-                    'Position', [(ss(3)-pdW)/2, (ss(4)-pdH)/2, pdW, pdH], ...
-                    'WindowStyle', 'modal');
-                CSSuiLabel(pd, 'Style', app.AppStyle, 'Text', 'Source channel:', ...
-                    'Position', [pdPad, pdH-pdPad-22, pdW-2*pdPad, 22]);
-                ddSrc = CSSuiDropdown(pd, 'Style', app.AppStyle, ...
-                    'Items', labels, ...
-                    'Position', [pdPad, pdH-pdPad-22-32, pdW-2*pdPad, 32]);
-                CSSuiLabel(pd, 'Style', app.AppStyle, 'Text', 'New output name:', ...
-                    'Position', [pdPad, pdH-pdPad-22-32-6-22, pdW-2*pdPad, 22]);
-                efAlias = CSSuiEditField(pd, 'Style', app.AppStyle, 'Value', '', ...
-                    'Position', [pdPad, pdH-pdPad-22-32-6-22-32, pdW-2*pdPad, 32]);
-                src = ''; alias = '';
-                CSSuiButton(pd, 'Style', app.AppStyle, 'Text', 'OK', ...
-                    'Position', [pdW-2*90-pdPad-8, pdPad, 90, 36], ...
-                    'ButtonPushedFcn', @(s,e) doOk());
-                CSSuiButton(pd, 'Style', app.AppStyle, 'Text', 'Cancel', ...
-                    'Position', [pdW-90-pdPad, pdPad, 90, 36], ...
-                    'ButtonPushedFcn', @(s,e) doCan());
-                uiwait(pd);
-                function doOk()
-                    src = ddSrc.Value;
-                    alias = strtrim(efAlias.Value);
-                    if isempty(alias)
-                        uialert(pd, 'New name is required.', 'Rename', 'Icon', 'error');
-                        return
-                    end
-                    if isvalid(pd), delete(pd); end
-                end
-                function doCan()
-                    src = ''; alias = '';
                     if isvalid(pd), delete(pd); end
                 end
             end
