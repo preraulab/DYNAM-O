@@ -1,6 +1,6 @@
 function html = buildLoadingAnimationHtml(~, caption)
     %LOADINGANIMATIONHTML  Build the centered HTML wrapper around
-    %   the dancing-bars SVG (the same one set_running puts on the
+    %   the dancing-bars SVG (the same one setRunningState puts on the
     %   RUN button). Used by both the preview pane placeholder and
     %   the file-tree loading overlay so the GUI's "something is
     %   churning" cue is consistent everywhere.
@@ -8,7 +8,7 @@ function html = buildLoadingAnimationHtml(~, caption)
     %   `caption` is shown beneath the bars (e.g. 'Loading…').
     %   Pass '' to omit.
     if nargin < 2, caption = ''; end
-    % SVG copied verbatim from set_running so updates to either
+    % SVG copied verbatim from setRunningState so updates to either
     % stay coupled. The `currentColor` fill picks up the CSS
     % color we set on the wrapper div.
     svg = ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 135 140" ', ...
