@@ -23,7 +23,7 @@ function previewMatSplinefit(app, p, names)
         if startsWith(varName, 'SOpower'), axis_kind = 'power';
         else,                              axis_kind = 'phase';
         end
-        [freq_bins, so_bins] = app.bins_for_paramfit(SF, p, axis_kind);
+        [freq_bins, so_bins] = app.binsForParamfit(SF, p, axis_kind);
         app.styleSOPHAxes(axS, SF.splinefit, freq_bins, so_bins, axis_kind);
         title(axS, 'Spline-fitted SOPH');
     end

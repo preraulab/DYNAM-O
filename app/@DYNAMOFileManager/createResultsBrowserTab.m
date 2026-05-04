@@ -12,7 +12,7 @@ function createResultsBrowserTab(app)
     app.ResultsBrowserGrid.Padding     = 10;
 
     % 1x3 split: left column | draggable splitter (6 px) | right.
-    % User-draggable splitter — see beginColumnResize().
+    % User-draggable splitter — see startResultsBrowserColumnResize().
     app.BrowserContentContainer                 = uigridlayout(app.ResultsBrowserGrid);
     app.BrowserContentContainer.ColumnWidth     = {'1.2x', 6, '3x'};
     app.BrowserContentContainer.RowHeight       = {'1x'};
@@ -28,7 +28,7 @@ function createResultsBrowserTab(app)
         'BackgroundColor', [0.92 0.93 0.95]);
     app.ResultsSplitter.Layout.Row    = 1;
     app.ResultsSplitter.Layout.Column = 2;
-    app.ResultsSplitter.ButtonDownFcn = @(~,~) app.beginColumnResize();
+    app.ResultsSplitter.ButtonDownFcn = @(~,~) app.startResultsBrowserColumnResize();
     app.ResultsSplitter.Tooltip = ...
         'Drag to resize the tree pane vs the preview pane';
 
@@ -131,7 +131,7 @@ function createResultsBrowserTab(app)
         'BackgroundColor', [0.92 0.93 0.95]);
     app.ResultsRowSplitter.Layout.Row    = 6;
     app.ResultsRowSplitter.Layout.Column = [1 2];
-    app.ResultsRowSplitter.ButtonDownFcn = @(~,~) app.beginRowResize();
+    app.ResultsRowSplitter.ButtonDownFcn = @(~,~) app.startResultsBrowserRowResize();
     app.ResultsRowSplitter.Tooltip = ...
         'Drag to resize the tree vs the status pane';
 

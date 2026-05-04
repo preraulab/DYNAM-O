@@ -40,7 +40,7 @@ function previewMatParamfit(app, p, names)
         tM = uitab(tg, 'Title','model SOPH');
         axM = uiaxes(tM, 'Units','normalized','Position',[0 0 1 1], ...
             'BackgroundColor','white');
-        [freq_bins, so_bins] = app.bins_for_paramfit(PF, p, axis_kind);
+        [freq_bins, so_bins] = app.binsForParamfit(PF, p, axis_kind);
         % model_SOPH comes from meshgrid(so_bins, freq_bins), so it
         % is [Nfreq × Nso]. styleSOPHAxes expects [Nso × Nfreq] —
         % transpose to match.

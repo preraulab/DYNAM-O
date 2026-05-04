@@ -90,8 +90,8 @@ function renderResultsBrowserPreviewTiff(app, p)
             'path', p, 'axis_kind', axis_kind, 'nPage', nPage, ...
             'freq_bins', freq_bins, 'bins', bins);
         app.renderSOPHTiffSliderPage(ctx, 1);
-        sl.ValueChangedFcn = @(s,~) app.jumpSOPHTiff(ctx, round(s.Value));
-        ed.ValueChangedFcn = @(s,~) app.jumpSOPHTiff(ctx, round(s.Value));
+        sl.ValueChangedFcn = @(s,~) app.jumpToSOPHTiffPage(ctx, round(s.Value));
+        ed.ValueChangedFcn = @(s,~) app.jumpToSOPHTiffPage(ctx, round(s.Value));
         app.attachPopOutToolbar(ax, ...
             @(a) app.replotSOPHTiffPage(a, p, axis_kind, 1), ...
             sprintf('SO-%s Histogram', upper(axis_kind(1))));
