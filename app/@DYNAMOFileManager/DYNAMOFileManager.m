@@ -1188,41 +1188,49 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             refBtnRow = uigridlayout(refPanel);
             refBtnRow.Layout.Row    = 3;
             refBtnRow.RowHeight     = {'1x'};
-            refBtnRow.ColumnWidth   = {'1x', '1x'};
+            refBtnRow.ColumnWidth   = {'1x', '1x', '1x', '1x'};
             refBtnRow.Padding       = [0 0 0 0];
             refBtnRow.ColumnSpacing = 6;
             CSSuiButton(refBtnRow, 'Style', app.AppStyle, ...
-                'Text', 'Add row', ...
-                'ButtonPushedFcn', @(s,e) addRefRow());
+                'Text', 'Add Channel', ...
+                'ButtonPushedFcn', @(s,e) addRefChannel());
             CSSuiButton(refBtnRow, 'Style', app.AppStyle, ...
-                'Text', 'Remove selected', ...
+                'Text', 'Create Mean', ...
+                'ButtonPushedFcn', @(s,e) addRefMean());
+            CSSuiButton(refBtnRow, 'Style', app.AppStyle, ...
+                'Text', 'Custom', ...
+                'ButtonPushedFcn', @(s,e) addRefCustom());
+            CSSuiButton(refBtnRow, 'Style', app.AppStyle, ...
+                'Text', 'Remove', ...
                 'ButtonPushedFcn', @(s,e) removeRef());
 
             % ---- MIDDLE column: button stack ----
             midCol = uigridlayout(outer);
             midCol.Layout.Row    = 1;
             midCol.Layout.Column = 2;
-            midCol.RowHeight     = {44, 44, 16, 44, 44, 16, 44, '1x'};
+            midCol.RowHeight     = {'1x', 44, 44, 16, 44, 44, 16, 44, '1x'};
             midCol.ColumnWidth   = {'1x'};
-            midCol.Padding       = [0 30 0 0];
+            midCol.Padding       = [0 0 0 0];
             midCol.RowSpacing    = 6;
+            uipanel(midCol, 'BorderType', 'none');   % top stretch spacer
             CSSuiButton(midCol, 'Style', app.AppStyle, ...
                 'Text', '+', ...
                 'ButtonPushedFcn', @(s,e) addPassthrough());
             CSSuiButton(midCol, 'Style', app.AppStyle, ...
                 'Text', '−', ...
                 'ButtonPushedFcn', @(s,e) removeChan());
-            uipanel(midCol, 'BorderType', 'none');   % spacer
+            uipanel(midCol, 'BorderType', 'none');   % gap
             CSSuiButton(midCol, 'Style', app.AppStyle, ...
                 'Text', 'Reference...', ...
                 'ButtonPushedFcn', @(s,e) addReferenceSubtraction());
             CSSuiButton(midCol, 'Style', app.AppStyle, ...
                 'Text', 'Custom...', ...
                 'ButtonPushedFcn', @(s,e) addCustomChannel());
-            uipanel(midCol, 'BorderType', 'none');   % spacer
+            uipanel(midCol, 'BorderType', 'none');   % gap
             CSSuiButton(midCol, 'Style', app.AppStyle, ...
                 'Text', 'Help', ...
                 'ButtonPushedFcn', @(s,e) showHelp());
+            uipanel(midCol, 'BorderType', 'none');   % bottom stretch spacer
 
             % ---- RIGHT column: Output Channels ----
             outPanel = uigridlayout(outer);
@@ -1454,8 +1462,47 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 refresh();
             end
 
-            function addRefRow()
-                refsState{end+1} = ' = ';
+            function addRefChannel()
+                % "Add Channel" — for each selected available row, append
+                % a reference whose Expression is that channel and Name
+                % is blank for the user to fill in inline. If nothing is
+                % selected, append one fully empty row.
+                if isempty(availSelectedRows)
+                    refsState{end+1} = ' = ';
+                else
+                    lbls = tableData(availSelectedRows, 1);
+                    for kk = 1:numel(lbls)
+                        refsState{end+1} = sprintf(' = %s', lbls{kk});
+                    end
+                end
+                refresh();
+            end
+
+            function addRefMean()
+                % "Create Mean" — needs 2+ available rows selected. Appends
+                % a single reference '= mean(L1, L2, ...)' with blank name
+                % for inline naming.
+                if numel(availSelectedRows) < 2
+                    uialert(d, 'Select at least 2 rows in Available Channels first.', ...
+                        'Create Mean', 'Icon', 'info');
+                    return
+                end
+                lbls = tableData(availSelectedRows, 1);
+                refsState{end+1} = sprintf(' = mean(%s)', strjoin(lbls, ', '));
+                refresh();
+            end
+
+            function addRefCustom()
+                % "Custom" — free-text reference. Name is required (refs
+                % cannot be anonymous); the validator catches an empty
+                % name on commit.
+                [nm, ex] = promptNameAndExpr('Add Custom Reference', '', '');
+                if isempty(nm) && isempty(ex), return, end
+                if isempty(nm)
+                    uialert(d, 'Reference name is required.', 'Custom', 'Icon', 'error');
+                    return
+                end
+                refsState{end+1} = sprintf('%s = %s', nm, ex);
                 refresh();
             end
 
