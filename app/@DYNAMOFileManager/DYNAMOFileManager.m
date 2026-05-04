@@ -738,7 +738,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         %   BUTTON CALLBACKS
         % ==================================================================
 
-        function showHelpButtonPushed(app)
+        function openReadmeInBrowser(app)
             % showHelpButtonPushed  Open the File Manager README in the system web browser.
             %
             %   If an internet connection is available, opens the GitHub README.
@@ -774,10 +774,15 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 web(fileURI, '-browser');
             end
         end
+        function showHelpButtonPushed(app)
+            % showHelpButtonPushed  Thin callback shim — see openReadmeInBrowser.
+            app.openReadmeInBrowser();
+        end
+
 
         % ------------------------------------------------------------------
 
-        function loadDataFileListCallback(app, ~)
+        function loadDataFileListFromFile(app)
             % Prompt user for list file
             [filename, filepath] = uigetfile( ...
                 {'*.txt;*.csv;*.tsv;*.dat;*.lst', ...
@@ -875,10 +880,15 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 uialert(win,sprintf('Logfile saved to:\n%s',logFullPath),'Log Saved','Icon','info');
             end
         end
+        function loadDataFileListCallback(app, ~)
+            % loadDataFileListCallback  Thin callback shim — see loadDataFileListFromFile.
+            app.loadDataFileListFromFile();
+        end
+
 
         % ------------------------------------------------------------------
 
-        function loadStagingListCallback(app, varargin)
+        function loadStagingListFromFile(app)
             % loadStagingListCallback  Load a list of staging file paths
             % from a text/CSV file the user picks. Each line becomes one
             % entry in the staging list. Mirrors loadDataFileListCallback;
@@ -978,10 +988,15 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             end
 
         end
+        function loadStagingListCallback(app, varargin)
+            % loadStagingListCallback  Thin callback shim — see loadStagingListFromFile.
+            app.loadStagingListFromFile();
+        end
+
 
         % ------------------------------------------------------------------
 
-        function DataAddFileButtonPushed(app, ~, ~)
+        function addDataFilesViaDialog(app)
             % DataAddFileButtonPushed  Open file picker to add one or more EDF files.
 
             files = selectFiles(app, 'Select Data Files', 'data');
@@ -991,10 +1006,15 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 updateDataListBox(app);
             end
         end
+        function DataAddFileButtonPushed(app, ~, ~)
+            % DataAddFileButtonPushed  Thin callback shim — see addDataFilesViaDialog.
+            app.addDataFilesViaDialog();
+        end
+
 
         % ------------------------------------------------------------------
 
-        function DataAddFolderButtonPushed(app, ~, ~)
+        function addDataFolderViaDialog(app)
             % DataAddFolderButtonPushed  Add all *.edf, *.edf.gz, *.edf.zst files in a chosen folder.
 
             folder = uigetdir(pwd, 'Select Data Folder');
@@ -1010,10 +1030,15 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 updateDataListBox(app);
             end
         end
+        function DataAddFolderButtonPushed(app, ~, ~)
+            % DataAddFolderButtonPushed  Thin callback shim — see addDataFolderViaDialog.
+            app.addDataFolderViaDialog();
+        end
+
 
         % ------------------------------------------------------------------
 
-        function DataRemoveButtonPushed(app, ~, ~)
+        function removeSelectedDataFiles(app)
             % DataRemoveButtonPushed  Remove currently selected EDF files from the list.
 
             selected = app.DataListBox.Value;
@@ -1021,6 +1046,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.DataList = setdiff(app.DataList, selected, 'stable');
             updateDataListBox(app);
         end
+        function DataRemoveButtonPushed(app, ~, ~)
+            % DataRemoveButtonPushed  Thin callback shim — see removeSelectedDataFiles.
+            app.removeSelectedDataFiles();
+        end
+
 
         % ------------------------------------------------------------------
 
@@ -1040,7 +1070,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
         % ------------------------------------------------------------------
 
-        function StagingAddFileButtonPushed(app, ~, ~)
+        function addStagingFilesViaDialog(app)
             % StagingAddFileButtonPushed  Open file picker to add one or more staging files.
 
             files = selectFiles(app, 'Select Staging Files', 'staging');
@@ -1050,10 +1080,15 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 updateStagingListBox(app);
             end
         end
+        function StagingAddFileButtonPushed(app, ~, ~)
+            % StagingAddFileButtonPushed  Thin callback shim — see addStagingFilesViaDialog.
+            app.addStagingFilesViaDialog();
+        end
+
 
         % ------------------------------------------------------------------
 
-        function StagingAddFolderButtonPushed(app, ~, ~)
+        function addStagingFolderViaDialog(app)
             % StagingAddFolderButtonPushed  Add all *.csv (or *.txt) files from a chosen folder.
             %
             %   Prefers *.csv; falls back to *.txt if no CSV files are found.
@@ -1072,10 +1107,15 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 updateStagingListBox(app);
             end
         end
+        function StagingAddFolderButtonPushed(app, ~, ~)
+            % StagingAddFolderButtonPushed  Thin callback shim — see addStagingFolderViaDialog.
+            app.addStagingFolderViaDialog();
+        end
+
 
         % ------------------------------------------------------------------
 
-        function StagingRemoveButtonPushed(app, ~, ~)
+        function removeSelectedStagingFiles(app)
             % StagingRemoveButtonPushed  Remove currently selected staging files from the list.
 
             selected = app.StagingListBox.Value;
@@ -1083,6 +1123,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             app.StagingList = setdiff(app.StagingList, selected, 'stable');
             updateStagingListBox(app);
         end
+        function StagingRemoveButtonPushed(app, ~, ~)
+            % StagingRemoveButtonPushed  Thin callback shim — see removeSelectedStagingFiles.
+            app.removeSelectedStagingFiles();
+        end
+
 
         % ------------------------------------------------------------------
 
@@ -5329,7 +5374,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
         %   BATCH RUN
         % ==================================================================
 
-        function RunBatchButtonPushed(app, ~, ~)
+        function startBatchRun(app)
             % RunBatchButtonPushed  Validate inputs and launch the batch processing loop.
             %
             %   Performs the following sequence:
@@ -5408,10 +5453,15 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
             runBatch(app, dataList, stagingList)
         end
+        function RunBatchButtonPushed(app, ~, ~)
+            % RunBatchButtonPushed  Thin callback shim — see startBatchRun.
+            app.startBatchRun();
+        end
+
 
         % ------------------------------------------------------------------
 
-        function StopBatchButtonPushed(app, ~, ~)
+        function requestStopBatch(app)
             % StopBatchButtonPushed  Request a graceful stop. Provides
             % immediate visual feedback (status line + disabled button)
             % BEFORE the alert, so the user sees confirmation instantly
@@ -5428,10 +5478,15 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Stop requested. The run will halt after the current channel finishes.', ...
                 'Stopping', 'Icon', 'warning');
         end
+        function StopBatchButtonPushed(app, ~, ~)
+            % StopBatchButtonPushed  Thin callback shim — see requestStopBatch.
+            app.requestStopBatch();
+        end
+
 
         % ------------------------------------------------------------------
 
-        function AboutMenuSelected(app, ~, ~)
+        function showAboutDialog(app)
             % AboutMenuSelected  Help menu → About handler. Opens a
             % modal-ish uifigure with the toolbox name, version, and
             % links to the lab + documentation.
@@ -5507,6 +5562,11 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 end
             end
         end
+        function AboutMenuSelected(app, ~, ~)
+            % AboutMenuSelected  Thin callback shim — see showAboutDialog.
+            app.showAboutDialog();
+        end
+
 
         % ------------------------------------------------------------------
 
