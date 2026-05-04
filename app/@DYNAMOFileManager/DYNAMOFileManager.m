@@ -1276,6 +1276,17 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 'Text', 'Cancel', 'ButtonPushedFcn', @(s,e) doCancel());
 
             refresh();
+
+            % Pin the parent function's workspace so the button
+            % callbacks (anonymous handles wrapping nested functions)
+            % stay valid after this method returns. MATLAB will GC the
+            % nested workspace once the figure dies; UserData holds a
+            % live reference until then. Without this, non-modal
+            % composers fail intermittently with "Unable to find
+            % function @(s,e)foo()" when CSSuiButton tries to fire its
+            % ButtonPushedFcn — the closure detached.
+            d.UserData = struct('keepAlive', @doCancel);
+
             return  % composer is non-modal; OK/Cancel callbacks finish the work
 
             % ============================================================
@@ -1466,15 +1477,17 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             function addRefChannel()
                 % "Add Channel" — for each selected available row, append
                 % a reference whose Expression is that channel and Name
-                % is blank for the user to fill in inline. If nothing is
-                % selected, append one fully empty row.
+                % is blank for the user to fill in inline. Requires a
+                % selection — no blank-row fallback (those just clutter
+                % the table and force the user to delete them).
                 if isempty(availSelectedRows)
-                    refsState{end+1} = ' = ';
-                else
-                    lbls = tableData(availSelectedRows, 1);
-                    for kk = 1:numel(lbls)
-                        refsState{end+1} = sprintf(' = %s', lbls{kk});
-                    end
+                    uialert(d, 'Select one or more rows in Available Channels first.', ...
+                        'Add Channel', 'Icon', 'info');
+                    return
+                end
+                lbls = tableData(availSelectedRows, 1);
+                for kk = 1:numel(lbls)
+                    refsState{end+1} = sprintf(' = %s', lbls{kk});
                 end
                 refresh();
             end
