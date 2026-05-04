@@ -634,9 +634,9 @@ classdef DYNAMO < handle
             fit_pow = []; coefs_pow = []; knots_x_pow = []; knots_y_pow = [];
             fit_phase = []; coefs_phase = []; knots_x_phase = []; knots_y_phase = [];
             try
-                [fit_pow, coefs_pow, s_pow, knots_x_pow, knots_y_pow] = ...
+                [fit_pow, coefs_pow, s_pow, knots_x_pow, knots_y_pow, fit_so_pow, fit_freq_pow] = ...
                     spline_basis('power', obj.SOPHs.SOpower_mat, obj.SOPHs.SOpower_bins, obj.SOPHs.freq_bins, opts_pow);
-                obj.SOPHs.SOpower_splinefit = obj.createSOPHsplinefitStruct(fit_pow, coefs_pow, s_pow, knots_x_pow, knots_y_pow);
+                obj.SOPHs.SOpower_splinefit = obj.createSOPHsplinefitStruct(fit_pow, coefs_pow, s_pow, knots_x_pow, knots_y_pow, fit_so_pow, fit_freq_pow);
                 pow_ok = true;
             catch ME_pow
                 obj.SOPHs.SOpower_splinefit = [];
@@ -645,9 +645,9 @@ classdef DYNAMO < handle
             end
 
             try
-                [fit_phase, coefs_phase, s_phase, knots_x_phase, knots_y_phase] = ...
+                [fit_phase, coefs_phase, s_phase, knots_x_phase, knots_y_phase, fit_so_phase, fit_freq_phase] = ...
                     spline_basis('phase', obj.SOPHs.SOphase_mat, obj.SOPHs.SOphase_bins, obj.SOPHs.freq_bins, opts_phase);
-                obj.SOPHs.SOphase_splinefit = obj.createSOPHsplinefitStruct(fit_phase, coefs_phase, s_phase, knots_x_phase, knots_y_phase);
+                obj.SOPHs.SOphase_splinefit = obj.createSOPHsplinefitStruct(fit_phase, coefs_phase, s_phase, knots_x_phase, knots_y_phase, fit_so_phase, fit_freq_phase);
                 phase_ok = true;
             catch ME_phase
                 obj.SOPHs.SOphase_splinefit = [];
@@ -1463,7 +1463,7 @@ classdef DYNAMO < handle
         end
     end
 
-    methods (Static, Access = protected)
+    methods (Static)
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % createSOPHsStruct
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1534,14 +1534,22 @@ classdef DYNAMO < handle
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % createSOPHsplinefitStruct
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function [SOPH_splinefit] = createSOPHsplinefitStruct(splinefit, coefs, spline_obj, knots_x, knots_y)
-            %CREATESOPHSPLINEFITSTRUCT  Pack spline fit outputs into struct
+        function [SOPH_splinefit] = createSOPHsplinefitStruct(splinefit, coefs, spline_obj, knots_x, knots_y, fit_SOfeature_bins, fit_freq_bins)
+            %CREATESOPHSPLINEFITSTRUCT  Pack spline fit outputs into struct.
+            %   fit_SOfeature_bins / fit_freq_bins (optional) are the
+            %   filtered fit-domain bins from spline_basis — required by
+            %   the GUI save path so the spline tiff metadata can carry
+            %   the bins page 2 was actually rendered on.
+            if nargin < 6, fit_SOfeature_bins = []; end
+            if nargin < 7, fit_freq_bins      = []; end
             SOPH_splinefit = struct;
             SOPH_splinefit.splinefit = splinefit;
             SOPH_splinefit.coefs = coefs;
             SOPH_splinefit.spline_obj = spline_obj;
             SOPH_splinefit.knots_x = knots_x;
             SOPH_splinefit.knots_y = knots_y;
+            SOPH_splinefit.fit_SOfeature_bins = fit_SOfeature_bins;
+            SOPH_splinefit.fit_freq_bins      = fit_freq_bins;
         end
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1579,28 +1587,45 @@ classdef DYNAMO < handle
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function writeTiff(filename,data,description)
             % Optional `description` (char/string/struct) is embedded in
-            % the ImageDescription tag — used by SOPH writes to carry
-            % freq_bins / SO bins so downstream readers can label axes.
+            % the ImageDescription tag of page 1 — used by SOPH writes
+            % to carry freq_bins / SO bins so downstream readers can
+            % label axes. `data` may be a single 2-D matrix or a cell
+            % array of matrices (one per page); pages may differ in
+            % size. Used by the spline writer to ship coefs on page 1
+            % and the rendered fit on page 2.
 
             if nargin < 3, description = []; end
             if isstruct(description), description = jsonencode(description); end
 
-            t = Tiff(filename, 'w');
-
-            tagstruct.ImageLength = size(data, 1);
-            tagstruct.ImageWidth = size(data, 2);
-            tagstruct.Photometric = Tiff.Photometric.MinIsBlack;
-            tagstruct.BitsPerSample = 64;              % Use 64 for double precision
-            tagstruct.SamplesPerPixel = 1;
-            tagstruct.SampleFormat = Tiff.SampleFormat.IEEEFP; % Key for negative/floats
-            tagstruct.PlanarConfiguration = Tiff.PlanarConfiguration.Chunky;
-            if ~isempty(description)
-                tagstruct.ImageDescription = char(description);
+            if iscell(data)
+                pages = data;
+            else
+                pages = {data};
             end
 
-            t.setTag(tagstruct);
-            t.write(data);
-            t.close();
+            t = Tiff(filename, 'w');
+            cleaner = onCleanup(@() close(t)); %#ok<NASGU>
+
+            for kk = 1:numel(pages)
+                page = pages{kk};
+                tagstruct = struct();
+                tagstruct.ImageLength = size(page, 1);
+                tagstruct.ImageWidth = size(page, 2);
+                tagstruct.Photometric = Tiff.Photometric.MinIsBlack;
+                tagstruct.BitsPerSample = 64;              % Use 64 for double precision
+                tagstruct.SamplesPerPixel = 1;
+                tagstruct.SampleFormat = Tiff.SampleFormat.IEEEFP; % Key for negative/floats
+                tagstruct.PlanarConfiguration = Tiff.PlanarConfiguration.Chunky;
+                if kk == 1 && ~isempty(description)
+                    tagstruct.ImageDescription = char(description);
+                end
+
+                t.setTag(tagstruct);
+                t.write(page);
+                if kk < numel(pages)
+                    t.writeDirectory();
+                end
+            end
 
         end
 

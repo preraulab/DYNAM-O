@@ -74,6 +74,7 @@ histograms.
   - [stats_table](#stats_table--tf-peak-features)
   - [SOPHs](#sophs--histogram-struct)
   - [timings](#timings--per-stage-wallclock)
+- [Saved file formats (GUI batch outputs)](#saved-file-formats-gui-batch-outputs)
 - [Repository Structure](#repository-structure)
 - [Algorithm details and background](#algorithm-details-and-background)
 
@@ -623,6 +624,230 @@ Optional 9th output. Struct with per-stage wallclock seconds.
 | `fit_param_basis` | Parametric fit (if `fit_param_basis=true`) |
 | `fit_spline_basis` | Spline fit (if `fit_spline_basis=true`) |
 | `total` | End-to-end wallclock |
+
+<p align="right"><sub><a href="#table-of-contents">↑ Back to Table of Contents</a></sub></p>
+
+---
+
+## Saved file formats (GUI batch outputs)
+
+The DYNAM-O File Manager writes per-subject results into
+`<output_dir>/<channel>/<subdir>/`. For each artefact type the
+**Saving Options** panel exposes a checkbox (save / don't save) and a
+file-format dropdown with `--`, a slim format, `.mat`, and `All`.
+Default for all four save formats is `All` so reconstruction is
+always possible — pick a single format only when you know what you
+need.
+
+This section documents what each format contains, when it's
+sufficient, and minimal read snippets in MATLAB and Python.
+
+### Peak stats table — `stats_table/`
+
+Per-subject TF-peak feature table (one row per detected peak; columns
+described in [stats_table](#stats_table--tf-peak-features)).
+
+| Format | What it contains | Reconstruct? |
+|---|---|---|
+| `.csv` | All scalar columns from `stats_table` | ✅ full |
+| `.mat` | `stats_table` table variable | ✅ full |
+| `All`  | both | ✅ full |
+
+`.csv` is the canonical interchange format here; `.mat` is mainly for
+keeping native MATLAB `categorical`s and round-tripping into other
+DYNAM-O calls without re-typing.
+
+```matlab
+% MATLAB
+T = readtable('subj01_stats_table_C3.csv');
+S = load('subj01_stats_table_C3.mat');  T = S.stats_table;
+```
+
+```python
+# Python
+import pandas as pd, scipy.io as sio
+T  = pd.read_csv('subj01_stats_table_C3.csv')
+M  = sio.loadmat('subj01_stats_table_C3.mat', squeeze_me=True)
+```
+
+### SO-Histograms (SOPHs) — `SOPHs/`
+
+Per-subject 2-D histograms of TF-peak rate by frequency × SO-feature
+(SO-power and SO-phase). The toolbox writes one file per axis
+(`*_SOPHs_<channel>` for `.mat`; `*_SOpower_SOPHs_<channel>` and
+`*_SOphase_SOPHs_<channel>` for `.tiff`).
+
+| Format | What it contains | Reconstruct? |
+|---|---|---|
+| `.tiff` | 2-D histogram (`double` IEEE float). `ImageDescription` JSON tag carries `freq_bins` and `SOpower_bins` / `SOphase_bins` so a reader can recover the axes without a sidecar. | ✅ full (image + bins) |
+| `.mat`  | The full `SOPHs` struct (see [SOPHs](#sophs--histogram-struct)) — also includes time-in-bin, peak-level coordinates, and any fits already computed. | ✅ full + extras |
+
+```matlab
+% MATLAB — read .tiff + bins
+M    = imread('subj01_SOpower_SOPHs_C3.tiff');
+info = imfinfo('subj01_SOpower_SOPHs_C3.tiff');
+meta = jsondecode(info(1).ImageDescription);  % .freq_bins, .SOpower_bins
+% MATLAB — read .mat
+S    = load('subj01_SOPHs_C3.mat');           % S.SOPHs.*
+```
+
+```python
+# Python — read .tiff + bins
+import json, tifffile, numpy as np, scipy.io as sio
+with tifffile.TiffFile('subj01_SOpower_SOPHs_C3.tiff') as tf:
+    M    = tf.asarray()
+    meta = json.loads(tf.pages[0].tags['ImageDescription'].value)
+freq_bins, sopower_bins = meta['freq_bins'], meta['SOpower_bins']
+
+# Python — read .mat
+S = sio.loadmat('subj01_SOPHs_C3.mat', squeeze_me=True, struct_as_record=False)
+SOPHs = S['SOPHs']
+```
+
+### Parametric basis fit — `param_basis/`
+
+Closed-form fit of each SOPH as a sum of rotated 2-D Gaussian
+(power) or von-Mises × Gaussian (phase) modes plus a linear
+background plane:
+
+```
+SOPH(x,y) = Σₙ basis_n(x,y; ampₙ, fmeanₙ, fstdₙ, pmeanₙ, pstdₙ, θₙ)
+            + xxx·x + yyy·y + zzz
+```
+
+| Format | What it contains | Reconstruct? |
+|---|---|---|
+| `.csv` | Per-mode params table (`Amplitude, FreqMean, FreqStd, …, Theta`, plus phase-coupling annotation columns for power) **and a fixed-format comment header** carrying `background.{xxx,yyy,zzz}`, `unit_row` (phase only), `gof.{sse,rsquare,dfe,adjrsquare,rmse}`, the source `freq_bins` / `SOpower_bins` (or `SOphase_bins`), and the **raw fitobj coefficients** (`fitobj_coefnames` + `fitobj_coefvalues` JSON arrays). Header lines start with `# ` and are skipped by both MATLAB `readtable` (`'CommentStyle','#'`) and pandas (`comment='#'`). | ✅ full — use `fitobj_coefvalues` for exact reconstruction |
+| `.mat`  | Full `*_paramfit` struct — params table, `fitobj` (MATLAB `cfit`), `gof` struct, `model_SOPH` (rendered model), `wshed_img` (watershed segmentation). | ✅ full + cfit + rendered model + watershed |
+| `All`   | both | ✅ |
+
+> ⚠️ **Phase Amplitude is not the raw fit coefficient.** For phase fits,
+> `param_basis_phase.m` overwrites `params(:,1)` after fitting with an
+> *empirical* no-sin amplitude (the model surface value at the peak's
+> location with the sinusoidal background zeroed out) so that the
+> `Amplitude` column reflects a human-interpretable peak height. Power
+> fits do **not** apply this transformation. **For exact reconstruction
+> of phase `model_SOPH`, use `fitobj_coefvalues` from the header — not
+> the `Amplitude` column.** Power fits can be reconstructed either way
+> (the values agree).
+
+The Results Browser CSV preview detects the comment header and
+splits the view: a key/value table on top showing the plane,
+`unit_row`, gof, bins, and the raw fit coefficients; the per-mode
+params table below.
+
+```matlab
+% MATLAB — params table + header (one-shot helper)
+path = 'subj01_SOpower_paramfit_C3.csv';
+T    = readtable(path, 'CommentStyle','#');
+fid  = fopen(path,'r');  c = onCleanup(@() fclose(fid));
+hdr  = struct();
+while true
+    L = fgetl(fid); if ~ischar(L) || ~startsWith(strtrim(L),'#'), break, end
+    tok = regexp(L, '^#\s*([^:]+):\s*(.*)$', 'tokens', 'once');
+    if numel(tok) == 2
+        key = matlab.lang.makeValidName(tok{1});
+        val = tok{2};
+        if startsWith(val,'[') || startsWith(val,'"')
+            hdr.(key) = jsondecode(val);
+        else
+            n = str2double(val); if ~isnan(n), hdr.(key) = n; else, hdr.(key) = val; end
+        end
+    end
+end
+% hdr.background_xxx, hdr.fitobj_coefnames, hdr.fitobj_coefvalues, hdr.freq_bins, …
+```
+
+```python
+# Python — params table + header dict (with array fields parsed)
+import json, pandas as pd, re
+path = 'subj01_SOpower_paramfit_C3.csv'
+T    = pd.read_csv(path, comment='#')
+
+hdr = {}
+with open(path) as f:
+    for line in f:
+        if not line.startswith('#'): break
+        m = re.match(r'#\s*([^:]+):\s*(.*)$', line.rstrip())
+        if not m: continue
+        key, val = m.group(1).strip(), m.group(2).strip()
+        if val.startswith('[') or val.startswith('"'):
+            hdr[key] = json.loads(val)
+        else:
+            try: hdr[key] = float(val)
+            except ValueError: hdr[key] = val
+# hdr['background.xxx'], hdr['fitobj_coefnames'], hdr['fitobj_coefvalues'], …
+```
+
+### Spline basis fit — `spline_basis/`
+
+Tensor-product cubic B-spline fit of each SOPH on a small
+`(num_knots_x+2) × (num_knots_y+2)` lattice of control points
+(`coefs`).
+
+| Format | What it contains | Reconstruct? |
+|---|---|---|
+| `.tiff` | **2-page** TIFF. Page 1 = `coefs` (the parameter matrix that *is* the model); `ImageDescription` JSON carries `knots_x`, `knots_y`, `freq_bins`, `SOpower_bins` / `SOphase_bins`, plus `page1`/`page2` labels. Page 2 = `splinefit` (the rendered fit on the fit-domain grid) for direct preview without rebuilding the spline. | ✅ full (coefs + knots + fit-domain bins) |
+| `.mat`  | Full `*_splinefit` struct: `splinefit`, `coefs`, `knots_x`, `knots_y`, `spline_obj` (MATLAB `spap2` form), plus `fit_SOfeature_bins` / `fit_freq_bins` (the bins the fit was actually computed on). | ✅ full + ready-to-`fnval` `spline_obj` |
+| `All`   | both | ✅ |
+
+> ⚠️ **The bins in the spline TIFF are the fit-domain bins, not the
+> source SOPH bins.** `spline_basis.m` filters bins by
+> `power_limits` / `phase_limits` / `freq_limits` and an
+> all-finite-rows validity mask before fitting (`spline_basis.m` ~ line
+> 146). Page 2 is the spline rendered on those filtered bins, so the
+> bins listed in `ImageDescription` are smaller than the full
+> `SOPHs.SOpower_bins` / `freq_bins`. They're also what you need to
+> feed `spap2` / `fnval` to exactly reproduce page 2.
+
+```matlab
+% MATLAB — coefs + metadata from page 1, rendered fit from page 2
+path  = 'subj01_SOpower_splinefit_C3.tiff';
+coefs     = double(imread(path, 1));   % size (n_y+2) × (n_x+2)
+splinefit = double(imread(path, 2));   % rendered on fit-domain bins
+info = imfinfo(path);
+meta = jsondecode(info(1).ImageDescription);   % knots_x, knots_y, fit-domain bins
+
+% Reconstruct on the same grid (recovers page 2 exactly):
+sp = spmak({augknt(meta.knots_x,3), augknt(meta.knots_y,3)}, coefs.');
+[X, Y] = ndgrid(meta.SOpower_bins, meta.freq_bins);
+splinefit_recon = reshape(fnval(sp, [X(:)'; Y(:)']), size(X));
+% then fnval(sp, [Xq(:)'; Yq(:)']) on any (Xq, Yq) ndgrid you like.
+```
+
+```python
+# Python — coefs + metadata + rendered preview (via tifffile + scipy)
+import json, tifffile, numpy as np
+from scipy.interpolate import BSpline   # or RectBivariateSpline
+
+with tifffile.TiffFile('subj01_SOpower_splinefit_C3.tiff') as tf:
+    coefs     = tf.pages[0].asarray()      # (n_y+2, n_x+2)
+    splinefit = tf.pages[1].asarray()      # rendered, on fit-domain bins
+    meta      = json.loads(tf.pages[0].tags['ImageDescription'].value)
+# Off-grid reconstruction: build cubic B-splines using
+# meta['knots_x'], meta['knots_y'] (augmented in MATLAB via augknt) and
+# coefs.T to match MATLAB's [n_x, n_y] layout.
+```
+
+### Auxiliary data — `auxiliary_data/`
+
+Per-subject `.mat` only. Contains `artifacts`, `Fs`,
+`SOpower_norm_method`, and other run-time scalars used by the
+Results Browser and the aggregation step.
+
+### Figures — `figures/`
+
+`.png`, `.tiff`, `.pdf` exports of summary, parametric, and spline
+figures. These are renderings — they are *not* reloadable into
+DYNAM-O state.
+
+### Aggregates — `<output_dir>/aggregates/<channel>/`
+
+Cross-subject stacks built by the Results Browser **Aggregate**
+action. The aggregate `.tiff`s are multi-page (one page per subject)
+with the same `ImageDescription` bin metadata and a sibling
+`*_subjectIDs.txt` listing subject IDs in page order; the
+aggregate `.mat`s carry concatenated histogram and paramfit tables.
 
 <p align="right"><sub><a href="#table-of-contents">↑ Back to Table of Contents</a></sub></p>
 

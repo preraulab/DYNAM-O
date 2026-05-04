@@ -20,6 +20,12 @@ function createUIFigureAndShell(app)
     % Set the callback ON THE PANEL, not the figure
     app.UIFigure.SizeChangedFcn = @(src, event) app.enforceMinSize;
 
+    % Tear down child windows + timers on close. Without this, the
+    % composer dialog, Run Log Console, header viewer, and the
+    % LogConsoleTimer all keep running with stale callbacks pointing
+    % at a deleted app instance.
+    app.UIFigure.CloseRequestFcn = @(~,~) app.uiFigureCloseRequest();
+
     % ---- File Menu ----
     app.FileMenu      = uimenu(app.UIFigure);
     app.FileMenu.Text = 'File';
@@ -62,7 +68,7 @@ function createUIFigureAndShell(app)
     % ---- Analysis Tab (third) — host for SO-Histograms and any
     %      future cross-channel visualisations.
     app.AnalysisTab       = uitab(app.ProjectTabGroup);
-    app.AnalysisTab.Title = 'Analysis';
+    app.AnalysisTab.Title = 'Aggregate Data';
 
     % Root grid: 1 column × 3 rows (instructions | main content | bottom bar)
     app.FullDYNAMOSetupGrid             = uigridlayout(app.DYNAMOSetupTab);

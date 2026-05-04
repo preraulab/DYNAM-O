@@ -392,7 +392,15 @@ for ii = 1:total
     try
         switch fmt
             case 'csv'
-                Ti = readtable(p, 'VariableNamingRule', 'preserve');
+                % Per-subject paramfit CSVs start with ~16 lines of
+                % '#'-prefixed metadata (background coefs, gof, bins,
+                % fitobj coef names/values — see writeParamfitCsv.m).
+                % CommentStyle='#' is the documented contract; without
+                % it, readtable treats those metadata lines as data
+                % and the stacked aggregate is garbage.
+                Ti = readtable(p, ...
+                    'VariableNamingRule', 'preserve', ...
+                    'CommentStyle',       '#');
             case 'mat'
                 S  = load(p);
                 Ti = locate_paramfit_table(S);

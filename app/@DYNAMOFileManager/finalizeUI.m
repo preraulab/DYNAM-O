@@ -16,16 +16,18 @@ function finalizeUI(app)
     app.AboutMenu.Text = 'About DYNAM-O...';
     app.AboutMenu.Separator = 'on';
 
-    % Make figure visible now that all components exist
-    app.UIFigure.Visible = 'on';
+    % NOTE: figure stays Visible='off' here. The constructor flips it on
+    % once at the very end (after applyQuickFill + drawnow) so the user
+    % never sees the window mid-population.
     app.applyFont;   % propagate FontName to all controls
 
     % ============================================================
     %   TOOLTIPS
     % ============================================================
 
-    app.ChannelEditField.HTMLComponent.Tooltip      = 'Comma-separated list of channels to run. Click ''Select'' button to scan files and select.';
-    app.ChannelEditFieldLabel.HTMLComponent.Tooltip = 'Comma-separated list of channels to run. Click ''Select'' button to scan files and select.';
+    % Channel + reference tooltips reflect current state and are
+    % refreshed from updateChannelTooltips on every composer commit.
+    app.updateChannelTooltips();
     app.DelimeterOptionField.HTMLComponent.Tooltip       = 'Select delimiter used in the staging file';
 
     % Apply tooltips to all stage label fields programmatically
@@ -48,9 +50,14 @@ function finalizeUI(app)
 
     % Wire ValueChangedFcn on all validated fields so errors clear
     % immediately when the user corrects the value.
+    % ChannelEditField is intentionally absent: the composer is the
+    % single writer for that field, and run-time validation surfaces
+    % "no channels" by reddening the launcher button (ViewChannelsButton)
+    % rather than the (read-only) channel field. Wiring this field's
+    % ValueChangedFcn here would do nothing useful since the user
+    % cannot type into it.
     clearFields = { ...
         app.OutputDirEditField, ...
-        app.ChannelEditField, ...
         app.StagesColumnEditField, ...
         app.TimesColumnEditField, ...
         app.HeaderRowsEditField ...

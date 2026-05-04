@@ -18,8 +18,8 @@ function files = dynamo_files_for_components(subject, channel, components)
 %                  + <chan>/TFpeaks/<subj>_stats_table_<chan>.csv
 %       'paramfit' → <chan>/param_basis/<subj>_SOpower_paramfit_<chan>.{mat,csv}
 %                  → <chan>/param_basis/<subj>_SOphase_paramfit_<chan>.{mat,csv}
-%       'spline'   → <chan>/spline_basis/<subj>_SOpower_splinefit_<chan>.{mat,csv}
-%                  → <chan>/spline_basis/<subj>_SOphase_splinefit_<chan>.{mat,csv}
+%       'spline'   → <chan>/spline_basis/<subj>_SOpower_splinefit_<chan>.{mat,tiff}
+%                  → <chan>/spline_basis/<subj>_SOphase_splinefit_<chan>.{mat,tiff}
 %
 %   The synth includes both .mat and .csv (or .tiff) companion files even
 %   though a given run may have saved only one format — downstream
@@ -74,11 +74,11 @@ function files = dynamo_files_for_components(subject, channel, components)
             case 'spline'
                 files{end+1} = sprintf('%s/spline_basis/%s_SOpower_splinefit_%s.mat', ...
                     channel, subject, channel); %#ok<AGROW>
-                files{end+1} = sprintf('%s/spline_basis/%s_SOpower_splinefit_%s.csv', ...
+                files{end+1} = sprintf('%s/spline_basis/%s_SOpower_splinefit_%s.tiff', ...
                     channel, subject, channel); %#ok<AGROW>
                 files{end+1} = sprintf('%s/spline_basis/%s_SOphase_splinefit_%s.mat', ...
                     channel, subject, channel); %#ok<AGROW>
-                files{end+1} = sprintf('%s/spline_basis/%s_SOphase_splinefit_%s.csv', ...
+                files{end+1} = sprintf('%s/spline_basis/%s_SOphase_splinefit_%s.tiff', ...
                     channel, subject, channel); %#ok<AGROW>
         end
     end

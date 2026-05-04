@@ -130,8 +130,27 @@ if ~has_derived
     end
 end
 
-[header, signalHeader, data] = read_EDF(edf_fpath, ...
-    'Channels', channels, 'References', References);
+% When resampling is requested, push it down into read_EDF via
+% TargetFs so References / derived-channel math runs on uniformly-
+% resampled raw signals. Otherwise apply_channel_derivations rejects
+% references that combine constituents at different native rates
+% (e.g. EEG@128 + EOG@32). The post-loop smartresample below becomes
+% a no-op in this path; we keep it for the Channels-only,
+% no-References case where read_EDF returned native-rate data.
+if ~isempty(resample_freq)
+    [header, signalHeader, data] = read_EDF(edf_fpath, ...
+        'Channels', channels, 'References', References, ...
+        'TargetFs', resample_freq);
+else
+    [header, signalHeader, data] = read_EDF(edf_fpath, ...
+        'Channels', channels, 'References', References);
+end
+% read_EDF returns signal_cells as a row cell of row vectors. Naive
+% cell2mat would horizontally concatenate them into 1 x (N*C) garbage
+% — single-channel callers got a harmless 1 x N row, but multi-channel
+% bulk reads were silently producing nonsense. Coerce each cell to a
+% column first so cell2mat yields a clean [N x C] matrix.
+data = cellfun(@(x) x(:), data, 'UniformOutput', false);
 data = cell2mat(data);
 
 % signalHeader is now ordered to match channels (including any rereferenced
@@ -173,8 +192,12 @@ else
 end
 
 %% RESAMPLING (if requested)
-if ~isempty(resample_freq) 
+% Most paths already had read_EDF do this via TargetFs (so References
+% see uniform rates). This block remains for safety: if any column of
+% data isn't yet at resample_freq, bring it there.
+if ~isempty(resample_freq) && any(abs(Fs - resample_freq) > 1e-9)
     data = smartresample(data,Fs,resample_freq);
+    Fs = repmat(resample_freq, size(Fs));
 end
 
 end
