@@ -3,6 +3,7 @@ archive/*
 *.DS_store
 output_images/*
 tests/*
+!tests/test_*.m
 *.asv
 .aider*
 .claude/

@@ -146,16 +146,23 @@ if any(strcmpi(features,'Boundaries'))
     stats_table.Properties.VariableUnits{'Boundaries'} = '(seconds, Hz)';
 end
 
+% regionprops returns WeightedCentroid in 1-based pixel-center coords:
+% the center of the upper-left pixel is at (1.0, 1.0). The (-1) shifts to
+% 0-based so a peak at column 1 maps to xvalues(1), not xvalues(2). The
+% legacy toolbox/watershed_functions/ version had this; the (-1) was
+% dropped in the 2022-09-28 camelCase rename (b59fa85), silently biasing
+% PeakTime/PeakFrequency by +1 spectrogram bin until restored here.
+%
 %Peak Time
 if any(strcmpi(features,'PeakTime'))
-    stats_table.PeakTime = stats_table.WeightedCentroid(:,1)*dx+seg_startx; % WeightedCentroid in spatial coordinates
+    stats_table.PeakTime = (stats_table.WeightedCentroid(:,1)-1)*dx+seg_startx;
     stats_table.Properties.VariableDescriptions{'PeakTime'} = 'Peak time based on weighted centroid';
     stats_table.Properties.VariableUnits{'PeakTime'} = 'sec';
 end
 
 %Peak Frequency
 if any(strcmpi(features,'PeakFrequency'))
-    stats_table.PeakFrequency = stats_table.WeightedCentroid(:,2)*dy+seg_starty; % WeightedCentroid in spatial coordinates
+    stats_table.PeakFrequency = (stats_table.WeightedCentroid(:,2)-1)*dy+seg_starty;
     stats_table.Properties.VariableDescriptions{'PeakFrequency'} = 'Peak frequency based on weighted centroid';
     stats_table.Properties.VariableUnits{'PeakFrequency'} = 'Hz';
 end
