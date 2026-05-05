@@ -198,6 +198,23 @@ function runBatch(app, dataList, stagingList)
         subject_loaded_ok    = false;
         channel_load_failed  = false(1, nChannels);
         t_load = tic;
+        % Push resampling down into load_data: it pipes TargetFs
+        % into read_EDF (References-defined fast path) AND also
+        % runs a post-load smartresample(data, Fs, target) which
+        % accepts a vector Fs — so heterogeneous-rate channels
+        % (e.g. EEG@256 + EOG@100, no References) are resampled
+        % per-channel correctly. The previous version reimplemented
+        % resampling here at the matlab level using `bulk_Fs(1)`
+        % for every column, which would silently mis-resample
+        % channels 2..N if bulk_Fs was non-uniform.
+        target_fs_arg = [];
+        if app.ResampleSwitch.Value
+            target_fs_arg = app.ResampleFsEditField.Value;
+            msg = sprintf('Resample target: %g Hz (per-channel inside load_data)...', target_fs_arg);
+            fprintf('%s\n', msg);
+            app.TextArea.addnl(['   ' msg]);
+            drawnow;
+        end
         try
             [bulk_data, bulk_Fs, bulk_stage_times, bulk_stage_vals] = load_data( ...
                 dataList{jj}, ...
@@ -205,37 +222,14 @@ function runBatch(app, dataList, stagingList)
                 app.StagesColumnEditField.Value, ...
                 app.TimesColumnEditField.Value, ...
                 channelList, ...
-                'References',  app.ReferenceList, ...
+                'References',   app.ReferenceList, ...
+                'resample_freq', target_fs_arg, ...
                 'header_lines', app.HeaderRowsEditField.Value, ...
                 'delimiter',    app.delimeter, ...
                 'stage_vals_in', { app.ArtifactUserInput, app.WakeUserInput, ...
                 app.REMUserInput,      app.N1UserInput, ...
                 app.N2UserInput,       app.N3UserInput, ...
                 app.UnknownUserInput });
-
-            % Resample once for every column. With References
-            % defined, load_data's read_EDF call already pushes
-            % TargetFs in and bulk_Fs returns uniformly at the
-            % target rate, making this a no-op — kept for the
-            % References-empty path where read_EDF returned
-            % native rates.
-            if app.ResampleSwitch.Value
-                target_fs = app.ResampleFsEditField.Value;
-                if any(abs(bulk_Fs - target_fs) > 1e-9)
-                    msg = sprintf('Resampling from %g Hz to %g Hz...', bulk_Fs(1), target_fs);
-                    fprintf('%s\n', msg);
-                    app.TextArea.addnl(['   ' msg]);
-                    drawnow;
-                    [pp, qq]  = rat(target_fs / bulk_Fs(1));
-                    bulk_data = resample(bulk_data, pp, qq);
-                    bulk_Fs   = repmat(target_fs, 1, size(bulk_data, 2));
-                else
-                    msg = sprintf('Skipping resample - data already at %g Hz.', target_fs);
-                    fprintf('%s\n', msg);
-                    app.TextArea.addnl(['   ' msg]);
-                    drawnow;
-                end
-            end
 
             % use_no_stages override (after resample so length
             % reflects final Fs).
@@ -280,24 +274,14 @@ function runBatch(app, dataList, stagingList)
                             app.StagesColumnEditField.Value, ...
                             app.TimesColumnEditField.Value, ...
                             channelList(ii_fb), ...
-                            'References',  app.ReferenceList, ...
+                            'References',   app.ReferenceList, ...
+                            'resample_freq', target_fs_arg, ...
                             'header_lines', app.HeaderRowsEditField.Value, ...
                             'delimiter',    app.delimeter, ...
                             'stage_vals_in', { app.ArtifactUserInput, app.WakeUserInput, ...
                             app.REMUserInput,      app.N1UserInput, ...
                             app.N2UserInput,       app.N3UserInput, ...
                             app.UnknownUserInput });
-                        if app.ResampleSwitch.Value
-                            target_fs = app.ResampleFsEditField.Value;
-                            if any(abs(f_ii - target_fs) > 1e-9)
-                                [pp, qq] = rat(target_fs / f_ii(1));
-                                d_ii = resample(d_ii, pp, qq);
-                                f_ii = repmat(target_fs, 1, size(d_ii, 2));
-                            end
-                            % already-at-target case is silent here:
-                            % per-channel loop runs once per channel and a
-                            % message per channel would clutter the log.
-                        end
                         if isempty(bulk_data)
                             bulk_data        = nan(size(d_ii, 1), nChannels);
                             bulk_Fs          = nan(1, nChannels);

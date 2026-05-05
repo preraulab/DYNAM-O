@@ -735,8 +735,13 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             [uniqueValidLines, ia] = unique(validLines, 'stable');
             duplicateLines = validLines(setdiff(1:numel(validLines), ia));
 
-            % Store only valid, unique files
-            app.StagingList = cellstr(uniqueValidLines);
+            % Store only valid, unique files. Force a row cellstr —
+            % `cellstr(<column string array>)` returns a column cellstr,
+            % which then breaks horz-concat in subsequent
+            % "Add Staging Files / Folder" callbacks
+            % (`[app.StagingList, filePaths]`). Mirrors the DataList
+            % fix in loadDataFileListFromFile.
+            app.StagingList = reshape(cellstr(uniqueValidLines), 1, []);
             app.updateStagingListBox;
 
             % Only show dedicated window if there are skipped or duplicate files
