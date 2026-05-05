@@ -13,14 +13,17 @@ function app = openFileInOS(app, varargin)
         return
     end
 
+    % Suppress the launched app's stdout/stderr so Linux desktop
+    % editors (pluma, gedit, ...) don't dump Gtk-CRITICAL warnings
+    % into MATLAB. & on Linux disowns the child so MATLAB doesn't
+    % block on a long-lived editor.
     if ispc        % Windows
         % winopen is a MATLAB function, it handles spaces automatically
         winopen(curr_file);
     elseif ismac   % macOS
-        system(['open -a TextEdit "' curr_file '"']);
+        [~, ~] = system(['open -a TextEdit "' curr_file '"']);
     elseif isunix  % Linux
-        % system() calls the terminal; quotes are required for spaces
-        system(['xdg-open "' curr_file '"']);
+        [~, ~] = system(['xdg-open "' curr_file '" >/dev/null 2>&1 &']);
     end
 
 end
