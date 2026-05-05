@@ -294,7 +294,7 @@ tfp_timings.spect_pass1 = toc(t_stage);
 t_stage = tic;
 if isempty(artifacts)
     if verbose
-        disp('Performing artifact rejection...');
+        fprintf('Performing artifact rejection (%s)...\n', backend);
     end
     artifacts = detect_artifacts(data_time_range, Fs, 'hpFilt_high', artifact_filters.hpFilt_high, 'hpFilt_broad', artifact_filters.hpFilt_broad);
 else
@@ -314,7 +314,7 @@ tfp_timings.baseline_pass1 = toc(t_stage);
 
 %% Compute time-frequency peaks
 if verbose
-    disp('Extracting TF peaks from the spectrogram...');
+    fprintf('Extracting TF peaks from the spectrogram (%s)...\n', backend);
 end
 tfp = tic;
 
@@ -389,7 +389,7 @@ if double_watershed
 
     % Compute time-frequency peaks
     if verbose
-        disp('[2nd] Extracting TF peaks from the spectrogram...');
+        fprintf('[2nd] Extracting TF peaks from the spectrogram (%s)...\n', backend);
     end
     tfp = tic;
 
@@ -413,7 +413,7 @@ end
 %% Refine TFpeak frequency estimation using Hann windows
 if refinement
     if verbose
-        disp('Refining peaks...');
+        fprintf('Refining peaks (%s)...\n', backend);
     end
     rft = tic;
 

@@ -39,8 +39,27 @@ function [spect, stimes, sfreqs] = multitaper_spectrogram_dynamo( ...
     bk = getappdata(0, 'dynamo_backend');
     if isempty(bk), bk = 'matlab'; end
 
-    use_rust = strcmpi(bk, 'rust') && ...
-        exist(['multitaper_spectrogram_rust_mex.' mexext], 'file') == 3;
+    rust_mex_present = exist(['multitaper_spectrogram_rust_mex.' mexext], 'file') == 3;
+    if strcmpi(bk, 'rust') && ~rust_mex_present
+        % Build the rust MTS MEX for this platform — the silent fall-through
+        % to the Coder MEX runs at single precision and (for the heavy
+        % artifact-detection MTS config) is several × slower than the rust
+        % path, which is what users typically hit when they ask "why is
+        % rust slow on Linux?". Fail loud so the platform mismatch is
+        % obvious instead of degrading silently.
+        error('multitaper_spectrogram_dynamo:missingRustMEX', ...
+            ['backend=''rust'' selected but multitaper_spectrogram_rust_mex.%s is not on the MATLAB path.\n' ...
+             'Build it with:  cd <DYNAM-O_dev>/rust_bridge && build_rust_mex'], mexext);
+    end
+    use_rust = strcmpi(bk, 'rust') && rust_mex_present;
+
+    if verbose
+        if use_rust
+            fprintf('  Multitaper spectrogram: rust (f64)\n');
+        else
+            fprintf('  Multitaper spectrogram: matlab (Coder MEX)\n');
+        end
+    end
 
     if use_rust
         % Rust path needs DPSS tapers explicitly. Mirror the Coder MEX's
