@@ -728,7 +728,7 @@ classdef DYNAMO < handle
             end
 
             if nargin<5
-                showButtons = true;
+                showButtons = false;
             end
 
             % Create main menu
@@ -1052,7 +1052,7 @@ classdef DYNAMO < handle
                         'Indeterminate', 'on');
 
                     % Rerun DYNAMO with current options (uses runDYNAMO wrapper)
-                    obj.run();
+                    obj.runDYNAMO();
 
                     % Close progress dialog if open
                     if isvalid(progressDlg)

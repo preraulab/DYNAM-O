@@ -349,6 +349,7 @@ if trim_vol < 1
         [f_inds, t_inds] = cellfun(@(x)ind2sub(size(img),x),regions,'UniformOutput',false);
         good_inds = cellfun(@(x)(max(x)-min(x))*dt>dur_min,t_inds) & cellfun(@(x)(max(x)-min(x))*df>bw_min,f_inds);
         regions = regions(good_inds);
+        borders = borders(good_inds);
     end
 
 end

@@ -306,7 +306,11 @@ tfp_timings.artifact = toc(t_stage);
 % Exclude artifacts, baseline_exclude, and times corresponding to stages not in baseline_stages from baseline computation
 t_stage = tic;
 exclude_stages = ~ismember(stage_vals, baseline_stages); %stages to use passed in
-exclude_stages_resamp = interp1(stage_times, single(exclude_stages), t_time_range, 'previous')~=0; % ~=0 excludes both 1 and NaN (when t_time_range exceeds the interp1 range)
+% interp1 returns NaN for samples outside [stage_times(1), stage_times(end)].
+% NaN~=0 is FALSE in MATLAB, so the previous `~=0` form silently kept those
+% out-of-range samples in the baseline. Treat unscored bookends as excluded.
+resamp_excl = interp1(stage_times, single(exclude_stages), t_time_range, 'previous');
+exclude_stages_resamp = (resamp_excl >= 1) | isnan(resamp_excl);
 baseline_exclude = artifacts(:) | exclude_stages_resamp(:) | baseline_exclude(:);
 
 baseline = computeBaseline(spect, stimes, t_time_range, baseline_exclude, baseline_range, baseline_ptile);

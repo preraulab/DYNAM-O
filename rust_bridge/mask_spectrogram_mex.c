@@ -38,17 +38,17 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         mexErrMsgIdAndTxt("dynamo:mask_spectrogram_mex:badInput",
             "spect_2s must be real double.");
     }
-    if (!mxIsDouble(prhs[1])) {
+    if (!mxIsDouble(prhs[1]) || mxIsComplex(prhs[1])) {
         mexErrMsgIdAndTxt("dynamo:mask_spectrogram_mex:badInput",
-            "stimes_2s must be double.");
+            "stimes_2s must be real double.");
     }
     if (!mxIsInt64(prhs[2])) {
         mexErrMsgIdAndTxt("dynamo:mask_spectrogram_mex:badInput",
             "labels_1s must be int64.");
     }
-    if (!mxIsDouble(prhs[3])) {
+    if (!mxIsDouble(prhs[3]) || mxIsComplex(prhs[3])) {
         mexErrMsgIdAndTxt("dynamo:mask_spectrogram_mex:badInput",
-            "stimes_1s must be double.");
+            "stimes_1s must be real double.");
     }
 
     mwSize F  = mxGetM(prhs[0]);

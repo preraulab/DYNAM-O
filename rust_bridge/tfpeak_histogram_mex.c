@@ -79,6 +79,27 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
             "At most 4 outputs: c_mat, time_in_bin, prop_in_bin, peak_at_freq.");
     }
 
+    /* Type guards: the Rust ABI takes `const double *` with no type tag, so
+     * mxGetPr on a single/int/complex mxArray would silently reinterpret bytes
+     * as f64 in Rust. Reject anything that isn't real-valued double up front,
+     * before any allocation. (prhs[3]/prhs[4] are logical/uint8 masks
+     * normalized by logical_or_u8_as_u8; prhs[9] is checked as struct below.) */
+    {
+        const int double_idx[] = {0, 1, 2, 5, 6, 7, 8};
+        const char *double_names[] = {
+            "c_metric", "c_stages", "c_dt",
+            "peak_freqs", "peak_c", "freq_edges", "c_edges"
+        };
+        for (size_t k = 0; k < sizeof(double_idx)/sizeof(double_idx[0]); ++k) {
+            const mxArray *p = prhs[double_idx[k]];
+            if (!mxIsDouble(p) || mxIsComplex(p)) {
+                mexErrMsgIdAndTxt("dynamo:tfpeak_histogram_mex:badInput",
+                    "Input %d (%s) must be real double.",
+                    double_idx[k] + 1, double_names[k]);
+            }
+        }
+    }
+
     size_t n_times = mxGetNumberOfElements(prhs[0]);
     if (mxGetNumberOfElements(prhs[1]) != n_times) {
         mexErrMsgIdAndTxt("dynamo:tfpeak_histogram_mex:dims",
