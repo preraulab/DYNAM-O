@@ -507,13 +507,14 @@ opts = detection_opts('quality_setting', 'default', 'trim_vol', 0.8, ...);
 |---|---|---|
 | `quality_setting` | `'default'` | Preset (see above) |
 | `double_watershed` | `true` | Use two-pass watershed (1 s + 2 s windows) |
-| `downsample_spect` | `[]` | `[time_factor, freq_factor]` pre-watershed decimation |
-| `seg_time` | `[]` | Segment duration for parallel processing (s) |
-| `merge_thresh` | `[]` | Stop merging when edge weight falls below |
+| `downsample_spect` | `[2, 2]` | `[time_factor, freq_factor]` pre-watershed decimation |
+| `seg_time` | `30` s | Segment duration for parallel processing |
+| `merge_thresh` | `11` | Stop merging when edge weight falls below |
 | `max_merges` | `Inf` | Maximum region merges allowed |
 | `trim_vol` | `0.8` | Trim peaks to this fraction of max volume |
 | `dur_max` | `5` s | Reject peaks longer than this |
 | `bw_max` | `15` Hz | Reject peaks wider than this |
+| `reuse_baseline` | `true` | Reuse pass-1 baseline in pass-2 (skip recompute) |
 | `mtm_freq_range` | `[0, 30]` Hz | Spectrogram frequency range |
 | `mtm_taper_params` | `[2, 3]` | Multitaper `[time-BW, num-tapers]` |
 | `mtm_window_length_1` | `1` s | First-pass watershed window |
@@ -593,6 +594,7 @@ One row per detected TF-peak. Available features (controlled by
 | `Duration` | s | Peak duration |
 | `Bandwidth` | Hz | Peak bandwidth |
 | `Volume` | s·μV² | Time-frequency volume |
+| `Peakiness` | dB | `10·log10(Area · Height / Volume)` — sharpness score |
 | `BoundingBox` | (s, Hz, s, Hz) | `[t_tl, f_tl, width, height]` |
 | `HeightData` | μV²/Hz | Per-pixel amplitudes within peak region |
 | `Boundaries` | (s, Hz) | Boundary pixel `(time, frequency)` |
@@ -858,6 +860,25 @@ Per-subject `.mat` only. Contains `artifacts`, `Fs`,
 `SOpower_norm_method`, and other run-time scalars used by the
 Results Browser and the aggregation step.
 
+### Run settings — `settings/`
+
+Per-run JSON snapshot of every options struct (`detection_options`,
+`baseline_options`, `SOPH_options`, the four basis-fit options
+structs, etc.) plus a `run_start` timestamp and a `schema_version`.
+Written by `generate_run_log` as `run_settings_<timestamp>.json`,
+read back by `load_run_log` (and by the File Manager's "Load
+settings" action). The format is pure data — no executable code —
+so loading a settings file from another user is safe. `Inf`, `-Inf`,
+and `NaN` round-trip via sentinel strings (`"__inf__"`, `"__-inf__"`,
+`"__nan__"`); arrays containing them are encoded as JSON arrays of
+mixed numeric/sentinel entries and decoded back to numeric vectors.
+
+```matlab
+% MATLAB
+opts = load_run_log('run_settings_260504_165939.json');
+% opts.detection_options, opts.baseline_options, ...
+```
+
 ### Figures — `figures/`
 
 `.png`, `.tiff`, `.pdf` exports of summary, parametric, and spline
@@ -944,8 +965,9 @@ so the nine assertion sub-tests cost milliseconds each.
 DYNAM-O_dev/
 ├── DYNAMO.m                         OOP pipeline class
 ├── runDYNAMO.m                      Functional pipeline entry point
-├── runApp.m                     GUI launcher (toolbox + app on path, opens FileManager)
+├── runApp.m                         GUI launcher (toolbox + app on path, opens FileManager)
 ├── DYNAMO_addpath.m                 Headless path setup (toolbox only, no GUI)
+├── clearDynamoClasses.m             Clear cached DYNAMO classdef state (after edits / branch switch)
 ├── example_data/
 │   ├── example_data.mat             Single-channel sleep EEG example
 │   └── runExampleData.m             Example data loader
@@ -970,7 +992,7 @@ DYNAM-O_dev/
 │   │   ├── createResultsBrowserTab.m Builder: tree + preview pane
 │   │   ├── createAnalysisTab.m      Builder: SO-Histograms host
 │   │   └── finalizeUI.m             Builder: Help menu (rightmost), tooltips
-│   ├── +results_browser/            Package: 21 helpers for the Results Browser
+│   ├── +results_browser/            Package: 19 helpers for the Results Browser
 │   └── components/
 │       └── CSSuicontrols/           Submodule: HTML-backed UI controls
 └── toolbox/                         Pure science (importable headlessly via DYNAMO_addpath)
@@ -996,11 +1018,13 @@ DYNAM-O_dev/
     ├── SOPH_dim_reduction/          Parametric and spline fitting
     ├── TFsigma_peak_detector/       Alternative sigma-band peak detector
     └── helper_functions/            Multitaper, artifacts, EDF, plotting, tests, …
-        └── dynamo_helpers/          Run-record infrastructure
-            ├── DYNAMORunLogger.m         Append-only JSONL writer
-            ├── dynamo_index_runs.m       Read+union JSONL files into a single index
-            ├── dynamo_walk_results.m     Pure recursive walker (CLI / scripts)
-            ├── dynamo_seed_index.m       CLI: walk + emit backfill JSONL
+        └── dynamo_helpers/          Run-record + settings infrastructure
+            ├── generate_run_log.m            Write per-run options struct to JSON (safe, no eval)
+            ├── load_run_log.m                Read run-settings JSON (replaces legacy `run()` loader)
+            ├── DYNAMORunLogger.m             Append-only JSONL writer
+            ├── dynamo_index_runs.m           Read+union JSONL files into a single index
+            ├── dynamo_walk_results.m         Pure recursive walker (CLI / scripts)
+            ├── dynamo_seed_index.m           CLI: walk + emit backfill JSONL
             └── dynamo_seed_index_from_cache.m  Generic seeder (consumed by both walkers)
 ```
 
