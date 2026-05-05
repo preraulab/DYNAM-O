@@ -93,19 +93,41 @@ histograms.
 
 You can either clone this repo directly, or clone the parent meta-repo
 ([DYNAM-O_toolbox](https://github.com/preraulab/DYNAM-O_toolbox)) to get
-MATLAB, Python, and Rust together as pinned submodules.
+MATLAB, Python, and Rust together as pinned sub-repos.
 
 **Standalone (MATLAB-only):**
 
 ```bash
 git clone --recursive https://github.com/preraulab/DYNAM-O.git
+cd DYNAM-O
+# Re-attach submodules to their tracking branches. The plain
+# `--recursive` clone always lands them in detached HEAD; this one-liner
+# walks the .gitmodules `branch` field and checks each one out.
+git submodule foreach 'b="$(git config -f "$toplevel/.gitmodules" --get "submodule.$name.branch")"; \
+                       [ -n "$b" ] && git checkout -q "$b" 2>/dev/null || true'
 ```
 
-**Meta-repo (WIP: not functional yet):**
+**Meta-repo (recommended — sets up MATLAB + Rust + Python in one go):**
 
 ```bash
-git clone --recursive https://github.com/preraulab/DYNAM-O_toolbox.git
+git clone https://github.com/preraulab/DYNAM-O_toolbox.git
+cd DYNAM-O_toolbox
+./bootstrap.sh                        # macOS / Linux / WSL
+# or
+.\bootstrap.ps1                       # Windows
 ```
+
+`bootstrap.sh` clones the three sub-repos, installs Rust if missing,
+builds the Rust core, and (if MATLAB is detected) offers to compile the
+MEX wrappers. It also re-attaches every submodule to its tracking
+branch automatically. Re-run any time — each step checks whether its
+target already exists.
+
+**To pull updates later:** `./refresh.sh` from the meta-repo root pulls
+the latest commits on every sub-repo, rebuilds Rust, and re-attaches
+submodules. Don't use bare `git submodule update --init --recursive` —
+it leaves submodules in detached HEAD and you can't pull or commit
+from there cleanly.
 
 ### 2. Pick a backend
 
@@ -1124,7 +1146,8 @@ Fs     = 100;
 - **`mex: Compiler not configured`** — run `mex -setup C` in MATLAB and select a supported compiler (Xcode on macOS, gcc on Linux, MSVC/MinGW-w64 on Windows).
 - **MEX run gives subtly different peak counts after a fresh `cargo build`** — restart MATLAB. `libdynamo_rs` stays cached until the session exits; `clear mex` does not unload the dynamic library.
 - **Figures accumulate across repeated runs** — pass `'plot_on', false` or call `close all` between iterations.
-- **`Undefined function 'multitaper_spectrogram'`** — submodules weren't initialized. Run `git submodule update --init --recursive` in the repo root.
+- **`Undefined function 'multitaper_spectrogram'`** — submodules weren't initialized. From the meta-repo: `./refresh.sh`. Standalone clone: `git submodule update --init --recursive` followed by the re-attach one-liner from the [Clone section](#1-clone).
+- **Submodules in detached HEAD after cloning or branch-switching** — bare `git submodule update` always detaches. Run `./refresh.sh` from the meta-repo, or apply the re-attach one-liner from the [Clone section](#1-clone).
 - **NaN values in EEG** — the pipeline does not tolerate NaNs in `data`. Interpolate across NaN runs or mark them via the artifact detector.
 - **`stage_times` / `stage_vals` length mismatch** — both must be the same length; `stage_times` must be non-decreasing.
 - **Recording shorter than one `seg_time` window** (default 30 s) — reduce `detection_opts.seg_time` for very short recordings.
