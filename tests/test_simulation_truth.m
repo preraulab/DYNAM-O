@@ -34,9 +34,11 @@ backends = p.Results.backends;
 verbose  = p.Results.verbose;
 
 % --- Locate inputs ---
+% tests/simulation_test.mat schema: data (1xN numeric), Fs (scalar),
+% true_values (table with at least Time, Frequency, Phase columns).
 this_dir = fileparts(mfilename('fullpath'));
 repo_root = fileparts(this_dir);
-data_path = fullfile(repo_root, 'example_data', 'simulation_truth_data.mat');
+data_path = fullfile(this_dir, 'simulation_test.mat');
 assert(exist(data_path, 'file') == 2, ...
     'test_simulation_truth: data file not found at %s', data_path);
 
@@ -46,8 +48,8 @@ if isempty(which('runDYNAMO'))
 end
 
 S = load(data_path);
-data = S.data(:);
-Fs   = S.Fs;
+data = double(S.data(:));
+Fs   = double(S.Fs);
 TV   = S.true_values;
 fprintf('Simulation: Fs=%.2f Hz, %d samples (%.1fs), %d true peaks\n', ...
     Fs, numel(data), numel(data)/Fs, height(TV));
