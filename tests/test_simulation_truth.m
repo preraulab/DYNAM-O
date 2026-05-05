@@ -50,16 +50,19 @@ common = {'plot_on', false, 'fit_param_basis', false, ...
 
 backends = {'matlab', 'rust'};
 results = struct();
+artifacts = struct();
 for k = 1:numel(backends)
     bk = backends{k};
     fprintf('  [setupOnce] running %s backend...\n', bk);
     t0 = tic;
-    [st, ~, ~, ~, ~, ~, ~, ~, ~] = runDYNAMO(data, Fs, stage_times, ...
+    [st, ~, ~, ~, ~, ~, art, ~, ~] = runDYNAMO(data, Fs, stage_times, ...
         stage_vals, common{:}, 'backend', bk);
     fprintf('    done in %.1fs, %d peaks\n', toc(t0), height(st));
     results.(bk) = st;
+    artifacts.(bk) = logical(art(:));
 end
 testCase.TestData.results = results;
+testCase.TestData.artifacts = artifacts;
 
 % Hungarian-match each backend to ground truth (block-decomposed by time).
 for k = 1:numel(backends)
@@ -217,6 +220,46 @@ testCase.assumeNotEmpty(M, 'MTS test pair not built; skipping.');
 % between scipy.signal.detrend (Rust path) and the Coder MEX.
 testCase.verifyLessThan(M.mean_rel_diff, 1e-5, ...
     sprintf('Coder vs Rust MTS mean|rel diff| = %.3g >= 1e-5', M.mean_rel_diff));
+end
+
+% =====================================================================
+% Artifact mask cross-backend agreement.
+% detect_artifacts' slope-test path runs the heaviest MTS config in the
+% pipeline; routing it via multitaper_spectrogram_dynamo means matlab
+% backend uses the Coder f32 MEX and rust backend uses the f64 rust MEX.
+% f32 vs f64 + a hard threshold (slope > slope_crit) can flip a few
+% boundary samples; the bulk of the mask must still agree.
+% =====================================================================
+
+function test_artifact_mask_size_match(testCase)
+A = testCase.TestData.artifacts;
+testCase.verifyEqual(numel(A.matlab), numel(A.rust), ...
+    'matlab and rust artifact masks differ in length.');
+end
+
+function test_artifact_mask_agreement(testCase)
+A = testCase.TestData.artifacts;
+agree = mean(A.matlab == A.rust);
+testCase.verifyGreaterThan(agree, 0.999, ...
+    sprintf('matlab/rust artifact mask agreement = %.4f%% < 99.9%%', 100*agree));
+end
+
+function test_artifact_mask_jaccard(testCase)
+% Jaccard (intersection / union) on the "is-artifact" set. Threshold of
+% 0.95 leaves headroom: f32 vs f64 typically flips only a handful of
+% slope-test samples on/off; the masked total is dominated by HF/BB
+% artifact regions which are computed from the same filtered signal in
+% both backends.
+A = testCase.TestData.artifacts;
+inter = sum(A.matlab & A.rust);
+uni   = sum(A.matlab | A.rust);
+if uni == 0
+    j = 1.0; % both empty -> perfect agreement by convention
+else
+    j = inter / uni;
+end
+testCase.verifyGreaterThan(j, 0.95, ...
+    sprintf('matlab/rust artifact mask Jaccard = %.4f < 0.95', j));
 end
 
 % =====================================================================
