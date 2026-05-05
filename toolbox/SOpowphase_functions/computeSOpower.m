@@ -250,7 +250,7 @@ end
 %% Compute SO-power
 %Compute power using the MTS (data, Fs, frequency_range, taper_params, window_params, min_NFFT, detrend_opt, weighting, plot_on, verbose)
 
-[SO_spect, stimes, sfreqs] = multitaper_spectrogram_mex(data, Fs, freq_range, tapers, window_params, [], 'linear', [], false, verbose);
+[SO_spect, stimes, sfreqs] = multitaper_spectrogram_dynamo(data, Fs, freq_range, tapers, window_params, [], 'linear', [], false, verbose);
 
 %Compute dt
 dt = stimes(2) - stimes(1);

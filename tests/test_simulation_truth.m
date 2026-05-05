@@ -75,6 +75,43 @@ end
 tight = dist < 0.1;
 testCase.TestData.cross_dt = ...
     results.rust.PeakTime(tight) - results.matlab.PeakTime(idx(tight));
+
+% MTS equivalence: compute the same multitaper spectrogram via the
+% MATLAB-Coder MEX and the Rust MEX, expose the per-element diff
+% statistics for assertion sub-tests below. Only run if both binaries
+% are on the path; otherwise leave testCase.TestData.mts empty so
+% downstream sub-tests can skip cleanly.
+testCase.TestData.mts = [];
+have_coder = exist(['multitaper_spectrogram_coder_mex.' mexext], 'file') == 3;
+have_rust  = exist(['multitaper_spectrogram_rust_mex.' mexext],  'file') == 3;
+if have_coder && have_rust
+    freq_range    = [0 30];
+    taper_params  = [2 3];
+    window_params = [1 0.05];
+    nfft = 2^nextpow2(round(window_params(1)*Fs)/0.1);
+    detrend_opt = 'linear'; weighting = 'unity';
+    NW = taper_params(1); K = taper_params(2);
+    winN = round(window_params(1)*Fs);
+    [tapers, ~] = dpss(winN, NW, K);
+
+    [s_m, t_m, f_m] = multitaper_spectrogram_mex(data, Fs, freq_range, ...
+        taper_params, window_params, nfft, detrend_opt, weighting, false, false);
+    [s_r, t_r, f_r] = multitaper_spectrogram_rust_mex(data, Fs, freq_range, ...
+        taper_params, window_params, tapers, [], nfft, detrend_opt, weighting);
+
+    M = struct();
+    M.size_match   = isequal(size(s_m), size(s_r));
+    M.stimes_diff  = max(abs(double(t_m(:)) - double(t_r(:))));
+    M.sfreqs_diff  = max(abs(double(f_m(:)) - double(f_r(:))));
+    if M.size_match
+        sm = double(s_m(:)); sr = double(s_r(:));
+        M.cosine_sim    = sum(sm .* sr) / (norm(sm) * norm(sr));
+        M.mean_rel_diff = mean(abs(sm - sr) ./ max(abs(sm), 1e-30));
+    else
+        M.cosine_sim = NaN; M.mean_rel_diff = NaN;
+    end
+    testCase.TestData.mts = M;
+end
 end
 
 % =====================================================================
@@ -146,6 +183,40 @@ testCase.assertNotEmpty(cross, 'No matched MATLAB-Rust peak pairs found.');
 md = abs(median(cross));
 testCase.verifyLessThan(md, 0.001, ...
     sprintf('MATLAB-Rust |median dt| = %.5fs >= 0.001s', md));
+end
+
+% =====================================================================
+% MTS equivalence — Coder MEX (f32) vs Rust MEX (f64) on the same data.
+% Outputs should agree up to f32 roundoff (~1e-7 relative).
+% =====================================================================
+
+function test_mts_size_match(testCase)
+M = testCase.TestData.mts;
+testCase.assumeNotEmpty(M, ...
+    'multitaper_spectrogram_(coder|rust)_mex not both on path; skipping MTS equivalence.');
+testCase.verifyTrue(M.size_match, ...
+    'MATLAB and Rust MTS produced different output sizes.');
+testCase.verifyLessThan(M.stimes_diff, 1e-9, ...
+    sprintf('stimes mismatch: max|diff| = %.3g', M.stimes_diff));
+testCase.verifyLessThan(M.sfreqs_diff, 1e-9, ...
+    sprintf('sfreqs mismatch: max|diff| = %.3g', M.sfreqs_diff));
+end
+
+function test_mts_cosine_similarity(testCase)
+M = testCase.TestData.mts;
+testCase.assumeNotEmpty(M, 'MTS test pair not built; skipping.');
+testCase.verifyGreaterThan(M.cosine_sim, 0.99999, ...
+    sprintf('Coder vs Rust MTS cosine sim = %.6f < 0.99999', M.cosine_sim));
+end
+
+function test_mts_mean_relative_diff(testCase)
+M = testCase.TestData.mts;
+testCase.assumeNotEmpty(M, 'MTS test pair not built; skipping.');
+% f32 roundoff is ~1.2e-7. Allow 1e-5 to absorb summed roundoff over
+% many windows + the slight detrend-numerical-stability differences
+% between scipy.signal.detrend (Rust path) and the Coder MEX.
+testCase.verifyLessThan(M.mean_rel_diff, 1e-5, ...
+    sprintf('Coder vs Rust MTS mean|rel diff| = %.3g >= 1e-5', M.mean_rel_diff));
 end
 
 % =====================================================================

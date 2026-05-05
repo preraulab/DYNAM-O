@@ -217,7 +217,7 @@ end
 
 %% Plot spectrogram
 if isgraphics(hypn_spect_ax(2))
-    [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(data, Fs, mtm_freq_range, [15 29], [30 15], [],'linear',[],false,false);
+    [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_dynamo(data, Fs, mtm_freq_range, [15 29], [30 15], [],'linear',[],false,false);
 
     stimes_inds = stimes_disp >= time_range(1) & stimes_disp <= time_range(2);
     imagesc(hypn_spect_ax(2), stimes_disp(stimes_inds)/3600, sfreqs_disp, pow2db(spect_disp(:, stimes_inds)));

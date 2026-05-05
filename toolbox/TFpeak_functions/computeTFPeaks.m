@@ -465,12 +465,11 @@ if verbose
     disp('Computing TF peak spectrogram...');
 end
 
-if exist(['multitaper_spectrogram_coder_mex.' mexext],'file')
-    [spect,stimes,sfreqs] = multitaper_spectrogram_mex(data_time_range, Fs, freq_range, taper_params, time_window_params, nfft, detrend_opt, weight, ploton, mts_verbose);
-else
-    [spect,stimes,sfreqs] = multitaper_spectrogram(data_time_range, Fs, freq_range, taper_params, time_window_params, nfft, detrend_opt, weight, ploton, mts_verbose);
-    warning(sprintf('Unable to use mex version of multitaper_spectrogram. Using compiled multitaper spectrogram function will greatly increase the speed of this computaton. \n\nFind mex code at:\n    https://github.com/preraulab/multitaper_toolbox')); %#ok<SPWRN>
-end
+% Dispatch via multitaper_spectrogram_dynamo: backend='rust' routes to
+% the f64 Rust path (multitaper_spectrogram_rust_mex), 'matlab' to the
+% existing Coder MEX (or pure-MATLAB fallback). Per-run backend is
+% read from getappdata(0,'dynamo_backend') set by runDYNAMO.
+[spect,stimes,sfreqs] = multitaper_spectrogram_dynamo(data_time_range, Fs, freq_range, taper_params, time_window_params, nfft, detrend_opt, weight, ploton, mts_verbose);
 end
 
 
