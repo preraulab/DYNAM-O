@@ -107,6 +107,34 @@ static bool get_bool_field(const mxArray *s, const char *name, bool def) {
     return mxGetScalar(f) != 0.0;
 }
 
+/* Free any Rust-allocated buffers that may have been populated in `out`
+ * before an error/panic. Used on the rc != 0 path so a partially-populated
+ * output doesn't leak across mexErrMsgIdAndTxt's longjmp. Each field is
+ * checked individually because a panic could fire at any point inside
+ * dynamo_extract_tfpeaks. Length companions (n_peaks, n_boundary_pixels,
+ * n_height_data_elems, n_label_elems) are written by Rust before the
+ * corresponding pointer, so they're trustworthy when the pointer is set. */
+static void free_partial_out(ExtractTfpeaksOut *out) {
+    if (!out) return;
+    size_t n = out->n_peaks;
+    if (out->peak_time)       dynamo_free_buffer_f64(out->peak_time,     n);
+    if (out->peak_freq)       dynamo_free_buffer_f64(out->peak_freq,     n);
+    if (out->duration)        dynamo_free_buffer_f64(out->duration,      n);
+    if (out->bandwidth)       dynamo_free_buffer_f64(out->bandwidth,     n);
+    if (out->height)          dynamo_free_buffer_f64(out->height,        n);
+    if (out->volume)          dynamo_free_buffer_f64(out->volume,        n);
+    if (out->segment_num)     dynamo_free_buffer_f64(out->segment_num,   n);
+    if (out->bounding_box)    dynamo_free_buffer_f64(out->bounding_box,  n * 4);
+    if (out->area)            dynamo_free_buffer_f64(out->area,          n);
+    if (out->peakiness)       dynamo_free_buffer_f64(out->peakiness,     n);
+    if (out->boundaries_xy)   dynamo_free_buffer_f64(out->boundaries_xy, out->n_boundary_pixels * 2);
+    if (out->boundary_offsets) dynamo_free_buffer_u64(out->boundary_offsets, n + 1);
+    if (out->height_data)     dynamo_free_buffer_f64(out->height_data,   out->n_height_data_elems);
+    if (out->height_data_offsets) dynamo_free_buffer_u64(out->height_data_offsets, n + 1);
+    if (out->labels)          dynamo_free_buffer_i64(out->labels,        out->n_label_elems);
+    memset(out, 0, sizeof(*out));
+}
+
 /* Copy a Rust-allocated double buffer of length n into a new (n, 1) mxArray,
  * then free the Rust buffer. Returns the mxArray (to be stored in plhs
  * fields). Handles n == 0 gracefully (returns empty column). */
@@ -338,6 +366,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     }
 
     if (rc != 0) {
+        /* Rust may have populated some out.* fields before the error. Free
+         * them before mexErrMsgIdAndTxt longjmps out, otherwise those
+         * leaked Box::leak allocations are unreachable. */
+        free_partial_out(&out);
         mexErrMsgIdAndTxt("dynamo:extract_tfpeaks_mex:rust_error",
             "dynamo_extract_tfpeaks returned error code %d.", rc);
     }

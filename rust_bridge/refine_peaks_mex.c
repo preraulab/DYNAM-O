@@ -8,9 +8,13 @@
  *
  *     peak_time:   Nx1 double
  *     peak_freq:   Nx1 double
- *     bbox:        Nx4 double  [t_tl, f_tl, width_s, height_Hz] per peak
- *                              (pydynamo BoundingBox format — same order
- *                              used by extract_tfpeaks_mex's output)
+ *     bbox:        Nx4 double  [f_lo, f_hi, t_lo, t_hi] per peak (Rust ABI).
+ *                              Only cols 1-2 (f_lo, f_hi) are consumed by
+ *                              dynamo_refine_peaks; t_lo/t_hi are accepted
+ *                              for forward-compat but currently unused.
+ *                              MATLAB callers (refinePeakFrequency.m) build
+ *                              this layout explicitly — do NOT pass the
+ *                              pydynamo `[t_tl, f_tl, w, h]` order here.
  *     data:        1xM double (raw signal)
  *     fs:          scalar double
  *     freq_range:  1x2 double [lo, hi]
