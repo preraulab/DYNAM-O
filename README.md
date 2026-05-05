@@ -75,6 +75,7 @@ histograms.
   - [SOPHs](#sophs--histogram-struct)
   - [timings](#timings--per-stage-wallclock)
 - [Saved file formats (GUI batch outputs)](#saved-file-formats-gui-batch-outputs)
+- [Unit tests](#unit-tests)
 - [Repository Structure](#repository-structure)
 - [Algorithm details and background](#algorithm-details-and-background)
 
@@ -853,6 +854,68 @@ aggregate `.mat`s carry concatenated histogram and paramfit tables.
 
 ---
 
+## Unit tests
+
+The `tests/` folder contains a small suite built on MATLAB's standard
+`matlab.unittest` framework. The headline test runs both backends on a
+synthetic dataset with **known** peak locations, Hungarian-matches each
+backend's `stats_table` to ground truth, and asserts on per-peak time,
+frequency, and SO-phase bias.
+
+### Running
+
+Interactively, from MATLAB:
+
+```matlab
+addpath('/path/to/DYNAM-O_dev');
+DYNAMO_addpath();
+cd('/path/to/DYNAM-O_dev/tests');
+run_all_tests                                 % whole folder, asserts on failure
+runtests('test_simulation_truth')             % one file, table output
+```
+
+Headless / CI:
+
+```sh
+matlab -batch "addpath('<repo>'); DYNAMO_addpath; cd tests; run_all_tests"
+```
+
+`run_all_tests` calls `assertSuccess(result)` so the process exits
+non-zero on any sub-test failure — drop-in for GitHub Actions.
+
+### What it tests
+
+| Test | Asserts |
+| --- | --- |
+| `test_recall_matlab` / `test_recall_rust` | every true peak is matched |
+| `test_time_bias_matlab` / `test_time_bias_rust` | `\|median Δt\|` < ½ spectrogram bin |
+| `test_freq_bias_matlab` / `test_freq_bias_rust` | `\|median Δf\|` < 0.5 Hz |
+| `test_phase_bias_matlab` / `test_phase_bias_rust` | `\|median Δphase\|` < 5° |
+| `test_cross_backend_dt` | MATLAB vs Rust `\|median Δt\|` < 1 ms |
+
+The phase-bias sub-tests exist as a regression guard for commit
+`b59fa85` (2022-09-28), which silently dropped a `-1` from the
+`WeightedCentroid` conversion in `computePeakStatsTable.m` and biased
+every `PeakTime` by one spectrogram bin (~+13° of SOphase). Restoring
+the `-1` collapsed the bias from +12.6° to −1.1° against ground truth.
+
+### Layout
+
+```
+tests/
+├── run_all_tests.m              CI entry point — runtests + assertSuccess
+├── test_simulation_truth.m      Function-based test (functiontests style)
+└── simulation_test.mat          Ground-truth fixture (data, Fs, true_values)
+```
+
+Both backends run **once** in `setupOnce` (~40 s, dominated by the
+MATLAB pass); the matched-pair data is cached in `testCase.TestData`
+so the nine assertion sub-tests cost milliseconds each.
+
+<p align="right"><sub><a href="#table-of-contents">↑ Back to Table of Contents</a></sub></p>
+
+---
+
 ## Repository Structure
 
 ```
@@ -864,6 +927,10 @@ DYNAM-O_dev/
 ├── example_data/
 │   ├── example_data.mat             Single-channel sleep EEG example
 │   └── runExampleData.m             Example data loader
+├── tests/                           matlab.unittest suite (see Unit tests)
+│   ├── run_all_tests.m              Folder runner — assertSuccess for CI
+│   ├── test_simulation_truth.m      Both-backends-vs-ground-truth assertions
+│   └── simulation_test.mat          Synthetic data + true_values fixture
 ├── rust_bridge/                     Rust backend (MEX wrappers around dynamo_rs)
 │   ├── README.md                    Per-platform build guide
 │   ├── build_rust_mex.m             MATLAB-side compile script
