@@ -1,162 +1,227 @@
-# `app/` — DYNAM-O File Manager Architecture
+# `app/` — File-by-file map of the GUI
 
-This folder contains the DYNAM-O File Manager (DFM) — a MATLAB-app-based GUI
-for running batch sleep-EEG analyses through the DYNAM-O toolbox. This document
-describes how the code is organized so contributors know where to add new
-features and where to find existing ones.
+This is a "where does this part of the screen come from" guide. Open the GUI,
+look at a region, and this doc tells you which file builds it, which file
+fills it with data, and which file runs when you click something inside it.
 
 For the user-facing manual (what each tab/button does), see
 [`../DYNAMOFileManager_README.md`](../DYNAMOFileManager_README.md).
 
 ---
 
-## Layout
+## Top-level folders
 
 ```
 app/
-├── @DYNAMOFileManager/      ← the GUI class (130 per-feature method files)
-│   ├── DYNAMOFileManager.m  ← classdef + properties + lifecycle + callback shims
-│   └── *.m                  ← one method per file, named for purpose
-├── +results_browser/        ← pure helpers for the Results Browser tree
-│   └── *.m                  ← stateless functions (no `app` argument)
-├── components/
-│   └── CSSuicontrols/       ← styled wrappers over uifigure controls (submodule)
-└── dynamoStyle.m            ← global colour / font palette
+├── @DYNAMOFileManager/      ← the GUI class — 130 method files
+│   ├── DYNAMOFileManager.m  ← classdef, properties, callbacks (1-line shims)
+│   └── *.m                  ← one method per file (auto-discovered by MATLAB)
+├── +results_browser/        ← stateless helpers used by the Results Browser
+├── components/CSSuicontrols/← styled uifigure widgets (submodule)
+└── dynamoStyle.m            ← global colors / fonts
 ```
 
-### `@DYNAMOFileManager/` — the class folder
-
-MATLAB auto-discovers any `function name(app, ...)` defined in a `.m` file inside
-`@ClassName/` and treats it as a method of the class. We use this to keep the
-classdef file (`DYNAMOFileManager.m`) small and feature-specific code in
-focused per-feature files.
-
-Only what *must* live in the classdef stays there:
-
-- `classdef ... < matlab.apps.AppBase` declaration + `properties` block
-- Constructor (`DYNAMOFileManager(varargin)`) and `delete(app)`
-- `createComponents` (top-level UI assembly — calls into `create*Tab` files)
-- Lifecycle helpers: `uiFigureCloseRequest`, `trackChildWindow`,
-  `enforceMinSize`, `applyFont`, `setEnabled`
-- Tiny pure statics: `fixFilename`, `splitTopLevelCommas`, `clearIsError`
-- **MATLAB-app callback shims** (`*ButtonPushed`, `*MenuSelected`, `*Changed`):
-  one-liners that delegate to the verb-noun implementation in the corresponding
-  per-file method (e.g. `RunBatchButtonPushed → app.startBatchRun()`)
-
-Everything else — UI builders, render passes, run-pipeline stages, file-list
-ops, aggregator, logging — lives in its own `.m` file in this folder.
-
-### `+results_browser/` — the package folder
-
-Pure helpers that don't depend on the `app` instance. Lower-case
-underscore-style names are used here (`is_dynamo_results_dir`,
-`build_tree_node`, `walk_to_cache`) to flag them as plain functions, not class
-methods. Anything that needs to mutate `app.state` or touch the UI lives in
-`@DYNAMOFileManager/` instead.
-
-### `components/CSSuicontrols/`
-
-Submodule of styled `uifigure` wrappers (`CSSuiButton`, `CSSuiListBox`,
-`CSSuiTable`, `CSSuiDropdown`, …). Treat as an external dependency: changes
-land via that repo, not here.
+When MATLAB sees `app.someMethod()`, it looks first in `DYNAMOFileManager.m`
+and then in any `someMethod.m` inside `@DYNAMOFileManager/`. We use that to
+keep one *purpose* per file.
 
 ---
 
-## Naming convention
+## Boot sequence — what runs when you launch DFM
 
-**Rule of thumb**: file/method names answer *"what does the user get?"* — not
-*"what UI element fired this?"* That means a button callback can be named
-`RunBatchButtonPushed` (forced by MATLAB-app), but the implementation it
-delegates to is named `startBatchRun`.
+```
+DYNAMOFileManager(varargin)            ← constructor in DYNAMOFileManager.m
+└── createComponents(app, ...)         ← also in DYNAMOFileManager.m
+    ├── createUIFigureAndShell.m       ← the uifigure window + tabgroup + menu bar
+    ├── createBatchSetupTab.m          ← Tab 1: "DYNAM-O Batch Run"
+    ├── createBottomBar.m              ← RUN/STOP buttons + status bar (across all tabs)
+    ├── createDYNAMOSettingsTab.m      ← Tab 4: settings sub-app
+    ├── createResultsBrowserTab.m      ← Tab 2: "Results Browser"
+    ├── createAnalysisTab.m            ← Tab 3: "Aggregate Data"
+    └── finalizeUI.m                   ← post-build: tooltips, default state, sizing
+```
 
-| Prefix | Means | Examples |
+If you can't find where a widget gets created, start at the matching
+`create*.m` file above. Every widget is `app.SomeName = ...` — search for that
+property name to find its builder.
+
+---
+
+## The window
+
+| Region you see | Built by | Notes |
 |---|---|---|
-| `create*` | Build a UI structure once (tab, window, panel, bar, dialog) | `createBatchSetupTab`, `createRunMontageWindow`, `createConsoleLogPanel` |
-| `render*` | Populate a UI element with data; can run repeatedly | `renderResultsBrowserPreviewMat`, `renderSOPHTiffSliderPage` |
-| `refresh*` | Re-derive UI state from current backing data | `refreshChannelTooltips`, `refreshLogConsole` |
-| `update*` | Recompute a derived UI piece in response to one input change | `updateRunErrorList`, `updateDataListBox` |
-| `run*` | Execute a pipeline stage | `runBatch`, `runStatsTable`, `runParamBasis` |
-| `compute*` | Pure computation returning a value, no side effects | `computeScatterLims` |
-| `load*` / `read*` | Read from disk / external source | `loadResultsBrowserTree`, `readRunIndexFile` |
-| `write*` / `save*` / `append*` | Write to disk or an output buffer | `writeParamfitAggregate`, `saveAuxData`, `appendRunLog` |
-| `build*` | Construct a non-UI data structure | `buildCacheFromIndex`, `buildOptionsStruct` |
-| `pick*` | Open a file/folder dialog and return the user's selection | `pickFilesViaDialog`, `pickOutputDirViaDialog` |
-| `start*` / `end*` / `drag*` | Pointer-drag interaction phases | `startResultsBrowserColumnResize`, `dragResultsBrowserColumnResize`, `endResultsBrowserColumnResize` |
-| `on*` | Event handler named after the user-visible event, not the control | `onResultsBrowserMenuAction`, `onResampleSwitchChanged`, `onOutputDirChanged` |
-| `validate*` | Check a value/state and surface a warning if invalid | `validateChannelSamplingRates` |
-| MATLAB callback shims | `*ButtonPushed`, `*MenuSelected`, `*Changed` | One-liners in `DYNAMOFileManager.m` that delegate to the verb-noun method |
+| Top window frame, menu bar, tab bar | `createUIFigureAndShell.m` | Sets `app.UIFigure`, `app.ProjectTabGroup`, the `File`/`Help` menus |
+| Bottom bar (RUN/STOP, status label, progress bar, version) | `createBottomBar.m` | Lives below all tabs |
+| Full-app font / spacing | `applyFont` (in classdef), `dynamoStyle.m` | Called at end of `createComponents` |
+| Window close (×) → asks "save lists?" | `uiFigureCloseRequest` (in classdef) | Wired in `createUIFigureAndShell.m` |
+| Min-size enforcement on resize | `enforceMinSize` (in classdef) | Wired via `SizeChangedFcn` |
 
 ---
 
-## Feature groupings
+## Tab 1 — "DYNAM-O Batch Run" (Setup tab)
 
-The 130 methods in `@DYNAMOFileManager/` cluster into these features. The list
-below points at the *entry-point* file for each feature; follow its `app.*`
-calls to find the rest.
+Built by **`createBatchSetupTab.m`**. The sections you see, top to bottom:
 
-| Feature | Entry point |
-|---|---|
-| App boot / top-level layout | `createUIFigureAndShell.m`, `finalizeUI.m` |
-| Setup tab (file lists, channels, options) | `createBatchSetupTab.m` |
-| Run-montage dialog (channel-selection window) | `createRunMontageWindow.m` |
-| Settings tab | `createDYNAMOSettingsTab.m` |
-| Bottom bar (Run / Stop / progress) | `createBottomBar.m` |
-| Run pipeline (driver + stage runners) | `runBatch.m`, `runStatsTable.m`, `runParamBasis.m`, `runSplineBasis.m`, `runDataSummaryFigure.m`, `saveAuxData.m` |
-| Results Browser tree + aggregator | `loadResultsBrowserTree.m`, `aggregateResultsRoot.m` |
-| Results Browser preview pane | `previewResultsBrowserNode.m` |
-| Aggregate Data tab (SOPH histograms / mode scatter) | `createAnalysisTab.m`, `renderSOPHHistograms.m`, `renderModeScatter.m` (look for verb-noun render entry points in the analysis tab builder) |
-| Logging / run-log console | `createRunLogConsole.m`, `appendRunLog.m`, `toggleRunLogConsole.m` |
-| Splitters | `startResultsBrowserColumnResize.m`, `startResultsBrowserRowResize.m`, `startDragSOHistogramsSplitter.m` |
+| Section | Widget | Files |
+|---|---|---|
+| **Data files** list | `app.DataListBox` | Built in `createBatchSetupTab.m` |
+| Add file / Add folder / Remove / Move ↑↓ | `Data*ButtonPushed` shims | Implementations: `addDataFilesViaDialog.m`, `addDataFolderViaDialog.m`, `removeSelectedDataFiles.m`, `moveListItems.m` |
+| Load list from file (CSV) | `loadDataFileListFromFile.m` | Triggered by File menu or Load button |
+| Double-click a row → header preview | `showEdfHeaderDialog.m` | EDF channel browser dialog |
+| **Staging files** list | `app.StagingListBox` | Built in `createBatchSetupTab.m` |
+| Add/Remove/Move on staging side | `Staging*ButtonPushed` shims | Implementations: `addStagingFilesViaDialog.m`, etc. |
+| Load staging list from file | `loadStagingListFromFile.m` | |
+| **Channel selection** table + "View Channels" | `app.ChannelTable`, `viewChannelsButtonPushed` | Click → opens `createRunMontageWindow.m` (the channel-selection dialog) |
+| Channel sampling-rate warning | `validateChannelSamplingRates.m` | Runs after channel changes |
+| Channel-row tooltips | `refreshChannelTooltips.m` | Runs when EDFs load |
+| **Staging file format** dropdowns (column / delimiter / header rows) | dropdown callbacks | Update logic: `updateStagesInput.m`, `updateChannelInput.m`, `updateReferenceInput.m`, `updateDelimeterInput.m` |
+| **Output options** (output dir, results-browser dir, resample switch, save format) | switch/edit callbacks | `pickOutputDirViaDialog.m`, `pickResultsBrowserDirViaDialog.m`, `onOutputDirChanged.m`, `onResampleSwitchChanged.m` |
+| **Quick-fill** preset menu | menu callback | `applyQuickFill.m` |
+| Run-error list (red text near bottom) | `app.RunErrorList` | Updated by `updateRunErrorList.m` whenever inputs change |
+
+**RUN button** (in bottom bar) → `RunBatchButtonPushed` shim → **`startBatchRun.m`**
+→ runs the pipeline (see Run pipeline below).
+**STOP button** → `StopBatchButtonPushed` → `requestStopBatch.m` (sets a flag
+that `runBatch.m` polls between stages).
 
 ---
 
-## Adding a new feature
+## Tab 2 — "Results Browser"
 
-1. **Pick a verb prefix from the table above** that matches what the function
-   does for the user. If none fits, add a new prefix to the convention rather
-   than picking a vague verb (`do*`, `process*`, `handle*`).
-2. **Create a new `.m` file** in `app/@DYNAMOFileManager/` named
-   `<verb><Noun>.m` containing a single function `function <verb><Noun>(app, ...)`.
-   MATLAB will auto-discover it as a method.
-3. **If wired to a button/menu**, add a 1-line MATLAB-app callback shim in
-   `DYNAMOFileManager.m`:
+Built by **`createResultsBrowserTab.m`**. Two-pane layout with a draggable
+column splitter; the right pane has a draggable row splitter for the preview.
+
+```
+┌─ Results Browser tab ─────────────────────────────────────────┐
+│ ┌─ left pane ─────┐ │ ┌─ right pane ────────────────────────┐ │
+│ │  results dir    │ │ │  preview header (filename, type)    │ │
+│ │  picker          │ │ ├─ row splitter ──────────────────────┤ │
+│ │  + tree         │ │ │  preview body (axes / table / text) │ │
+│ └─────────────────┘ │ └─────────────────────────────────────┘ │
+│        column splitter ↕ (draggable)                          │
+└───────────────────────────────────────────────────────────────┘
+```
+
+| Region | Built by | Populated by | Reacts via |
+|---|---|---|---|
+| Results dir picker, tree (`app.ResultsTree`) | `createResultsBrowserTab.m` | `loadResultsBrowserTree.m` (walks dir, reads `_runs/*.jsonl`) | `onResultsBrowserMenuAction.m` (right-click menu) |
+| Tree-cache build | — | `buildCacheFromIndex.m`, `scanDirIntoCache.m`, `readRunIndexFile.m`, `promptToSeedRunIndex.m`, `regenerateRunIndex.m` | |
+| **Aggregate** menu items (right-click on a channel/root) | — | `aggregateResultsRoot.m`, `aggregateOneChannel.m`, `aggregateChannelByMenu.m` | Writes via `writeParamfitAggregate.m`, `writeSOPHsAggregate.m`; confirms via `confirmAggregateOverwrite.m` |
+| Aggregate progress bar (under the tree) | `createAggregateProgressGrid.m` | `tickAggregateProgress.m` (per-stage tick) | Torn down by `destroyAggregateProgressGrid.m` |
+| Right-pane preview header | `createResultsBrowserTab.m` | `previewResultsBrowserNode.m` (entry point — switches by file type) | |
+| `.mat` preview | — | `renderResultsBrowserPreviewMat.m` → `previewMatSOPHs.m` / `previewMatParamfit.m` / `previewMatSplinefit.m` / `previewMatAuxiliary.m` / `previewMatStatsTable.m` / `previewMatAggregate.m` / `renderResultsBrowserPreviewMatGeneric.m` | |
+| `.tiff` preview (multi-page slider) | — | `renderResultsBrowserPreviewTiff.m`, `renderSOPHTiffSliderPage.m`, `replotSOPHTiffPage.m`, `jumpToSOPHTiffPage.m` | |
+| `.csv` / `.txt` / `.png` previews | — | `renderResultsBrowserPreviewCsv.m`, `renderResultsBrowserPreviewText.m`, `renderResultsBrowserPreviewImage.m` | |
+| 3D volume page (`renderMatNodeValue` slider) | — | `renderMatVolumePage.m`, scroll bar built inline in `renderMatNodeValue.m` | |
+| Preview-loading spinner | `createResultsBrowserPreviewProgress.m` | `tickResultsBrowserPreviewProgress.m` | |
+| "Open in Finder/Explorer" right-click | — | `openPathInOS.m` (also fires on tree double-click) | |
+| **Column splitter** (drag to resize panes) | `createResultsBrowserTab.m` | — | `startResultsBrowserColumnResize.m` → `dragResultsBrowserColumnResize.m` → `endResultsBrowserColumnResize.m` |
+| **Row splitter** (drag to resize preview header vs body) | `createResultsBrowserTab.m` | — | `startResultsBrowserRowResize.m` / `drag*` / `end*` |
+| **Pop-out toolbar** (the ⤴ button on a preview axes) | `attachPopOutToolbar.m` | — | Click → `openAxesInFigure.m` (re-renders the axes in a standalone figure) |
+
+Pure helpers used here that don't need `app`: see **`+results_browser/`** —
+`build_tree_node.m`, `cache_to_tree_node.m`, `walk_to_cache.m`,
+`is_dynamo_results_dir.m`, `node_label.m`, `node_menu_items.m`, etc.
+
+---
+
+## Tab 3 — "Aggregate Data" (Analysis tab)
+
+Built by **`createAnalysisTab.m`**. Three-column layout with a draggable
+splitter between the channel selector and the inner tab group:
+
+```
+┌─ Aggregate Data tab ───────────────────────────────────────────┐
+│ channels  ║  ┌─ inner tab group ──────────────────────────┐    │
+│ list box  ║  │  Mean SOPH | Mode Scatter | … (sub-tabs)   │    │
+│           ║  │                                            │    │
+│           ║  │  (plots / dropdowns / colorbar)            │    │
+│           ║  └────────────────────────────────────────────┘    │
+│  splitter ↕ (draggable)                                        │
+└────────────────────────────────────────────────────────────────┘
+```
+
+| Region | Built by | Populated by | Reacts via |
+|---|---|---|---|
+| Channel list (`app.SOHistogramsChannelListBox`) | `createAnalysisTab.m` | `refreshSOHistogramsAvailability.m` (greys out channels with no aggregate on disk) | Selection-change → re-renders all sub-tabs |
+| **Splitter** between channel list and tab group | `createAnalysisTab.m` | — | `startDragSOHistogramsSplitter.m` → `dragSOHistogramsSplitter.m` → `endDragSOHistogramsSplitter.m` |
+| **Mean SOPH** sub-tab (`app.MeanSOPHTab`) — pair grid of histograms | `createAnalysisTab.m` (grid) + `buildPairGrid.m` (axes) | `renderSOPHHistograms.m`, `plotAggregateSOHist.m`, `styleSOPHAxes.m` | Reads aggregate via `loadParamfitAggregateForChannel.m`, `findSOHistAggregate.m` |
+| **Mode Scatter** sub-tab — N×N pair plot | `createAnalysisTab.m` + `buildPairGrid.m` | `renderModeScatter.m` (scatter), dropdown handlers in `createAnalysisTab.m` | Color/size dropdowns recompute via `computeScatterLims.m`; redrawn by `redrawModeScatter.m` |
+| Range hints used by axes (`x` from frequency, `y` from SO-power bins) | — | `getSOPHFreqRange.m`, `getSOPHPowerBinRange.m`, `binsForParamfit.m` | |
+| "Has data?" gating (greys sub-tabs without aggregate on disk) | — | `hasModeParamData.m` | |
+| Pop-out an axes to a figure | `attachPopOutToolbar.m` | — | `openAxesInFigure.m` |
+
+This tab and the Results Browser preview share the SOPH plotting helpers
+(`plotAggregateSOHist`, `styleSOPHAxes`, `renderSOPHTiffSliderPage`,
+`peekSOPHTiffBins`) — that's why those files don't live "inside" either tab.
+
+---
+
+## Tab 4 — "DYNAM-O Settings"
+
+Built by **`createDYNAMOSettingsTab.m`**. Embeds the settings sub-app from
+the toolbox. Most logic is in the embedded settings UI; this file just
+host-mounts it.
+
+---
+
+## Run pipeline (the RUN button)
+
+`RunBatchButtonPushed` (shim) → **`startBatchRun.m`** → loops over selected
+data files → for each file, calls **`runBatch.m`** which orchestrates the
+five pipeline stages with per-file save gates:
+
+| Stage | File | What it does |
+|---|---|---|
+| `runDataSummaryFigure.m` | hypnogram + spectrogram QC figure | |
+| `runStatsTable.m` | SOPH 2D-histograms (`.mat` + `.csv`) | |
+| `runParamBasis.m` | parametric peak-fit basis | |
+| `runSplineBasis.m` | spline-fit basis | |
+| `saveAuxData.m` | aux outputs (per-file `_aux.mat`) | |
+
+UI state during a run:
+- `setRunningState.m` — disables most controls, swaps RUN icon for spinner.
+- `resetRunUiState.m` — restores normal state on completion / abort.
+- `appendRunLog.m` — writes one line to the run-log buffer.
+- `toggleRunLogConsole.m` — opens/closes the floating run-log window
+  (`createRunLogConsole.m` builds it).
+- `refreshLogConsole.m` + `startLogConsoleTimer.m` / `stopLogConsoleTimer.m`
+  — periodically tail the buffer into the console.
+
+The driver checks `app.UserStopRequest` between stages to honor the STOP
+button (`requestStopBatch.m` flips that flag).
+
+---
+
+## Where do shared things live?
+
+- **MATLAB-app callbacks** (`*ButtonPushed`, `*MenuSelected`, `*Changed`):
+  in `DYNAMOFileManager.m` as 1-line shims that call the verb-noun method.
+  Don't put logic in the shim — put it in the per-file method.
+- **Properties** (`app.SomeWidget`, `app.SomeState`): in the `properties`
+  block of `DYNAMOFileManager.m` (per-file methods can't declare properties).
+- **Stateless helpers** (no `app` argument): under `+results_browser/` if
+  Results-Browser-specific, else inline in the calling method.
+- **CSS-styled widgets** (`CSSuiButton`, `CSSuiListBox`, `CSSuiTable`,
+  `CSSuiDropdown`, `CSSuiLabel`): submodule under `components/CSSuicontrols/`.
+  Build issues with these (e.g. selection-change events) are fixed in that
+  repo, not here.
+
+---
+
+## Adding a new feature — minimal recipe
+
+1. Pick a verb (`create`/`render`/`refresh`/`update`/`run`/`build`/`load`/
+   `pick`/`on`/…) that describes what it does for the user.
+2. Add `app/@DYNAMOFileManager/<verb><Noun>.m` containing
+   `function <verb><Noun>(app, ...)` — MATLAB auto-discovers it.
+3. If wired to a button, add a one-line shim in `DYNAMOFileManager.m`:
    ```matlab
    function MyButtonPushed(app, ~, ~)
        app.myVerbNoun();
    end
    ```
-4. **Helpers that don't need `app`** belong in `+results_browser/` (or a new
-   `+package/` if the feature is large enough to warrant its own).
-5. **Don't add new properties to a per-file method** — properties have to live
-   in the classdef's `properties` block. Add them grouped by feature there.
-
----
-
-## Why this layout
-
-The class was a single 8,400-line file before this split. Discoverability and
-naming inconsistency were the two pain points:
-
-- **Discoverability**: with one method per file, `ls @DYNAMOFileManager` is the
-  feature index. Verb prefixes mean even partial-recall searches
-  (`createRun…`, `runStats…`) land on the right file.
-- **Naming consistency**: half the methods used to be named for the GUI
-  control that fired them (`viewChannelsButtonPushed`, `RunBatchButtonPushed`).
-  Now those names survive only as one-line callback shims; the implementation
-  is named for what it does (`createRunMontageWindow`, `startBatchRun`).
-
-Per-file methods do not have a measurable runtime cost — MATLAB caches
-class-folder method tables on first use of the class, so the parse cost is paid
-once per session.
-
----
-
-## Out of scope (for future refactors)
-
-- Splitting the 611-line `runBatch` further into per-stage helpers (a
-  per-channel/per-stage split is the natural next pass).
-- Promoting groups of methods to standalone classes (e.g. a
-  `ResultsBrowserModel` with its own state). The flat `@`-folder is sufficient
-  for navigability now that file names describe purpose.
-- Reorganizing the `properties` block — properties can't be declared in
-  per-file methods, so they stay grouped by feature in the classdef.
+4. If you need new state, add a property to the `properties` block.
+5. If it's stateless and doesn't touch `app`, put it in `+results_browser/`
+   (or a new `+package/`) instead.
