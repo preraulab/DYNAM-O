@@ -135,8 +135,8 @@ DYNAM-O ships two pipeline backends:
 
 | Backend | Speed (full-night on M3) | Accuracy | Extra setup |
 |---|---|---|---|
-| **`'rust'`** *(default)* | **~30 s** | −0.8 % peak count vs MATLAB ground truth | Requires compiled MEX wrappers (step 3) |
-| `'matlab'` | ~125 s | authoritative | None — works out of the box with MATLAB only |
+| **`'rust'`** *(default)* | **~50–80 s** | within ±0.85% peak count vs MATLAB across 4 nights | Requires compiled MEX wrappers (step 3) |
+| `'matlab'` | ~220–300 s | authoritative | None — works out of the box with MATLAB only |
 
 <details>
 <summary><b>How to select the backend</b> — call site, options struct, or GUI</summary>
@@ -1097,15 +1097,20 @@ For in-depth algorithm documentation and video tutorials, visit the
 
 ### Backends at a glance
 
-| Backend | Implementation | Parallelism | Peak count (night) | Wallclock |
+| Backend | Implementation | Parallelism | Final peak count (4-night range) | Wallclock (4-night range) |
 |---|---|---|---|---|
-| **`'rust'`** *(default)* | `dynamo_rs` via MEX | `rayon` inside MEX (no parpool) | 34 511 | ~30 s (M3) |
-| `'matlab'` | pure MATLAB | `parfor` over segments | 34 788 (truth) | ~125 s (M3) |
+| **`'rust'`** *(default)* | `dynamo_rs` via MEX | `rayon` inside MEX (no parpool) | within ±0.85% of MATLAB | 48–79 s (M3) |
+| `'matlab'` | pure MATLAB | `parfor` over segments | authoritative | 221–300 s (M3) |
 
-Both produce visually indistinguishable SO-power / SO-phase histograms
-(cosine similarity 0.999 / 0.996). The −0.8 % peak-count gap is a subtle
-label-assignment detail in Rust merge that shifts ~270 peaks across the
-bandwidth/duration filter cutoffs; downstream histograms are unaffected.
+Verified on `example_data` plus three Compumedics PSG nights
+(`TS00304`/`TS00404`/`TS00504`, channel C4-A1, default
+`quality_setting`). Final-peak deltas span −0.82% to +0.45% — sign
+varies, so Rust isn't systematically over- or under-counting. Both
+backends produce visually indistinguishable SO-power / SO-phase
+histograms (cosine similarity 0.999 / 0.996). See
+[`rust_bridge/README.md` — Backend parity](rust_bridge/README.md#backend-parity)
+for the per-stage breakdown showing how the +5–6% pass-1 raw-peak
+divergence collapses to <±1% by the end of pass-2.
 
 ### Parallel pool (MATLAB backend only)
 
