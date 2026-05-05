@@ -157,7 +157,7 @@ for ci = 1:numel(cats)
             % bins already pulled out of stack_sophs_mat_files; if those
             % weren't populated (TIFF-only run), try (1) the TIFF
             % ImageDescription, (2) any whole-struct .mat in the folder,
-            % (3) the run_settings_*.txt file at the results root.
+            % (3) the run_settings_*.json file at the results root.
             freqBins = []; soBins = [];
             if ~isempty(fieldnames(mat_struct))
                 if isfield(mat_struct,'freq_bins'),  freqBins = mat_struct.freq_bins; end
@@ -562,28 +562,37 @@ end
 
 function [freq_bins, so_bins] = peek_bins_from_settings(channelDir, axis_kind)
 %PEEK_BINS_FROM_SETTINGS  Reconstruct freq_bins (and SOphase_bins) from a
-%`<root>/settings/run_settings_*.txt` file emitted by the FileManager.
+%`<root>/settings/run_settings_*.json` file emitted by the FileManager.
 %SOpower_bins are adaptive per subject and cannot be recovered this way.
 freq_bins = [];
 so_bins   = [];
 root = fileparts(channelDir);
 settingsDir = fullfile(root, 'settings');
 if ~isfolder(settingsDir), return, end
-files = dir(fullfile(settingsDir, 'run_settings_*.txt'));
+files = dir(fullfile(settingsDir, 'run_settings_*.json'));
 if isempty(files), return, end
 % Use the most recent settings file.
 [~, idx] = max([files.datenum]);
-txt = fileread(fullfile(files(idx).folder, files(idx).name));
+try
+    S = load_run_log(fullfile(files(idx).folder, files(idx).name));
+catch
+    return
+end
+if ~isfield(S.options, 'SOPH_options'); return; end
+opts = S.options.SOPH_options;
 
-freq_range = parse_vec(txt, 'SOPH_options.freq_range');
-freq_step  = parse_vec(txt, 'SOPH_options.freq_binsizestep');
-freq_bins  = bin_centers(freq_range, freq_step);
+freq_bins = bin_centers(get_field(opts, 'freq_range'), ...
+                        get_field(opts, 'freq_binsizestep'));
 
 if strcmp(axis_kind, 'phase')
-    ph_range = parse_vec(txt, 'SOPH_options.SOphase_range');
-    ph_step  = parse_vec(txt, 'SOPH_options.SOphase_binsizestep');
-    so_bins  = bin_centers(ph_range, ph_step);
+    so_bins = bin_centers(get_field(opts, 'SOphase_range'), ...
+                          get_field(opts, 'SOphase_binsizestep'));
 end
+end
+
+function v = get_field(s, name)
+v = [];
+if isfield(s, name); v = s.(name)(:).'; end
 end
 
 function b = bin_centers(rng, step)
@@ -594,13 +603,4 @@ b = [];
 if numel(rng) ~= 2 || numel(step) ~= 2, return, end
 n = round((rng(2) - rng(1)) / step(2)) + 1;
 b = linspace(rng(1), rng(2), n).';
-end
-
-function v = parse_vec(txt, key)
-%PARSE_VEC  Pull `key = [a b ...];` out of a settings text dump.
-v = [];
-pat = ['^\s*' regexptranslate('escape', key) '\s*=\s*\[([^\]]*)\]'];
-tok = regexp(txt, pat, 'tokens', 'lineanchors', 'once');
-if isempty(tok), return, end
-v = sscanf(tok{1}, '%g').';
 end

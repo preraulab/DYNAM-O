@@ -743,37 +743,31 @@ classdef DYNAMO < handle
 
             % --- Callback functions ---
             function loadSettingsCallback(~, ~)
-                [filename, filepath] = uigetfile({'*.txt'},'Select DYNAM-O settings file.');
+                % Load settings from a JSON file written by saveSettingsCallback
+                % / the FileManager run-log. The legacy `.txt` format stored
+                % MATLAB code and was loaded via `run()` — a code-injection
+                % vector. JSON is inert (jsondecode = data deserialization only).
+                [filename, filepath] = uigetfile({'*.json'}, 'Select DYNAM-O settings file (JSON).');
+                if isequal(filename, 0); return; end
 
-                if filename ~= 0
-                    new_filename = filename;
-                    new_filename(end-2:end) = 'm  ';
-
-                    movefile(strcat(filepath,filename),strcat(filepath,new_filename));
-
-                    SOPH_options = []; %#ok<*PROPLC>
-                    baseline_options = [];
-                    detection_options = [];
-                    param_basis_power_options = [];
-                    param_basis_phase_options = [];
-                    spline_basis_power_options = [];
-                    spline_basis_phase_options = [];
-
-                    run(strcat(filepath,new_filename));
-
-                    obj.updateOptions('SOPH_options',SOPH_options);
-                    obj.updateOptions('baseline_options',baseline_options);
-                    obj.updateOptions('detection_options',detection_options);
-                    obj.updateOptions('param_basis_power_options',param_basis_power_options);
-                    obj.updateOptions('param_basis_phase_options',param_basis_phase_options);
-                    obj.updateOptions('spline_basis_power_options',spline_basis_power_options);
-                    obj.updateOptions('spline_basis_phase_options',spline_basis_phase_options);
-                    clear SOPH_options baseline_options detection_options param_basis_power_options param_basis_phase_options spline_basis_power_options spline_basis_phase_options
-
-                    movefile(strcat(filepath,new_filename),strcat(filepath,filename));
-
-                    updateAll();
+                try
+                    settings = load_run_log(fullfile(filepath, filename));
+                catch err
+                    uialert(fig, sprintf('Could not parse settings file:\n%s', err.message), ...
+                        'Load Settings', 'Icon', 'error');
+                    return
                 end
+
+                % Update each option struct present in the file. Any
+                % unknown keys in settings.options are ignored.
+                opt_names = fieldnames(settings.options);
+                for k = 1:numel(opt_names)
+                    name = opt_names{k};
+                    if isprop(obj, name)
+                        obj.updateOptions(name, settings.options.(name));
+                    end
+                end
+                updateAll();
             end
 
             function saveSettingsCallback(~, ~)

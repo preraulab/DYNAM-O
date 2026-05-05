@@ -4,9 +4,9 @@ function [freq_bins, so_bins] = binsForParamfit(~, S, p, axis_kind)
     %     1. Direct fields on the struct (freq_bins, SO<axis>_bins).
     %     2. Embedded SOPH metadata (some saves stash a copy under
     %        a sub-struct called 'SOPH_options' or 'SOPHs').
-    %     3. peek_bins_from_settings_walk on the file path —
+    %     3. recover_soph_bins_from_run_settings on the file path —
     %        same fallback the SOPH TIFF preview uses, walks up
-    %        to find run_settings_*.txt and reconstructs the bin
+    %        to find run_settings_*.json and reconstructs the bin
     %        centers from the recorded ranges.
     %   Returns [] for whichever can't be recovered; the caller
     %   (styleSOPHAxes) treats [] as "use bin indices" so the
@@ -41,7 +41,7 @@ function [freq_bins, so_bins] = binsForParamfit(~, S, p, axis_kind)
         end
     end
     if isempty(freq_bins) || isempty(so_bins)
-        [fb, sb] = peek_bins_from_settings_walk(p, axis_kind);
+        [fb, sb] = recover_soph_bins_from_run_settings(p, axis_kind);
         if isempty(freq_bins), freq_bins = fb; end
         if isempty(so_bins),   so_bins   = sb; end
     end

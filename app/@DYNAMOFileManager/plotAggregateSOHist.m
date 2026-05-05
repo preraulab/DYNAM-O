@@ -65,7 +65,7 @@ function plotAggregateSOHist(app, ax, filePath, axis_kind)
                 % freq_bins and SOphase_bins are recoverable
                 % this way (SOpower bins are adaptive).
                 if isempty(freq_bins) || (isempty(bins) && strcmp(axis_kind,'phase'))
-                    [fb2, sb2] = peek_bins_from_settings_walk(filePath, axis_kind);
+                    [fb2, sb2] = recover_soph_bins_from_run_settings(filePath, axis_kind);
                     if isempty(freq_bins) && ~isempty(fb2), freq_bins = fb2; end
                     if isempty(bins)      && ~isempty(sb2), bins      = sb2; end
                 end
