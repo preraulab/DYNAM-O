@@ -4,6 +4,7 @@ archive/*
 output_images/*
 tests/*
 !tests/test_*.m
+!tests/run_all_tests.m
 !tests/simulation_test.mat
 *.asv
 .aider*
