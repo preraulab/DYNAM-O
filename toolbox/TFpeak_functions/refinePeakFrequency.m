@@ -173,9 +173,18 @@ parfor ii = 1:N_events
     % Take the spectrogram slice at that single timepoint
     curr = spect(:,ii);
 
-    % Calculate the location (frequency) of the max value within the slice and bounding box freqs
-    max_val = max(curr(range_inds)); % Find the index of the max within those bounds
-    max_freq = sfreqs(range_inds & (curr' == max_val)); % Get final frequency location
+    % Calculate the location (frequency) of the max value within the slice
+    % and bounding box freqs. Index-based lookup so ties pick a single bin
+    % (the lowest index) and an all-NaN slice doesn't trip the equality
+    % comparison or feed empty/NaN to fminsearch in the spline_opt branch.
+    sub_curr   = curr(range_inds);
+    sub_sfreqs = sfreqs(range_inds);
+    [max_val, k_max] = max(sub_curr, [], 'omitnan');
+    if isempty(k_max) || ~isfinite(max_val)
+        peak_freqs(ii) = NaN;
+        continue
+    end
+    max_freq = sub_sfreqs(k_max);
 
     switch refine_method
         case 'spline_interp' %Spline interpolation over a grid

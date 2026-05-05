@@ -198,8 +198,18 @@ else % Compute the SOphase
         'EEG_times', EEG_times, 'isexcluded', isexcluded, 'SO_freqrange', SO_freqrange, 'SOphase_filter', SOphase_filter);
 end
 
-% Get SOphase_times step size
+% Get SOphase_times step size. The synthetic-padding interp1 below assumes
+% uniform sampling — verify rather than trust the first two samples.
 SOphase_times_step = SOphase_times(2) - SOphase_times(1);
+SOphase_times_diffs = diff(SOphase_times);
+if numel(SOphase_times_diffs) > 1 && ...
+        max(abs(SOphase_times_diffs - SOphase_times_step)) > 1e-6 * abs(SOphase_times_step)
+    error('SOphaseHistogram:nonUniformTimes', ...
+        ['SOphase_times must be uniformly sampled (max step deviation %.3g s ' ...
+         'vs nominal %.3g s). Non-uniform sampling would silently corrupt the ' ...
+         'synthetic boundary padding used for interp1.'], ...
+        max(abs(SOphase_times_diffs - SOphase_times_step)), SOphase_times_step);
+end
 
 % Interpolate SOphase to peak time points
 peak_SOphase = interp1([SOphase_times(1)-SOphase_times_step, SOphase_times, SOphase_times(end)+SOphase_times_step],...

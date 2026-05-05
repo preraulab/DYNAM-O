@@ -205,8 +205,18 @@ else % Compute the normalized SOpower
         'SOpower_outlier_threshold', SOpower_outlier_threshold, 'norm_method', norm_method, 'retain_Fs', retain_Fs);
 end
 
-% Get SOpower_times step size
+% Get SOpower_times step size. The synthetic-padding interp1 below assumes
+% uniform sampling — verify rather than trust the first two samples.
 SOpower_times_step = SOpower_times(2) - SOpower_times(1);
+SOpower_times_diffs = diff(SOpower_times);
+if numel(SOpower_times_diffs) > 1 && ...
+        max(abs(SOpower_times_diffs - SOpower_times_step)) > 1e-6 * abs(SOpower_times_step)
+    error('SOpowerHistogram:nonUniformTimes', ...
+        ['SOpower_times must be uniformly sampled (max step deviation %.3g s ' ...
+         'vs nominal %.3g s). Non-uniform sampling would silently corrupt the ' ...
+         'synthetic boundary padding used for interp1.'], ...
+        max(abs(SOpower_times_diffs - SOpower_times_step)), SOpower_times_step);
+end
 
 % Interpolate SOpower to peak time points
 peak_SOpower = interp1([SOpower_times(1)-SOpower_times_step, SOpower_times, SOpower_times(end)+SOpower_times_step],...
