@@ -229,6 +229,11 @@ function runBatch(app, dataList, stagingList)
                     [pp, qq]  = rat(target_fs / bulk_Fs(1));
                     bulk_data = resample(bulk_data, pp, qq);
                     bulk_Fs   = repmat(target_fs, 1, size(bulk_data, 2));
+                else
+                    msg = sprintf('Skipping resample - data already at %g Hz.', target_fs);
+                    fprintf('%s\n', msg);
+                    app.TextArea.addnl(['   ' msg]);
+                    drawnow;
                 end
             end
 
@@ -289,6 +294,9 @@ function runBatch(app, dataList, stagingList)
                                 d_ii = resample(d_ii, pp, qq);
                                 f_ii = repmat(target_fs, 1, size(d_ii, 2));
                             end
+                            % already-at-target case is silent here:
+                            % per-channel loop runs once per channel and a
+                            % message per channel would clutter the log.
                         end
                         if isempty(bulk_data)
                             bulk_data        = nan(size(d_ii, 1), nChannels);
