@@ -86,11 +86,7 @@ stats_table.PeakStage = interp1(stage_times, stage_vals, stats_table.PeakTime, '
 stats_table.PeakStage(isnan(stats_table.PeakStage)) = 0; % a conservative choice to mark peaks outside scored stages as unknown
 
 if ~isempty(artifacts) && ~isempty(t_artifacts)
-    % Peaks whose PeakTime falls outside [t_artifacts(1), t_artifacts(end)]
-    % return NaN from interp1, and logical(NaN) errors in modern MATLAB.
-    % Default out-of-range peaks to "not an artifact".
-    artifact_hits = interp1(t_artifacts, single(artifacts), stats_table.PeakTime, 'nearest', 0);
-    stats_table.PeakStage(logical(artifact_hits)) = 6;
+    stats_table.PeakStage(logical(interp1(t_artifacts, single(artifacts), stats_table.PeakTime, 'nearest'))) = 6;
 end
 
 % update table column header
