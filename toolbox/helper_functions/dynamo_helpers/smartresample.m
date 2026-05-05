@@ -1,62 +1,79 @@
-function out = smartresample(data, src_fs, target_fs)
-%SMARTRESAMPLE  Resample to target_fs, handling scalar or per-column source rates.
+%SMARTRESAMPLE  Resample a signal between arbitrary sampling rates using rational approximation
 %
-%   out = smartresample(data, src_fs, target_fs)
+%   Usage:
+%       out = smartresample(x, Fs, Frs)
+%       out = smartresample(x, Fs, Frs, order)
 %
-%   data:      vector or N x C matrix
-%   src_fs:    scalar (uniform across columns) OR length-C vector
-%              (one Fs per column — used when channels in `data` were
-%              loaded at different native rates).
-%   target_fs: scalar
+%   Inputs:
+%       x     : vector OR N x C matrix
+%       Fs    : scalar (uniform across columns) OR length-C vector
+%               (one Fs per column — used when channels in `x` were
+%               loaded at different native rates).
+%       Frs   : scalar - target sampling frequency in Hz.
+%       order : integer - FIR filter order passed to resample (default: 500)
 %
-%   When src_fs is a vector with at least two distinct rates, each
-%   column is resampled with its own ratio and the result is trimmed
-%   to the shortest length so the output stays a rectangular matrix.
-%   Columns already at target_fs are passed through unchanged.
+%   Outputs:
+%       out   : resampled signal, same orientation as `x`. Heterogeneous-
+%               rate columns are trimmed to the shortest output length so
+%               the result remains a rectangular matrix.
+%
+%   Notes:
+%       - Mirrors the canonical Prerau-lab `smartresample` ([d,n]=rat(Fs/Frs);
+%         resample(x,n,d,order)) for the scalar case so output is bit-equal
+%         to other lab tools using that helper.
+%       - The matrix + per-column-Fs path is a DYNAM-O extension used by
+%         load_data.m to handle EDFs where selected channels have
+%         different native rates.
+%       - Columns already at Frs are passed through unchanged (no resample
+%         filter ringing where none is needed).
+%
+%   See also: resample, rat
+%
+%   ∿∿∿  Prerau Laboratory MATLAB Codebase · sleepEEG.org  ∿∿∿
 
-    if isvector(data)
-        % Single-channel fast path. Accept src_fs as scalar (or 1-elem
-        % vector); rat() then chooses the smallest integer ratio that
-        % approximates target/src to MATLAB's default tolerance.
-        f = src_fs(1);
-        if abs(f - target_fs) <= 1e-9
-            out = data;
-            return
-        end
-        [p, q] = rat(target_fs / f);
-        out = resample(data, p, q);
+function out = smartresample(x, Fs, Frs, order)
+if nargin < 4
+    order = 500;
+end
+
+if isvector(x)
+    f = Fs(1);
+    if abs(f - Frs) <= 1e-9
+        out = x;
         return
     end
+    [d, n] = rat(f / Frs);
+    out = resample(x, n, d, order);
+    return
+end
 
-    % Matrix path. If src_fs is scalar OR uniform, do it in one shot
-    % (resample handles columns of a matrix natively).
-    if isscalar(src_fs) || all(abs(src_fs - src_fs(1)) < 1e-9)
-        if abs(src_fs(1) - target_fs) <= 1e-9
-            out = data;
-            return
-        end
-        [p, q] = rat(target_fs / src_fs(1));
-        out = resample(data, p, q);
+% Matrix path. Uniform Fs (scalar or all-equal vector) → one-shot resample.
+if isscalar(Fs) || all(abs(Fs - Fs(1)) < 1e-9)
+    if abs(Fs(1) - Frs) <= 1e-9
+        out = x;
         return
     end
+    [d, n] = rat(Fs(1) / Frs);
+    out = resample(x, n, d, order);
+    return
+end
 
-    % Heterogeneous-rate matrix: resample each column independently.
-    % Resulting columns may differ by 1 sample due to rat()/resample
-    % rounding — trim to the shortest so the output remains a matrix.
-    nC = size(data, 2);
-    cols = cell(1, nC);
-    for ii = 1:nC
-        f = src_fs(ii);
-        if abs(f - target_fs) <= 1e-9
-            cols{ii} = data(:, ii);
-        else
-            [p, q] = rat(target_fs / f);
-            cols{ii} = resample(data(:, ii), p, q);
-        end
+% Heterogeneous-rate matrix: resample each column on its own ratio.
+% Trim to the shortest output column so we keep a rectangular matrix.
+nC = size(x, 2);
+cols = cell(1, nC);
+for ii = 1:nC
+    f = Fs(ii);
+    if abs(f - Frs) <= 1e-9
+        cols{ii} = x(:, ii);
+    else
+        [d, n] = rat(f / Frs);
+        cols{ii} = resample(x(:, ii), n, d, order);
     end
-    Lmin = min(cellfun(@numel, cols));
-    out = zeros(Lmin, nC, 'like', data);
-    for ii = 1:nC
-        out(:, ii) = cols{ii}(1:Lmin);
-    end
+end
+Lmin = min(cellfun(@numel, cols));
+out = zeros(Lmin, nC, 'like', x);
+for ii = 1:nC
+    out(:, ii) = cols{ii}(1:Lmin);
+end
 end
