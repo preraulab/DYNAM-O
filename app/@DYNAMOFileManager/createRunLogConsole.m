@@ -12,7 +12,12 @@ function createRunLogConsole(app)
         'run_start', app.curr_datetime, ...
         'file_path', strcat(app.OutputDirEditField.Value, '/settings/'));
 
-    app.runlog_fname = matlab.lang.makeValidName(strcat('file_log_', app.curr_datetime, '.txt'));
+    % Don't run this through matlab.lang.makeValidName — it converts the
+    % '.' before the extension into '_', producing 'file_log_..._txt'
+    % filenames that the Results Browser preview can't recognize as text.
+    % curr_datetime is already a digits+underscores string (no chars that
+    % need escaping), so the concatenation is safe as-is.
+    app.runlog_fname = strcat('file_log_', app.curr_datetime, '.txt');
     app.runlog_fpath = strcat(app.OutputDirEditField.Value, '/logs/');
     app.runlog_fid   = fopen(fullfile(app.runlog_fpath, app.runlog_fname), 'w');
 

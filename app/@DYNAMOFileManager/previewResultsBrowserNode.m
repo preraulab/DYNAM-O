@@ -36,7 +36,10 @@ function previewResultsBrowserNode(app, evt)
                 app.renderResultsBrowserPreviewTiff(p);
             case '.csv'
                 app.renderResultsBrowserPreviewCsv(p);
-            case '.txt'
+            case {'.txt', '.json', '.log'}
+                % JSON is plain text — render via the text viewer instead
+                % of falling through to "Preview not available". `.log`
+                % covers any other text-style log files we emit.
                 app.renderResultsBrowserPreviewText(p);
             case '.mat'
                 app.renderResultsBrowserPreviewMat(p);
