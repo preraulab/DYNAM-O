@@ -1,19 +1,24 @@
 function createRunMontageWindow(app)
-% createRunMontageWindow  Build the Channel & Reference Composer
+% createRunMontageWindow  Build the Channels & Derived Channels Composer
 %   ("run montage" picker). Scans every loaded EDF file's header for
 %   available channel labels and per-file sampling rates, then opens a
 %   non-modal three-column dialog where the user assembles the output
-%   channel set + named references that the upcoming batch run will use.
+%   channel set the upcoming batch run will use. Derived channels (mean,
+%   difference, custom) are created via popup dialogs and live in the
+%   same Available Channels table as the EDF labels, marked Derived.
 %
-%   LEFT  : Available Channels table (read-only, sourced from EDF scan).
-%   MID   : button stack (Add / Remove / Rereference / Custom) operating
-%           on the Output Channels table.
-%   RIGHT : editable Output Channels table on top, draggable splitter,
-%           editable References table below.
+%   LEFT  : button row (+ Mean / + Difference / + Custom / ✕ Remove) on
+%           top of the unified Available Channels table (rows are EDF or
+%           Derived; the Type column distinguishes them).
+%   MID   : button stack (→ Add / ✕ Remove / − Rereference / ƒ(x) Custom)
+%           operating on the Output Channels table.
+%   RIGHT : editable Output Channels table (one DYNAM-O run per row).
 %
 %   Triggered by the "View Channels" button on the Setup tab via the
-%   thin viewChannelsButtonPushed shim. OK validates and commits to
-%   app properties; Cancel discards.
+%   thin viewChannelsButtonPushed shim. OK validates and commits both
+%   app.ChannelList (output channels) and app.ReferenceList (every
+%   derived channel, regardless of whether the user used it in an
+%   output row — read_EDF needs the named-derivation prefix).
 
     if isempty(app.DataList)
         uialert(app.UIFigure, ...
@@ -59,14 +64,20 @@ function createRunMontageWindow(app)
         return
     end
 
-    % Build sorted table data: {channel, fs_string, file_count_string}
-    % Also build fsByLabel: label -> Fs (scalar) or NaN if mixed
-    % across files. When resampling is enabled, every label maps to
-    % the target rate (the resampler runs before any composer math
-    % does, so downstream operations see a single uniform rate).
+    % Build sorted base rows for the Available Channels table:
+    %   {Type, Channel, Fs string, Expression}.
+    % The Type column distinguishes 'EDF' (immutable, sourced from the
+    % loaded EDFs) from 'Derived' (built in this dialog and appended
+    % by rebuildAvailable() at refresh time). The Expression column is
+    % blank for EDF rows and shows the formula for Derived rows.
+    %
+    % fsByLabel: label -> Fs (scalar) or NaN if mixed across files.
+    % When resampling is enabled, every label maps to the target rate
+    % (the resampler runs before any composer math does, so downstream
+    % operations see a single uniform rate).
     all_edf_labels = sort(keys(chan_map));
     nChans = numel(all_edf_labels);
-    tableData = cell(nChans, 3);
+    edfBaseRows = cell(nChans, 4);
     resample_on = ~isempty(app.ResampleSwitch) && ...
         logical(app.ResampleSwitch.Value);
     if resample_on
@@ -88,11 +99,16 @@ function createRunMontageWindow(app)
             end
             freqStr = [strjoin(arrayfun(@(f) sprintf('%g', f), ufreqs, 'UniformOutput', false), ' / ') ' Hz'];
         end
-        fileStr = sprintf('%d / %d', numel(entry{1}), nFiles);
-        tableData{ii,1} = lbl;
-        tableData{ii,2} = freqStr;
-        tableData{ii,3} = fileStr;
+        edfBaseRows{ii,1} = 'EDF';
+        edfBaseRows{ii,2} = lbl;
+        edfBaseRows{ii,3} = freqStr;
+        edfBaseRows{ii,4} = '';
     end
+    % `tableData` is the live rendered version (EDF rows + any Derived
+    % rows built in this dialog). It's rebuilt by rebuildAvailable()
+    % on every refresh so newly created derived channels show up in
+    % the Available Channels table without re-creating the widget.
+    tableData = edfBaseRows;
 
     % ============================================================
     % CHANNEL & REFERENCE COMPOSER (three-column layout)
@@ -122,7 +138,6 @@ function createRunMontageWindow(app)
 
     % Track selections in each table for the action buttons.
     availSelectedRows = [];
-    refSelectedRows   = [];
     chanSelectedRows  = [];
 
     ss = get(0, 'ScreenSize');
@@ -132,13 +147,13 @@ function createRunMontageWindow(app)
     % composer is open. The closure over `app` keeps the
     % dialog wired to the live app instance regardless of
     % focus changes.
-    d = uifigure('Name', 'Configure Channels & References', ...
+    d = uifigure('Name', 'Configure Channels & Derived Channels', ...
         'Position', [(ss(3)-dW)/2, (ss(4)-dH)/2, dW, dH]);
     app.trackChildWindow(d);
 
     outer = uigridlayout(d);
     outer.RowHeight    = {62, '1x', 32, 44};
-    outer.ColumnWidth  = {'1x', 150, '1.4x'};
+    outer.ColumnWidth  = {'1.2x', 150, '1x'};
     outer.Padding      = [10 10 10 10];
     outer.RowSpacing   = 8;
     outer.ColumnSpacing= 10;
@@ -152,129 +167,72 @@ function createRunMontageWindow(app)
     headerHtml.Layout.Row    = 1;
     headerHtml.Layout.Column = [1 3];
 
-    % ---- ROW 2 / COL 1: Available Channels (top), splitter,
-    %             Create Reference (bottom) ----
+    % ---- ROW 2 / COL 1: Available Channels (full height) ----
+    % Single panel — the old splitter + separate "References" panel
+    % were collapsed into this one column. Derived channels (mean,
+    % difference, custom) live in the same Available Channels table
+    % alongside the EDF labels, distinguished by the Type column.
+    % Anything in this list — EDF or derived — is a valid source for
+    % the middle-column "Build Output" buttons.
     leftCol = uigridlayout(outer);
     leftCol.Layout.Row    = 2;
     leftCol.Layout.Column = 1;
-    leftCol.RowHeight     = {'2x', 14, '1x'};
+    leftCol.RowHeight     = {30, 44, '1x'};
     leftCol.ColumnWidth   = {'1x'};
     leftCol.Padding       = [0 0 0 0];
     leftCol.RowSpacing    = 6;
 
-    availPanel = uigridlayout(leftCol);
-    availPanel.Layout.Row    = 1;
-    availPanel.Layout.Column = 1;
-    availPanel.RowHeight  = {30, '1x'};
-    availPanel.ColumnWidth= {'1x'};
-    availPanel.Padding    = [0 0 0 0];
-    availPanel.RowSpacing = 4;
-    CSSuiLabel(availPanel, 'Style', app.AppStyle, ...
+    CSSuiLabel(leftCol, 'Style', app.AppStyle, ...
         'Text', 'AVAILABLE CHANNELS', ...
         'FontWeight', '700', ...
         'FontSize', app.FontSizeTitle, ...
         'HorizontalAlignment', 'left', ...
         'VerticalAlignment', 'top');
-    availTable = CSSuiTable(availPanel, ...
+
+    % Button row: derived-channel creators + a single Remove that
+    % only deletes Derived rows (EDF rows are immutable).
+    derivedBtnRow = uigridlayout(leftCol);
+    derivedBtnRow.Layout.Row    = 2;
+    derivedBtnRow.RowHeight     = {44};
+    derivedBtnRow.ColumnWidth   = {'1x', '1x', '1x', '1x'};
+    derivedBtnRow.Padding       = [0 0 0 0];
+    derivedBtnRow.ColumnSpacing = 6;
+    refMeanBtn = CSSuiButton(derivedBtnRow, 'Style', app.AppStyle, ...
+        'Text', '+ Mean', ...
+        'ButtonPushedFcn', @(s,e) addRefMean());
+    refMeanBtn.HTMLComponent.Tooltip = ['Create a derived channel: the mean of two or more ' ...
+        'available channels. Opens a popup to pick the inputs and name the result.'];
+    refABMinusBtn = CSSuiButton(derivedBtnRow, 'Style', app.AppStyle, ...
+        'Text', '+ Difference', ...
+        'ButtonPushedFcn', @(s,e) addRefABMinus());
+    refABMinusBtn.HTMLComponent.Tooltip = ['Create a derived channel as the difference A − B. ' ...
+        'Opens a popup with two channel pickers and a name field.'];
+    refCustomBtn = CSSuiButton(derivedBtnRow, 'Style', app.AppStyle, ...
+        'Text', '+ Custom', ...
+        'ButtonPushedFcn', @(s,e) addRefCustom());
+    refCustomBtn.HTMLComponent.Tooltip = ['Create a derived channel from a free-form ' ...
+        'expression (e.g., (A1 + A2) / 2 or C3 - mean(A1, A2)). A name is required.'];
+    refRemoveBtn = CSSuiButton(derivedBtnRow, 'Style', app.AppStyle, ...
+        'Text', '✕ Remove', ...
+        'ButtonPushedFcn', @(s,e) removeRef());
+    refRemoveBtn.HTMLComponent.Tooltip = ['Remove the selected derived channel(s). EDF ' ...
+        'channels can''t be removed. If any output channels use the derived channel ' ...
+        'being removed, you''ll be warned before they''re removed too.'];
+
+    availTable = CSSuiTable(leftCol, ...
         'Data', tableData, ...
-        'ColumnName', {'Channel', 'Fs (Hz)', 'Files'}, ...
-        'ColumnWidth', [180, 150, 80], ...
+        'ColumnName', {'Type', 'Channel', 'Fs (Hz)', 'Expression'}, ...
+        'ColumnWidth', [70, 150, 110, 220], ...
         'Style', app.AppStyle, ...
         'SelectionType', 'row', ...
         'SelectionChangedFcn', @(s,e) onAvailSelect(e), ...
         'DoubleClickFcn', @(s,e) onAvailDoubleClick(e));
-    availTable.HTMLComponent.Tooltip = ['Channels found in the loaded EDF files. ' ...
-        'Double-click a row to add it as a passthrough output, or select one or more ' ...
-        'rows (Ctrl/Shift-click) to use as sources for the middle-column buttons.'];
-
-    % --- Splitter between Available Channels and Create Reference ---
-    % uipanel with a ButtonDownFcn that captures the figure's
-    % mouse-motion / mouse-up callbacks for live drag. Heights
-    % are computed in pixels (not flex units) during drag so
-    % the user feels a 1:1 response. Kept as a bare uipanel
-    % (no child controls) so ButtonDownFcn fires reliably — a
-    % uihtml child would swallow the mousedown.
-    splitterDrag = struct('active', false, 'startY', 0, ...
-        'startH1', 0, 'totalH', 0, ...
-        'origMotion', [], 'origUp', [], 'origPointer', '');
-    splitterPanel = uipanel(leftCol, ...
-        'BackgroundColor', [0.74 0.78 0.85], ...
-        'BorderType', 'none');
-    splitterPanel.Layout.Row    = 2;
-    splitterPanel.Layout.Column = 1;
-    splitterPanel.ButtonDownFcn = @(~,~) beginSplitDrag();
-
-    refPanel = uigridlayout(leftCol);
-    refPanel.Layout.Row    = 3;
-    refPanel.Layout.Column = 1;
-    refPanel.RowHeight  = {30, '1x', 44};
-    refPanel.ColumnWidth= {'1x'};
-    refPanel.Padding    = [0 0 0 0];
-    refPanel.RowSpacing = 4;
-    CSSuiLabel(refPanel, 'Style', app.AppStyle, ...
-        'Text', 'REFERENCES (optional)', ...
-        'FontWeight', '700', ...
-        'FontSize', app.FontSizeTitle, ...
-        'HorizontalAlignment', 'left', ...
-        'VerticalAlignment', 'top');
-    % Empty-state hint and the references table share the same
-    % grid cell. refresh() toggles their HTMLComponent.Visible
-    % so only one is shown at a time: textarea while
-    % refsState is empty, table once the user adds a reference.
-    refEmptyHelp = CSSuiTextArea(refPanel, ...
-        'Style', app.AppStyle, ...
-        'Editable', false, ...
-        'WordWrap', true, ...
-        'Value', sprintf(['References are optional. Skip this section for plain\n' ...
-            'differential montages like C3-A2.\n\n' ...
-            '1.  Click  A − B  to make a difference reference (e.g. M = M1 − M2).\n' ...
-            '2.  Or click  Mean  /  Custom  to build other references.\n' ...
-            '3.  Then select channels above and click  −  Rereference  in the\n' ...
-            '    middle column to apply this reference to each selected channel.\n\n' ...
-            'Drag the bar above to give this section more room.']));
-    refEmptyHelp.Layout.Row    = 2;
-    refEmptyHelp.Layout.Column = 1;
-    refTable = CSSuiTable(refPanel, ...
-        'Data', refRowsToTable(refsState), ...
-        'ColumnName', {'✎ Name', 'Expression'}, ...
-        'ColumnWidth', [80, 280], ...
-        'ColumnEditable', [true false], ...
-        'CellEditCallback', @(s,e) onRefCellEdit(e), ...
-        'Style', app.AppStyle, ...
-        'SelectionType', 'row', ...
-        'SelectionChangedFcn', @(s,e) onRefSelect(e));
-    refTable.Layout.Row    = 2;
-    refTable.Layout.Column = 1;
-    refTable.HTMLComponent.Tooltip = ['Defined references. Click a Name cell (✎) to rename ' ...
-        'the reference; the Expression is read-only — to change it, remove the row and ' ...
-        're-add it with one of the buttons below. Drag the divider above to give ' ...
-        'this section more room.'];
-    refBtnRow = uigridlayout(refPanel);
-    refBtnRow.Layout.Row    = 3;
-    refBtnRow.RowHeight     = {44};
-    refBtnRow.ColumnWidth   = {'1x', '1x', '1x', '1x'};
-    refBtnRow.Padding       = [0 0 0 0];
-    refBtnRow.ColumnSpacing = 6;
-    refABMinusBtn = CSSuiButton(refBtnRow, 'Style', app.AppStyle, ...
-        'Text', 'A − B', ...
-        'ButtonPushedFcn', @(s,e) addRefABMinus());
-    refABMinusBtn.HTMLComponent.Tooltip = ['Add a difference reference (e.g., M1 − M2). ' ...
-        'Opens a small dialog to pick the two channels.'];
-    refMeanBtn = CSSuiButton(refBtnRow, 'Style', app.AppStyle, ...
-        'Text', 'Mean', ...
-        'ButtonPushedFcn', @(s,e) addRefMean());
-    refMeanBtn.HTMLComponent.Tooltip = ['Add a mean reference from the channels currently ' ...
-        'selected in Available Channels (e.g., (A1 + A2) / 2).'];
-    refCustomBtn = CSSuiButton(refBtnRow, 'Style', app.AppStyle, ...
-        'Text', 'Custom', ...
-        'ButtonPushedFcn', @(s,e) addRefCustom());
-    refCustomBtn.HTMLComponent.Tooltip = ['Add a reference from a free-form expression ' ...
-        '(e.g., (A1 + A2) / 2). A reference name is required.'];
-    refRemoveBtn = CSSuiButton(refBtnRow, 'Style', app.AppStyle, ...
-        'Text', 'Remove', ...
-        'ButtonPushedFcn', @(s,e) removeRef());
-    refRemoveBtn.HTMLComponent.Tooltip = ['Remove the selected reference. If any output ' ...
-        'channels use it, you will be warned before they are removed too.'];
+    availTable.Layout.Row    = 3;
+    availTable.Layout.Column = 1;
+    availTable.HTMLComponent.Tooltip = ['Every channel available to the batch — both EDF ' ...
+        'labels and any derived channels you''ve built above. Double-click a row to add it ' ...
+        'as a passthrough output, or select one or more rows (Ctrl/Shift-click) to use as ' ...
+        'sources for the middle-column buttons.'];
 
     % ---- COL 2: middle button stack (Output Channel ops) ----
     % Vertical stack of the four operations that produce output
@@ -425,15 +383,6 @@ function createRunMontageWindow(app)
     % Nested helpers — table data, validation, callbacks
     % ============================================================
 
-    function tbl = refRowsToTable(rows)
-        if isempty(rows), tbl = cell(0,2); return; end
-        tbl = cell(numel(rows), 2);
-        for r = 1:numel(rows)
-            [n, e] = splitNameExpr(rows{r});
-            tbl{r,1} = n;
-            tbl{r,2} = e;
-        end
-    end
     function tbl = chanRowsToTable(rows)
         if isempty(rows), tbl = cell(0,2); return; end
         tbl = cell(numel(rows), 2);
@@ -448,24 +397,6 @@ function createRunMontageWindow(app)
         end
     end
 
-    function nm = nextRefName()
-        % Auto-name new references R1, R2, ... skipping any
-        % already in refsState. Lets the user click a button
-        % and get a working ref without typing a name first.
-        used = false(1, 999);
-        for kk = 1:numel(refsState)
-            n2 = firstName(refsState{kk});
-            tok = regexp(n2, '^R(\d+)$', 'tokens', 'once');
-            if ~isempty(tok)
-                idx = str2double(tok{1});
-                if idx >= 1 && idx <= 999
-                    used(idx) = true;
-                end
-            end
-        end
-        k = find(~used, 1, 'first');
-        nm = sprintf('R%d', k);
-    end
     function [nm, ex] = splitNameExpr(s)
         eq = strfind(s, '=');
         if isempty(eq)
@@ -478,20 +409,11 @@ function createRunMontageWindow(app)
     end
 
     function refresh()
-        refTable.Data  = refRowsToTable(refsState);
-        chanTable.Data = chanRowsToTable(chansState);
-        % Empty-state swap: textarea explains the workflow
-        % until the user adds the first reference, then the
-        % table takes over the same grid cell.
-        if isempty(refsState)
-            refEmptyHelp.HTMLComponent.Visible = 'on';
-            refTable.HTMLComponent.Visible     = 'off';
-        else
-            refEmptyHelp.HTMLComponent.Visible = 'off';
-            refTable.HTMLComponent.Visible     = 'on';
-        end
-        % Same pattern for output channels: show a "where to start"
-        % placeholder when the table is empty.
+        rebuildAvailable();
+        availTable.Data = tableData;
+        chanTable.Data  = chanRowsToTable(chansState);
+        % Empty-state swap for output channels: show a
+        % "where to start" placeholder when the table is empty.
         if isempty(chansState)
             chanEmptyHelp.HTMLComponent.Visible = 'on';
             chanTable.HTMLComponent.Visible     = 'off';
@@ -501,7 +423,7 @@ function createRunMontageWindow(app)
         end
         [okFlag, msg] = validateAll();
         if okFlag
-            setStatus('ok', sprintf('Ready: %d reference(s), %d output channel(s). Click Save and Close to apply.', ...
+            setStatus('ok', sprintf('Ready: %d derived channel(s), %d output channel(s). Click Save and Close to apply.', ...
                 numel(refsState), numel(chansState)));
         else
             setStatus('error', msg);
@@ -510,6 +432,34 @@ function createRunMontageWindow(app)
         % again on click and alerts if invalid. Gating the
         % button visually was unreliable across uihtml refreshes
         % and confused users into thinking the dialog was stuck.
+    end
+
+    function rebuildAvailable()
+        % EDF rows (immutable) + Derived rows from refsState.
+        % Derived appear after the EDF block so the EDF labels stay
+        % in their familiar alphabetical order. Newest derived row
+        % lands at the bottom — easy to spot right after creation.
+        nDerived = numel(refsState);
+        if nDerived == 0
+            tableData = edfBaseRows;
+            return
+        end
+        m = fullFsMap();
+        derivedRows = cell(nDerived, 4);
+        for k = 1:nDerived
+            [nm, ex] = splitNameExpr(refsState{k});
+            if isempty(nm), nm = '(unnamed)'; end
+            if isKey(m, nm) && ~isnan(m(nm))
+                fsStr = sprintf('%g Hz', m(nm));
+            else
+                fsStr = '— (mixed)';
+            end
+            derivedRows{k,1} = 'Derived';
+            derivedRows{k,2} = nm;
+            derivedRows{k,3} = fsStr;
+            derivedRows{k,4} = ex;
+        end
+        tableData = [edfBaseRows; derivedRows];
     end
 
     function setStatus(level, msg)
@@ -634,9 +584,6 @@ function createRunMontageWindow(app)
     function onAvailSelect(evt)
         availSelectedRows = extractSelectedRows(evt);
     end
-    function onRefSelect(evt)
-        refSelectedRows = extractSelectedRows(evt);
-    end
     function onChanSelect(evt)
         chanSelectedRows = extractSelectedRows(evt);
     end
@@ -667,44 +614,8 @@ function createRunMontageWindow(app)
         catch
         end
         if isempty(r) || r < 1 || r > size(tableData,1), return, end
-        chansState{end+1} = tableData{r,1};
+        chansState{end+1} = tableData{r,2};
         refresh();
-    end
-
-    % ---- Splitter drag (left column: Available ↔ Create Reference) ----
-    function beginSplitDrag()
-        % Capture mouse-motion / mouse-up on the dialog so the
-        % user can drag the divider between Available Channels
-        % and Create Reference. Heights are computed in pixels
-        % and written back to leftCol.RowHeight {h1, 8, h2}.
-        avP = getpixelposition(availPanel, true);
-        rfP = getpixelposition(refPanel, true);
-        splitterDrag.active      = true;
-        splitterDrag.startY      = d.CurrentPoint(2);
-        splitterDrag.startH1     = avP(4);
-        splitterDrag.totalH      = avP(4) + rfP(4);
-        splitterDrag.origMotion  = d.WindowButtonMotionFcn;
-        splitterDrag.origUp      = d.WindowButtonUpFcn;
-        splitterDrag.origPointer = d.Pointer;
-        d.Pointer               = 'top';
-        d.WindowButtonMotionFcn = @(~,~) dragSplit();
-        d.WindowButtonUpFcn     = @(~,~) endSplitDrag();
-    end
-    function dragSplit()
-        if ~splitterDrag.active, return, end
-        dy     = d.CurrentPoint(2) - splitterDrag.startY;
-        startH = splitterDrag.startH1;
-        total  = splitterDrag.totalH;
-        minH   = 80;
-        newH1  = min(max(startH - dy, minH), total - minH);
-        newH2  = max(total - newH1, minH);
-        leftCol.RowHeight = {newH1, 8, newH2};
-    end
-    function endSplitDrag()
-        d.WindowButtonMotionFcn = splitterDrag.origMotion;
-        d.WindowButtonUpFcn     = splitterDrag.origUp;
-        d.Pointer               = splitterDrag.origPointer;
-        splitterDrag.active     = false;
     end
 
     function nm = firstName(s)
@@ -793,98 +704,104 @@ function createRunMontageWindow(app)
         end
     end
 
-    % ---- References table: inline Name edit + add/remove rows ----
-    % Only the Name column is editable; Expression is fixed by
-    % the originating button (Add Channel / Create Mean / Custom).
-    function onRefCellEdit(evt)
-        r = evt.Indices(1);
-        if r < 1 || r > numel(refsState), return, end
-        [~, e] = splitNameExpr(refsState{r});
-        n = strtrim(char(evt.NewData));
-        if isempty(n) && isempty(e)
-            refsState(r) = [];
-        else
-            refsState{r} = sprintf('%s = %s', n, e);
-        end
-        refresh();
-    end
+    % ---- Derived channels: popup-driven creators + cascade-aware remove ----
+    %
+    % All three creators (+ Mean / + Difference / + Custom) open a
+    % focused modal popup that captures the inputs in one shot, then
+    % validate Fs uniformity and name-uniqueness before appending to
+    % refsState. `refsState` maps 1:1 to app.ReferenceList at OK
+    % time, so every derived channel is passed downstream as a
+    % named-derivation prefix to read_EDF — exactly as before, just
+    % surfaced through a unified UI.
 
     function addRefABMinus()
-        % "A − B" — pick two channels (or earlier refs) and
-        % create a new reference of the form NAME = A-B. Name
-        % is optional in the prompt; if blank, auto-named R<N>.
-        aug = [all_edf_labels, ...
-            cellfun(@firstName, refsState, 'UniformOutput', false)];
-        aug = aug(~cellfun(@isempty, aug));
+        % Difference — pick A and B (any available channel,
+        % EDF or already-derived) and name the result.
+        aug = augmentedLabels();
         if numel(aug) < 2
-            uialert(d, 'Need at least two labels (channels or references).', ...
-                'A − B', 'Icon', 'info');
+            uialert(d, 'Need at least two channels to form a difference.', ...
+                'Difference', 'Icon', 'info');
             return
         end
-        [chA, chB, alias] = promptDifference(aug);
+        [chA, chB, alias] = promptDifference(aug, suggestName('D'));
         if isempty(chA), return, end
+        if ~validateNewDerivedName(alias, 'Difference'), return, end
         m = fullFsMap();
         [okFs, msgFs] = uniformFs({chA, chB}, m);
         if ~okFs
             uialert(d, msgFs, 'Mixed sampling rates', 'Icon', 'error');
             return
         end
-        if isempty(alias), alias = nextRefName(); end
         refsState{end+1} = sprintf('%s = %s-%s', alias, chA, chB);
         refresh();
     end
 
     function addRefMean()
-        % "Create Mean" — needs 2+ available rows selected.
-        % Appends '<R<N>> = mean(L1, L2, ...)'. All selected
-        % channels must share Fs.
-        if numel(availSelectedRows) < 2
-            uialert(d, 'Select at least 2 rows in Available Channels first.', ...
-                'Create Mean', 'Icon', 'info');
+        % Mean — popup-driven: a multi-select listbox of every
+        % available channel (EDF + already-derived) and a name
+        % field. Need at least 2 picks; all picks must share Fs.
+        items = augmentedLabels();
+        if numel(items) < 2
+            uialert(d, 'Need at least two channels to form a mean.', ...
+                'Mean', 'Icon', 'info');
             return
         end
-        lbls = tableData(availSelectedRows, 1);
+        [picks, alias] = promptMean(items, suggestName('M'));
+        if isempty(picks), return, end
+        if numel(picks) < 2
+            uialert(d, 'Pick at least two channels for a mean.', ...
+                'Mean', 'Icon', 'error');
+            return
+        end
+        if ~validateNewDerivedName(alias, 'Mean'), return, end
         m = fullFsMap();
-        [okFs, msgFs] = uniformFs(lbls(:)', m);
+        [okFs, msgFs] = uniformFs(picks(:)', m);
         if ~okFs
             uialert(d, msgFs, 'Mixed sampling rates', 'Icon', 'error');
             return
         end
-        refsState{end+1} = sprintf('%s = mean(%s)', nextRefName(), strjoin(lbls, ', '));
+        refsState{end+1} = sprintf('%s = mean(%s)', alias, strjoin(picks, ', '));
         refresh();
     end
 
     function addRefCustom()
-        % "Custom" — free-text reference. Name is optional;
-        % blank -> auto R<N>. Refs validate against EDF labels
-        % only (a ref can't reference a later ref).
-        [nm, ex] = promptCustom('Add Custom Reference', false, all_edf_labels);
+        % Custom — free-text expression validated against the
+        % full augmented label set (EDF + already-derived). Name
+        % is required so the result can be reused / removed.
+        [nm, ex] = promptCustom('Create Custom Derived Channel', true, augmentedLabels(), suggestName('C'));
         if isempty(ex), return, end
-        [~, ~, leaves] = checkLeaves(ex, all_edf_labels);
+        if ~validateNewDerivedName(nm, 'Custom'), return, end
+        [~, ~, leaves] = checkLeaves(ex, augmentedLabels());
         m = fullFsMap();
         [okFs, msgFs] = uniformFs(leaves, m);
         if ~okFs
             uialert(d, msgFs, 'Mixed sampling rates', 'Icon', 'error');
             return
         end
-        if isempty(nm), nm = nextRefName(); end
         refsState{end+1} = sprintf('%s = %s', nm, ex);
         refresh();
     end
 
     function removeRef()
-        % Removing a reference cascades: any output channel whose
-        % expression cites that ref name becomes invalid. Find
-        % those rows up front and confirm with the user before
-        % deleting both. Cancel aborts the whole operation; no
-        % half-state where refs are gone but dependent channels
-        % linger and fail validation.
-        if isempty(refSelectedRows), return, end
-        rows = refSelectedRows(refSelectedRows >= 1 & refSelectedRows <= numel(refsState));
-        if isempty(rows), return, end
+        % Operates on the unified Available Channels selection,
+        % but only Derived rows are removable — EDF rows are
+        % immutable. Cascade rule unchanged: any output channel
+        % whose expression cites a removed derived name is
+        % flagged for cascade removal.
+        if isempty(availSelectedRows), return, end
+        % Derived rows live after the EDF block in tableData;
+        % map selected row indices back to refsState indices.
+        nEdf = size(edfBaseRows, 1);
+        derivedSel = availSelectedRows(availSelectedRows > nEdf) - nEdf;
+        derivedSel = derivedSel(derivedSel >= 1 & derivedSel <= numel(refsState));
+        if isempty(derivedSel)
+            uialert(d, 'EDF channels can''t be removed. Select one or more Derived rows.', ...
+                'Remove', 'Icon', 'info');
+            return
+        end
         removedNames = {};
-        for kk = 1:numel(rows)
-            n2 = firstName(refsState{rows(kk)});
+        for kk = 1:numel(derivedSel)
+            n2 = firstName(refsState{derivedSel(kk)});
             if ~isempty(n2), removedNames{end+1} = n2; end %#ok<AGROW>
         end
         aug = augmentedLabels();
@@ -901,7 +818,7 @@ function createRunMontageWindow(app)
         end
         if ~isempty(affectedRows)
             msgWarn = sprintf( ...
-                ['Removing reference(s) %s will also remove %d output channel(s) that use them:\n\n%s\n\n' ...
+                ['Removing derived channel(s) %s will also remove %d output channel(s) that use them:\n\n%s\n\n' ...
                  'Proceed?'], ...
                 strjoin(removedNames, ', '), ...
                 numel(affectedRows), ...
@@ -915,9 +832,48 @@ function createRunMontageWindow(app)
             chansState(affectedRows) = [];
             chanSelectedRows = [];
         end
-        refsState(rows) = [];
-        refSelectedRows = [];
+        refsState(derivedSel) = [];
+        availSelectedRows = [];
         refresh();
+    end
+
+    function nm = suggestName(prefix)
+        % Suggest <prefix><N> picking the lowest N not already in use
+        % across EDF labels and existing derived names. Used to
+        % pre-fill the Name field in each popup.
+        used = [all_edf_labels, ...
+            cellfun(@firstName, refsState, 'UniformOutput', false)];
+        used = used(~cellfun(@isempty, used));
+        for k = 1:999
+            cand = sprintf('%s%d', prefix, k);
+            if ~any(strcmpi(cand, used))
+                nm = cand; return
+            end
+        end
+        nm = prefix;  % fallback (shouldn't happen)
+    end
+
+    function ok = validateNewDerivedName(nm, label)
+        % Inline-fail with a clear alert before the row is
+        % committed. Catches collisions with EDF labels and with
+        % existing derived names.
+        ok = false;
+        if isempty(nm)
+            uialert(d, 'Name is required.', label, 'Icon', 'error');
+            return
+        end
+        if any(strcmpi(nm, all_edf_labels))
+            uialert(d, sprintf('"%s" collides with an EDF channel label.', nm), ...
+                label, 'Icon', 'error');
+            return
+        end
+        existing = cellfun(@firstName, refsState, 'UniformOutput', false);
+        if any(strcmpi(nm, existing))
+            uialert(d, sprintf('"%s" is already a derived channel name.', nm), ...
+                label, 'Icon', 'error');
+            return
+        end
+        ok = true;
     end
 
     % ---- Output Channels: inline Output-Name edit + middle-column ops ----
@@ -944,7 +900,7 @@ function createRunMontageWindow(app)
                 'Add Passthrough', 'Icon', 'info');
             return
         end
-        lbls = tableData(availSelectedRows, 1);
+        lbls = tableData(availSelectedRows, 2);
         for kk = 1:numel(lbls)
             chansState{end+1} = lbls{kk};
         end
@@ -968,14 +924,14 @@ function createRunMontageWindow(app)
         refNames = refNames(~cellfun(@isempty, refNames));
         pickList = [refNames(:)' all_edf_labels(:)'];
         if isempty(pickList)
-            uialert(d, 'No references or labels available to subtract.', ...
-                'Reference', 'Icon', 'info');
+            uialert(d, 'No channels available to subtract.', ...
+                'Rereference', 'Icon', 'info');
             return
         end
         pick = promptPickFromList( ...
             'Subtract from each selected channel:', pickList);
         if isempty(pick), return, end
-        lbls = tableData(availSelectedRows, 1);
+        lbls = tableData(availSelectedRows, 2);
         m = fullFsMap();
         for kk = 1:numel(lbls)
             [okFs, msgFs] = uniformFs({lbls{kk}, pick}, m);
@@ -1044,44 +1000,40 @@ function createRunMontageWindow(app)
 '         font-size: 12px; padding: 1px 6px; border: 1px solid #c4cbdb;' ...
 '         border-radius: 4px; background: #fff; }' ...
 '</style></head><body>' ...
-'<h1>Channel &amp; Reference Composer</h1>' ...
+'<h1>Channels &amp; Derived Channels Composer</h1>' ...
 '<div class="subtitle">Build the list of <i>output channels</i> DYNAM-O will analyze. Each output channel is one row in the right-hand table — one DYNAM-O run per subject per row.</div>' ...
 '<h2>Typical workflow</h2>' ...
 '<ol>' ...
-'  <li><i>(Optional)</i> Build mastoid / linked-ear references in the <b>Create Reference</b> panel. Example: <code>R1 = mean(A1, A2)</code>.</li>' ...
-'  <li>Select one or more rows in <b>Available Channels</b>.</li>' ...
-'  <li>Click <span class="btn">Add</span> for a passthrough output, or <span class="btn">Rereference</span> to subtract a chosen reference from each selected channel.</li>' ...
-'  <li>Use <span class="btn">Custom</span> for anything more complex.</li>' ...
+'  <li><i>(Optional)</i> Build mastoid / linked-ear or any other derived channels with the <span class="btn">+ Mean</span>, <span class="btn">+ Difference</span>, or <span class="btn">+ Custom</span> buttons above the Available Channels table. They appear in the same table marked <code>Derived</code>.</li>' ...
+'  <li>Select one or more rows in <b>Available Channels</b> (EDF or Derived).</li>' ...
+'  <li>Click <span class="btn">→ Add</span> for a passthrough output, or <span class="btn">− Rereference</span> to subtract a chosen channel from each selected row.</li>' ...
+'  <li>Use <span class="btn">ƒ(x) Custom</span> for anything more complex.</li>' ...
 '  <li>Rename outputs in place (Output Name column).</li>' ...
-'  <li>Click <span class="btn">OK</span> to commit.</li>' ...
+'  <li>Click <span class="btn">Save and Close</span> to commit.</li>' ...
 '</ol>' ...
 '<h2>Panels</h2>' ...
 '<div class="panel"><div class="panel-title">Available Channels (left)</div>' ...
 '<div class="panel-meta">read-only · double-click adds as passthrough</div>' ...
-'Every label found across the loaded EDF files. The <i>Fs</i> column shows the resampled rate when <b>Resample data</b> is on in the main panel; otherwise the native rate(s) per file.' ...
-'</div>' ...
-'<div class="panel"><div class="panel-title">Create Reference (left, lower)</div>' ...
-'<div class="panel-meta">edit Name in place · drag the divider above to resize</div>' ...
-'Helper definitions of the form <code>NAME = expression</code>. Defined references can be reused by name in later references or output channels. New references auto-name <code>R1</code>, <code>R2</code>, …' ...
+'Every channel available to the batch — both <code>EDF</code> labels (sourced from loaded files) and <code>Derived</code> channels (built with the buttons above). The <i>Fs</i> column shows the resampled rate when <b>Resample data</b> is on in the main panel; otherwise the native rate(s) per file. The <i>Expression</i> column shows the formula for derived rows and is blank for EDF rows.' ...
 '</div>' ...
 '<div class="panel"><div class="panel-title">Output Channels (right)</div>' ...
 '<div class="panel-meta">edit Output Name in place</div>' ...
 'The final list. One DYNAM-O run per row. The Output Name becomes the output directory name. Leave blank to use the expression as the name.' ...
 '</div>' ...
 '<h2>Buttons</h2>' ...
-'<b>Under Create Reference:</b>' ...
+'<b>Above Available Channels (create derived):</b>' ...
 '<ul>' ...
-'  <li><span class="btn">A − B</span> &nbsp; Pick two channels (or earlier references) → <code>NAME = A-B</code>.</li>' ...
-'  <li><span class="btn">Mean</span> &nbsp; Average the 2+ selected Available rows → <code>NAME = mean(...)</code>.</li>' ...
-'  <li><span class="btn">Custom</span> &nbsp; Free-text reference, <code>NAME = expression</code>.</li>' ...
-'  <li><span class="btn">Remove</span> &nbsp; Delete the selected reference(s). Output channels that depend on a removed reference are flagged for cascade removal first.</li>' ...
+'  <li><span class="btn">+ Mean</span> &nbsp; Popup with multi-select listbox; pick 2+ channels and a name → <code>NAME = mean(...)</code>.</li>' ...
+'  <li><span class="btn">+ Difference</span> &nbsp; Popup with two dropdowns and a name → <code>NAME = A-B</code>.</li>' ...
+'  <li><span class="btn">+ Custom</span> &nbsp; Popup with a free-text expression and a name → <code>NAME = expression</code>.</li>' ...
+'  <li><span class="btn">✕ Remove</span> &nbsp; Delete the selected Derived row(s). EDF rows are immutable. Output channels that depend on a removed derived channel are flagged for cascade removal first.</li>' ...
 '</ul>' ...
-'<b>Middle column:</b>' ...
+'<b>Middle column (build output):</b>' ...
 '<ul>' ...
-'  <li><span class="btn">Add</span> &nbsp; Add each selected Available row as a passthrough output (no math).</li>' ...
-'  <li><span class="btn">Remove</span> &nbsp; Remove the selected output row(s).</li>' ...
-'  <li><span class="btn">Rereference</span> &nbsp; Subtract a chosen reference (or another label) from each selected Available row. Produces one output row per selection.</li>' ...
-'  <li><span class="btn">Custom</span> &nbsp; Free-text output expression with optional alias.</li>' ...
+'  <li><span class="btn">→ Add</span> &nbsp; Add each selected Available row as a passthrough output (no math).</li>' ...
+'  <li><span class="btn">✕ Remove</span> &nbsp; Remove the selected output row(s).</li>' ...
+'  <li><span class="btn">− Rereference</span> &nbsp; Subtract a chosen channel (EDF or derived) from each selected Available row. Produces one output row per selection.</li>' ...
+'  <li><span class="btn">ƒ(x) Custom</span> &nbsp; Free-text output expression with optional alias.</li>' ...
 '</ul>' ...
 '<h2>Expression syntax</h2>' ...
 '<table class="syntax">' ...
@@ -1094,11 +1046,11 @@ function createRunMontageWindow(app)
 '<tr><td>Escape weird labels</td><td>$EEG A+B$ - $A1$</td></tr>' ...
 '</table>' ...
 '<div class="callout"><b>Sampling-rate rule.</b> Any combination operation (<i>A − B</i>, <i>Mean</i>, <i>Rereference</i>, <i>Custom</i>) is rejected if its leaves do not share a single <i>Fs</i>. Enable <b>Resample data</b> in the main panel to force every channel to a common rate before any reference math runs.</div>' ...
-'<div class="callout"><b>Editing.</b> Only the <i>Name</i> / <i>Output Name</i> column is editable in place. To change an expression, remove the row and re-add it via the appropriate button. This guarantees every expression was constructed by the GUI and is well-formed.</div>' ...
+'<div class="callout"><b>Editing.</b> Only the <i>Output Name</i> column on the right is editable in place. To change a derived channel''s expression, Remove it and re-add it via the appropriate button. This guarantees every expression was constructed by the GUI and is well-formed.</div>' ...
 '</body></html>'];
 
         hpW = 760; hpH = 720;
-        hp = uifigure('Name', 'Channel Composer — Help', ...
+        hp = uifigure('Name', 'Channel Composer Help', ...
             'Position', [(ss(3)-hpW)/2, (ss(4)-hpH)/2, hpW, hpH]);
         hpGrid = uigridlayout(hp);
         hpGrid.RowHeight    = {'1x', 44};
@@ -1144,25 +1096,28 @@ function createRunMontageWindow(app)
         end
     end
 
-    function [nm, ex] = promptCustom(title, nameRequired, augLabels)
+    function [nm, ex] = promptCustom(title, nameRequired, augLabels, suggestedName)
         % Custom name + expression dialog. Validates the
         % expression (via checkLeaves) against augLabels before
         % closing; if the user supplies an unknown label, the
         % dialog stays open with a uialert. The name is either
         % marked '(required)' or '(optional)' in the label and
-        % enforced at the OK handler.
+        % enforced at the OK handler. suggestedName pre-fills the
+        % name field (the caller usually computes it via
+        % suggestName(prefix)); pass '' to leave blank.
+        if nargin < 4, suggestedName = ''; end
         pdW = 520; pdH = 220; pdPad = 12;
         pd = uifigure('Name', title, ...
             'Position', [(ss(3)-pdW)/2, (ss(4)-pdH)/2, pdW, pdH], ...
             'WindowStyle', 'modal');
         if nameRequired
-            nameLabelText = 'Reference name (required):';
+            nameLabelText = 'Name (required):';
         else
-            nameLabelText = 'Output name (optional):';
+            nameLabelText = 'Name (optional):';
         end
         CSSuiLabel(pd, 'Style', app.AppStyle, 'Text', nameLabelText, ...
             'Position', [pdPad, pdH-pdPad-22, pdW-2*pdPad, 22]);
-        efN = CSSuiEditField(pd, 'Style', app.AppStyle, 'Value', '', ...
+        efN = CSSuiEditField(pd, 'Style', app.AppStyle, 'Value', suggestedName, ...
             'Position', [pdPad, pdH-pdPad-22-32, pdW-2*pdPad, 32]);
         CSSuiLabel(pd, 'Style', app.AppStyle, ...
             'Text', 'Expression (e.g. mean(A1, A2) or C3 - LM):', ...
@@ -1202,13 +1157,15 @@ function createRunMontageWindow(app)
         end
     end
 
-    function [chA, chB, alias] = promptDifference(labels)
-        % "A − B" picker: two dropdowns + optional alias.
-        % Validates A != B; the resulting 'CHA-CHB' string is
-        % already lexically valid by construction (both leaves
-        % are members of the augmented label set).
+    function [chA, chB, alias] = promptDifference(labels, suggestedName)
+        % "A − B" picker: two dropdowns + name field. Validates
+        % A != B; the resulting 'CHA-CHB' string is lexically
+        % valid by construction (both leaves are members of the
+        % augmented label set). Name is required so the result
+        % is referenceable from later expressions / output rows.
+        if nargin < 2, suggestedName = ''; end
         pdW = 540; pdH = 220; pdPad = 12;
-        pd = uifigure('Name', 'A − B Channel', ...
+        pd = uifigure('Name', 'Create Derived Channel — Difference (A − B)', ...
             'Position', [(ss(3)-pdW)/2, (ss(4)-pdH)/2, pdW, pdH], ...
             'WindowStyle', 'modal');
         CSSuiLabel(pd, 'Style', app.AppStyle, 'Text', 'A:', ...
@@ -1221,9 +1178,9 @@ function createRunMontageWindow(app)
         ddB = CSSuiDropdown(pd, 'Style', app.AppStyle, ...
             'Items', labels, ...
             'Position', [pdPad+60+(pdW-2*pdPad-60)/2+10, pdH-pdPad-32, (pdW-2*pdPad-60)/2-10, 32]);
-        CSSuiLabel(pd, 'Style', app.AppStyle, 'Text', 'Optional alias (output name):', ...
+        CSSuiLabel(pd, 'Style', app.AppStyle, 'Text', 'Name (required):', ...
             'Position', [pdPad, pdH-pdPad-32-32-6-22, pdW-2*pdPad, 22]);
-        efAlias = CSSuiEditField(pd, 'Style', app.AppStyle, 'Value', '', ...
+        efAlias = CSSuiEditField(pd, 'Style', app.AppStyle, 'Value', suggestedName, ...
             'Position', [pdPad, pdH-pdPad-32-32-6-22-32, pdW-2*pdPad, 32]);
         chA = ''; chB = ''; alias = '';
         CSSuiButton(pd, 'Style', app.AppStyle, 'Text', 'OK', ...
@@ -1240,11 +1197,69 @@ function createRunMontageWindow(app)
                 uialert(pd, 'A and B must be different.', 'Invalid', 'Icon', 'error');
                 return
             end
-            chA = candA; chB = candB; alias = strtrim(efAlias.Value);
+            candAlias = strtrim(efAlias.Value);
+            if isempty(candAlias)
+                uialert(pd, 'Name is required.', 'Missing name', 'Icon', 'error');
+                return
+            end
+            chA = candA; chB = candB; alias = candAlias;
             if isvalid(pd), delete(pd); end
         end
         function doCan()
             chA = ''; chB = ''; alias = '';
+            if isvalid(pd), delete(pd); end
+        end
+    end
+
+    function [picks, alias] = promptMean(items, suggestedName)
+        % Mean popup — multi-select listbox of every available
+        % channel + name field. Need at least 2 picks. The
+        % returned `picks` is a cell of selected label strings;
+        % `alias` is the user-supplied name. Caller validates
+        % Fs uniformity and name uniqueness.
+        if nargin < 2, suggestedName = ''; end
+        pdW = 520; pdH = 380; pdPad = 12;
+        pd = uifigure('Name', 'Create Derived Channel — Mean', ...
+            'Position', [(ss(3)-pdW)/2, (ss(4)-pdH)/2, pdW, pdH], ...
+            'WindowStyle', 'modal');
+        CSSuiLabel(pd, 'Style', app.AppStyle, ...
+            'Text', 'Pick two or more channels to average:', ...
+            'Position', [pdPad, pdH-pdPad-22, pdW-2*pdPad, 22]);
+        lbBox = CSSuiListBox(pd, 'Style', app.AppStyle, ...
+            'Items', items, ...
+            'Multiselect', true, ...
+            'Position', [pdPad, pdH-pdPad-22-200-6, pdW-2*pdPad, 200]);
+        CSSuiLabel(pd, 'Style', app.AppStyle, 'Text', 'Name (required):', ...
+            'Position', [pdPad, pdH-pdPad-22-200-6-22-6, pdW-2*pdPad, 22]);
+        efAlias = CSSuiEditField(pd, 'Style', app.AppStyle, ...
+            'Value', suggestedName, ...
+            'Position', [pdPad, pdH-pdPad-22-200-6-22-6-32, pdW-2*pdPad, 32]);
+        picks = {}; alias = '';
+        CSSuiButton(pd, 'Style', app.AppStyle, 'Text', 'OK', ...
+            'Position', [pdW-2*90-pdPad-8, pdPad, 90, 36], ...
+            'ButtonPushedFcn', @(s,e) doOk());
+        CSSuiButton(pd, 'Style', app.AppStyle, 'Text', 'Cancel', ...
+            'Position', [pdW-90-pdPad, pdPad, 90, 36], ...
+            'ButtonPushedFcn', @(s,e) doCan());
+        uiwait(pd);
+        function doOk()
+            sel = lbBox.Value;
+            if ischar(sel), sel = {sel}; end
+            if isstring(sel), sel = cellstr(sel); end
+            if numel(sel) < 2
+                uialert(pd, 'Pick at least two channels.', 'Need 2+', 'Icon', 'error');
+                return
+            end
+            candAlias = strtrim(efAlias.Value);
+            if isempty(candAlias)
+                uialert(pd, 'Name is required.', 'Missing name', 'Icon', 'error');
+                return
+            end
+            picks = sel(:)'; alias = candAlias;
+            if isvalid(pd), delete(pd); end
+        end
+        function doCan()
+            picks = {}; alias = '';
             if isvalid(pd), delete(pd); end
         end
     end
@@ -1283,7 +1298,9 @@ function createRunMontageWindow(app)
         else
             app.ReferenceEditField.Value = strjoin(refsState, ', ');
         end
-        validateChannelSamplingRates(app, chansState, tableData);
+        % Helper consumes a 2-column slice {label, fs_string}; pass the
+        % matching cols from the new 4-column tableData layout.
+        validateChannelSamplingRates(app, chansState, tableData(:, [2 3]));
         app.refreshChannelTooltips();
         if isvalid(d), delete(d); end
     end
