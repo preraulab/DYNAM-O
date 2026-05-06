@@ -73,7 +73,7 @@ function createBatchSetupTab(app)
     % most of the row width; combined with the bumped MaxWidth on each
     % button below, this lets the buttons grow on large monitors while
     % staying centered in their cells (MaxWidth handles centering).
-    app.DataFileButtonGrid.ColumnWidth      = {'0.2x', '1x', '1x', '1x', '1x', '1x', '0.2x'};
+    app.DataFileButtonGrid.ColumnWidth      = {'0.2x', '1x', '1x', '1x', '1x', '1x', '1x', '0.2x'};
     app.DataFileButtonGrid.RowHeight        = {button_height};
     app.DataFileButtonGrid.ColumnSpacing    = 5;
     app.DataFileButtonGrid.Padding          = [5 0 5 0];
@@ -110,6 +110,21 @@ function createBatchSetupTab(app)
     app.DataAddFolderButton.Column = 3;
     app.DataAddFolderButton.HTMLComponent.Tooltip       = 'Add all EDF files in folder';
 
+    % -- Add EDFs from a path-list file (mirrors the Batch Settings menu item) --
+    app.DataAddListButton = CSSuiButton(app.DataFileButtonGrid, ...
+        'Style', app.AppStyle, ...
+        'Text', 'Add List', ...
+        'MaxWidth', '180px',...
+        'ButtonPushedFcn',  createCallbackFcn(app, @loadDataFileListCallback, true), ...
+        'IconPosition', 'top', ...
+        'IconSize', filelist_icon_size,...
+        'IconOnlyWidth', icon_only_width,...
+        'Icon', '<path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm0 7V3.5L18.5 9H14zM7 13h10v1.5H7zm0 3h10v1.5H7zm0 3h7v1.5H7z"/>' ...
+        );
+    app.DataAddListButton.Row    = 1;
+    app.DataAddListButton.Column = 4;
+    app.DataAddListButton.HTMLComponent.Tooltip       = 'Add EDF files from a text/CSV list of paths';
+
     % -- Remove selected EDF file --
     app.DataRemoveButton = CSSuiButton(app.DataFileButtonGrid, ...
         'Style', app.AppStyle, ...
@@ -122,7 +137,7 @@ function createBatchSetupTab(app)
         'Icon', '<path d="M3 6h18v2H3V6zm2 2h14l-1.5 14h-11L5 8zm5 2v8h2v-8h-2zm4 0v8h2v-8h-2zM8 4h8v2H8V4z"/>' ...
         );
     app.DataRemoveButton.Row    = 1;
-    app.DataRemoveButton.Column = 4;
+    app.DataRemoveButton.Column = 5;
     app.DataRemoveButton.HTMLComponent.Tooltip       = 'Remove selected EDF file';
 
     % -- Move EDF file up --
@@ -138,7 +153,7 @@ function createBatchSetupTab(app)
         'Icon', '<path d="M12 5l-7 9h5v8h4v-8h5z"/>' ...
         );
     app.DataMoveUpButton.Row    = 1;
-    app.DataMoveUpButton.Column = 5;
+    app.DataMoveUpButton.Column = 6;
     app.DataMoveUpButton.HTMLComponent.Tooltip = 'Move current EDF file up';
 
     % -- Move EDF file down --
@@ -154,7 +169,7 @@ function createBatchSetupTab(app)
         'Icon', '<path d="M12 19l-7-9h5v-8h4v8h5z"/>' ...
         );
     app.DataMoveDownButton.Row    = 1;
-    app.DataMoveDownButton.Column = 6;
+    app.DataMoveDownButton.Column = 7;
     app.DataMoveDownButton.HTMLComponent.Tooltip = 'Move current EDF file down';
 
     % =========================================================================
@@ -193,7 +208,7 @@ function createBatchSetupTab(app)
     app.StagingFileButtonGrid             = uigridlayout(app.FileInputGrid);
     % Mirrors DataFileButtonGrid: trim edge spacers, give the button
     % cells more room so MaxWidth can be larger on big monitors.
-    app.StagingFileButtonGrid.ColumnWidth = {'0.2x', '1x', '1x', '1x', '1x', '1x', '0.2x'};
+    app.StagingFileButtonGrid.ColumnWidth = {'0.2x', '1x', '1x', '1x', '1x', '1x', '1x', '0.2x'};
     app.StagingFileButtonGrid.RowHeight   = {button_height};
     app.StagingFileButtonGrid.ColumnSpacing = 5;
     app.StagingFileButtonGrid.Padding     = [5 0 5 0];
@@ -229,6 +244,21 @@ function createBatchSetupTab(app)
     app.StagingAddFolderButton.Column = 3;
     app.StagingAddFolderButton.HTMLComponent.Tooltip       = 'Add all staging files in folder';
 
+    % -- Add staging files from a path-list file (mirrors the Batch Settings menu item) --
+    app.StagingAddListButton = CSSuiButton(app.StagingFileButtonGrid, ...
+        'Style', app.AppStyle, ...
+        'Text', 'Add List', ...
+        'MaxWidth', '180px',...
+        'ButtonPushedFcn',  createCallbackFcn(app, @loadStagingListCallback, true), ...
+        'IconPosition', 'top', ...
+        'IconSize', filelist_icon_size,...
+        'IconOnlyWidth', icon_only_width,...
+        'Icon', '<path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm0 7V3.5L18.5 9H14zM7 13h10v1.5H7zm0 3h10v1.5H7zm0 3h7v1.5H7z"/>' ...
+        );
+    app.StagingAddListButton.Row    = 1;
+    app.StagingAddListButton.Column = 4;
+    app.StagingAddListButton.HTMLComponent.Tooltip       = 'Add staging files from a text/CSV list of paths';
+
     % -- Remove selected staging file --
     app.StagingRemoveButton = CSSuiButton(app.StagingFileButtonGrid, ...
         'Style', app.AppStyle, ...
@@ -241,7 +271,7 @@ function createBatchSetupTab(app)
         'Icon', '<path d="M3 6h18v2H3V6zm2 2h14l-1.5 14h-11L5 8zm5 2v8h2v-8h-2zm4 0v8h2v-8h-2zM8 4h8v2H8V4z"/>' ...
         );
     app.StagingRemoveButton.Row    = 1;
-    app.StagingRemoveButton.Column = 4;
+    app.StagingRemoveButton.Column = 5;
     app.StagingRemoveButton.HTMLComponent.Tooltip       = 'Remove selected staging file';
 
     % -- Move staging file up --
@@ -256,7 +286,7 @@ function createBatchSetupTab(app)
         'Icon', '<path d="M12 5l-7 9h5v8h4v-8h5z"/>' ...
         );
     app.StagingMoveUpButton.Row    = 1;
-    app.StagingMoveUpButton.Column = 5;
+    app.StagingMoveUpButton.Column = 6;
     app.StagingMoveUpButton.HTMLComponent.Tooltip       = 'Move current staging file up';
 
     % -- Move staging file down --
@@ -271,7 +301,7 @@ function createBatchSetupTab(app)
         'Icon', '<path d="M12 19l-7-9h5v-8h4v8h5z"/>' ...
         );
     app.StagingMoveDownButton.Row    = 1;
-    app.StagingMoveDownButton.Column = 6;
+    app.StagingMoveDownButton.Column = 7;
     app.StagingMoveDownButton.HTMLComponent.Tooltip       = 'Move current staging file down';
 
     % ============================================================

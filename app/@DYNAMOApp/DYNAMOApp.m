@@ -257,12 +257,14 @@ classdef DYNAMOApp < matlab.apps.AppBase & DYNAMO
         StagingMoveDownButton           % CSSuiButton                   % Move selected staging item down
         StagingMoveUpButton             % CSSuiButton                   % Move selected staging item up
         StagingRemoveButton             % CSSuiButton                   % Remove selected staging file
+        StagingAddListButton            % CSSuiButton                   % Add staging files from a path-list file
         StagingAddFolderButton          % CSSuiButton                   % Add all staging files from a folder
         StagingAddFileButton            % CSSuiButton                   % Add individual staging file(s)
         DataFileButtonGrid              matlab.ui.container.GridLayout  % Grid for data list action buttons
         DataMoveDownButton              % CSSuiButton                   % Move selected data item down
         DataMoveUpButton                % CSSuiButton                   % Move selected data item up
         DataRemoveButton                % CSSuiButton                   % Remove selected data file
+        DataAddListButton               % CSSuiButton                   % Add EDF files from a path-list file
         DataAddFolderButton             % CSSuiButton                   % Add all EDF files from a folder
         DataAddFileButton               % CSSuiButton                   % Add individual EDF file(s)
 
