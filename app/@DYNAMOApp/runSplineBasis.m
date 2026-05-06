@@ -110,7 +110,7 @@ function runSplineBasis(app)
     end
 
     if ~pow_have && ~phase_have
-        error('DYNAMOFileManager:runSplineBasis:bothFitsFailed', ...
+        error('DYNAMOApp:runSplineBasis:bothFitsFailed', ...
             'Both spline power and phase fits failed.');
     end
 

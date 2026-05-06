@@ -26,7 +26,7 @@ across many subjects without writing MATLAB code. Standalone (compiled)
 executables for macOS, Windows, and Linux are in development; until those
 ship, the File Manager runs inside MATLAB.
 
-- **File Manager guide:** [`DYNAMOFileManager_README.md`](DYNAMOFileManager_README.md)
+- **File Manager guide:** [`DYNAMOApp_README.md`](DYNAMOApp_README.md)
 - **Launch from MATLAB:** `runApp` (sets up the path, then opens the File Manager)
 
 Most users should start with the File Manager. The rest of this README
@@ -64,7 +64,7 @@ histograms.
 - [Main Pipeline Functions](#main-pipeline-functions)
   - [runDYNAMO](#rundynamo)
   - [DYNAMO (OOP class)](#dynamo-oop-class)
-  - [DYNAMOFileManager (GUI)](#dynamofilemanager-gui)
+  - [DYNAMOApp (GUI)](#dynamoapp-gui)
   - [Key Sub-Functions](#key-sub-functions)
 - [Options](#options)
   - [Detection Options](#detection-options-detection_opts)
@@ -155,7 +155,7 @@ opts = detection_opts('backend', 'matlab');
 runDYNAMO(data, Fs, stage_times, stage_vals, opts);
 ```
 
-The GUI (`DYNAMOFileManager` / `DYNAMOOptionsApp`) also surfaces the
+The GUI (`DYNAMOApp` / `DYNAMOOptionsApp`) also surfaces the
 `backend` setting as a dropdown on the Detection options panel — no
 command-line override needed.
 
@@ -442,7 +442,7 @@ fh = d.displaySummaryPlot();
 
 ---
 
-### `DYNAMOFileManager` (GUI)
+### `DYNAMOApp` (GUI)
 
 App Designer application for batch processing EDF polysomnography files.
 
@@ -965,7 +965,7 @@ so the nine assertion sub-tests cost milliseconds each.
 DYNAM-O_dev/
 ├── DYNAMO.m                         OOP pipeline class
 ├── runDYNAMO.m                      Functional pipeline entry point
-├── runApp.m                         GUI launcher (toolbox + app on path, opens FileManager)
+├── runApp.m                         GUI launcher (toolbox + app on path, opens DYNAMOApp)
 ├── init_DYNAMO.m                    Path setup + class-cache reset (replaces DYNAMO_addpath / clearDynamoClasses)
 ├── example_data/
 │   ├── example_data.mat             Single-channel sleep EEG example
@@ -983,8 +983,8 @@ DYNAM-O_dev/
 │   ├── tfpeak_histogram_mex.c       SOpower / SOphase histogram MEX
 │   └── *.mex{a64,maca64,maci64,w64} Platform-specific binaries
 ├── app/                             GUI lives here (compile target for mcc -m)
-│   ├── @DYNAMOFileManager/          Class folder (split-file methods)
-│   │   ├── DYNAMOFileManager.m      Properties + constructor + most methods
+│   ├── @DYNAMOApp/          Class folder (split-file methods)
+│   │   ├── DYNAMOApp.m      Properties + constructor + most methods
 │   │   ├── createUIFigureAndShell.m Builder: figure, File menu, outer tabs
 │   │   ├── createBatchSetupTab.m    Builder: File Selection + Runtime Options
 │   │   ├── createBottomBar.m        Builder: status, RUN/STOP, Help, progress
@@ -1051,7 +1051,7 @@ DYNAM-O depends on several standalone libraries included as Git submodules. The 
 | **Artifact Detection** | [preraulab/artifact_detection](https://github.com/preraulab/artifact_detection) | Detects and removes artifacts in EEG time series using high-frequency and broadband filtering with adaptive z-score thresholding. Includes Hjorth feature-based detection. |
 | **Read EDF** | [preraulab/read_EDF](https://github.com/preraulab/read_EDF) | Reads European Data Format (EDF/EDF+) files with full metadata extraction, per-signal scaling, and optional MEX acceleration. Includes a GUI for exploring EDF headers. |
 | **Statistical Tests** | [preraulab/multicomp_test](https://github.com/preraulab/multicomp_test) | Permutation-based statistical tests and false discovery rate (FDR) correction for multi-dimensional data. Provides `permtest`, `gpermtest`, `FDR_1D`, and `FDR_2D`. |
-| **CSSuicontrols** | [preraulab/CSSuicontrols](https://github.com/preraulab/CSSuicontrols) | CSS-styled HTML-backed UI controls for MATLAB App Designer. Powers the progress bar, text areas, buttons, and other custom widgets in DYNAMOFileManager. Lives at `app/components/CSSuicontrols/`. |
+| **CSSuicontrols** | [preraulab/CSSuicontrols](https://github.com/preraulab/CSSuicontrols) | CSS-styled HTML-backed UI controls for MATLAB App Designer. Powers the progress bar, text areas, buttons, and other custom widgets in DYNAMOApp. Lives at `app/components/CSSuicontrols/`. |
 
 > [!NOTE]
 > To update all submodules to their latest versions:

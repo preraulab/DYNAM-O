@@ -8,7 +8,7 @@ function openPathInOS(~, p)
     % `Opening: <path>` chatter — it pollutes the run log and
     % the user already triggered the action.
     if ~isfile(p) && ~isfolder(p)
-        warning('DYNAMOFileManager:openPathInOS', ...
+        warning('DYNAMOApp:openPathInOS', ...
             'Path does not resolve: %s', p);
         return
     end

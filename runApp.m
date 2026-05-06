@@ -1,5 +1,5 @@
 function runApp()
-%RUNAPP  Launch the DYNAM-O GUI (DYNAMOFileManager).
+%RUNAPP  Launch the DYNAM-O GUI (DYNAMOApp).
 %
 %   Calls init_DYNAMO('clear','gui') to reset the class cache and add
 %   both the toolbox and GUI trees to the path, then opens the
@@ -15,5 +15,5 @@ function runApp()
 %   will be cleared along with the cache.
 
     init_DYNAMO('clear', 'gui');
-    DYNAMOFileManager();
+    DYNAMOApp();
 end

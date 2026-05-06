@@ -1,4 +1,4 @@
-classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
+classdef DYNAMOApp < matlab.apps.AppBase & DYNAMO
     % DYNAMOFILEMANAGER  GUI application for managing batch file processing in the DYNAM-O toolbox.
     %
     %   This class provides a MATLAB App Designer-based graphical user interface
@@ -11,7 +11,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
     %       DYNAMO               - base class providing core DYNAM-O analysis methods
     %
     %   Usage:
-    %       app = DYNAMOFileManager()
+    %       app = DYNAMOApp()
     %
     %   See also: DYNAMO, runDYNAMO, matlab.apps.AppBase
     %
@@ -390,8 +390,8 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
 
     methods (Access = public)
 
-        function app = DYNAMOFileManager(varargin)
-            % DYNAMOFileManager  Constructor – parses arguments and builds the GUI.
+        function app = DYNAMOApp(varargin)
+            % DYNAMOApp  Constructor – parses arguments and builds the GUI.
             %
             %   Supported Name-Value pairs:
             %     'BatchCallback'      – function_handle invoked at batch start
@@ -532,7 +532,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %     6. createAnalysisTab       — SO-Histograms host
             %     7. finalizeUI              — Help menu (rightmost), font, tooltips
             %
-            %   Each builder method lives next to this file under @DYNAMOFileManager/.
+            %   Each builder method lives next to this file under @DYNAMOApp/.
             app.createUIFigureAndShell();
             app.createBatchSetupTab();
             app.createBottomBar();
@@ -558,7 +558,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
             %   If an internet connection is available, opens the GitHub README.
             %   Otherwise, falls back to a local HTML help file.
 
-            githubURL = 'https://github.com/preraulab/DYNAM-O_dev/blob/master/DYNAMOFileManager_README.md';
+            githubURL = 'https://github.com/preraulab/DYNAM-O_dev/blob/master/DYNAMOApp_README.md';
 
             % Check for internet connectivity
             hasInternet = false;
@@ -572,7 +572,7 @@ classdef DYNAMOFileManager < matlab.apps.AppBase & DYNAMO
                 web(githubURL, '-browser');
             else
                 % Fall back to local HTML help file
-                helpPath = fullfile(fileparts(mfilename('fullpath')), 'DYNAMOFileManager_README.html');
+                helpPath = fullfile(fileparts(mfilename('fullpath')), 'DYNAMOApp_README.html');
                 if ~isfile(helpPath)
                     uialert(app.UIFigure, ...
                         sprintf('Help file not found:\n%s', helpPath), ...

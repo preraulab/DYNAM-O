@@ -19,7 +19,7 @@ function names = init_DYNAMO(varargin)
 %   like CSSuicontrols), and leaves third-party classes, base-workspace
 %   variables, breakpoints, and timers from other tools untouched. It
 %   WILL still delete live instances of the cleared classes (e.g., an
-%   open DYNAMOFileManager) — the cache and live instances are coupled
+%   open DYNAMOApp) — the cache and live instances are coupled
 %   in MATLAB. Uses `clear classdef <name>` on R2022b+ and falls back
 %   to `clear <name>` on older releases.
 %

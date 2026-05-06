@@ -126,7 +126,7 @@ function runParamBasis(app)
     % If both fits failed, surface that to the per-stage try/catch in
     % runBatch so the subject is logged as "partially run".
     if ~pow_have && ~phase_have
-        error('DYNAMOFileManager:runParamBasis:bothFitsFailed', ...
+        error('DYNAMOApp:runParamBasis:bothFitsFailed', ...
             'Both parametric power and phase fits failed.');
     end
 end % runParamBasis

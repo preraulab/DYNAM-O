@@ -451,11 +451,11 @@ The File Manager exposes a handful of helper methods for populating file lists a
 ### Constructor
 
 ```matlab
-app = DYNAMOFileManager()
-app = DYNAMOFileManager('Title', 'My Batch Run')
-app = DYNAMOFileManager('Position', [x y w h])
-app = DYNAMOFileManager('BatchCallback', @myCallback)
-app = DYNAMOFileManager('ValidationCallback', @myValidator)
+app = DYNAMOApp()
+app = DYNAMOApp('Title', 'My Batch Run')
+app = DYNAMOApp('Position', [x y w h])
+app = DYNAMOApp('BatchCallback', @myCallback)
+app = DYNAMOApp('ValidationCallback', @myValidator)
 ```
 
 | Parameter | Description |

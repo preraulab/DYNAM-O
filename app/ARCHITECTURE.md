@@ -5,7 +5,7 @@ look at a region, and this doc tells you which file builds it, which file
 fills it with data, and which file runs when you click something inside it.
 
 For the user-facing manual (what each tab/button does), see
-[`../DYNAMOFileManager_README.md`](../DYNAMOFileManager_README.md).
+[`../DYNAMOApp_README.md`](../DYNAMOApp_README.md).
 
 ---
 
@@ -13,16 +13,16 @@ For the user-facing manual (what each tab/button does), see
 
 ```
 app/
-├── @DYNAMOFileManager/      ← the GUI class — 130 method files
-│   ├── DYNAMOFileManager.m  ← classdef, properties, callbacks (1-line shims)
+├── @DYNAMOApp/      ← the GUI class — 130 method files
+│   ├── DYNAMOApp.m  ← classdef, properties, callbacks (1-line shims)
 │   └── *.m                  ← one method per file (auto-discovered by MATLAB)
 ├── +results_browser/        ← stateless helpers used by the Results Browser
 ├── components/CSSuicontrols/← styled uifigure widgets (submodule)
 └── dynamoStyle.m            ← global colors / fonts
 ```
 
-When MATLAB sees `app.someMethod()`, it looks first in `DYNAMOFileManager.m`
-and then in any `someMethod.m` inside `@DYNAMOFileManager/`. We use that to
+When MATLAB sees `app.someMethod()`, it looks first in `DYNAMOApp.m`
+and then in any `someMethod.m` inside `@DYNAMOApp/`. We use that to
 keep one *purpose* per file.
 
 ---
@@ -30,8 +30,8 @@ keep one *purpose* per file.
 ## Boot sequence — what runs when you launch DFM
 
 ```
-DYNAMOFileManager(varargin)            ← constructor in DYNAMOFileManager.m
-└── createComponents(app, ...)         ← also in DYNAMOFileManager.m
+DYNAMOApp(varargin)            ← constructor in DYNAMOApp.m
+└── createComponents(app, ...)         ← also in DYNAMOApp.m
     ├── createUIFigureAndShell.m       ← the uifigure window + tabgroup + menu bar
     ├── createBatchSetupTab.m          ← Tab 1: "DYNAM-O Batch Run"
     ├── createBottomBar.m              ← RUN/STOP buttons + status bar (across all tabs)
@@ -197,10 +197,10 @@ button (`requestStopBatch.m` flips that flag).
 ## Where do shared things live?
 
 - **MATLAB-app callbacks** (`*ButtonPushed`, `*MenuSelected`, `*Changed`):
-  in `DYNAMOFileManager.m` as 1-line shims that call the verb-noun method.
+  in `DYNAMOApp.m` as 1-line shims that call the verb-noun method.
   Don't put logic in the shim — put it in the per-file method.
 - **Properties** (`app.SomeWidget`, `app.SomeState`): in the `properties`
-  block of `DYNAMOFileManager.m` (per-file methods can't declare properties).
+  block of `DYNAMOApp.m` (per-file methods can't declare properties).
 - **Stateless helpers** (no `app` argument): under `+results_browser/` if
   Results-Browser-specific, else inline in the calling method.
 - **CSS-styled widgets** (`CSSuiButton`, `CSSuiListBox`, `CSSuiTable`,
@@ -214,9 +214,9 @@ button (`requestStopBatch.m` flips that flag).
 
 1. Pick a verb (`create`/`render`/`refresh`/`update`/`run`/`build`/`load`/
    `pick`/`on`/…) that describes what it does for the user.
-2. Add `app/@DYNAMOFileManager/<verb><Noun>.m` containing
+2. Add `app/@DYNAMOApp/<verb><Noun>.m` containing
    `function <verb><Noun>(app, ...)` — MATLAB auto-discovers it.
-3. If wired to a button, add a one-line shim in `DYNAMOFileManager.m`:
+3. If wired to a button, add a one-line shim in `DYNAMOApp.m`:
    ```matlab
    function MyButtonPushed(app, ~, ~)
        app.myVerbNoun();
