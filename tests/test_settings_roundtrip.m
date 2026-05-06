@@ -11,7 +11,7 @@ function setupOnce(testCase)
 this_dir = fileparts(mfilename('fullpath'));
 repo_root = fileparts(this_dir);
 if isempty(which('runDYNAMO'))
-    addpath(repo_root); DYNAMO_addpath();
+    addpath(repo_root); init_DYNAMO();
 end
 testCase.TestData.tmpDir = tempname;
 mkdir(testCase.TestData.tmpDir);

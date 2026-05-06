@@ -911,7 +911,7 @@ Interactively, from MATLAB:
 
 ```matlab
 addpath('/path/to/DYNAM-O_dev');
-DYNAMO_addpath();
+init_DYNAMO();
 cd('/path/to/DYNAM-O_dev/tests');
 run_all_tests                                 % whole folder, asserts on failure
 runtests('test_simulation_truth')             % one file, table output
@@ -920,7 +920,7 @@ runtests('test_simulation_truth')             % one file, table output
 Headless / CI:
 
 ```sh
-matlab -batch "addpath('<repo>'); DYNAMO_addpath; cd tests; run_all_tests"
+matlab -batch "addpath('<repo>'); init_DYNAMO; cd tests; run_all_tests"
 ```
 
 `run_all_tests` calls `assertSuccess(result)` so the process exits
@@ -966,8 +966,7 @@ DYNAM-O_dev/
 ├── DYNAMO.m                         OOP pipeline class
 ├── runDYNAMO.m                      Functional pipeline entry point
 ├── runApp.m                         GUI launcher (toolbox + app on path, opens FileManager)
-├── DYNAMO_addpath.m                 Headless path setup (toolbox only, no GUI)
-├── clearDynamoClasses.m             Clear cached DYNAMO classdef state (after edits / branch switch)
+├── init_DYNAMO.m                    Path setup + class-cache reset (replaces DYNAMO_addpath / clearDynamoClasses)
 ├── example_data/
 │   ├── example_data.mat             Single-channel sleep EEG example
 │   └── runExampleData.m             Example data loader
@@ -995,7 +994,7 @@ DYNAM-O_dev/
 │   ├── +results_browser/            Package: 19 helpers for the Results Browser
 │   └── components/
 │       └── CSSuicontrols/           Submodule: HTML-backed UI controls
-└── toolbox/                         Pure science (importable headlessly via DYNAMO_addpath)
+└── toolbox/                         Pure science (importable headlessly via init_DYNAMO)
     ├── dynamo_version.m             '<branch>@<sha>[.dirty]' build identifier
     ├── TFpeak_functions/            Watershed TF-peak extraction
     │   ├── computeTFPeaks.m         Main detection function
@@ -1028,9 +1027,10 @@ DYNAM-O_dev/
             └── dynamo_seed_index_from_cache.m  Generic seeder (consumed by both walkers)
 ```
 
-The toolbox is GUI-free: a script that does `DYNAMO_addpath; runDYNAMO(...)`
-never sees `app/` on its path. The launcher (`runApp.m`) layers `app/`
-and `app/components/` on top for the GUI flow. `app/` is the natural
+The toolbox is GUI-free: a script that does `init_DYNAMO; runDYNAMO(...)`
+never sees `app/` on its path. The launcher (`runApp.m`) calls
+`init_DYNAMO('clear','gui')` so `app/` and `app/components/` are
+layered on top for the GUI flow. `app/` is the natural
 `mcc -m` compile target.
 
 ### Included Submodules

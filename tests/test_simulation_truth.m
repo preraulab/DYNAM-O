@@ -32,7 +32,7 @@ testCase.assertEqual(exist(data_path, 'file'), 2, ...
 
 if isempty(which('runDYNAMO'))
     addpath(repo_root);
-    DYNAMO_addpath();
+    init_DYNAMO();
 end
 
 S = load(data_path);

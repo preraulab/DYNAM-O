@@ -6,7 +6,7 @@ function result = run_all_tests(varargin)
 %       run_all_tests('Strict', true)
 %
 %   Usage (CI / matlab -batch):
-%       matlab -batch "addpath('<repo>'); DYNAMO_addpath; cd tests; run_all_tests"
+%       matlab -batch "addpath('<repo>'); init_DYNAMO; cd tests; run_all_tests"
 %
 %   Returns the matlab.unittest.TestResult array. Errors out via
 %   assertSuccess so a -batch invocation exits non-zero on any failure.
@@ -20,7 +20,7 @@ this_dir = fileparts(mfilename('fullpath'));
 repo_root = fileparts(this_dir);
 if isempty(which('runDYNAMO'))
     addpath(repo_root);
-    DYNAMO_addpath();
+    init_DYNAMO();
 end
 
 import matlab.unittest.TestSuite
