@@ -1,5 +1,5 @@
 classdef DYNAMOApp < matlab.apps.AppBase & DYNAMO
-    % DYNAMOFILEMANAGER  GUI application for managing batch file processing in the DYNAM-O toolbox.
+    % DYNAMOAPP  GUI application for managing batch file processing in the DYNAM-O toolbox.
     %
     %   This class provides a MATLAB App Designer-based graphical user interface
     %   for loading EDF (polysomnography data) files and paired sleep staging files,
@@ -449,7 +449,7 @@ classdef DYNAMOApp < matlab.apps.AppBase & DYNAMO
             % the pool itself only when backend='matlab' is chosen, via
             % setup_parallel_pool(detection_options.parallel_mode) — see
             % runDYNAMO.m:270-272. Keeping this constructor pool-free
-            % means the FileManager opens instantly and rust runs never
+            % means the DYNAMOApp opens instantly and rust runs never
             % touch parpool at all.
 
             sc = get(0, 'ScreenSize');
@@ -553,7 +553,7 @@ classdef DYNAMOApp < matlab.apps.AppBase & DYNAMO
         % ==================================================================
 
         function openReadmeInBrowser(app)
-            % showHelpButtonPushed  Open the File Manager README in the system web browser.
+            % showHelpButtonPushed  Open the DYNAM-O App README in the system web browser.
             %
             %   If an internet connection is available, opens the GitHub README.
             %   Otherwise, falls back to a local HTML help file.

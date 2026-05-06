@@ -14,7 +14,7 @@ function createUIFigureAndShell(app)
 
     % Set figure position
     app.UIFigure.Position = [x, y, app.WindowWidth, app.WindowHeight];
-    app.UIFigure.Name = 'DYNAM-O File Manager';
+    app.UIFigure.Name = 'DYNAM-O App';
     app.UIFigure.AutoResizeChildren = 'off';   % grid handles it, not figure
 
     % Set the callback ON THE PANEL, not the figure

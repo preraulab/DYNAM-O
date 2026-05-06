@@ -17,19 +17,19 @@ siblings, see the parent meta-repo:
 
 ---
 
-## Start here — the DYNAM-O File Manager (GUI)
+## Start here — the DYNAM-O App (GUI)
 
-The **File Manager** is the primary interface for DYNAM-O. It is a
+The **DYNAM-O App** is the primary interface for DYNAM-O. It is a
 graphical application for loading EDF recordings and hypnograms,
 configuring channels and analysis options, and running batch analyses
 across many subjects without writing MATLAB code. Standalone (compiled)
 executables for macOS, Windows, and Linux are in development; until those
-ship, the File Manager runs inside MATLAB.
+ship, the DYNAM-O App runs inside MATLAB.
 
-- **File Manager guide:** [`DYNAMOApp_README.md`](DYNAMOApp_README.md)
-- **Launch from MATLAB:** `runApp` (sets up the path, then opens the File Manager)
+- **DYNAM-O App guide:** [`DYNAMOApp_README.md`](DYNAMOApp_README.md)
+- **Launch from MATLAB:** `runApp` (sets up the path, then opens the DYNAM-O App)
 
-Most users should start with the File Manager. The rest of this README
+Most users should start with the DYNAM-O App. The rest of this README
 covers the **MATLAB DYNAM-O API** — `runDYNAMO`, the `DYNAMO` class, and
 the underlying pipeline functions — for users writing their own analysis
 scripts or integrating DYNAM-O into a larger MATLAB workflow.
@@ -656,7 +656,7 @@ Optional 9th output. Struct with per-stage wallclock seconds.
 
 ## Saved file formats (GUI batch outputs)
 
-The DYNAM-O File Manager writes per-subject results into
+The DYNAM-O App writes per-subject results into
 `<output_dir>/<channel>/<subdir>/`. For each artefact type the
 **Saving Options** panel exposes a checkbox (save / don't save) and a
 file-format dropdown with `--`, a slim format, `.mat`, and `All`.
@@ -866,7 +866,7 @@ Per-run JSON snapshot of every options struct (`detection_options`,
 `baseline_options`, `SOPH_options`, the four basis-fit options
 structs, etc.) plus a `run_start` timestamp and a `schema_version`.
 Written by `generate_run_log` as `run_settings_<timestamp>.json`,
-read back by `load_run_log` (and by the File Manager's "Load
+read back by `load_run_log` (and by the DYNAM-O App's "Load
 settings" action). The format is pure data — no executable code —
 so loading a settings file from another user is safe. `Inf`, `-Inf`,
 and `NaN` round-trip via sentinel strings (`"__inf__"`, `"__-inf__"`,
@@ -1159,7 +1159,7 @@ The mechanism: multitaper NFFT = `2^nextpow2(Fs / mtm_dsfreqs)` (default `mtm_ds
 | 500, 512 | 8192 | ~9.3× |
 | 1000 | 16384 | ~18× |
 
-The FileManager has Resample = ON at 100 Hz by default. For scripted callers (`runDYNAMO`, `DYNAMO` class):
+The DYNAMOApp has Resample = ON at 100 Hz by default. For scripted callers (`runDYNAMO`, `DYNAMO` class):
 
 ```matlab
 [p, q] = rat(100 / Fs);

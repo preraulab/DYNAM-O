@@ -562,7 +562,7 @@ end
 
 function [freq_bins, so_bins] = peek_bins_from_settings(channelDir, axis_kind)
 %PEEK_BINS_FROM_SETTINGS  Reconstruct freq_bins (and SOphase_bins) from a
-%`<root>/settings/run_settings_*.json` file emitted by the FileManager.
+%`<root>/settings/run_settings_*.json` file emitted by the DYNAMOApp.
 %SOpower_bins are adaptive per subject and cannot be recovered this way.
 freq_bins = [];
 so_bins   = [];

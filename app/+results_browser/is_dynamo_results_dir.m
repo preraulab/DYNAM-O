@@ -1,6 +1,6 @@
 function tf = is_dynamo_results_dir(root)
 %IS_DYNAMO_RESULTS_DIR  True iff `root` looks like a directory produced
-%by the FileManager batch run. Each save category in the batch dialog
+%by the DYNAMOApp batch run. Each save category in the batch dialog
 %is independently optional, so accept the directory if any of the
 %following signals is present:
 %  - <root>/settings/run_settings_*.json          (always emitted)

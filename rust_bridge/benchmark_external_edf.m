@@ -6,9 +6,9 @@ function out_path = benchmark_external_edf(edf_path, staging_path, varargin)
 %
 %   Use this when you want to know "is my real-patient run slow because the
 %   data is longer, or because something is off?" — point this at the same
-%   EDF the FileManager loads, compare its `total` against the bundled
+%   EDF the DYNAMOApp loads, compare its `total` against the bundled
 %   `night` fixture's number, and the difference is the data-length /
-%   pipeline ratio in isolation from FileManager wrapper overhead (CSV
+%   pipeline ratio in isolation from DYNAMOApp wrapper overhead (CSV
 %   save, EDF parse, plot rendering, UI drawnow).
 %
 %   Usage:

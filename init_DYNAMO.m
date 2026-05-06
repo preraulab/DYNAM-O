@@ -24,7 +24,7 @@ function names = init_DYNAMO(varargin)
 %   to `clear <name>` on older releases.
 %
 %   For a GUI launch, prefer runApp() (which calls init_DYNAMO('clear','gui')
-%   and then opens the file manager).
+%   and then opens the DYNAM-O App).
 
     flags = lower(string(varargin));
     do_clear = any(flags == "clear");

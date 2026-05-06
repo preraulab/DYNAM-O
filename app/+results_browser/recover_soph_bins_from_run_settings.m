@@ -1,6 +1,6 @@
 function [freq_bins, so_bins] = recover_soph_bins_from_run_settings(filePath, axis_kind)
 %RECOVER_SOPH_BINS_FROM_RUN_SETTINGS  Recover SOPH histogram bin centers
-%from the FileManager batch's saved settings JSON.
+%from the DYNAMOApp batch's saved settings JSON.
 %
 %   Walks up to 6 parent directories from filePath looking for
 %   settings/run_settings_*.json (the most recent file wins). Reconstructs

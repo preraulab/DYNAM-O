@@ -2,11 +2,11 @@
 <img src=https://user-images.githubusercontent.com/78376124/214062562-4f8fc73b-5a0a-4cf7-b219-9d0de101528d.png>
 </p>
 
-# DYNAM-O File Manager
+# DYNAM-O App
 
-The DYNAM-O File Manager is the primary graphical interface for running batch EEG/polysomnography analyses with the DYNAM-O (Dynamical Oscillation) toolbox. It manages file loading, analysis configuration, and batch execution across multiple subjects and channels, with real-time progress monitoring and structured output logging.
+The DYNAM-O App is the primary graphical interface for running batch EEG/polysomnography analyses with the DYNAM-O (Dynamical Oscillation) toolbox. It manages file loading, analysis configuration, and batch execution across multiple subjects and channels, with real-time progress monitoring and structured output logging.
 
-The goal of the File Manager is to provide a fully operational GUI — with standalone executables for macOS, Windows, and Linux in development — so users can run DYNAM-O without writing any MATLAB code. For programmatic use of the MATLAB DYNAM-O API (`runDYNAMO`, the `DYNAMO` class, and lower-level pipeline functions), see the main [`README.md`](README.md).
+The goal of the DYNAM-O App is to provide a fully operational GUI — with standalone executables for macOS, Windows, and Linux in development — so users can run DYNAM-O without writing any MATLAB code. For programmatic use of the MATLAB DYNAM-O API (`runDYNAMO`, the `DYNAMO` class, and lower-level pipeline functions), see the main [`README.md`](README.md).
 
 ---
 
@@ -39,7 +39,7 @@ The goal of the File Manager is to provide a fully operational GUI — with stan
 6. Click RUN
 ```
 
-**Inputs must be EDF.** MAT-based recordings are not supported by the File Manager.
+**Inputs must be EDF.** MAT-based recordings are not supported by the DYNAM-O App.
 
 Data and staging file counts must match — each EDF is paired with the staging file at the same list position.
 
@@ -47,7 +47,7 @@ Data and staging file counts must match — each EDF is paired with the staging 
 
 ## 2. Batch Behavior at a Glance
 
-The File Manager is designed around long-running batches (e.g. 50 EDFs × 2 channels = 100 iterations). Three facts matter before you hit RUN:
+The DYNAM-O App is designed around long-running batches (e.g. 50 EDFs × 2 channels = 100 iterations). Three facts matter before you hit RUN:
 
 ### Output Layout (summary)
 
@@ -137,7 +137,7 @@ The resulting virtual channel appears in the table with its own file count (only
 
 #### Sampling Frequency Warnings
 
-When channels are added via the browser, the File Manager checks each channel's sampling frequency against the DYNAM-O analysis frequency range. The upper analysis bound is the larger of the SOPH frequency range upper limit and the multitaper spectrogram frequency range upper limit (configured in the DYNAM-O Settings tab). Two warnings may appear:
+When channels are added via the browser, the DYNAM-O App checks each channel's sampling frequency against the DYNAM-O analysis frequency range. The upper analysis bound is the larger of the SOPH frequency range upper limit and the multitaper spectrogram frequency range upper limit (configured in the DYNAM-O Settings tab). Two warnings may appear:
 
 - **Fs too high** (Fs > 10× the upper analysis bound): The channel's sampling rate far exceeds what DYNAM-O analyzes. This wastes memory and processing time. Consider enabling **Resample Data** to downsample before processing.
 - **Fs too low** (Fs < 2× the upper analysis bound): The Nyquist frequency (Fs/2) is below the upper analysis bound, meaning the analysis frequency range cannot be fully represented at this sampling rate. You **must** enable **Resample Data** and upsample, or the run will fail. However, note that upsampling does not create real spectral content above the original Nyquist — consider whether narrowing the analysis frequency range is more appropriate.
@@ -150,7 +150,7 @@ The **Resample Data** switch is **ON by default at 100 Hz** — leave it that wa
 - The multitaper FFT size is `2^nextpow2(Fs/0.1)`. Above **Fs = 102.4 Hz** (a common boundary that 128 / 200 / 256 / 500 / 1000 Hz EDFs all cross), NFFT doubles and the spectrogram typically spills past CPU L3 cache. Every downstream stage takes a 2–3× memory-bandwidth hit on top of the doubled FFT cost.
 - Empirically: a 10.5 h × 128 Hz EDF runs in ~22 s resampled to 100 Hz vs ~41 s at native rate (Threadripper Pro, Rust backend).
 
-Turn the switch **off** only if you specifically need spectral content above 50 Hz (e.g., gamma analysis beyond DYNAM-O's analyzed band). The FileManager will warn if a selected channel's native Fs > 102.4 Hz and Resample is disabled.
+Turn the switch **off** only if you specifically need spectral content above 50 Hz (e.g., gamma analysis beyond DYNAM-O's analyzed band). The DYNAMOApp will warn if a selected channel's native Fs > 102.4 Hz and Resample is disabled.
 
 ---
 
@@ -318,7 +318,7 @@ For each EDF + staging file pair, for each selected channel:
 
 ### Help Button
 
-A **Help** button is located in the bottom-right area of the File Manager window, next to the progress bar. Clicking it opens this README documentation in the system's default web browser.
+A **Help** button is located in the bottom-right area of the DYNAM-O App window, next to the progress bar. Clicking it opens this README documentation in the system's default web browser.
 
 Errors in any step are caught per-iteration — see [Error Containment and Resuming After a Crash](#error-containment-and-resuming-after-a-crash).
 
@@ -446,7 +446,7 @@ Hosts the embedded DYNAMOOptions sub-app for configuring all analysis parameters
 
 ## 13. Programmatic API
 
-The File Manager exposes a handful of helper methods for populating file lists and querying state from scripts. It does **not** expose a public method for launching a batch run non-interactively: the batch is driven by the RUN button and depends on internal GUI state, so scripts can pre-populate the manager but a human (or a simulated button click) is still required to start processing. Treat the API below as a convenience layer, not a headless-batch entry point.
+The DYNAM-O App exposes a handful of helper methods for populating file lists and querying state from scripts. It does **not** expose a public method for launching a batch run non-interactively: the batch is driven by the RUN button and depends on internal GUI state, so scripts can pre-populate the manager but a human (or a simulated button click) is still required to start processing. Treat the API below as a convenience layer, not a headless-batch entry point.
 
 ### Constructor
 

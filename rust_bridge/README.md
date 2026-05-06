@@ -176,7 +176,7 @@ when input data is resampled to **100 Hz**. The multitaper NFFT is
 spectrogram spills past CPU L3 cache, taking a 2–3× memory-bandwidth
 hit on every downstream stage. DYNAM-O analyzes 0–30 Hz so 100 Hz
 Nyquist is more than enough — the resample is lossless for sleep
-oscillations. The MATLAB **FileManager** has this enabled by default
+oscillations. The MATLAB **DYNAMOApp** has this enabled by default
 (Resample = ON @ 100 Hz). See
 [`benchmarks/README.md`](benchmarks/README.md) for the per-stage
 scaling analysis.

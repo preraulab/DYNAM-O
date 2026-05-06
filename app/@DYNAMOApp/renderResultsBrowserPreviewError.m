@@ -16,7 +16,7 @@ function renderResultsBrowserPreviewError(app, root)
         ''
         sprintf('Selected: %s', root)
         ''
-        'A valid DYNAM-O_results folder is one produced by the FileManager'
+        'A valid DYNAM-O_results folder is one produced by the DYNAMOApp'
         'batch run. Each save category is independently optional, so this'
         'folder is accepted if ANY of the following is present:'
         ''

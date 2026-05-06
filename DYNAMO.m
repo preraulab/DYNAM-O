@@ -744,7 +744,7 @@ classdef DYNAMO < handle
             % --- Callback functions ---
             function loadSettingsCallback(~, ~)
                 % Load settings from a JSON file written by saveSettingsCallback
-                % / the FileManager run-log. The legacy `.txt` format stored
+                % / the DYNAMOApp run-log. The legacy `.txt` format stored
                 % MATLAB code and was loaded via `run()` — a code-injection
                 % vector. JSON is inert (jsondecode = data deserialization only).
                 [filename, filepath] = uigetfile({'*.json'}, 'Select DYNAM-O settings file (JSON).');
