@@ -135,13 +135,10 @@ classdef DYNAMORunLogger < handle
             s = regexprep(in, '[^A-Za-z0-9_-]', '_');
         end
         function s = detectCodeVersion()
-            s = '';
-            here = fileparts(mfilename('fullpath'));
             try
-                [st, out] = system(sprintf( ...
-                    'git -C "%s" rev-parse --short HEAD 2>/dev/null', here));
-                if st == 0, s = strtrim(out); end
+                s = dynamo_version();
             catch
+                s = '';
             end
         end
     end
