@@ -224,7 +224,7 @@ ttotal = datetime('now');
 
 if verbose
     fprintf('================================================================\n');
-    fprintf('  DYNAM-O · The Dynamic Oscillation Toolbox\n');
+    fprintf('  D Y N A M - O - The Dynamic Oscillation Toolbox\n');
     fprintf('  Version: %s\n', dynamo_version());
     fprintf('================================================================\n');
     fprintf('  Developed by the Prerau Laboratory\n');

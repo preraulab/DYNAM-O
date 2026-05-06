@@ -465,6 +465,11 @@ classdef DYNAMOApp < matlab.apps.AppBase & DYNAMO
             % composer dialog or programmatic callers.
             app.ReferenceList = {};
 
+            % Splash screen: pop the logo + version + lab credit while the
+            % rest of construction runs. Minimum 2s visible lifetime
+            % enforced in closeSplashScreen() below.
+            splashFig = app.showSplashScreen();
+
             % Build all UI components
             createComponents(app, p.Results.Title, p.Results.Position);
             app.enforceMinSize;
@@ -478,6 +483,11 @@ classdef DYNAMOApp < matlab.apps.AppBase & DYNAMO
             % not a half-drawn skeleton being filled in.
             drawnow;
             app.UIFigure.Visible = 'on';
+
+            % Close the splash once the main window is visible (with a
+            % 2s minimum-lifetime guard so it doesn't flash by on a fast
+            % build).
+            app.closeSplashScreen(splashFig);
         end
         % ------------------------------------------------------------------
 
