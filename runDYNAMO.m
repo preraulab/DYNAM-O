@@ -222,6 +222,18 @@ timings = struct();
 % summary table.
 ttotal = datetime('now');
 
+if verbose
+    fprintf('================================================================\n');
+    fprintf('  DYNAM-O · The Dynamic Oscillation Toolbox\n');
+    fprintf('  Version: %s\n', dynamo_version());
+    fprintf('================================================================\n');
+    fprintf('  Developed by the Prerau Laboratory\n');
+    fprintf('  Web:       https://sleepeeg.org\n');
+    fprintf('  Tutorials: https://prerau.bwh.harvard.edu/dynam-o/\n');
+    fprintf('  GitHub:    https://github.com/preraulab/DYNAM-O\n');
+    fprintf('================================================================\n\n');
+end
+
 % Harden against partial option structs: a user may pass an
 % old/incomplete struct from a prior session (e.g., before a new field
 % like reuse_baseline or seg_time was added). Without backfilling we'd
