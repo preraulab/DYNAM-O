@@ -1174,7 +1174,7 @@ classdef DYNAMOApp < matlab.apps.AppBase & DYNAMO
             % modal-ish uifigure with the toolbox name, version, and
             % links to the lab + documentation.
             fig = uifigure('Name', 'About DYNAM-O', ...
-                'Position', [0 0 600 600]);
+                'Position', [0 0 600 620]);
             app.trackChildWindow(fig);
             movegui(fig, 'center');
 
