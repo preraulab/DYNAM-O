@@ -126,7 +126,7 @@ function createRunMontageWindow(app)
     chanSelectedRows  = [];
 
     ss = get(0, 'ScreenSize');
-    dW = 1180; dH = 720;
+    dW = 1200; dH = 760;
     % Non-modal so the user can adjust other parts of the batch
     % (file list, output dir, staging columns) while the
     % composer is open. The closure over `app` keeps the
@@ -137,18 +137,27 @@ function createRunMontageWindow(app)
     app.trackChildWindow(d);
 
     outer = uigridlayout(d);
-    outer.RowHeight    = {'1x', 26, 44};
+    outer.RowHeight    = {62, '1x', 32, 44};
     outer.ColumnWidth  = {'1x', 150, '1.4x'};
     outer.Padding      = [10 10 10 10];
     outer.RowSpacing   = 8;
     outer.ColumnSpacing= 10;
 
-    % ---- COL 1: Available Channels (top), splitter,
+    % ---- ROW 1: numbered-steps header strip (spans all 3 columns) ----
+    % Self-explanatory onboarding for first-time users — replaces the
+    % "must hover every button to learn what it does" pattern. The
+    % chips align with the column they describe so the eye flows
+    % left-to-right with the workflow.
+    headerHtml = uihtml(outer, 'HTMLSource', buildHeaderStripHtml(app));
+    headerHtml.Layout.Row    = 1;
+    headerHtml.Layout.Column = [1 3];
+
+    % ---- ROW 2 / COL 1: Available Channels (top), splitter,
     %             Create Reference (bottom) ----
     leftCol = uigridlayout(outer);
-    leftCol.Layout.Row    = 1;
+    leftCol.Layout.Row    = 2;
     leftCol.Layout.Column = 1;
-    leftCol.RowHeight     = {'2x', 8, '1x'};
+    leftCol.RowHeight     = {'2x', 14, '1x'};
     leftCol.ColumnWidth   = {'1x'};
     leftCol.Padding       = [0 0 0 0];
     leftCol.RowSpacing    = 6;
@@ -182,12 +191,14 @@ function createRunMontageWindow(app)
     % uipanel with a ButtonDownFcn that captures the figure's
     % mouse-motion / mouse-up callbacks for live drag. Heights
     % are computed in pixels (not flex units) during drag so
-    % the user feels a 1:1 response.
+    % the user feels a 1:1 response. Kept as a bare uipanel
+    % (no child controls) so ButtonDownFcn fires reliably — a
+    % uihtml child would swallow the mousedown.
     splitterDrag = struct('active', false, 'startY', 0, ...
         'startH1', 0, 'totalH', 0, ...
         'origMotion', [], 'origUp', [], 'origPointer', '');
     splitterPanel = uipanel(leftCol, ...
-        'BackgroundColor', [0.82 0.84 0.88], ...
+        'BackgroundColor', [0.74 0.78 0.85], ...
         'BorderType', 'none');
     splitterPanel.Layout.Row    = 2;
     splitterPanel.Layout.Column = 1;
@@ -201,7 +212,7 @@ function createRunMontageWindow(app)
     refPanel.Padding    = [0 0 0 0];
     refPanel.RowSpacing = 4;
     CSSuiLabel(refPanel, 'Style', app.AppStyle, ...
-        'Text', 'CREATE REFERENCE', ...
+        'Text', 'REFERENCES (optional)', ...
         'FontWeight', '700', ...
         'FontSize', app.FontSizeTitle, ...
         'HorizontalAlignment', 'left', ...
@@ -214,14 +225,18 @@ function createRunMontageWindow(app)
         'Style', app.AppStyle, ...
         'Editable', false, ...
         'WordWrap', true, ...
-        'Value', sprintf(['Use the buttons below to create and name a new reference.\n\n' ...
-                          'Then select channels above and click Rereference to ' ...
-                          'subtract this reference from each selected channel.']));
+        'Value', sprintf(['References are optional. Skip this section for plain\n' ...
+            'differential montages like C3-A2.\n\n' ...
+            '1.  Click  A − B  to make a difference reference (e.g. M = M1 − M2).\n' ...
+            '2.  Or click  Mean  /  Custom  to build other references.\n' ...
+            '3.  Then select channels above and click  −  Rereference  in the\n' ...
+            '    middle column to apply this reference to each selected channel.\n\n' ...
+            'Drag the bar above to give this section more room.']));
     refEmptyHelp.Layout.Row    = 2;
     refEmptyHelp.Layout.Column = 1;
     refTable = CSSuiTable(refPanel, ...
         'Data', refRowsToTable(refsState), ...
-        'ColumnName', {'Name', 'Expression'}, ...
+        'ColumnName', {'✎ Name', 'Expression'}, ...
         'ColumnWidth', [80, 280], ...
         'ColumnEditable', [true false], ...
         'CellEditCallback', @(s,e) onRefCellEdit(e), ...
@@ -230,7 +245,7 @@ function createRunMontageWindow(app)
         'SelectionChangedFcn', @(s,e) onRefSelect(e));
     refTable.Layout.Row    = 2;
     refTable.Layout.Column = 1;
-    refTable.HTMLComponent.Tooltip = ['Defined references. Click a Name cell to rename ' ...
+    refTable.HTMLComponent.Tooltip = ['Defined references. Click a Name cell (✎) to rename ' ...
         'the reference; the Expression is read-only — to change it, remove the row and ' ...
         're-add it with one of the buttons below. Drag the divider above to give ' ...
         'this section more room.'];
@@ -267,38 +282,44 @@ function createRunMontageWindow(app)
     % spacers above and below so the cluster sits next to the
     % Output Channels table on the right.
     midCol = uigridlayout(outer);
-    midCol.Layout.Row    = 1;
+    midCol.Layout.Row    = 2;
     midCol.Layout.Column = 2;
-    midCol.RowHeight     = {'1x', 44, 44, 44, 44, '1x'};
+    midCol.RowHeight     = {30, '1x', 48, 48, 48, 48, '1x'};
     midCol.ColumnWidth   = {'1x'};
     midCol.Padding       = [0 0 0 0];
     midCol.RowSpacing    = 8;
+    CSSuiLabel(midCol, 'Style', app.AppStyle, ...
+        'Text', 'BUILD OUTPUT', ...
+        'FontWeight', '700', ...
+        'FontSize', app.FontSizeTitle, ...
+        'HorizontalAlignment', 'center', ...
+        'VerticalAlignment', 'top');
     uipanel(midCol, 'BorderType', 'none');   % top stretch spacer
     chanAddBtn = CSSuiButton(midCol, 'Style', app.AppStyle, ...
-        'Text', 'Add', ...
+        'Text', '→ Add', ...
         'ButtonPushedFcn', @(s,e) addPassthrough());
     chanAddBtn.HTMLComponent.Tooltip = ['Add a passthrough output for each channel ' ...
         'currently selected in Available Channels (no referencing applied).'];
     chanRemoveBtn = CSSuiButton(midCol, 'Style', app.AppStyle, ...
-        'Text', 'Remove', ...
+        'Text', '✕ Remove', ...
         'ButtonPushedFcn', @(s,e) removeChan());
     chanRemoveBtn.HTMLComponent.Tooltip = 'Remove the selected output channel.';
     refSubtractBtn = CSSuiButton(midCol, 'Style', app.AppStyle, ...
-        'Text', 'Rereference', ...
+        'Text', '− Rereference', ...
         'ButtonPushedFcn', @(s,e) addReferenceSubtraction());
     refSubtractBtn.HTMLComponent.Tooltip = ['Subtract a chosen reference from each ' ...
         'selected available channel and add one output row per channel ' ...
         '(e.g., C3, C4 with reference M → C3-M, C4-M).'];
     chanCustomBtn = CSSuiButton(midCol, 'Style', app.AppStyle, ...
-        'Text', 'Custom', ...
+        'Text', 'ƒ(x) Custom', ...
         'ButtonPushedFcn', @(s,e) addCustomChannel());
     chanCustomBtn.HTMLComponent.Tooltip = ['Add an output channel from a free-form ' ...
         'expression (e.g., C3 - (A1 + A2)/2). Output name is optional.'];
     uipanel(midCol, 'BorderType', 'none');   % bottom stretch spacer
 
-    % ---- COL 3: Output Channels (full height) ----
+    % ---- ROW 2 / COL 3: Output Channels (full height) ----
     outPanel = uigridlayout(outer);
-    outPanel.Layout.Row    = 1;
+    outPanel.Layout.Row    = 2;
     outPanel.Layout.Column = 3;
     outPanel.RowHeight     = {30, '1x'};
     outPanel.ColumnWidth   = {'1x'};
@@ -310,24 +331,51 @@ function createRunMontageWindow(app)
         'FontSize', app.FontSizeTitle, ...
         'HorizontalAlignment', 'left', ...
         'VerticalAlignment', 'top');
+    % Stack the placeholder textarea and the table in the same grid
+    % cell — refresh() flips Visible based on chansState. Mirrors the
+    % References panel pattern and gives first-time users a clear
+    % "where to start" cue when the table is empty.
+    chanEmptyHelp = CSSuiTextArea(outPanel, ...
+        'Style', app.AppStyle, ...
+        'Editable', false, ...
+        'WordWrap', true, ...
+        'Value', sprintf(['No output channels yet.\n\n' ...
+            '↑  Pick a row on the left and click  →  Add  in the middle column,\n' ...
+            'or  double-click a row on the left  to add it as a passthrough.\n\n' ...
+            'For referenced channels: build a reference below first, then\n' ...
+            'click  −  Rereference  on selected available channels.']));
+    chanEmptyHelp.Layout.Row    = 2;
+    chanEmptyHelp.Layout.Column = 1;
     chanTable = CSSuiTable(outPanel, ...
         'Data', chanRowsToTable(chansState), ...
-        'ColumnName', {'Output Name', 'Expression'}, ...
+        'ColumnName', {'✎ Output Name', 'Expression'}, ...
         'ColumnWidth', [160, 420], ...
         'ColumnEditable', [true false], ...
         'CellEditCallback', @(s,e) onChanCellEdit(e), ...
         'Style', app.AppStyle, ...
         'SelectionType', 'row', ...
         'SelectionChangedFcn', @(s,e) onChanSelect(e));
+    chanTable.Layout.Row    = 2;
+    chanTable.Layout.Column = 1;
     chanTable.HTMLComponent.Tooltip = ['Output channels — one DYNAM-O run per row. Click ' ...
-        'an Output Name cell to rename it (optional alias); leave it blank to use the ' ...
-        'expression as the output name. Expression is read-only.'];
+        'an Output Name cell (✎) to rename it (optional alias); leave it blank to use the ' ...
+        'expression as the output name. Expression is read-only — to change it, remove ' ...
+        'the row and re-add it with a middle-column button.'];
 
     % ---- Status line + Help / OK / Cancel ----
-    statusLabel = CSSuiLabel(outer, ...
+    % Status uses a small grid so we can colour-stripe it by severity
+    % (info / warn / error) inside setStatus().
+    statusBar = uigridlayout(outer);
+    statusBar.Layout.Row    = 3;
+    statusBar.Layout.Column = [1 3];
+    statusBar.RowHeight     = {'1x'};
+    statusBar.ColumnWidth   = {'1x'};
+    statusBar.Padding       = [10 4 10 4];
+    statusBar.BackgroundColor = [0.96 0.97 0.99];
+    statusLabel = CSSuiLabel(statusBar, ...
         'Style', app.AppStyle, 'Text', '');
-    statusLabel.Layout.Row    = 2;
-    statusLabel.Layout.Column = [1 3];
+    statusLabel.Layout.Row    = 1;
+    statusLabel.Layout.Column = 1;
 
     % Help icon — same SVG path as the main-page HelpButton
     % (createBottomBar.m). Keeps the visual language consistent
@@ -339,10 +387,10 @@ function createRunMontageWindow(app)
         'c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>'];
 
     bottomRow = uigridlayout(outer);
-    bottomRow.Layout.Row    = 3;
+    bottomRow.Layout.Row    = 4;
     bottomRow.Layout.Column = [1 3];
     bottomRow.RowHeight     = {'1x'};
-    bottomRow.ColumnWidth   = {'1x', 110, 110, 110};
+    bottomRow.ColumnWidth   = {'1x', 110, 150, 110};
     bottomRow.Padding       = [0 0 0 0];
     bottomRow.ColumnSpacing = 8;
     uipanel(bottomRow, 'BorderType', 'none');  % spacer
@@ -352,7 +400,7 @@ function createRunMontageWindow(app)
         'ButtonPushedFcn', @(s,e) showHelp());
     helpBtn.HTMLComponent.Tooltip = 'Show help for this dialog.';
     okBtn = CSSuiButton(bottomRow, 'Style', app.AppStyle, ...
-        'Text', 'OK', 'ButtonPushedFcn', @(s,e) doOk());
+        'Text', 'Save and Close', 'ButtonPushedFcn', @(s,e) doOk());
     okBtn.HTMLComponent.Tooltip = ['Validate and apply: writes the output channels and ' ...
         'references back to the main page and closes the dialog.'];
     cancelBtn = CSSuiButton(bottomRow, 'Style', app.AppStyle, ...
@@ -442,17 +490,53 @@ function createRunMontageWindow(app)
             refEmptyHelp.HTMLComponent.Visible = 'off';
             refTable.HTMLComponent.Visible     = 'on';
         end
+        % Same pattern for output channels: show a "where to start"
+        % placeholder when the table is empty.
+        if isempty(chansState)
+            chanEmptyHelp.HTMLComponent.Visible = 'on';
+            chanTable.HTMLComponent.Visible     = 'off';
+        else
+            chanEmptyHelp.HTMLComponent.Visible = 'off';
+            chanTable.HTMLComponent.Visible     = 'on';
+        end
         [okFlag, msg] = validateAll();
         if okFlag
-            statusLabel.Text = sprintf('OK: %d reference(s), %d output channel(s).', ...
-                numel(refsState), numel(chansState));
+            setStatus('ok', sprintf('Ready: %d reference(s), %d output channel(s). Click Save and Close to apply.', ...
+                numel(refsState), numel(chansState)));
         else
-            statusLabel.Text = ['Problem: ' msg];
+            setStatus('error', msg);
         end
         % OK button stays clickable; doOk() runs validateAll
         % again on click and alerts if invalid. Gating the
         % button visually was unreliable across uihtml refreshes
         % and confused users into thinking the dialog was stuck.
+    end
+
+    function setStatus(level, msg)
+        % Colour-stripe the status bar by severity so warnings and
+        % errors aren't lost in the bottom-strip text. Levels:
+        %   'ok'    - light grey   (resting state, ready to save)
+        %   'info'  - light blue   (in-flight info, e.g. action hint)
+        %   'warn'  - amber        (Fs mismatch, resample suggestion)
+        %   'error' - red          (parse error, name collision, etc.)
+        switch lower(level)
+            case 'ok'
+                statusBar.BackgroundColor = [0.96 0.97 0.99];
+                prefix = '';
+            case 'info'
+                statusBar.BackgroundColor = [0.92 0.96 1.00];
+                prefix = 'ⓘ  ';
+            case 'warn'
+                statusBar.BackgroundColor = [1.00 0.95 0.82];
+                prefix = '⚠  Warning: ';
+            case 'error'
+                statusBar.BackgroundColor = [1.00 0.90 0.90];
+                prefix = '✕  Problem: ';
+            otherwise
+                statusBar.BackgroundColor = [0.96 0.97 0.99];
+                prefix = '';
+        end
+        statusLabel.Text = [prefix, msg];
     end
 
     function [ok, msg] = validateAll()
