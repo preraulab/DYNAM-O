@@ -9,9 +9,22 @@ function names = init_DYNAMO(varargin)
 %       init_DYNAMO('gui')             % also addpath app/ (GUI tree)
 %       init_DYNAMO('clear')           % also evict DYNAM-O classdef cache
 %       init_DYNAMO('clear','gui')     % both
+%       init_DYNAMO('force')           % bypass session cache; redo everything
 %
 %   Returns the list of class names that were evicted from the MATLAB
-%   class cache (empty unless 'clear' was passed).
+%   class cache (empty unless 'clear' was passed and there was something
+%   to evict).
+%
+%   Performance notes:
+%     - Within a single MATLAB session this function is idempotent and
+%       cheap on the second-and-later calls. It remembers (in a
+%       persistent) the repo it has already initialized, so a redundant
+%       call with the same flags returns in microseconds.
+%     - The 'clear' scan (which opens every .m file in the repo to look
+%       for `classdef`) only happens once per session. Subsequent
+%       'clear' calls reuse the cached classname list.
+%     - 'force' resets the session cache and re-walks everything. Use
+%       after pulling new files or renaming classes mid-session.
 %
 %   'clear' is the surgical alternative to `clear classes`: it drops
 %   every class declared inside this repository (top-level classdefs,
@@ -19,24 +32,44 @@ function names = init_DYNAMO(varargin)
 %   like CSSuicontrols), and leaves third-party classes, base-workspace
 %   variables, breakpoints, and timers from other tools untouched. It
 %   WILL still delete live instances of the cleared classes (e.g., an
-%   open DYNAMOApp) — the cache and live instances are coupled
-%   in MATLAB. Uses `clear classdef <name>` on R2022b+ and falls back
+%   open DYNAMOApp) — the cache and live instances are coupled in
+%   MATLAB. Uses `clear classdef <name>` on R2022b+ and falls back
 %   to `clear <name>` on older releases.
-%
-%   For a GUI launch, prefer runApp() (which calls init_DYNAMO('clear','gui')
-%   and then opens the DYNAM-O App).
 
-    flags = lower(string(varargin));
+    persistent done_root done_gui classnames_cache
+    if isempty(done_gui), done_gui = false; end
+
+    flags    = lower(string(varargin));
     do_clear = any(flags == "clear");
     do_gui   = any(flags == "gui");
+    do_force = any(flags == "force");
 
     repo_root = fileparts(mfilename('fullpath'));
-    names = {};
+    names     = {};
 
-    % --- Optional: evict cached DYNAM-O classes BEFORE addpath, so the
-    %     fresh path immediately re-resolves classdefs from disk.
+    if do_force
+        done_root        = '';
+        done_gui         = false;
+        classnames_cache = [];
+    end
+
+    already_for_this_repo = ~isempty(done_root) && strcmp(done_root, repo_root);
+
+    % Fast path: same MATLAB session already initialized this repo, the
+    % caller didn't ask for a class-cache wipe, and either no GUI was
+    % requested or the GUI tree was already added in a prior call.
+    if already_for_this_repo && ~do_clear && (~do_gui || done_gui)
+        return
+    end
+
+    % --- Optional: clear cache. Reuse the cached classname list when
+    %     available; the contents only change when the repo gains or
+    %     loses classes, which doesn't happen inside a session.
     if do_clear
-        names = collectClassNames(repo_root);
+        if isempty(classnames_cache)
+            classnames_cache = collectClassNames(repo_root);
+        end
+        names = classnames_cache;
         for k = 1:numel(names)
             try
                 evalin('base', sprintf('clear classdef %s', names{k}));
@@ -56,12 +89,15 @@ function names = init_DYNAMO(varargin)
     addpath(repo_root);
 
     % --- Optional: GUI tree.
-    if do_gui
+    if do_gui && (~done_gui || do_clear || do_force)
         app_dir = fullfile(repo_root, 'app');
         if isfolder(app_dir)
             addpath(genpath(app_dir));
         end
+        done_gui = true;
     end
+
+    done_root = repo_root;
 end
 
 function names = collectClassNames(repo_root)
