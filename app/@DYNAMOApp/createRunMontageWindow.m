@@ -65,11 +65,12 @@ function createRunMontageWindow(app)
     end
 
     % Build sorted base rows for the Available Channels table:
-    %   {Type, Channel, Fs string, Expression}.
-    % The Type column distinguishes 'EDF' (immutable, sourced from the
-    % loaded EDFs) from 'Derived' (built in this dialog and appended
-    % by rebuildAvailable() at refresh time). The Expression column is
-    % blank for EDF rows and shows the formula for Derived rows.
+    %   {Channel, Fs string, Expression}.
+    % EDF rows have a blank Expression; Derived rows (built in this
+    % dialog and appended by rebuildAvailable() at refresh time) show
+    % their formula in the Expression column. The presence/absence of
+    % an Expression value is what distinguishes the two — no separate
+    % Type column.
     %
     % fsByLabel: label -> Fs (scalar) or NaN if mixed across files.
     % When resampling is enabled, every label maps to the target rate
@@ -77,7 +78,7 @@ function createRunMontageWindow(app)
     % operations see a single uniform rate).
     all_edf_labels = sort(keys(chan_map));
     nChans = numel(all_edf_labels);
-    edfBaseRows = cell(nChans, 4);
+    edfBaseRows = cell(nChans, 3);
     resample_on = ~isempty(app.ResampleSwitch) && ...
         logical(app.ResampleSwitch.Value);
     if resample_on
@@ -99,10 +100,9 @@ function createRunMontageWindow(app)
             end
             freqStr = [strjoin(arrayfun(@(f) sprintf('%g', f), ufreqs, 'UniformOutput', false), ' / ') ' Hz'];
         end
-        edfBaseRows{ii,1} = 'EDF';
-        edfBaseRows{ii,2} = lbl;
-        edfBaseRows{ii,3} = freqStr;
-        edfBaseRows{ii,4} = '';
+        edfBaseRows{ii,1} = lbl;
+        edfBaseRows{ii,2} = freqStr;
+        edfBaseRows{ii,3} = '';
     end
     % `tableData` is the live rendered version (EDF rows + any Derived
     % rows built in this dialog). It's rebuilt by rebuildAvailable()
@@ -191,8 +191,8 @@ function createRunMontageWindow(app)
 
     availTable = CSSuiTable(leftCol, ...
         'Data', tableData, ...
-        'ColumnName', {'Type', 'Channel', 'Fs (Hz)', 'Expression'}, ...
-        'ColumnWidth', [70, 150, 110, 220], ...
+        'ColumnName', {'Channel', 'Fs (Hz)', 'Expression'}, ...
+        'ColumnWidth', [150, 170, 230], ...
         'Style', app.AppStyle, ...
         'SelectionType', 'row', ...
         'SelectionChangedFcn', @(s,e) onAvailSelect(e), ...
@@ -453,7 +453,7 @@ function createRunMontageWindow(app)
             return
         end
         m = fullFsMap();
-        derivedRows = cell(nDerived, 4);
+        derivedRows = cell(nDerived, 3);
         for k = 1:nDerived
             [nm, ex] = splitNameExpr(refsState{k});
             if isempty(nm), nm = '(unnamed)'; end
@@ -462,10 +462,9 @@ function createRunMontageWindow(app)
             else
                 fsStr = '— (mixed)';
             end
-            derivedRows{k,1} = 'Derived';
-            derivedRows{k,2} = nm;
-            derivedRows{k,3} = fsStr;
-            derivedRows{k,4} = ex;
+            derivedRows{k,1} = nm;
+            derivedRows{k,2} = fsStr;
+            derivedRows{k,3} = ex;
         end
         tableData = [edfBaseRows; derivedRows];
     end
@@ -622,7 +621,7 @@ function createRunMontageWindow(app)
         catch
         end
         if isempty(r) || r < 1 || r > size(tableData,1), return, end
-        chansState{end+1} = tableData{r,2};
+        chansState{end+1} = tableData{r,1};
         refresh();
     end
 
@@ -759,7 +758,7 @@ function createRunMontageWindow(app)
             return
         end
         if ~isempty(availSelectedRows)
-            picksInit = tableData(availSelectedRows, 2);
+            picksInit = tableData(availSelectedRows, 1);
             picksInit = picksInit(:)';
         else
             picksInit = {};
@@ -918,7 +917,7 @@ function createRunMontageWindow(app)
                 'Add Passthrough', 'Icon', 'info');
             return
         end
-        lbls = tableData(availSelectedRows, 2);
+        lbls = tableData(availSelectedRows, 1);
         for kk = 1:numel(lbls)
             chansState{end+1} = lbls{kk};
         end
@@ -949,7 +948,7 @@ function createRunMontageWindow(app)
         pick = promptPickFromList( ...
             'Subtract from each selected channel:', pickList);
         if isempty(pick), return, end
-        lbls = tableData(availSelectedRows, 2);
+        lbls = tableData(availSelectedRows, 1);
         m = fullFsMap();
         for kk = 1:numel(lbls)
             [okFs, msgFs] = uniformFs({lbls{kk}, pick}, m);
@@ -1328,9 +1327,9 @@ function createRunMontageWindow(app)
         else
             app.ReferenceEditField.Value = strjoin(refsState, ', ');
         end
-        % Helper consumes a 2-column slice {label, fs_string}; pass the
-        % matching cols from the new 4-column tableData layout.
-        validateChannelSamplingRates(app, chansState, tableData(:, [2 3]));
+        % Helper consumes a 2-column slice {label, fs_string}; the
+        % first two cols of tableData match that shape.
+        validateChannelSamplingRates(app, chansState, tableData(:, [1 2]));
         app.refreshChannelTooltips();
         if isvalid(d), delete(d); end
     end
