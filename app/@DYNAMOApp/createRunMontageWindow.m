@@ -65,12 +65,12 @@ function createRunMontageWindow(app)
     end
 
     % Build sorted base rows for the Available Channels table:
-    %   {Channel, Fs string, Expression}.
-    % EDF rows have a blank Expression; Derived rows (built in this
-    % dialog and appended by rebuildAvailable() at refresh time) show
-    % their formula in the Expression column. The presence/absence of
-    % an Expression value is what distinguishes the two — no separate
-    % Type column.
+    %   {Channel, Fs string, Info}.
+    % The Info column does double duty: for EDF rows it shows file
+    % coverage ('5 / 10 files' — how many of the loaded EDFs contain
+    % this label), and for Derived rows it shows the expression. The
+    % shape of that string is what distinguishes the two visually —
+    % no separate Type column.
     %
     % fsByLabel: label -> Fs (scalar) or NaN if mixed across files.
     % When resampling is enabled, every label maps to the target rate
@@ -100,9 +100,18 @@ function createRunMontageWindow(app)
             end
             freqStr = [strjoin(arrayfun(@(f) sprintf('%g', f), ufreqs, 'UniformOutput', false), ' / ') ' Hz'];
         end
+        nFound = numel(entry{1});
+        if nFound == nFiles
+            fileStr = sprintf('%d / %d files', nFound, nFiles);
+        else
+            % Highlight partial coverage with the same arrow glyph
+            % the dialog uses elsewhere — easy to spot at a glance
+            % when one file is missing the label.
+            fileStr = sprintf('%d / %d files ⚠', nFound, nFiles);
+        end
         edfBaseRows{ii,1} = lbl;
         edfBaseRows{ii,2} = freqStr;
-        edfBaseRows{ii,3} = '';
+        edfBaseRows{ii,3} = fileStr;
     end
     % `tableData` is the live rendered version (EDF rows + any Derived
     % rows built in this dialog). It's rebuilt by rebuildAvailable()
@@ -206,7 +215,7 @@ function createRunMontageWindow(app)
 
     availTable = CSSuiTable(leftCol, ...
         'Data', tableData, ...
-        'ColumnName', {'Channel', 'Fs (Hz)', 'Expression'}, ...
+        'ColumnName', {'Channel', 'Fs (Hz)', 'Info'}, ...
         'ColumnWidth', [150, 170, 230], ...
         'Style', app.AppStyle, ...
         'SelectionType', 'row', ...
@@ -1059,7 +1068,7 @@ function createRunMontageWindow(app)
 '<h2>Panels</h2>' ...
 '<div class="panel"><div class="panel-title">Available Channels (left)</div>' ...
 '<div class="panel-meta">read-only · double-click adds as passthrough</div>' ...
-'Every channel available to the batch — both <code>EDF</code> labels (sourced from loaded files) and <code>Derived</code> channels (built with the buttons above). The <i>Fs</i> column shows the resampled rate when <b>Resample data</b> is on in the main panel; otherwise the native rate(s) per file. The <i>Expression</i> column shows the formula for derived rows and is blank for EDF rows.' ...
+'Every channel available to the batch — EDF labels sourced from the loaded files plus any derived channels built with the buttons above. The <i>Fs</i> column shows the resampled rate when <b>Resample data</b> is on in the main panel; otherwise the native rate(s) per file. The <i>Info</i> column shows file coverage (e.g. <code>5 / 10 files</code>) for EDF rows and the formula for derived rows.' ...
 '</div>' ...
 '<div class="panel"><div class="panel-title">Output Channels (right)</div>' ...
 '<div class="panel-meta">edit Output Name in place</div>' ...
