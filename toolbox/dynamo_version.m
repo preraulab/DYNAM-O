@@ -1,39 +1,45 @@
 function v = dynamo_version()
-%DYNAMO_VERSION  Return the DYNAM-O release + build version string.
+%DYNAMO_VERSION  Return the DYNAM-O build identifier.
 %
-%   Format follows SemVer build metadata: '<release>+<sha>[.dirty]'.
-%   For example:
-%       '1.0.0'                 - compiled standalone (no git tree)
-%       '1.0.0+25f7d8b'         - source-tree build at commit 25f7d8b
-%       '1.0.0+25f7d8b.dirty'   - source tree with uncommitted changes
+%   Returns '<branch>@<short_sha>' for a source-tree build, with a
+%   '.dirty' suffix when there are uncommitted changes. For example:
+%       'file-manager-overhaul@25f7d8b'         - clean source-tree build
+%       'file-manager-overhaul@25f7d8b.dirty'   - tree has uncommitted changes
+%       'detached@25f7d8b'                      - detached HEAD (no branch)
+%       'unknown'                               - compiled standalone / non-git
 %
 %   This is what gets recorded in run-log JSONL entries and what a
-%   compiled standalone reports. Bump the release constant on release.
+%   compiled standalone reports.
 
-    release = '1.0.0';
-
-    sha = '';
-    dirty = false;
+    v = 'unknown';
     here = fileparts(mfilename('fullpath'));
     try
         [st, out] = system(sprintf( ...
             'git -C "%s" rev-parse --short HEAD 2>/dev/null', here));
-        if st == 0
-            sha = strtrim(out);
-            [st2, out2] = system(sprintf( ...
-                'git -C "%s" status --porcelain --untracked-files=no 2>/dev/null', here));
-            if st2 == 0 && ~isempty(strtrim(out2))
-                dirty = true;
-            end
+        if st ~= 0; return; end
+        sha = strtrim(out);
+        if isempty(sha); return; end
+
+        [stb, outb] = system(sprintf( ...
+            'git -C "%s" rev-parse --abbrev-ref HEAD 2>/dev/null', here));
+        if stb == 0
+            branch = strtrim(outb);
+        else
+            branch = '';
+        end
+        if isempty(branch) || strcmp(branch, 'HEAD')
+            branch = 'detached';
+        end
+
+        [std, outd] = system(sprintf( ...
+            'git -C "%s" status --porcelain --untracked-files=no 2>/dev/null', here));
+        dirty = (std == 0) && ~isempty(strtrim(outd));
+
+        if dirty
+            v = sprintf('%s@%s.dirty', branch, sha);
+        else
+            v = sprintf('%s@%s', branch, sha);
         end
     catch
-    end
-
-    if isempty(sha)
-        v = release;
-    elseif dirty
-        v = sprintf('%s+%s.dirty', release, sha);
-    else
-        v = sprintf('%s+%s', release, sha);
     end
 end

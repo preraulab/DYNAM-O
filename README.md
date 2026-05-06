@@ -996,7 +996,7 @@ DYNAM-O_dev/
 │   └── components/
 │       └── CSSuicontrols/           Submodule: HTML-backed UI controls
 └── toolbox/                         Pure science (importable headlessly via DYNAMO_addpath)
-    ├── dynamo_version.m             '1.0.0' release constant
+    ├── dynamo_version.m             '<branch>@<sha>[.dirty]' build identifier
     ├── TFpeak_functions/            Watershed TF-peak extraction
     │   ├── computeTFPeaks.m         Main detection function
     │   ├── runWatershed.m           MATLAB watershed segmentation
