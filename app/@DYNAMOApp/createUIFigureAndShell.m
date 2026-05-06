@@ -26,9 +26,9 @@ function createUIFigureAndShell(app)
     % at a deleted app instance.
     app.UIFigure.CloseRequestFcn = @(~,~) app.uiFigureCloseRequest();
 
-    % ---- File Menu ----
+    % ---- Batch Settings Menu ----
     app.FileMenu      = uimenu(app.UIFigure);
-    app.FileMenu.Text = 'File';
+    app.FileMenu.Text = 'Batch Settings';
 
     % Menu item: load a text file containing EDF paths (one per line)
     app.LoadEDFFileListMenu = uimenu(app.FileMenu);

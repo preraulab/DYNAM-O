@@ -58,7 +58,7 @@ classdef DYNAMOApp < matlab.apps.AppBase & DYNAMO
 
         % --- UI Figure & Menus ---
         UIFigure                        matlab.ui.Figure                % Main application window
-        FileMenu                        matlab.ui.container.Menu        % Top-level 'File' menu
+        FileMenu                        matlab.ui.container.Menu        % Top-level 'Batch Settings' menu
         LoadEDFFileListMenu             matlab.ui.container.Menu        % Menu item: load EDF path list
         LoadStagingFileListMenu         matlab.ui.container.Menu        % Menu item: load staging path list
         ShowRunLogConsoleMenu           matlab.ui.container.Menu        % Menu item: toggle Run Log Console
