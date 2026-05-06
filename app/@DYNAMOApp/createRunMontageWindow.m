@@ -152,7 +152,7 @@ function createRunMontageWindow(app)
     app.trackChildWindow(d);
 
     outer = uigridlayout(d);
-    outer.RowHeight    = {62, '1x', 32, 44};
+    outer.RowHeight    = {62, '1x', 44};
     outer.ColumnWidth  = {'1.2x', 150, '1x'};
     outer.Padding      = [10 10 10 10];
     outer.RowSpacing   = 8;
@@ -177,7 +177,7 @@ function createRunMontageWindow(app)
     leftCol = uigridlayout(outer);
     leftCol.Layout.Row    = 2;
     leftCol.Layout.Column = 1;
-    leftCol.RowHeight     = {30, 44, '1x'};
+    leftCol.RowHeight     = {30, '1x', 30, 44};
     leftCol.ColumnWidth   = {'1x'};
     leftCol.Padding       = [0 0 0 0];
     leftCol.RowSpacing    = 6;
@@ -189,10 +189,32 @@ function createRunMontageWindow(app)
         'HorizontalAlignment', 'left', ...
         'VerticalAlignment', 'top');
 
+    availTable = CSSuiTable(leftCol, ...
+        'Data', tableData, ...
+        'ColumnName', {'Type', 'Channel', 'Fs (Hz)', 'Expression'}, ...
+        'ColumnWidth', [70, 150, 110, 220], ...
+        'Style', app.AppStyle, ...
+        'SelectionType', 'row', ...
+        'SelectionChangedFcn', @(s,e) onAvailSelect(e), ...
+        'DoubleClickFcn', @(s,e) onAvailDoubleClick(e));
+    availTable.Layout.Row    = 2;
+    availTable.Layout.Column = 1;
+    availTable.HTMLComponent.Tooltip = ['Every channel available to the batch — both EDF ' ...
+        'labels and any derived channels you''ve built. Double-click a row to add it ' ...
+        'as a passthrough output, or select one or more rows (Ctrl/Shift-click) to use as ' ...
+        'sources for the middle-column buttons.'];
+
+    CSSuiLabel(leftCol, 'Style', app.AppStyle, ...
+        'Text', 'DERIVE CHANNEL', ...
+        'FontWeight', '700', ...
+        'FontSize', app.FontSizeTitle, ...
+        'HorizontalAlignment', 'left', ...
+        'VerticalAlignment', 'top');
+
     % Button row: derived-channel creators + a single Remove that
     % only deletes Derived rows (EDF rows are immutable).
     derivedBtnRow = uigridlayout(leftCol);
-    derivedBtnRow.Layout.Row    = 2;
+    derivedBtnRow.Layout.Row    = 4;
     derivedBtnRow.RowHeight     = {44};
     derivedBtnRow.ColumnWidth   = {'1x', '1x', '1x', '1x'};
     derivedBtnRow.Padding       = [0 0 0 0];
@@ -201,7 +223,8 @@ function createRunMontageWindow(app)
         'Text', '+ Mean', ...
         'ButtonPushedFcn', @(s,e) addRefMean());
     refMeanBtn.HTMLComponent.Tooltip = ['Create a derived channel: the mean of two or more ' ...
-        'available channels. Opens a popup to pick the inputs and name the result.'];
+        'available channels. Opens a popup pre-selected with whatever you have selected ' ...
+        'in the Available Channels table.'];
     refABMinusBtn = CSSuiButton(derivedBtnRow, 'Style', app.AppStyle, ...
         'Text', '+ Difference', ...
         'ButtonPushedFcn', @(s,e) addRefABMinus());
@@ -218,21 +241,6 @@ function createRunMontageWindow(app)
     refRemoveBtn.HTMLComponent.Tooltip = ['Remove the selected derived channel(s). EDF ' ...
         'channels can''t be removed. If any output channels use the derived channel ' ...
         'being removed, you''ll be warned before they''re removed too.'];
-
-    availTable = CSSuiTable(leftCol, ...
-        'Data', tableData, ...
-        'ColumnName', {'Type', 'Channel', 'Fs (Hz)', 'Expression'}, ...
-        'ColumnWidth', [70, 150, 110, 220], ...
-        'Style', app.AppStyle, ...
-        'SelectionType', 'row', ...
-        'SelectionChangedFcn', @(s,e) onAvailSelect(e), ...
-        'DoubleClickFcn', @(s,e) onAvailDoubleClick(e));
-    availTable.Layout.Row    = 3;
-    availTable.Layout.Column = 1;
-    availTable.HTMLComponent.Tooltip = ['Every channel available to the batch — both EDF ' ...
-        'labels and any derived channels you''ve built above. Double-click a row to add it ' ...
-        'as a passthrough output, or select one or more rows (Ctrl/Shift-click) to use as ' ...
-        'sources for the middle-column buttons.'];
 
     % ---- COL 2: middle button stack (Output Channel ops) ----
     % Vertical stack of the four operations that produce output
@@ -320,12 +328,30 @@ function createRunMontageWindow(app)
         'expression as the output name. Expression is read-only — to change it, remove ' ...
         'the row and re-add it with a middle-column button.'];
 
-    % ---- Status line + Help / OK / Cancel ----
-    % Status uses a small grid so we can colour-stripe it by severity
-    % (info / warn / error) inside setStatus().
-    statusBar = uigridlayout(outer);
-    statusBar.Layout.Row    = 3;
-    statusBar.Layout.Column = [1 3];
+    % ---- Bottom row: status (left) + Help / Save / Cancel (right) ----
+    % Help icon — same SVG path as the main-page HelpButton
+    % (createBottomBar.m). Keeps the visual language consistent so a
+    % user lands here recognising it.
+    helpIcon = ['<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z' ...
+        'M13 19h-2v-2h2v2z' ...
+        'M15.07 11.25l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83' ...
+        'l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8' ...
+        'c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>'];
+
+    bottomRow = uigridlayout(outer);
+    bottomRow.Layout.Row    = 3;
+    bottomRow.Layout.Column = [1 3];
+    bottomRow.RowHeight     = {'1x'};
+    bottomRow.ColumnWidth   = {'1x', 110, 150, 110};
+    bottomRow.Padding       = [0 0 0 0];
+    bottomRow.ColumnSpacing = 8;
+    % Status panel inside the bottom row's first cell. setStatus()
+    % paints its BackgroundColor to colour-stripe by severity
+    % (info / warn / error). The colour stops at the buttons so the
+    % stripe doesn't bleed under Help / Save / Cancel.
+    statusBar = uigridlayout(bottomRow);
+    statusBar.Layout.Row    = 1;
+    statusBar.Layout.Column = 1;
     statusBar.RowHeight     = {'1x'};
     statusBar.ColumnWidth   = {'1x'};
     statusBar.Padding       = [10 4 10 4];
@@ -334,24 +360,6 @@ function createRunMontageWindow(app)
         'Style', app.AppStyle, 'Text', '');
     statusLabel.Layout.Row    = 1;
     statusLabel.Layout.Column = 1;
-
-    % Help icon — same SVG path as the main-page HelpButton
-    % (createBottomBar.m). Keeps the visual language consistent
-    % so a user lands here recognising it.
-    helpIcon = ['<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z' ...
-        'M13 19h-2v-2h2v2z' ...
-        'M15.07 11.25l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83' ...
-        'l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8' ...
-        'c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>'];
-
-    bottomRow = uigridlayout(outer);
-    bottomRow.Layout.Row    = 4;
-    bottomRow.Layout.Column = [1 3];
-    bottomRow.RowHeight     = {'1x'};
-    bottomRow.ColumnWidth   = {'1x', 110, 150, 110};
-    bottomRow.Padding       = [0 0 0 0];
-    bottomRow.ColumnSpacing = 8;
-    uipanel(bottomRow, 'BorderType', 'none');  % spacer
     helpBtn = CSSuiButton(bottomRow, 'Style', app.AppStyle, ...
         'Text', 'Help', ...
         'Icon', helpIcon, 'IconPosition', 'left', 'IconSize', '1.5em', ...
@@ -740,13 +748,23 @@ function createRunMontageWindow(app)
         % Mean — popup-driven: a multi-select listbox of every
         % available channel (EDF + already-derived) and a name
         % field. Need at least 2 picks; all picks must share Fs.
+        % Whatever the user has selected in the Available Channels
+        % table is pre-selected in the popup so a workflow of
+        % "shift-click 4 mastoids → click + Mean → tweak name → OK"
+        % takes only one extra interaction.
         items = augmentedLabels();
         if numel(items) < 2
             uialert(d, 'Need at least two channels to form a mean.', ...
                 'Mean', 'Icon', 'info');
             return
         end
-        [picks, alias] = promptMean(items, suggestName('M'));
+        if ~isempty(availSelectedRows)
+            picksInit = tableData(availSelectedRows, 2);
+            picksInit = picksInit(:)';
+        else
+            picksInit = {};
+        end
+        [picks, alias] = promptMean(items, suggestName('M'), picksInit);
         if isempty(picks), return, end
         if numel(picks) < 2
             uialert(d, 'Pick at least two channels for a mean.', ...
@@ -1211,13 +1229,17 @@ function createRunMontageWindow(app)
         end
     end
 
-    function [picks, alias] = promptMean(items, suggestedName)
+    function [picks, alias] = promptMean(items, suggestedName, preselected)
         % Mean popup — multi-select listbox of every available
         % channel + name field. Need at least 2 picks. The
         % returned `picks` is a cell of selected label strings;
         % `alias` is the user-supplied name. Caller validates
         % Fs uniformity and name uniqueness.
+        % `preselected` (cell of label strings) is set as the
+        % initial listbox value so the popup opens with whatever
+        % the caller had highlighted in the parent table.
         if nargin < 2, suggestedName = ''; end
+        if nargin < 3, preselected = {}; end
         pdW = 520; pdH = 380; pdPad = 12;
         pd = uifigure('Name', 'Create Derived Channel — Mean', ...
             'Position', [(ss(3)-pdW)/2, (ss(4)-pdH)/2, pdW, pdH], ...
@@ -1229,6 +1251,14 @@ function createRunMontageWindow(app)
             'Items', items, ...
             'Multiselect', true, ...
             'Position', [pdPad, pdH-pdPad-22-200-6, pdW-2*pdPad, 200]);
+        if ~isempty(preselected)
+            % Filter to labels that actually appear in `items` so
+            % we don't error on a stale label.
+            keep = preselected(ismember(preselected, items));
+            if ~isempty(keep)
+                lbBox.Value = keep;
+            end
+        end
         CSSuiLabel(pd, 'Style', app.AppStyle, 'Text', 'Name (required):', ...
             'Position', [pdPad, pdH-pdPad-22-200-6-22-6, pdW-2*pdPad, 22]);
         efAlias = CSSuiEditField(pd, 'Style', app.AppStyle, ...
