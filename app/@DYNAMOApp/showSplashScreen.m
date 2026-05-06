@@ -22,11 +22,15 @@ function fig = showSplashScreen(app)
 
     % Resolve Saira to a local-disk cache when possible (prefdir/dynamo_cache);
     % falls back to the gstatic CDN URL when the cache is cold and the box
-    % is online. Returns '' on offline first launch — we still emit the
-    % CDN URL so the cascade of local() → url() can find the font.
-    fontUri = app.getSairaFontDataUri();
-    if isempty(fontUri)
-        fontUri = 'https://fonts.gstatic.com/s/saira/v23/memjYa2wxmKQyPMrZX79wwYZQMhsyuSLiIvS.woff2';
+    % is online OR when the helper isn't available (older checkout, stale
+    % MATLAB class cache). The CDN URL is the universal safe default.
+    fontUri = 'https://fonts.gstatic.com/s/saira/v23/memjYa2wxmKQyPMrZX79wwYZQMhsyuSLiIvS.woff2';
+    try
+        cached = app.getSairaFontDataUri();
+        if ~isempty(cached)
+            fontUri = cached;
+        end
+    catch
     end
 
     html = ['<!doctype html><html><head>' ...

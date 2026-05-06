@@ -1183,11 +1183,18 @@ classdef DYNAMOApp < matlab.apps.AppBase & DYNAMO
             g.RowHeight = {'1x'};
             g.ColumnWidth = {'1x'};
 
-            % Local-disk cache for Saira (prefdir/dynamo_cache); falls
-            % back to the gstatic CDN URL on cache miss + first launch.
-            fontUri = app.getSairaFontDataUri();
-            if isempty(fontUri)
-                fontUri = 'https://fonts.gstatic.com/s/saira/v23/memjYa2wxmKQyPMrZX79wwYZQMhsyuSLiIvS.woff2';
+            % Local-disk cache for Saira (prefdir/dynamo_cache); the
+            % gstatic CDN URL is the universal safe default — used on
+            % cache miss + first launch and as a guard against the
+            % helper being unavailable (older checkout / stale class
+            % cache).
+            fontUri = 'https://fonts.gstatic.com/s/saira/v23/memjYa2wxmKQyPMrZX79wwYZQMhsyuSLiIvS.woff2';
+            try
+                cached = app.getSairaFontDataUri();
+                if ~isempty(cached)
+                    fontUri = cached;
+                end
+            catch
             end
 
             htmlContent = [...
