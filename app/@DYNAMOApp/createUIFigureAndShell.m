@@ -46,6 +46,17 @@ function createUIFigureAndShell(app)
     app.ShowRunLogConsoleMenu.Text = 'Show Run Log Console';
     app.ShowRunLogConsoleMenu.Separator = 'on';
 
+    % Menu items: save / load the full batch run settings as a JSON file
+    % so a configuration can be archived and reloaded in a future session.
+    app.SaveBatchSettingsMenu = uimenu(app.FileMenu);
+    app.SaveBatchSettingsMenu.MenuSelectedFcn = createCallbackFcn(app, @saveBatchSettingsCallback, true);
+    app.SaveBatchSettingsMenu.Text = 'Save Batch Settings as JSON...';
+    app.SaveBatchSettingsMenu.Separator = 'on';
+
+    app.LoadBatchSettingsMenu = uimenu(app.FileMenu);
+    app.LoadBatchSettingsMenu.MenuSelectedFcn = createCallbackFcn(app, @loadBatchSettingsCallback, true);
+    app.LoadBatchSettingsMenu.Text = 'Load Batch Settings from JSON...';
+
     % ---- Outer Tab Group ----
     % ---- Top-level grid fills the figure automatically ----
     rootGrid = uigridlayout(app.UIFigure, [1 1]);

@@ -9,10 +9,22 @@ function [run_ID, fname] = generate_run_log(structs, struct_names, varargin)
 %       struct_names: cell array - names matched 1:1 to structs            -- required
 %
 %   Optional:
-%       run_start:  char - start timestamp; default = now (yyyyMMdd_HHmmss)
-%       file_path:  char - directory to write into; default = cwd
-%       write_file: logical - if false, skip the file write (Default: true)
-%       verbose:    logical - print to console (Default: false)
+%       run_start:      char    - start timestamp; default = now (yyyyMMdd_HHmmss)
+%       file_path:      char    - directory to write into; default = cwd
+%       out_path:       char    - explicit full path (dir + filename) to
+%                                 write to. Overrides file_path/fname when
+%                                 given. Useful when the caller already has
+%                                 a uiputfile result. Default = '' (use
+%                                 file_path + auto-generated fname).
+%       write_file:     logical - if false, skip the file write (Default: true)
+%       verbose:        logical - print to console (Default: false)
+%       batch_settings: struct  - GUI batch-level state (data/staging file
+%                                 lists, output dir, save toggles, etc.).
+%                                 When non-empty, the payload includes a
+%                                 top-level "batch_settings" object and
+%                                 schema_version is set to 2 so the file
+%                                 is reloadable into the DYNAMOApp GUI.
+%                                 Default = [] (legacy v1 file).
 %
 %   Output:
 %       run_ID: char - unique identifier (currently the timestamp)
@@ -21,12 +33,13 @@ function [run_ID, fname] = generate_run_log(structs, struct_names, varargin)
 %   Schema (JSON):
 %       {
 %         "run_start": "<yyyyMMdd_HHmmss>",
-%         "schema_version": 1,
+%         "schema_version": 1 | 2,
 %         "options": {
 %             "<struct_names{1}>": <struct_1 fields>,
 %             "<struct_names{2}>": <struct_2 fields>,
 %             ...
-%         }
+%         },
+%         "batch_settings": { ... }   // present when schema_version >= 2
 %       }
 %
 %   This replaces the legacy `.txt` format (which stored MATLAB code and
@@ -41,14 +54,18 @@ p = inputParser;
 p.CaseSensitive = false;
 addParameter(p, 'run_start', '', @(x) ischar(x) || isstring(x));
 addParameter(p, 'file_path', '', @(x) ischar(x) || isstring(x));
+addParameter(p, 'out_path',  '', @(x) ischar(x) || isstring(x));
 addParameter(p, 'write_file', true, @(x) islogical(x) && isscalar(x));
 addParameter(p, 'verbose', false, @(x) islogical(x) && isscalar(x));
+addParameter(p, 'batch_settings', [], @(x) isempty(x) || isstruct(x));
 parse(p, varargin{:});
 
-run_start  = char(p.Results.run_start);
-file_path  = char(p.Results.file_path);
-write_file = p.Results.write_file;
-verbose    = p.Results.verbose;
+run_start      = char(p.Results.run_start);
+file_path      = char(p.Results.file_path);
+out_path       = char(p.Results.out_path);
+write_file     = p.Results.write_file;
+verbose        = p.Results.verbose;
+batch_settings = p.Results.batch_settings;
 
 assert(~isempty(structs) && iscell(structs), 'structs must be a non-empty cell array');
 assert(iscell(struct_names) && numel(struct_names) == numel(structs), ...
@@ -68,9 +85,16 @@ for ii = 1:numel(structs)
     assert(isvarname(name), 'struct_names{%d}=%s is not a valid identifier', ii, name);
     options.(name) = structs{ii};
 end
+has_batch_settings = ~isempty(batch_settings) && isstruct(batch_settings);
+if has_batch_settings
+    schema_version = 2;
+else
+    schema_version = 1;
+end
+
 payload = struct( ...
     'run_start',      run_start, ...
-    'schema_version', 1, ...
+    'schema_version', schema_version, ...
     'options',        options);
 
 % Convert Inf/-Inf/NaN scalars to sentinel strings before encoding.
@@ -79,6 +103,10 @@ payload = struct( ...
 % on read-back. detection_options.max_merges = Inf is the canonical
 % case that triggers this. load_run_log reverses the substitution.
 payload.options = encode_specials(payload.options);
+
+if has_batch_settings
+    payload.batch_settings = encode_specials(batch_settings);
+end
 
 try
     json_text = jsonencode(payload, 'PrettyPrint', true);
@@ -91,11 +119,16 @@ if verbose
 end
 
 if write_file
-    if isempty(file_path)
-        file_path = pwd;
+    if ~isempty(out_path)
+        target = out_path;
+    else
+        if isempty(file_path)
+            file_path = pwd;
+        end
+        target = fullfile(file_path, fname);
     end
-    fid = fopen(fullfile(file_path, fname), 'w');
-    assert(fid > 0, 'Could not open %s for writing', fullfile(file_path, fname));
+    fid = fopen(target, 'w');
+    assert(fid > 0, 'Could not open %s for writing', target);
     cleaner = onCleanup(@() fclose(fid));
     fwrite(fid, json_text, 'char');
 end

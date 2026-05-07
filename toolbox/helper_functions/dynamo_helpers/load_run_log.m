@@ -4,9 +4,17 @@ function S = load_run_log(filepath)
 %   Usage:
 %       S = load_run_log(filepath)
 %
-%   Output: a struct with fields .run_start, .schema_version, .options
+%   Output: a struct with fields .run_start, .schema_version, .options,
+%   and (schema v2+) .batch_settings.
+%
 %   The .options field is itself a struct keyed by config name (e.g.
 %   .options.SOPH_options, .options.detection_options).
+%
+%   The .batch_settings field, when present, holds the GUI batch-level
+%   state (data/staging file lists, output dir, save toggles, etc.) that
+%   makes the file reloadable into the DYNAMOApp GUI. Callers that don't
+%   need it can ignore it; callers that do need it should check
+%   `isfield(S, 'batch_settings')` before reading.
 %
 %   This is the SAFE deserializer — uses jsondecode only, no eval/run.
 %
@@ -27,6 +35,10 @@ end
 % Reverse the Inf/NaN sentinel substitution that generate_run_log applied
 % to dodge JSON's lack of IEEE specials.
 S.options = decode_specials(S.options);
+
+if isfield(S, 'batch_settings') && isstruct(S.batch_settings)
+    S.batch_settings = decode_specials(S.batch_settings);
+end
 end
 
 

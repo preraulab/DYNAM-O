@@ -5,12 +5,18 @@ function createRunLogConsole(app)
     %   <OutputDir>/settings/run_settings_<timestamp>.json via
     %   generate_run_log (JSON-only since the legacy `.txt` MATLAB-code
     %   format was a code-injection vector when loaded back via run()).
+    %   The settings JSON is schema v2: alongside the 7 DYNAM-O option
+    %   structs it also captures the GUI batch-level state (file lists,
+    %   output dir, save toggles, channel/reference, stage labels, etc.)
+    %   so the run is fully reloadable into the GUI via
+    %   `Batch Settings → Load Batch Settings from JSON…`.
     %   Stores the file handle for subsequent writes. Resets LogBuffer
     %   so the Run Log Console shows only this run.
 
     generate_run_log(app.options_structs, app.struct_names, ...
-        'run_start', app.curr_datetime, ...
-        'file_path', strcat(app.OutputDirEditField.Value, '/settings/'));
+        'run_start',      app.curr_datetime, ...
+        'file_path',      strcat(app.OutputDirEditField.Value, '/settings/'), ...
+        'batch_settings', app.collectBatchSettings());
 
     % Don't run this through matlab.lang.makeValidName — it converts the
     % '.' before the extension into '_', producing 'file_log_..._txt'

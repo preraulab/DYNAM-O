@@ -62,6 +62,8 @@ classdef DYNAMOApp < matlab.apps.AppBase & DYNAMO
         LoadEDFFileListMenu             matlab.ui.container.Menu        % Menu item: load EDF path list
         LoadStagingFileListMenu         matlab.ui.container.Menu        % Menu item: load staging path list
         ShowRunLogConsoleMenu           matlab.ui.container.Menu        % Menu item: toggle Run Log Console
+        SaveBatchSettingsMenu           matlab.ui.container.Menu        % Menu item: save batch settings as JSON
+        LoadBatchSettingsMenu           matlab.ui.container.Menu        % Menu item: load batch settings from JSON
         HelpMenu                        matlab.ui.container.Menu        % Top-level 'Help' menu
         HelpMenuItem                    matlab.ui.container.Menu        % Menu item: open README documentation in browser
         AboutMenu                       matlab.ui.container.Menu        % Menu item: show About dialog
@@ -822,6 +824,16 @@ classdef DYNAMOApp < matlab.apps.AppBase & DYNAMO
         function loadStagingListCallback(app, varargin)
             % loadStagingListCallback  Thin callback shim — see loadStagingListFromFile.
             app.loadStagingListFromFile();
+        end
+
+        function saveBatchSettingsCallback(app, varargin)
+            % saveBatchSettingsCallback  Thin callback shim — see saveBatchSettingsToFile.
+            app.saveBatchSettingsToFile();
+        end
+
+        function loadBatchSettingsCallback(app, varargin)
+            % loadBatchSettingsCallback  Thin callback shim — see loadBatchSettingsFromFile.
+            app.loadBatchSettingsFromFile();
         end
 
 
