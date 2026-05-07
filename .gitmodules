@@ -24,10 +24,6 @@
 	path = toolbox/helper_functions/EDF_toolbox
 	url = ../EDF_toolbox.git
 	branch = master
-[submodule "toolbox/helper_functions/CSSuicontrols"]
-	path = toolbox/helper_functions/CSSuicontrols
-	url = ../CSSuicontrols.git
-	branch = master
 [submodule "toolbox/helper_functions/data_processing"]
 	path = toolbox/helper_functions/data_processing
 	url = ../data_processing.git
