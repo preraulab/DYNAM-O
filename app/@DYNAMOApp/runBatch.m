@@ -24,6 +24,31 @@ function runBatch(app, dataList, stagingList)
     app.setRunningState;
     drawnow;
 
+    % Defensively disable parallel-pool auto-creation across the whole
+    % batch. Justification: the rust backend's contract is "rayon inside
+    % MEX, no MATLAB parpool"; the matlab backend's setup_parallel_pool
+    % uses an EXPLICIT parpool() call which AutoCreate=false does not
+    % block, so it still gets its pool. Without this guard, post-runDYNAMO
+    % stages (fitParamBasis, save_*) can hit a MATLAB built-in (e.g.
+    % imgaussfilt, fit() with NLS, prepareSurfaceData) that auto-spawns
+    % a process pool — observed concretely on Linux as "Starting parallel
+    % pool ... shutting down" between a rust-backend timing summary and
+    % the param_basis_phase iterations. Restored via onCleanup so the
+    % user's MATLAB session-level setting is unchanged after the batch. %#ok<NASGU>
+    if exist('parallel.Settings', 'class') == 8 || ...
+            (exist('ver','builtin')~=0 && any(strcmp({ver().Name}, 'Parallel Computing Toolbox')))
+        try
+            ps_ = parallel.Settings;
+            pool_autocreate_orig_ = ps_.Pool.AutoCreate;
+            ps_.Pool.AutoCreate = false;
+            pool_autocreate_cleanup_ = onCleanup( ...
+                @() restore_pool_autocreate_(pool_autocreate_orig_)); %#ok<NASGU>
+        catch ME_pool_
+            % Read-only or licensing issue — continue without the guard.
+            app.TextArea.addnl(sprintf('Note: could not disable Pool.AutoCreate (%s)', ME_pool_.message));
+        end
+    end
+
     % Build DYNAMO options struct from current GUI settings
     app.TextArea.Value = 'Updating advanced options...';
     drawnow;
@@ -601,3 +626,15 @@ function runBatch(app, dataList, stagingList)
     app.resetRunUiState;
     drawnow
 end % runBatch
+
+function restore_pool_autocreate_(orig)
+    % Restore the original parallel.Settings.Pool.AutoCreate value at
+    % batch exit. Skip if we never captured one (Parallel Computing
+    % Toolbox absent or initial read failed).
+    if isempty(orig), return, end
+    try
+        parallel.Settings.Pool.AutoCreate = orig;
+    catch
+        % no-op — toolbox unloaded mid-run, etc.
+    end
+end
