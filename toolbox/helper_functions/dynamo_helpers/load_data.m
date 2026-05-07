@@ -126,7 +126,13 @@ if ~has_derived
         end
     end
     if ~all(valid)
-        error(char(strcat('Invalid channels:',{' '},channels(~valid),' | Valid channels: ',{' '},sprintf('%s ',signalHeader.signal_labels))))
+        % strcat with a cell on the RHS replicates per-row, then char()
+        % stacks rows into a padded N×M matrix; error() serializes that
+        % column-major and produces "IIIIInnnnn..." soup. Build a single
+        % string via strjoin instead.
+        error('Invalid channels: %s | Valid channels: %s', ...
+              strjoin(channels(~valid), ', '), ...
+              strjoin(signalHeader.signal_labels, ' '));
     end
 end
 
