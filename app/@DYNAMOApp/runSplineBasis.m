@@ -56,15 +56,24 @@ function runSplineBasis(app)
     % Fit spline basis model. Layered AutoCreate=false guard mirrors
     % runParamBasis — see the comment block there for why this is
     % needed even though runBatch already sets it at batch scope.
-    pool_guard_orig_ = []; %#ok<NASGU>
+    pool_guard_orig_ = [];
+    pool_guard_mode_ = 'none';
     if exist('parallel.Settings', 'class') == 8 || ...
             (exist('ver','builtin')~=0 && any(strcmp({ver().Name}, 'Parallel Computing Toolbox')))
         try
             ps_ = parallel.Settings;
-            pool_guard_orig_ = ps_.Pool.AutoCreate.ActiveValue;
-            ps_.Pool.AutoCreate.TemporaryValue = false;
+            raw_ = ps_.Pool.AutoCreate;
+            if isa(raw_, 'matlab.settings.Setting')
+                pool_guard_orig_ = raw_.ActiveValue;
+                ps_.Pool.AutoCreate.TemporaryValue = false;
+                pool_guard_mode_ = 'temporary';
+            else
+                pool_guard_orig_ = logical(raw_);
+                ps_.Pool.AutoCreate = false;
+                pool_guard_mode_ = 'direct';
+            end
             pool_guard_cleanup_ = onCleanup( ...
-                @() restore_pool_autocreate_(pool_guard_orig_)); %#ok<NASGU>
+                @() restore_pool_autocreate_(pool_guard_orig_, pool_guard_mode_)); %#ok<NASGU>
         catch
         end
     end
@@ -179,11 +188,15 @@ function runSplineBasis(app)
     end
 end % runSplineBasis
 
-function restore_pool_autocreate_(orig)
-    if isempty(orig), return, end
+function restore_pool_autocreate_(orig, mode)
+    if isempty(orig) || strcmp(mode, 'none'), return, end
     try
-        parallel.Settings.Pool.AutoCreate.TemporaryValue = orig;
-        clearTemporaryValue(parallel.Settings.Pool.AutoCreate);
+        switch mode
+            case 'temporary'
+                clearTemporaryValue(parallel.Settings.Pool.AutoCreate);
+            case 'direct'
+                parallel.Settings.Pool.AutoCreate = orig;
+        end
     catch
     end
 end

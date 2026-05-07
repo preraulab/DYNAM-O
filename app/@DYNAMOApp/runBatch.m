@@ -35,21 +35,34 @@ function runBatch(app, dataList, stagingList)
     % pool ... shutting down" between a rust-backend timing summary and
     % the param_basis_phase iterations. Restored via onCleanup so the
     % user's MATLAB session-level setting is unchanged after the batch. %#ok<NASGU>
+    % parallel.Settings.Pool.AutoCreate has TWO shapes depending on the
+    % MATLAB release: a Setting object (R2025+ ish, supports
+    % .TemporaryValue) or a plain logical (R2024b on Linux, supports
+    % only direct assignment). Detect at runtime and use the right API.
+    pool_autocreate_orig_ = [];
+    pool_autocreate_mode_ = 'none';
     if exist('parallel.Settings', 'class') == 8 || ...
             (exist('ver','builtin')~=0 && any(strcmp({ver().Name}, 'Parallel Computing Toolbox')))
         try
-            % Use TemporaryValue so the change is scoped to this MATLAB
-            % session (cleared on exit). PersonalValue would persist
-            % across sessions, which is too sticky for an ephemeral
-            % batch-level guard. Read .ActiveValue (not the Setting
-            % object directly) to capture the current effective value.
             ps_ = parallel.Settings;
-            pool_autocreate_orig_ = ps_.Pool.AutoCreate.ActiveValue;
-            ps_.Pool.AutoCreate.TemporaryValue = false;
+            raw_ = ps_.Pool.AutoCreate;
+            if isa(raw_, 'matlab.settings.Setting')
+                % Modern: Setting object. TemporaryValue keeps the
+                % override session-scoped (vs PersonalValue, which would
+                % persist across sessions).
+                pool_autocreate_orig_ = raw_.ActiveValue;
+                ps_.Pool.AutoCreate.TemporaryValue = false;
+                pool_autocreate_mode_ = 'temporary';
+            else
+                % Older: plain logical. Direct assignment is the only
+                % option; we restore the captured value at exit.
+                pool_autocreate_orig_ = logical(raw_);
+                ps_.Pool.AutoCreate = false;
+                pool_autocreate_mode_ = 'direct';
+            end
             pool_autocreate_cleanup_ = onCleanup( ...
-                @() restore_pool_autocreate_(pool_autocreate_orig_)); %#ok<NASGU>
+                @() restore_pool_autocreate_(pool_autocreate_orig_, pool_autocreate_mode_)); %#ok<NASGU>
         catch ME_pool_
-            % Read-only or licensing issue — continue without the guard.
             app.TextArea.addnl(sprintf('Note: could not disable Pool.AutoCreate (%s)', ME_pool_.message));
         end
     end
@@ -632,19 +645,19 @@ function runBatch(app, dataList, stagingList)
     drawnow
 end % runBatch
 
-function restore_pool_autocreate_(orig)
+function restore_pool_autocreate_(orig, mode)
     % Restore the original parallel.Settings.Pool.AutoCreate value at
-    % batch exit. Skip if we never captured one (Parallel Computing
-    % Toolbox absent or initial read failed). Clear TemporaryValue so
-    % the Setting falls back to whatever persistent value the user has.
-    if isempty(orig), return, end
+    % batch exit. mode tracks which API shape we used on entry so we
+    % know how to undo: 'temporary' clears the TemporaryValue; 'direct'
+    % assigns back the captured primitive value.
+    if isempty(orig) || strcmp(mode, 'none'), return, end
     try
-        % Clear our session-scoped override; the Setting reverts to
-        % its persistent (PersonalValue / FactoryValue) state, which
-        % equals `orig` we captured on entry.
-        parallel.Settings.Pool.AutoCreate.TemporaryValue = orig;
-        clearTemporaryValue(parallel.Settings.Pool.AutoCreate);
+        switch mode
+            case 'temporary'
+                clearTemporaryValue(parallel.Settings.Pool.AutoCreate);
+            case 'direct'
+                parallel.Settings.Pool.AutoCreate = orig;
+        end
     catch
-        % no-op — toolbox unloaded mid-run, etc.
     end
 end

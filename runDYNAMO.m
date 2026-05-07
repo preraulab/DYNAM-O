@@ -320,20 +320,33 @@ if strcmp(backend, 'rust')
     % keeps the contract ("rust backend uses rayon, never MATLAB parpool")
     % even if a regression sneaks in. Under AutoCreate=false, any stray
     % parfor runs serially in the current MATLAB thread.
+    % parallel.Settings.Pool.AutoCreate has TWO different shapes depending
+    % on MATLAB release:
+    %   - newer (e.g. R2025b mac):   matlab.settings.Setting object with
+    %                                .ActiveValue / .TemporaryValue / .PersonalValue
+    %   - older (e.g. R2024b linux): plain logical
+    % We handle both and remember which mode we used so the onCleanup can
+    % restore correctly. Track guard_mode in a local that the cleanup can
+    % capture.
     pool_autocreate_orig = [];
+    pool_autocreate_mode = 'none';
     if exist('parallel.Settings', 'class') == 8 || ...
             (exist('ver','builtin')~=0 && any(strcmp({ver().Name}, 'Parallel Computing Toolbox')))
         try
             ps = parallel.Settings;
-            pool_autocreate_orig = ps.Pool.AutoCreate.ActiveValue;
-            ps.Pool.AutoCreate.TemporaryValue = false;
+            raw = ps.Pool.AutoCreate;
+            if isa(raw, 'matlab.settings.Setting')
+                pool_autocreate_orig = raw.ActiveValue;
+                ps.Pool.AutoCreate.TemporaryValue = false;
+                pool_autocreate_mode = 'temporary';
+            else
+                pool_autocreate_orig = logical(raw);
+                ps.Pool.AutoCreate = false;
+                pool_autocreate_mode = 'direct';
+            end
             pool_autocreate_cleanup = onCleanup( ...
-                @() restore_pool_autocreate(pool_autocreate_orig)); %#ok<NASGU>
+                @() restore_pool_autocreate(pool_autocreate_orig, pool_autocreate_mode)); %#ok<NASGU>
         catch ME
-            % If toggling fails (read-only setting on some MATLAB versions,
-            % licensing edge case, etc.), continue without the guard. The
-            % rust pipeline will still work; the user just sees a parpool
-            % spin up if any rogue parfor exists.
             if verbose
                 fprintf('  Note: could not disable Pool.AutoCreate (%s)\n', ME.message);
             end
@@ -540,15 +553,20 @@ function rmappdata_safe(h, key)
     end
 end
 
-function restore_pool_autocreate(orig)
+function restore_pool_autocreate(orig, mode)
     % Restore the original parallel.Settings.Pool.AutoCreate value at
-    % function exit. Skip if we never captured one (Parallel Computing
-    % Toolbox absent or initial read failed). Clear our session-scoped
-    % override so the Setting falls back to the user's persistent value.
-    if isempty(orig), return, end
+    % function exit. mode tracks which API shape we used on entry so we
+    % know how to undo: 'temporary' clears the TemporaryValue (newer
+    % releases with Setting objects); 'direct' assigns back the captured
+    % primitive value.
+    if isempty(orig) || strcmp(mode, 'none'), return, end
     try
-        parallel.Settings.Pool.AutoCreate.TemporaryValue = orig;
-        clearTemporaryValue(parallel.Settings.Pool.AutoCreate);
+        switch mode
+            case 'temporary'
+                clearTemporaryValue(parallel.Settings.Pool.AutoCreate);
+            case 'direct'
+                parallel.Settings.Pool.AutoCreate = orig;
+        end
     catch
         % no-op — toolbox unloaded mid-run, etc.
     end

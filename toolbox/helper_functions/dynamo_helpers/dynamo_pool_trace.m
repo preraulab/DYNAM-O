@@ -28,25 +28,19 @@ end
 
 ts = char(datetime('now', 'Format', 'HH:mm:ss.SSS'));
 
-% parallel.Settings.Pool.AutoCreate returns a matlab.settings.Setting
-% object, NOT a logical — mat2str() on it throws. Read .ActiveValue
-% to get the underlying boolean. Fall back to coerce-to-logical (the
-% Setting class implements logical conversion) if .ActiveValue isn't
-% accessible (very old releases).
+% parallel.Settings.Pool.AutoCreate has two shapes depending on MATLAB
+% release: a matlab.settings.Setting object (newer; use .ActiveValue)
+% or a plain logical (older, e.g. R2024b on Linux; use directly).
+% Detect at runtime so the trace works on both.
 ac_str = '?';
 try
     s = parallel.Settings.Pool.AutoCreate;
-    if isprop(s, 'ActiveValue') || isa(s, 'matlab.settings.Setting')
+    if isa(s, 'matlab.settings.Setting')
         ac_str = mat2str(logical(s.ActiveValue));
     else
         ac_str = mat2str(logical(s));
     end
 catch
-    % Older release fallback — try direct logical coercion.
-    try
-        ac_str = mat2str(logical(parallel.Settings.Pool.AutoCreate));
-    catch
-    end
 end
 
 p = [];
