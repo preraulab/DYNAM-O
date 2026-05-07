@@ -314,7 +314,7 @@ if strcmp(backend, 'rust')
     if verbose
         fprintf('  Backend:       rust (MEX)\n');
         fprintf('  Parallel mode: rayon (in-MEX, no MATLAB parpool)\n');
-        fprintf('  Segment size:  %g s\n', detection_options.seg_time);
+        fprintf('  Segment size:  %g s\n\n', detection_options.seg_time);
     end
 else
     % MATLAB backend: parpool benefits segment parfor in runSegmentedData.
@@ -342,7 +342,7 @@ else
                 fprintf('  Parallel mode: ProcessPool (%d workers)\n', nw);
             end
         end
-        fprintf('  Segment size:  %g s\n', detection_options.seg_time);
+        fprintf('  Segment size:  %g s\n\n', detection_options.seg_time);
     end
 end
 
