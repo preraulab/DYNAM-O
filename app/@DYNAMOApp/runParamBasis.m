@@ -79,7 +79,9 @@ function runParamBasis(app)
 
     app.TextArea.addnl('   Running parametric basis...');
     app.TextArea.addnl('   Generating parametric basis figure...');
+    dynamo_pool_trace('runParamBasis: before fitParamBasis');
     app.fitParamBasis();
+    dynamo_pool_trace('runParamBasis: after fitParamBasis');
     % If a pool was nevertheless spawned during fitParamBasis (some
     % MATLAB toolbox internals ignore AutoCreate), kill it now so the
     % next channel doesn't inherit an idle pool.

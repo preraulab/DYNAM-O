@@ -161,16 +161,21 @@ bw_min = watershed_params(3);
 height_min = watershed_params(4);
 trim_vol = watershed_params(5);
 
+dynamo_pool_trace('param_basis_phase: ENTRY');
+
 % -------- SOPhase Specific --------
 %Duplicate the SOPhH so that periodic regions can be detected
 SOPhH_wshed = [SOPhH SOPhH(:,2:end-1) SOPhH];
+dynamo_pool_trace('param_basis_phase: before imgaussfilt');
 if gauss_filt_std>0
     SOPhH_wshed = imgaussfilt(SOPhH_wshed, gauss_filt_std);
 end
+dynamo_pool_trace('param_basis_phase: after imgaussfilt');
 phase_wshed = [(phase_bins-2*pi) phase_bins(2:end-1) (phase_bins+2*pi)];
 % ----------------------------------
 
 %% Compute watershed segmentation
+dynamo_pool_trace('param_basis_phase: before extracthistpeaks');
 if wshed_exp
     [stats_table, phase_wshed_img] = extracthistpeaks(exp(SOPhH_wshed), phase_wshed, freq_bins, ...
         merge_thresh, dur_min, bw_min, height_min, trim_vol, false, false);
@@ -178,6 +183,7 @@ else
     [stats_table, phase_wshed_img] = extracthistpeaks(SOPhH_wshed, phase_wshed, freq_bins, ...
         merge_thresh, dur_min, bw_min, height_min, trim_vol, false, false);
 end
+dynamo_pool_trace('param_basis_phase: after extracthistpeaks');
 
 % Watershed-derived initial conditions are best-effort: if any step in
 % the wraparound dedup logic fails to yield a usable region set, fall
@@ -420,7 +426,9 @@ for ii = 1:max_peaks
     LBi = [LBi; LB_default];
 
     % Fit the model and obtain goodness-of-fit
+    dynamo_pool_trace(sprintf('param_basis_phase: before fitfunc iter (B0i rows=%d)', size(B0i,1)));
     [fitobj, gof] = fitfunc(SOPhH(valid_freq_bins, valid_phase_bins), phase_bins(valid_phase_bins), freq_bins(valid_freq_bins), B0i, LBi, UBi, false);
+    dynamo_pool_trace('param_basis_phase: after  fitfunc iter');
 
     % Save the fitted model SOPhH
     model_SOPhH = feval(fitobj, phase_grid, freq_grid);

@@ -112,8 +112,11 @@ else
 end
 
 %Fit
+dynamo_pool_trace('fit_vmGauss: before prepareSurfaceData');
 [xData, yData, zData] = prepareSurfaceData(phase_bins, freq_bins, phase_hist);
+dynamo_pool_trace('fit_vmGauss: after  prepareSurfaceData / before fit()');
 [fitresult, gof] = fit([xData, yData], zData, ft, opts, 'problem', true);
+dynamo_pool_trace('fit_vmGauss: after  fit()');
 
 %%
 if plot_on
