@@ -308,6 +308,38 @@ if strcmp(backend, 'rust')
             'Or call runDYNAMO(..., ''backend'', ''matlab'') to use the pure MATLAB path.'], ...
             strjoin(missing, ', '));
     end
+
+    % Defensively disable parpool auto-creation under the rust backend.
+    % All rust-path stages that were known to use parfor (runSegmentedData,
+    % refinePeakFrequency, MTS) short-circuit into MEX before reaching the
+    % parfor. A pool spinning up under rust therefore signals an unintended
+    % code path — usually a stale committed dylib (undefined symbol →
+    % MEX runtime error → catch in some upstream wrapper falls through to
+    % a pure-MATLAB function with parfor) or a future-added parfor that
+    % wasn't paired with a rust MEX dispatch. Forcing AutoCreate=false
+    % keeps the contract ("rust backend uses rayon, never MATLAB parpool")
+    % even if a regression sneaks in. Under AutoCreate=false, any stray
+    % parfor runs serially in the current MATLAB thread.
+    pool_autocreate_orig = [];
+    if exist('parallel.Settings', 'class') == 8 || ...
+            (exist('ver','builtin')~=0 && any(strcmp({ver().Name}, 'Parallel Computing Toolbox')))
+        try
+            ps = parallel.Settings;
+            pool_autocreate_orig = ps.Pool.AutoCreate;
+            ps.Pool.AutoCreate = false;
+            pool_autocreate_cleanup = onCleanup( ...
+                @() restore_pool_autocreate(pool_autocreate_orig)); %#ok<NASGU>
+        catch ME
+            % If toggling fails (read-only setting on some MATLAB versions,
+            % licensing edge case, etc.), continue without the guard. The
+            % rust pipeline will still work; the user just sees a parpool
+            % spin up if any rogue parfor exists.
+            if verbose
+                fprintf('  Note: could not disable Pool.AutoCreate (%s)\n', ME.message);
+            end
+        end
+    end
+
     timings.pool_setup = 0;
     timings.mex_build = 0;
 
@@ -505,5 +537,17 @@ function rmappdata_safe(h, key)
     try
         if isappdata(h, key), rmappdata(h, key); end
     catch
+    end
+end
+
+function restore_pool_autocreate(orig)
+    % Restore the original parallel.Settings.Pool.AutoCreate value at
+    % function exit. Skip if we never captured one (Parallel Computing
+    % Toolbox absent or initial read failed).
+    if isempty(orig), return, end
+    try
+        parallel.Settings.Pool.AutoCreate = orig;
+    catch
+        % no-op — toolbox unloaded mid-run, etc.
     end
 end
