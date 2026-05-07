@@ -81,7 +81,19 @@ end
 %************************
 % Determine data segs *
 %************************
-% This seging prevents having a small segment at the end.
+% This segmenting prevents having a small segment at the end.
+%
+% The floor/ceil round-trip is intentional and self-balancing:
+%   max_dx (= floor(seg_time/dt) for typical inputs) is the largest
+%     column count that fits inside seg_time;
+%   n_segs is the number of segments needed to cover the recording
+%     using max_dx as an upper bound;
+%   new_dx then redistributes len_x columns evenly across n_segs
+%     segments, so all segments are within ±1 column of each other
+%     (rather than n-1 full segments + one tiny tail).
+%
+% Off-by-one between adjacent segments is harmless: peaks straddling
+% a segment boundary are reconciled in mergeWshedSegment.
 len_y = length(sfreqs);
 len_x = length(stimes);
 dt = stimes(2) - stimes(1);

@@ -17,19 +17,19 @@ siblings, see the parent meta-repo:
 
 ---
 
-## Start here — the DYNAM-O File Manager (GUI)
+## Start here — the DYNAM-O App (GUI)
 
-The **File Manager** is the primary interface for DYNAM-O. It is a
+The **DYNAM-O App** is the primary interface for DYNAM-O. It is a
 graphical application for loading EDF recordings and hypnograms,
 configuring channels and analysis options, and running batch analyses
 across many subjects without writing MATLAB code. Standalone (compiled)
 executables for macOS, Windows, and Linux are in development; until those
-ship, the File Manager runs inside MATLAB.
+ship, the DYNAM-O App runs inside MATLAB.
 
-- **File Manager guide:** [`DYNAMOFileManager_README.md`](DYNAMOFileManager_README.md)
-- **Launch from MATLAB:** `DYNAMOFileManager();`
+- **DYNAM-O App guide:** [`DYNAMOApp_README.md`](DYNAMOApp_README.md)
+- **Launch from MATLAB:** `runApp` (sets up the path, then opens the DYNAM-O App)
 
-Most users should start with the File Manager. The rest of this README
+Most users should start with the DYNAM-O App. The rest of this README
 covers the **MATLAB DYNAM-O API** — `runDYNAMO`, the `DYNAMO` class, and
 the underlying pipeline functions — for users writing their own analysis
 scripts or integrating DYNAM-O into a larger MATLAB workflow.
@@ -64,7 +64,7 @@ histograms.
 - [Main Pipeline Functions](#main-pipeline-functions)
   - [runDYNAMO](#rundynamo)
   - [DYNAMO (OOP class)](#dynamo-oop-class)
-  - [DYNAMOFileManager (GUI)](#dynamofilemanager-gui)
+  - [DYNAMOApp (GUI)](#dynamoapp-gui)
   - [Key Sub-Functions](#key-sub-functions)
 - [Options](#options)
   - [Detection Options](#detection-options-detection_opts)
@@ -74,6 +74,8 @@ histograms.
   - [stats_table](#stats_table--tf-peak-features)
   - [SOPHs](#sophs--histogram-struct)
   - [timings](#timings--per-stage-wallclock)
+- [Saved file formats (GUI batch outputs)](#saved-file-formats-gui-batch-outputs)
+- [Unit tests](#unit-tests)
 - [Repository Structure](#repository-structure)
 - [Algorithm details and background](#algorithm-details-and-background)
 
@@ -91,19 +93,41 @@ histograms.
 
 You can either clone this repo directly, or clone the parent meta-repo
 ([DYNAM-O_toolbox](https://github.com/preraulab/DYNAM-O_toolbox)) to get
-MATLAB, Python, and Rust together as pinned submodules.
+MATLAB, Python, and Rust together as pinned sub-repos.
 
 **Standalone (MATLAB-only):**
 
 ```bash
 git clone --recursive https://github.com/preraulab/DYNAM-O.git
+cd DYNAM-O
+# Re-attach submodules to their tracking branches. The plain
+# `--recursive` clone always lands them in detached HEAD; this one-liner
+# walks the .gitmodules `branch` field and checks each one out.
+git submodule foreach 'b="$(git config -f "$toplevel/.gitmodules" --get "submodule.$name.branch")"; \
+                       [ -n "$b" ] && git checkout -q "$b" 2>/dev/null || true'
 ```
 
-**Meta-repo (WIP: not functional yet):**
+**Meta-repo (recommended — sets up MATLAB + Rust + Python in one go):**
 
 ```bash
-git clone --recursive https://github.com/preraulab/DYNAM-O_toolbox.git
+git clone https://github.com/preraulab/DYNAM-O_toolbox.git
+cd DYNAM-O_toolbox
+./bootstrap.sh                        # macOS / Linux / WSL
+# or
+.\bootstrap.ps1                       # Windows
 ```
+
+`bootstrap.sh` clones the three sub-repos, installs Rust if missing,
+builds the Rust core, and (if MATLAB is detected) offers to compile the
+MEX wrappers. It also re-attaches every submodule to its tracking
+branch automatically. Re-run any time — each step checks whether its
+target already exists.
+
+**To pull updates later:** `./refresh.sh` from the meta-repo root pulls
+the latest commits on every sub-repo, rebuilds Rust, and re-attaches
+submodules. Don't use bare `git submodule update --init --recursive` —
+it leaves submodules in detached HEAD and you can't pull or commit
+from there cleanly.
 
 ### 2. Pick a backend
 
@@ -111,8 +135,8 @@ DYNAM-O ships two pipeline backends:
 
 | Backend | Speed (full-night on M3) | Accuracy | Extra setup |
 |---|---|---|---|
-| **`'rust'`** *(default)* | **~30 s** | −0.8 % peak count vs MATLAB ground truth | Requires compiled MEX wrappers (step 3) |
-| `'matlab'` | ~125 s | authoritative | None — works out of the box with MATLAB only |
+| **`'rust'`** *(default)* | **~50–80 s** | within ±0.85% peak count vs MATLAB across 4 nights | Requires compiled MEX wrappers (step 3) |
+| `'matlab'` | ~220–300 s | authoritative | None — works out of the box with MATLAB only |
 
 <details>
 <summary><b>How to select the backend</b> — call site, options struct, or GUI</summary>
@@ -131,7 +155,7 @@ opts = detection_opts('backend', 'matlab');
 runDYNAMO(data, Fs, stage_times, stage_vals, opts);
 ```
 
-The GUI (`DYNAMOFileManager` / `DYNAMOOptionsApp`) also surfaces the
+The GUI (`DYNAMOApp` / `DYNAMOOptionsApp`) also surfaces the
 `backend` setting as a dropdown on the Detection options panel — no
 command-line override needed.
 
@@ -248,7 +272,7 @@ settings via `d.updateOptions(...)` and `d.runDYNAMO()`.
 ### GUI batch processing
 
 ```matlab
-DYNAMOFileManager();
+runApp
 ```
 
 <p align="right"><sub><a href="#table-of-contents">↑ Back to Table of Contents</a></sub></p>
@@ -418,12 +442,12 @@ fh = d.displaySummaryPlot();
 
 ---
 
-### `DYNAMOFileManager` (GUI)
+### `DYNAMOApp` (GUI)
 
 App Designer application for batch processing EDF polysomnography files.
 
 ```matlab
-DYNAMOFileManager();
+runApp
 ```
 
 - Add / remove EDF and staging file pairs
@@ -483,13 +507,14 @@ opts = detection_opts('quality_setting', 'default', 'trim_vol', 0.8, ...);
 |---|---|---|
 | `quality_setting` | `'default'` | Preset (see above) |
 | `double_watershed` | `true` | Use two-pass watershed (1 s + 2 s windows) |
-| `downsample_spect` | `[]` | `[time_factor, freq_factor]` pre-watershed decimation |
-| `seg_time` | `[]` | Segment duration for parallel processing (s) |
-| `merge_thresh` | `[]` | Stop merging when edge weight falls below |
+| `downsample_spect` | `[2, 2]` | `[time_factor, freq_factor]` pre-watershed decimation |
+| `seg_time` | `30` s | Segment duration for parallel processing |
+| `merge_thresh` | `11` | Stop merging when edge weight falls below |
 | `max_merges` | `Inf` | Maximum region merges allowed |
 | `trim_vol` | `0.8` | Trim peaks to this fraction of max volume |
 | `dur_max` | `5` s | Reject peaks longer than this |
 | `bw_max` | `15` Hz | Reject peaks wider than this |
+| `reuse_baseline` | `true` | Reuse pass-1 baseline in pass-2 (skip recompute) |
 | `mtm_freq_range` | `[0, 30]` Hz | Spectrogram frequency range |
 | `mtm_taper_params` | `[2, 3]` | Multitaper `[time-BW, num-tapers]` |
 | `mtm_window_length_1` | `1` s | First-pass watershed window |
@@ -569,6 +594,7 @@ One row per detected TF-peak. Available features (controlled by
 | `Duration` | s | Peak duration |
 | `Bandwidth` | Hz | Peak bandwidth |
 | `Volume` | s·μV² | Time-frequency volume |
+| `Peakiness` | dB | `10·log10(Area · Height / Volume)` — sharpness score |
 | `BoundingBox` | (s, Hz, s, Hz) | `[t_tl, f_tl, width, height]` |
 | `HeightData` | μV²/Hz | Per-pixel amplitudes within peak region |
 | `Boundaries` | (s, Hz) | Boundary pixel `(time, frequency)` |
@@ -628,16 +654,326 @@ Optional 9th output. Struct with per-stage wallclock seconds.
 
 ---
 
+## Saved file formats (GUI batch outputs)
+
+The DYNAM-O App writes per-subject results into
+`<output_dir>/<channel>/<subdir>/`. For each artefact type the
+**Saving Options** panel exposes a checkbox (save / don't save) and a
+file-format dropdown with `--`, a slim format, `.mat`, and `All`.
+Default for all four save formats is `All` so reconstruction is
+always possible — pick a single format only when you know what you
+need.
+
+This section documents what each format contains, when it's
+sufficient, and minimal read snippets in MATLAB and Python.
+
+### Peak stats table — `stats_table/`
+
+Per-subject TF-peak feature table (one row per detected peak; columns
+described in [stats_table](#stats_table--tf-peak-features)).
+
+| Format | What it contains | Reconstruct? |
+|---|---|---|
+| `.csv` | All scalar columns from `stats_table` | ✅ full |
+| `.mat` | `stats_table` table variable | ✅ full |
+| `All`  | both | ✅ full |
+
+`.csv` is the canonical interchange format here; `.mat` is mainly for
+keeping native MATLAB `categorical`s and round-tripping into other
+DYNAM-O calls without re-typing.
+
+```matlab
+% MATLAB
+T = readtable('subj01_stats_table_C3.csv');
+S = load('subj01_stats_table_C3.mat');  T = S.stats_table;
+```
+
+```python
+# Python
+import pandas as pd, scipy.io as sio
+T  = pd.read_csv('subj01_stats_table_C3.csv')
+M  = sio.loadmat('subj01_stats_table_C3.mat', squeeze_me=True)
+```
+
+### SO-Histograms (SOPHs) — `SOPHs/`
+
+Per-subject 2-D histograms of TF-peak rate by frequency × SO-feature
+(SO-power and SO-phase). The toolbox writes one file per axis
+(`*_SOPHs_<channel>` for `.mat`; `*_SOpower_SOPHs_<channel>` and
+`*_SOphase_SOPHs_<channel>` for `.tiff`).
+
+| Format | What it contains | Reconstruct? |
+|---|---|---|
+| `.tiff` | 2-D histogram (`double` IEEE float). `ImageDescription` JSON tag carries `freq_bins` and `SOpower_bins` / `SOphase_bins` so a reader can recover the axes without a sidecar. | ✅ full (image + bins) |
+| `.mat`  | The full `SOPHs` struct (see [SOPHs](#sophs--histogram-struct)) — also includes time-in-bin, peak-level coordinates, and any fits already computed. | ✅ full + extras |
+
+```matlab
+% MATLAB — read .tiff + bins
+M    = imread('subj01_SOpower_SOPHs_C3.tiff');
+info = imfinfo('subj01_SOpower_SOPHs_C3.tiff');
+meta = jsondecode(info(1).ImageDescription);  % .freq_bins, .SOpower_bins
+% MATLAB — read .mat
+S    = load('subj01_SOPHs_C3.mat');           % S.SOPHs.*
+```
+
+```python
+# Python — read .tiff + bins
+import json, tifffile, numpy as np, scipy.io as sio
+with tifffile.TiffFile('subj01_SOpower_SOPHs_C3.tiff') as tf:
+    M    = tf.asarray()
+    meta = json.loads(tf.pages[0].tags['ImageDescription'].value)
+freq_bins, sopower_bins = meta['freq_bins'], meta['SOpower_bins']
+
+# Python — read .mat
+S = sio.loadmat('subj01_SOPHs_C3.mat', squeeze_me=True, struct_as_record=False)
+SOPHs = S['SOPHs']
+```
+
+### Parametric basis fit — `param_basis/`
+
+Closed-form fit of each SOPH as a sum of rotated 2-D Gaussian
+(power) or von-Mises × Gaussian (phase) modes plus a linear
+background plane:
+
+```
+SOPH(x,y) = Σₙ basis_n(x,y; ampₙ, fmeanₙ, fstdₙ, pmeanₙ, pstdₙ, θₙ)
+            + xxx·x + yyy·y + zzz
+```
+
+| Format | What it contains | Reconstruct? |
+|---|---|---|
+| `.csv` | Per-mode params table (`Amplitude, FreqMean, FreqStd, …, Theta`, plus phase-coupling annotation columns for power) **and a fixed-format comment header** carrying `background.{xxx,yyy,zzz}`, `unit_row` (phase only), `gof.{sse,rsquare,dfe,adjrsquare,rmse}`, the source `freq_bins` / `SOpower_bins` (or `SOphase_bins`), and the **raw fitobj coefficients** (`fitobj_coefnames` + `fitobj_coefvalues` JSON arrays). Header lines start with `# ` and are skipped by both MATLAB `readtable` (`'CommentStyle','#'`) and pandas (`comment='#'`). | ✅ full — use `fitobj_coefvalues` for exact reconstruction |
+| `.mat`  | Full `*_paramfit` struct — params table, `fitobj` (MATLAB `cfit`), `gof` struct, `model_SOPH` (rendered model), `wshed_img` (watershed segmentation). | ✅ full + cfit + rendered model + watershed |
+| `All`   | both | ✅ |
+
+> ⚠️ **Phase Amplitude is not the raw fit coefficient.** For phase fits,
+> `param_basis_phase.m` overwrites `params(:,1)` after fitting with an
+> *empirical* no-sin amplitude (the model surface value at the peak's
+> location with the sinusoidal background zeroed out) so that the
+> `Amplitude` column reflects a human-interpretable peak height. Power
+> fits do **not** apply this transformation. **For exact reconstruction
+> of phase `model_SOPH`, use `fitobj_coefvalues` from the header — not
+> the `Amplitude` column.** Power fits can be reconstructed either way
+> (the values agree).
+
+The Results Browser CSV preview detects the comment header and
+splits the view: a key/value table on top showing the plane,
+`unit_row`, gof, bins, and the raw fit coefficients; the per-mode
+params table below.
+
+```matlab
+% MATLAB — params table + header (one-shot helper)
+path = 'subj01_SOpower_paramfit_C3.csv';
+T    = readtable(path, 'CommentStyle','#');
+fid  = fopen(path,'r');  c = onCleanup(@() fclose(fid));
+hdr  = struct();
+while true
+    L = fgetl(fid); if ~ischar(L) || ~startsWith(strtrim(L),'#'), break, end
+    tok = regexp(L, '^#\s*([^:]+):\s*(.*)$', 'tokens', 'once');
+    if numel(tok) == 2
+        key = matlab.lang.makeValidName(tok{1});
+        val = tok{2};
+        if startsWith(val,'[') || startsWith(val,'"')
+            hdr.(key) = jsondecode(val);
+        else
+            n = str2double(val); if ~isnan(n), hdr.(key) = n; else, hdr.(key) = val; end
+        end
+    end
+end
+% hdr.background_xxx, hdr.fitobj_coefnames, hdr.fitobj_coefvalues, hdr.freq_bins, …
+```
+
+```python
+# Python — params table + header dict (with array fields parsed)
+import json, pandas as pd, re
+path = 'subj01_SOpower_paramfit_C3.csv'
+T    = pd.read_csv(path, comment='#')
+
+hdr = {}
+with open(path) as f:
+    for line in f:
+        if not line.startswith('#'): break
+        m = re.match(r'#\s*([^:]+):\s*(.*)$', line.rstrip())
+        if not m: continue
+        key, val = m.group(1).strip(), m.group(2).strip()
+        if val.startswith('[') or val.startswith('"'):
+            hdr[key] = json.loads(val)
+        else:
+            try: hdr[key] = float(val)
+            except ValueError: hdr[key] = val
+# hdr['background.xxx'], hdr['fitobj_coefnames'], hdr['fitobj_coefvalues'], …
+```
+
+### Spline basis fit — `spline_basis/`
+
+Tensor-product cubic B-spline fit of each SOPH on a small
+`(num_knots_x+2) × (num_knots_y+2)` lattice of control points
+(`coefs`).
+
+| Format | What it contains | Reconstruct? |
+|---|---|---|
+| `.tiff` | **2-page** TIFF. Page 1 = `coefs` (the parameter matrix that *is* the model); `ImageDescription` JSON carries `knots_x`, `knots_y`, `freq_bins`, `SOpower_bins` / `SOphase_bins`, plus `page1`/`page2` labels. Page 2 = `splinefit` (the rendered fit on the fit-domain grid) for direct preview without rebuilding the spline. | ✅ full (coefs + knots + fit-domain bins) |
+| `.mat`  | Full `*_splinefit` struct: `splinefit`, `coefs`, `knots_x`, `knots_y`, `spline_obj` (MATLAB `spap2` form), plus `fit_SOfeature_bins` / `fit_freq_bins` (the bins the fit was actually computed on). | ✅ full + ready-to-`fnval` `spline_obj` |
+| `All`   | both | ✅ |
+
+> ⚠️ **The bins in the spline TIFF are the fit-domain bins, not the
+> source SOPH bins.** `spline_basis.m` filters bins by
+> `power_limits` / `phase_limits` / `freq_limits` and an
+> all-finite-rows validity mask before fitting (`spline_basis.m` ~ line
+> 146). Page 2 is the spline rendered on those filtered bins, so the
+> bins listed in `ImageDescription` are smaller than the full
+> `SOPHs.SOpower_bins` / `freq_bins`. They're also what you need to
+> feed `spap2` / `fnval` to exactly reproduce page 2.
+
+```matlab
+% MATLAB — coefs + metadata from page 1, rendered fit from page 2
+path  = 'subj01_SOpower_splinefit_C3.tiff';
+coefs     = double(imread(path, 1));   % size (n_y+2) × (n_x+2)
+splinefit = double(imread(path, 2));   % rendered on fit-domain bins
+info = imfinfo(path);
+meta = jsondecode(info(1).ImageDescription);   % knots_x, knots_y, fit-domain bins
+
+% Reconstruct on the same grid (recovers page 2 exactly):
+sp = spmak({augknt(meta.knots_x,3), augknt(meta.knots_y,3)}, coefs.');
+[X, Y] = ndgrid(meta.SOpower_bins, meta.freq_bins);
+splinefit_recon = reshape(fnval(sp, [X(:)'; Y(:)']), size(X));
+% then fnval(sp, [Xq(:)'; Yq(:)']) on any (Xq, Yq) ndgrid you like.
+```
+
+```python
+# Python — coefs + metadata + rendered preview (via tifffile + scipy)
+import json, tifffile, numpy as np
+from scipy.interpolate import BSpline   # or RectBivariateSpline
+
+with tifffile.TiffFile('subj01_SOpower_splinefit_C3.tiff') as tf:
+    coefs     = tf.pages[0].asarray()      # (n_y+2, n_x+2)
+    splinefit = tf.pages[1].asarray()      # rendered, on fit-domain bins
+    meta      = json.loads(tf.pages[0].tags['ImageDescription'].value)
+# Off-grid reconstruction: build cubic B-splines using
+# meta['knots_x'], meta['knots_y'] (augmented in MATLAB via augknt) and
+# coefs.T to match MATLAB's [n_x, n_y] layout.
+```
+
+### Auxiliary data — `auxiliary_data/`
+
+Per-subject `.mat` only. Contains `artifacts`, `Fs`,
+`SOpower_norm_method`, and other run-time scalars used by the
+Results Browser and the aggregation step.
+
+### Run settings — `settings/`
+
+Per-run JSON snapshot of every options struct (`detection_options`,
+`baseline_options`, `SOPH_options`, the four basis-fit options
+structs, etc.) plus a `run_start` timestamp and a `schema_version`.
+Written by `generate_run_log` as `run_settings_<timestamp>.json`,
+read back by `load_run_log` (and by the DYNAM-O App's "Load
+settings" action). The format is pure data — no executable code —
+so loading a settings file from another user is safe. `Inf`, `-Inf`,
+and `NaN` round-trip via sentinel strings (`"__inf__"`, `"__-inf__"`,
+`"__nan__"`); arrays containing them are encoded as JSON arrays of
+mixed numeric/sentinel entries and decoded back to numeric vectors.
+
+```matlab
+% MATLAB
+opts = load_run_log('run_settings_260504_165939.json');
+% opts.detection_options, opts.baseline_options, ...
+```
+
+### Figures — `figures/`
+
+`.png`, `.tiff`, `.pdf` exports of summary, parametric, and spline
+figures. These are renderings — they are *not* reloadable into
+DYNAM-O state.
+
+### Aggregates — `<output_dir>/aggregates/<channel>/`
+
+Cross-subject stacks built by the Results Browser **Aggregate**
+action. The aggregate `.tiff`s are multi-page (one page per subject)
+with the same `ImageDescription` bin metadata and a sibling
+`*_subjectIDs.txt` listing subject IDs in page order; the
+aggregate `.mat`s carry concatenated histogram and paramfit tables.
+
+<p align="right"><sub><a href="#table-of-contents">↑ Back to Table of Contents</a></sub></p>
+
+---
+
+## Unit tests
+
+The `tests/` folder contains a small suite built on MATLAB's standard
+`matlab.unittest` framework. The headline test runs both backends on a
+synthetic dataset with **known** peak locations, Hungarian-matches each
+backend's `stats_table` to ground truth, and asserts on per-peak time,
+frequency, and SO-phase bias.
+
+### Running
+
+Interactively, from MATLAB:
+
+```matlab
+addpath('/path/to/DYNAM-O_dev');
+init_DYNAMO();
+cd('/path/to/DYNAM-O_dev/tests');
+run_all_tests                                 % whole folder, asserts on failure
+runtests('test_simulation_truth')             % one file, table output
+```
+
+Headless / CI:
+
+```sh
+matlab -batch "addpath('<repo>'); init_DYNAMO; cd tests; run_all_tests"
+```
+
+`run_all_tests` calls `assertSuccess(result)` so the process exits
+non-zero on any sub-test failure — drop-in for GitHub Actions.
+
+### What it tests
+
+| Test | Asserts |
+| --- | --- |
+| `test_recall_matlab` / `test_recall_rust` | every true peak is matched |
+| `test_time_bias_matlab` / `test_time_bias_rust` | `\|median Δt\|` < ½ spectrogram bin |
+| `test_freq_bias_matlab` / `test_freq_bias_rust` | `\|median Δf\|` < 0.5 Hz |
+| `test_phase_bias_matlab` / `test_phase_bias_rust` | `\|median Δphase\|` < 5° |
+| `test_cross_backend_dt` | MATLAB vs Rust `\|median Δt\|` < 1 ms |
+
+The phase-bias sub-tests exist as a regression guard for commit
+`b59fa85` (2022-09-28), which silently dropped a `-1` from the
+`WeightedCentroid` conversion in `computePeakStatsTable.m` and biased
+every `PeakTime` by one spectrogram bin (~+13° of SOphase). Restoring
+the `-1` collapsed the bias from +12.6° to −1.1° against ground truth.
+
+### Layout
+
+```
+tests/
+├── run_all_tests.m              CI entry point — runtests + assertSuccess
+├── test_simulation_truth.m      Function-based test (functiontests style)
+└── simulation_test.mat          Ground-truth fixture (data, Fs, true_values)
+```
+
+Both backends run **once** in `setupOnce` (~40 s, dominated by the
+MATLAB pass); the matched-pair data is cached in `testCase.TestData`
+so the nine assertion sub-tests cost milliseconds each.
+
+<p align="right"><sub><a href="#table-of-contents">↑ Back to Table of Contents</a></sub></p>
+
+---
+
 ## Repository Structure
 
 ```
 DYNAM-O_dev/
 ├── DYNAMO.m                         OOP pipeline class
 ├── runDYNAMO.m                      Functional pipeline entry point
-├── DYNAMOFileManager.m              GUI batch processing app
+├── runApp.m                         GUI launcher (toolbox + app on path, opens DYNAMOApp)
+├── init_DYNAMO.m                    Path setup + class-cache reset (replaces DYNAMO_addpath / clearDynamoClasses)
 ├── example_data/
 │   ├── example_data.mat             Single-channel sleep EEG example
 │   └── runExampleData.m             Example data loader
+├── tests/                           matlab.unittest suite (see Unit tests)
+│   ├── run_all_tests.m              Folder runner — assertSuccess for CI
+│   ├── test_simulation_truth.m      Both-backends-vs-ground-truth assertions
+│   └── simulation_test.mat          Synthetic data + true_values fixture
 ├── rust_bridge/                     Rust backend (MEX wrappers around dynamo_rs)
 │   ├── README.md                    Per-platform build guide
 │   ├── build_rust_mex.m             MATLAB-side compile script
@@ -646,7 +982,20 @@ DYNAM-O_dev/
 │   ├── refine_peaks_mex.c           Hann refinement MEX
 │   ├── tfpeak_histogram_mex.c       SOpower / SOphase histogram MEX
 │   └── *.mex{a64,maca64,maci64,w64} Platform-specific binaries
-└── toolbox/
+├── app/                             GUI lives here (compile target for mcc -m)
+│   ├── @DYNAMOApp/          Class folder (split-file methods)
+│   │   ├── DYNAMOApp.m      Properties + constructor + most methods
+│   │   ├── createUIFigureAndShell.m Builder: figure, File menu, outer tabs
+│   │   ├── createBatchSetupTab.m    Builder: File Selection + Runtime Options
+│   │   ├── createBottomBar.m        Builder: status, RUN/STOP, Help, progress
+│   │   ├── createResultsBrowserTab.m Builder: tree + preview pane
+│   │   ├── createAnalysisTab.m      Builder: SO-Histograms host
+│   │   └── finalizeUI.m             Builder: Help menu (rightmost), tooltips
+│   ├── +results_browser/            Package: 19 helpers for the Results Browser
+│   └── components/
+│       └── CSSuicontrols/           Submodule: HTML-backed UI controls
+└── toolbox/                         Pure science (importable headlessly via init_DYNAMO)
+    ├── dynamo_version.m             '<branch>@<sha>[.dirty]' build identifier
     ├── TFpeak_functions/            Watershed TF-peak extraction
     │   ├── computeTFPeaks.m         Main detection function
     │   ├── runWatershed.m           MATLAB watershed segmentation
@@ -668,11 +1017,33 @@ DYNAM-O_dev/
     ├── SOPH_dim_reduction/          Parametric and spline fitting
     ├── TFsigma_peak_detector/       Alternative sigma-band peak detector
     └── helper_functions/            Multitaper, artifacts, EDF, plotting, tests, …
+        └── dynamo_helpers/          Run-record + settings infrastructure
+            ├── generate_run_log.m            Write per-run options struct to JSON (safe, no eval)
+            ├── load_run_log.m                Read run-settings JSON (replaces legacy `run()` loader)
+            ├── DYNAMORunLogger.m             Append-only JSONL writer
+            ├── dynamo_index_runs.m           Read+union JSONL files into a single index
+            ├── dynamo_walk_results.m         Pure recursive walker (CLI / scripts)
+            ├── dynamo_seed_index.m           CLI: walk + emit backfill JSONL
+            └── dynamo_seed_index_from_cache.m  Generic seeder (consumed by both walkers)
 ```
+
+The toolbox is GUI-free: a script that does `init_DYNAMO; runDYNAMO(...)`
+never sees `app/` on its path. The launcher (`runApp.m`) calls
+`init_DYNAMO('clear','gui')` so `app/` and `app/components/` are
+layered on top for the GUI flow. `app/` is the natural
+`mcc -m` compile target.
 
 ### Included Submodules
 
-DYNAM-O depends on several standalone libraries included as Git submodules under `toolbox/helper_functions/`. These are cloned automatically with `--recursive` (see [Installation](#installation)).
+DYNAM-O depends on several standalone libraries included as Git submodules. The toolbox-side submodules live under `toolbox/helper_functions/`; the GUI's UI-control library lives under `app/components/`. All are cloned automatically with `--recursive` (see [Installation](#installation)).
+
+> [!IMPORTANT]
+> If you already have a checkout from before the `app/components/CSSuicontrols`
+> path was introduced, run once after pulling:
+> ```bash
+> git submodule sync && git submodule update --init --recursive
+> ```
+> This flips your local `.git/config` to point CSSuicontrols at its new path.
 
 | Submodule | Repository | Description |
 |---|---|---|
@@ -680,7 +1051,7 @@ DYNAM-O depends on several standalone libraries included as Git submodules under
 | **Artifact Detection** | [preraulab/artifact_detection](https://github.com/preraulab/artifact_detection) | Detects and removes artifacts in EEG time series using high-frequency and broadband filtering with adaptive z-score thresholding. Includes Hjorth feature-based detection. |
 | **Read EDF** | [preraulab/read_EDF](https://github.com/preraulab/read_EDF) | Reads European Data Format (EDF/EDF+) files with full metadata extraction, per-signal scaling, and optional MEX acceleration. Includes a GUI for exploring EDF headers. |
 | **Statistical Tests** | [preraulab/multicomp_test](https://github.com/preraulab/multicomp_test) | Permutation-based statistical tests and false discovery rate (FDR) correction for multi-dimensional data. Provides `permtest`, `gpermtest`, `FDR_1D`, and `FDR_2D`. |
-| **CSSuicontrols** | [preraulab/CSSuicontrols](https://github.com/preraulab/CSSuicontrols) | CSS-styled HTML-backed UI controls for MATLAB App Designer. Powers the progress bar, text areas, buttons, and other custom widgets in DYNAMOFileManager. |
+| **CSSuicontrols** | [preraulab/CSSuicontrols](https://github.com/preraulab/CSSuicontrols) | CSS-styled HTML-backed UI controls for MATLAB App Designer. Powers the progress bar, text areas, buttons, and other custom widgets in DYNAMOApp. Lives at `app/components/CSSuicontrols/`. |
 
 > [!NOTE]
 > To update all submodules to their latest versions:
@@ -726,15 +1097,20 @@ For in-depth algorithm documentation and video tutorials, visit the
 
 ### Backends at a glance
 
-| Backend | Implementation | Parallelism | Peak count (night) | Wallclock |
+| Backend | Implementation | Parallelism | Final peak count (4-night range) | Wallclock (4-night range) |
 |---|---|---|---|---|
-| **`'rust'`** *(default)* | `dynamo_rs` via MEX | `rayon` inside MEX (no parpool) | 34 511 | ~30 s (M3) |
-| `'matlab'` | pure MATLAB | `parfor` over segments | 34 788 (truth) | ~125 s (M3) |
+| **`'rust'`** *(default)* | `dynamo_rs` via MEX | `rayon` inside MEX (no parpool) | within ±0.85% of MATLAB | 48–79 s (M3) |
+| `'matlab'` | pure MATLAB | `parfor` over segments | authoritative | 221–300 s (M3) |
 
-Both produce visually indistinguishable SO-power / SO-phase histograms
-(cosine similarity 0.999 / 0.996). The −0.8 % peak-count gap is a subtle
-label-assignment detail in Rust merge that shifts ~270 peaks across the
-bandwidth/duration filter cutoffs; downstream histograms are unaffected.
+Verified on `example_data` plus three Compumedics PSG nights
+(`TS00304`/`TS00404`/`TS00504`, channel C4-A1, default
+`quality_setting`). Final-peak deltas span −0.82% to +0.45% — sign
+varies, so Rust isn't systematically over- or under-counting. Both
+backends produce visually indistinguishable SO-power / SO-phase
+histograms (cosine similarity 0.999 / 0.996). See
+[`rust_bridge/README.md` — Backend parity](rust_bridge/README.md#backend-parity)
+for the per-stage breakdown showing how the +5–6% pass-1 raw-peak
+divergence collapses to <±1% by the end of pass-2.
 
 ### Parallel pool (MATLAB backend only)
 
@@ -783,7 +1159,7 @@ The mechanism: multitaper NFFT = `2^nextpow2(Fs / mtm_dsfreqs)` (default `mtm_ds
 | 500, 512 | 8192 | ~9.3× |
 | 1000 | 16384 | ~18× |
 
-The FileManager has Resample = ON at 100 Hz by default. For scripted callers (`runDYNAMO`, `DYNAMO` class):
+The DYNAMOApp has Resample = ON at 100 Hz by default. For scripted callers (`runDYNAMO`, `DYNAMO` class):
 
 ```matlab
 [p, q] = rat(100 / Fs);
@@ -799,7 +1175,8 @@ Fs     = 100;
 - **`mex: Compiler not configured`** — run `mex -setup C` in MATLAB and select a supported compiler (Xcode on macOS, gcc on Linux, MSVC/MinGW-w64 on Windows).
 - **MEX run gives subtly different peak counts after a fresh `cargo build`** — restart MATLAB. `libdynamo_rs` stays cached until the session exits; `clear mex` does not unload the dynamic library.
 - **Figures accumulate across repeated runs** — pass `'plot_on', false` or call `close all` between iterations.
-- **`Undefined function 'multitaper_spectrogram'`** — submodules weren't initialized. Run `git submodule update --init --recursive` in the repo root.
+- **`Undefined function 'multitaper_spectrogram'`** — submodules weren't initialized. From the meta-repo: `./refresh.sh`. Standalone clone: `git submodule update --init --recursive` followed by the re-attach one-liner from the [Clone section](#1-clone).
+- **Submodules in detached HEAD after cloning or branch-switching** — bare `git submodule update` always detaches. Run `./refresh.sh` from the meta-repo, or apply the re-attach one-liner from the [Clone section](#1-clone).
 - **NaN values in EEG** — the pipeline does not tolerate NaNs in `data`. Interpolate across NaN runs or mark them via the artifact detector.
 - **`stage_times` / `stage_vals` length mismatch** — both must be the same length; `stage_times` must be non-decreasing.
 - **Recording shorter than one `seg_time` window** (default 30 s) — reduce `detection_opts.seg_time` for very short recordings.

@@ -21,8 +21,8 @@ splinefit_phase = []; coefs_phase = []; knots_x_phase = []; knots_y_phase = [];
 if valid_powerhist
     power_opts.plot_on = plot_each;
     try
-        [splinefit_power, coefs_power, spline_obj_power, knots_x_power, knots_y_power] = spline_basis('power', SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins, power_opts);
-        SOPHs.SOpower_splinefit = createSOPHsplinefitStruct(splinefit_power, coefs_power, spline_obj_power, knots_x_power, knots_y_power);
+        [splinefit_power, coefs_power, spline_obj_power, knots_x_power, knots_y_power, fit_so_power, fit_freq_power] = spline_basis('power', SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins, power_opts);
+        SOPHs.SOpower_splinefit = createSOPHsplinefitStruct(splinefit_power, coefs_power, spline_obj_power, knots_x_power, knots_y_power, fit_so_power, fit_freq_power);
         pow_ok = true;
     catch ME_pow
         fprintf(2, '  [ERROR] spline_basis (power) failed: %s\n', ME_pow.message);
@@ -33,8 +33,8 @@ end
 if valid_phasehist
     phase_opts.plot_on = plot_each;
     try
-        [splinefit_phase, coefs_phase, spline_obj_phase, knots_x_phase, knots_y_phase] = spline_basis('phase', SOPHs.SOphase_mat, SOPHs.SOphase_bins, SOPHs.freq_bins, phase_opts);
-        SOPHs.SOphase_splinefit = createSOPHsplinefitStruct(splinefit_phase, coefs_phase, spline_obj_phase, knots_x_phase, knots_y_phase);
+        [splinefit_phase, coefs_phase, spline_obj_phase, knots_x_phase, knots_y_phase, fit_so_phase, fit_freq_phase] = spline_basis('phase', SOPHs.SOphase_mat, SOPHs.SOphase_bins, SOPHs.freq_bins, phase_opts);
+        SOPHs.SOphase_splinefit = createSOPHsplinefitStruct(splinefit_phase, coefs_phase, spline_obj_phase, knots_x_phase, knots_y_phase, fit_so_phase, fit_freq_phase);
         phase_ok = true;
     catch ME_phase
         fprintf(2, '  [ERROR] spline_basis (phase) failed: %s\n', ME_phase.message);

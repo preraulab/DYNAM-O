@@ -81,7 +81,12 @@ p = inputParser;
 % hypnogram needs these variables
 addParameter(p, 'stage_times', [], @(x) validateattributes(x, {'double','single'}, {'real','finite','nondecreasing','2d'}));
 addParameter(p, 'stage_vals', [], @(x) validateattributes(x, {'double','single'}, {'real','finite','nonnegative','2d'}));
-addParameter(p, 'artifacts', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
+% Accept logical OR numeric mask (numeric gets coerced to logical
+% after parse). Earlier versions only accepted logical, but some
+% callers persist artifacts via .mat round-trips or struct copies
+% that promote them to double; rejecting those here aborts the
+% summary figure for an entire subject over a harmless type drift.
+addParameter(p, 'artifacts', logical([]), @(x) validateattributes(x,{'logical','numeric'},{'real','finite','2d'}));
 addParameter(p, 't_time_range', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
 
 % spectrogram needs these variables
@@ -119,6 +124,11 @@ field_names = fieldnames(p.Results);
 
 %Automatically add parser results to the workspace
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
+
+% Coerce numeric artifact masks to logical (validator accepts both).
+if ~islogical(artifacts)
+    artifacts = logical(artifacts);
+end
 
 %% Handle default values
 if isempty(t_time_range) && ~isempty(artifacts)
@@ -207,7 +217,7 @@ end
 
 %% Plot spectrogram
 if isgraphics(hypn_spect_ax(2))
-    [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(data, Fs, mtm_freq_range, [15 29], [30 15], [],'linear',[],false,false);
+    [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_dynamo(data, Fs, mtm_freq_range, [15 29], [30 15], [],'linear',[],false,false);
 
     stimes_inds = stimes_disp >= time_range(1) & stimes_disp <= time_range(2);
     imagesc(hypn_spect_ax(2), stimes_disp(stimes_inds)/3600, sfreqs_disp, pow2db(spect_disp(:, stimes_inds)));

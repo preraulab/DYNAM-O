@@ -296,7 +296,10 @@ if dur_min>0 || bw_min>0
     df = y(2)-y(1);
     dt = x(2)-x(1);
     [f_inds,t_inds] = cellfun(@(x)ind2sub(size(img),x),regions,'UniformOutput',false);
-    good_inds = cellfun(@(x)(max(x)-min(x))*dt>dur_min,t_inds) & cellfun(@(x)(max(x)-min(x))*df>bw_min,f_inds);
+    % Span = (#pixels)*dt = (max-min+1)*dt, matching how Duration/Bandwidth
+    % are reported via regionprops in computePeakStatsTable. Without the +1
+    % the filter drops peaks of true span dur_min by exactly one bin.
+    good_inds = cellfun(@(x)(max(x)-min(x)+1)*dt>dur_min,t_inds) & cellfun(@(x)(max(x)-min(x)+1)*df>bw_min,f_inds);
     regions = regions(good_inds);
     borders = borders(good_inds);
 end
@@ -328,7 +331,7 @@ if trim_vol < 1
     %Remove regions that now fall below the removal criteria after trimming
     if dur_min>0 || bw_min>0
         [f_inds, t_inds] = cellfun(@(x)ind2sub(size(img),x),trim_regions,'UniformOutput',false);
-        good_inds = cellfun(@(x)~isempty(max(x))&&((max(x)-min(x))*dt>dur_min),t_inds) & cellfun(@(x)~isempty(max(x))&&((max(x)-min(x))*df>bw_min),f_inds);
+        good_inds = cellfun(@(x)~isempty(max(x))&&((max(x)-min(x)+1)*dt>dur_min),t_inds) & cellfun(@(x)~isempty(max(x))&&((max(x)-min(x)+1)*df>bw_min),f_inds);
         trim_regions = trim_regions(good_inds);
         trim_borders = trim_borders(good_inds);
     end
@@ -341,15 +344,6 @@ if trim_vol < 1
 
     regions = trim_regions;
     borders = trim_borders;
-
-    if dur_min>0 || bw_min>0
-        df = y(2)-y(1);
-        dt = x(2)-x(1);
-
-        [f_inds, t_inds] = cellfun(@(x)ind2sub(size(img),x),regions,'UniformOutput',false);
-        good_inds = cellfun(@(x)(max(x)-min(x))*dt>dur_min,t_inds) & cellfun(@(x)(max(x)-min(x))*df>bw_min,f_inds);
-        regions = regions(good_inds);
-    end
 
 end
 

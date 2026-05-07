@@ -222,6 +222,18 @@ timings = struct();
 % summary table.
 ttotal = datetime('now');
 
+if verbose
+    fprintf('================================================================\n');
+    fprintf('  D Y N A M - O - The Dynamic Oscillation Toolbox\n');
+    fprintf('  Version: %s\n', dynamo_version());
+    fprintf('================================================================\n');
+    fprintf('  Developed by the Prerau Laboratory\n');
+    fprintf('  Web:       https://sleepeeg.org\n');
+    fprintf('  Tutorials: https://prerau.bwh.harvard.edu/dynam-o/\n');
+    fprintf('  GitHub:    https://github.com/preraulab/DYNAM-O\n');
+    fprintf('================================================================\n\n');
+end
+
 % Harden against partial option structs: a user may pass an
 % old/incomplete struct from a prior session (e.g., before a new field
 % like reuse_baseline or seg_time was added). Without backfilling we'd
@@ -265,6 +277,15 @@ backend = lower(char(backend));
 % "Cannot include struct and duplicate parameters" error when the struct
 % is passed alongside an explicit 'backend' name/value pair).
 detection_options.backend = backend;
+
+% Publish backend to multitaper_spectrogram_dynamo via app-level state,
+% so detect_artifacts / displaySummaryPlot / computeSOpower / computeTFPeaks
+% all dispatch their multitaper calls to the matching MTS implementation
+% without each one needing a 'backend' kwarg threaded down. Cleared in the
+% onCleanup at function exit so a script that aborts mid-run doesn't
+% poison the next call.
+setappdata(0, 'dynamo_backend', backend);
+mts_state_cleanup = onCleanup(@() rmappdata_safe(0, 'dynamo_backend'));
 
 if strcmp(backend, 'rust')
     % Rust MEX backend: add rust_bridge/ to path, assert the four MEX
@@ -476,4 +497,13 @@ if verbose
     printTimingSummary(timings);
 end
 
+end
+
+function rmappdata_safe(h, key)
+    % rmappdata throws if the key isn't set; suppress for the onCleanup
+    % path where we don't care if some other path already removed it.
+    try
+        if isappdata(h, key), rmappdata(h, key); end
+    catch
+    end
 end

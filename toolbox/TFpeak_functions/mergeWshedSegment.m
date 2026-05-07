@@ -343,6 +343,9 @@ if f_disp
     title(ax(4), 'Borders of merged regions');
 end
 
-% Remove dead regions
-regions = regions(cellfun(@(x)~isempty(x),regions));
-borders = borders(cellfun(@(x)~isempty(x),borders));
+% Remove dead regions. Use one shared mask so the regions/borders pairing
+% by index is preserved even if a merge branch ever leaves one of the pair
+% non-empty while the other is [].
+keep = ~cellfun(@isempty, regions);
+regions = regions(keep);
+borders = borders(keep);

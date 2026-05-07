@@ -535,6 +535,26 @@ classdef DYNAMO < handle
             pow_ok = false; phase_ok = false;
             params_pow = []; model_SOPH_pow = []; power_wshed_img = [];
             params_phase = []; model_SOPhH_phase = []; phase_wshed_img = [];
+            % Phase fit runs first so its model surface
+            % (model_SOPhH_phase) is available when the power table is
+            % annotated with model-based preferred-phase columns.
+            try
+                [params_phase, fitobj_phase, gof_phase, model_SOPhH_phase, phase_wshed_img] = ...
+                    param_basis_phase(obj.SOPHs.SOphase_mat, obj.SOPHs.SOphase_bins, obj.SOPHs.freq_bins, ...
+                    opts_phase);
+                if isempty(fitobj_phase)
+                    obj.SOPHs.SOphase_paramfit = [];
+                    fprintf(2, '   [WARN] param_basis_phase returned no fit (see warning above).\n');
+                else
+                    obj.SOPHs.SOphase_paramfit = obj.createSOPHparamfitStruct('phase', params_phase, fitobj_phase, gof_phase, model_SOPhH_phase, phase_wshed_img);
+                    phase_ok = true;
+                end
+            catch ME_phase
+                obj.SOPHs.SOphase_paramfit = [];
+                fprintf(2, '   [ERROR] param_basis_phase failed: %s\n', ME_phase.message);
+                warning('DYNAMO:fitParamBasis:phase', 'param_basis_phase failed: %s', ME_phase.message);
+            end
+
             try
                 [params_pow, fitobj_pow, gof_pow, model_SOPH_pow, power_wshed_img] = ...
                     param_basis_power(obj.SOPHs.SOpower_mat, obj.SOPHs.SOpower_bins, obj.SOPHs.freq_bins, ...
@@ -547,30 +567,19 @@ classdef DYNAMO < handle
                     obj.SOPHs.SOpower_paramfit = [];
                     fprintf(2, '   [WARN] param_basis_power returned no fit (see warning above).\n');
                 else
-                    obj.SOPHs.SOpower_paramfit = obj.createSOPHparamfitStruct(params_pow, fitobj_pow, gof_pow, model_SOPH_pow, power_wshed_img);
+                    obj.SOPHs.SOpower_paramfit = obj.createSOPHparamfitStruct('power', params_pow, fitobj_pow, gof_pow, model_SOPH_pow, power_wshed_img);
                     pow_ok = true;
+
+                    if ~isempty(obj.SOPHs.SOpower_paramfit.params)
+                        obj.SOPHs.SOpower_paramfit.params = annotatePowerWithPreferredPhase( ...
+                            obj.SOPHs.SOpower_paramfit.params, obj.SOPHs.SOphase_mat, ...
+                            obj.SOPHs.freq_bins, obj.SOPHs.SOphase_bins, model_SOPhH_phase);
+                    end
                 end
             catch ME_pow
                 obj.SOPHs.SOpower_paramfit = [];
                 fprintf(2, '   [ERROR] param_basis_power failed: %s\n', ME_pow.message);
                 warning('DYNAMO:fitParamBasis:power', 'param_basis_power failed: %s', ME_pow.message);
-            end
-
-            try
-                [params_phase, fitobj_phase, gof_phase, model_SOPhH_phase, phase_wshed_img] = ...
-                    param_basis_phase(obj.SOPHs.SOphase_mat, obj.SOPHs.SOphase_bins, obj.SOPHs.freq_bins, ...
-                    opts_phase);
-                if isempty(fitobj_phase)
-                    obj.SOPHs.SOphase_paramfit = [];
-                    fprintf(2, '   [WARN] param_basis_phase returned no fit (see warning above).\n');
-                else
-                    obj.SOPHs.SOphase_paramfit = obj.createSOPHparamfitStruct(params_phase, fitobj_phase, gof_phase, model_SOPhH_phase, phase_wshed_img);
-                    phase_ok = true;
-                end
-            catch ME_phase
-                obj.SOPHs.SOphase_paramfit = [];
-                fprintf(2, '   [ERROR] param_basis_phase failed: %s\n', ME_phase.message);
-                warning('DYNAMO:fitParamBasis:phase', 'param_basis_phase failed: %s', ME_phase.message);
             end
 
             if plot_on && (pow_ok || phase_ok)
@@ -625,9 +634,9 @@ classdef DYNAMO < handle
             fit_pow = []; coefs_pow = []; knots_x_pow = []; knots_y_pow = [];
             fit_phase = []; coefs_phase = []; knots_x_phase = []; knots_y_phase = [];
             try
-                [fit_pow, coefs_pow, s_pow, knots_x_pow, knots_y_pow] = ...
+                [fit_pow, coefs_pow, s_pow, knots_x_pow, knots_y_pow, fit_so_pow, fit_freq_pow] = ...
                     spline_basis('power', obj.SOPHs.SOpower_mat, obj.SOPHs.SOpower_bins, obj.SOPHs.freq_bins, opts_pow);
-                obj.SOPHs.SOpower_splinefit = obj.createSOPHsplinefitStruct(fit_pow, coefs_pow, s_pow, knots_x_pow, knots_y_pow);
+                obj.SOPHs.SOpower_splinefit = obj.createSOPHsplinefitStruct(fit_pow, coefs_pow, s_pow, knots_x_pow, knots_y_pow, fit_so_pow, fit_freq_pow);
                 pow_ok = true;
             catch ME_pow
                 obj.SOPHs.SOpower_splinefit = [];
@@ -636,9 +645,9 @@ classdef DYNAMO < handle
             end
 
             try
-                [fit_phase, coefs_phase, s_phase, knots_x_phase, knots_y_phase] = ...
+                [fit_phase, coefs_phase, s_phase, knots_x_phase, knots_y_phase, fit_so_phase, fit_freq_phase] = ...
                     spline_basis('phase', obj.SOPHs.SOphase_mat, obj.SOPHs.SOphase_bins, obj.SOPHs.freq_bins, opts_phase);
-                obj.SOPHs.SOphase_splinefit = obj.createSOPHsplinefitStruct(fit_phase, coefs_phase, s_phase, knots_x_phase, knots_y_phase);
+                obj.SOPHs.SOphase_splinefit = obj.createSOPHsplinefitStruct(fit_phase, coefs_phase, s_phase, knots_x_phase, knots_y_phase, fit_so_phase, fit_freq_phase);
                 phase_ok = true;
             catch ME_phase
                 obj.SOPHs.SOphase_splinefit = [];
@@ -706,6 +715,9 @@ classdef DYNAMO < handle
                 verbose = false;
             end
 
+            % Single shared CSSPreset for every CSSui* widget in this dialog.
+            appStyle = dynamoStyle();
+
             % Create main figure
             if nargin<3 || isempty(fig)
                 fig = uifigure('Name', 'DYNAMO Options', 'Position', [100 100 900 650]);
@@ -716,7 +728,7 @@ classdef DYNAMO < handle
             end
 
             if nargin<5
-                showButtons = true;
+                showButtons = false;
             end
 
             % Create main menu
@@ -731,37 +743,31 @@ classdef DYNAMO < handle
 
             % --- Callback functions ---
             function loadSettingsCallback(~, ~)
-                [filename, filepath] = uigetfile({'*.txt'},'Select DYNAM-O settings file.');
+                % Load settings from a JSON file written by saveSettingsCallback
+                % / the DYNAMOApp run-log. The legacy `.txt` format stored
+                % MATLAB code and was loaded via `run()` — a code-injection
+                % vector. JSON is inert (jsondecode = data deserialization only).
+                [filename, filepath] = uigetfile({'*.json'}, 'Select DYNAM-O settings file (JSON).');
+                if isequal(filename, 0); return; end
 
-                if filename ~= 0
-                    new_filename = filename;
-                    new_filename(end-2:end) = 'm  ';
-
-                    movefile(strcat(filepath,filename),strcat(filepath,new_filename));
-
-                    SOPH_options = []; %#ok<*PROPLC>
-                    baseline_options = [];
-                    detection_options = [];
-                    param_basis_power_options = [];
-                    param_basis_phase_options = [];
-                    spline_basis_power_options = [];
-                    spline_basis_phase_options = [];
-
-                    run(strcat(filepath,new_filename));
-
-                    obj.updateOptions('SOPH_options',SOPH_options);
-                    obj.updateOptions('baseline_options',baseline_options);
-                    obj.updateOptions('detection_options',detection_options);
-                    obj.updateOptions('param_basis_power_options',param_basis_power_options);
-                    obj.updateOptions('param_basis_phase_options',param_basis_phase_options);
-                    obj.updateOptions('spline_basis_power_options',spline_basis_power_options);
-                    obj.updateOptions('spline_basis_phase_options',spline_basis_phase_options);
-                    clear SOPH_options baseline_options detection_options param_basis_power_options param_basis_phase_options spline_basis_power_options spline_basis_phase_options
-
-                    movefile(strcat(filepath,new_filename),strcat(filepath,filename));
-
-                    updateAll();
+                try
+                    settings = load_run_log(fullfile(filepath, filename));
+                catch err
+                    uialert(fig, sprintf('Could not parse settings file:\n%s', err.message), ...
+                        'Load Settings', 'Icon', 'error');
+                    return
                 end
+
+                % Update each option struct present in the file. Any
+                % unknown keys in settings.options are ignored.
+                opt_names = fieldnames(settings.options);
+                for k = 1:numel(opt_names)
+                    name = opt_names{k};
+                    if isprop(obj, name)
+                        obj.updateOptions(name, settings.options.(name));
+                    end
+                end
+                updateAll();
             end
 
             function saveSettingsCallback(~, ~)
@@ -854,7 +860,7 @@ classdef DYNAMO < handle
 
                 for jj = 1:nButtons
                     xpos = startX + (jj-1)*(buttonWidth+spacing);
-                    CSSuiButton(fig, 'Style', 'shadow', ...
+                    CSSuiButton(fig, 'Style', appStyle, ...
                         'Text', buttonLabels{jj}, ...
                         'Position', [xpos 10 buttonWidth buttonHeight], ...
                         'ButtonPushedFcn', buttonCallbacks{jj});
@@ -942,7 +948,7 @@ classdef DYNAMO < handle
                     'ColumnName',  {'Parameter', 'Description', 'Value'}, ...
                     'ColumnWidth', [180, 470, 150], ...
                     'Data',        tableData2cell(createTableData(opts, config)), ...
-                    'Style',       'shadow_light', ...
+                    'Style', appStyle, ...
                     'SelectionType', 'row');
                 tbl.Layout.Row    = 1;
                 tbl.Layout.Column = 1;
@@ -956,15 +962,15 @@ classdef DYNAMO < handle
                 editGrid.Layout.Row    = 2;
                 editGrid.Layout.Column = 1;
 
-                selLabel = CSSuiLabel(editGrid, 'Style', 'shadow', ...
+                selLabel = CSSuiLabel(editGrid, 'Style', appStyle, ...
                     'Text', 'Select a row to edit', 'HorizontalAlignment', 'left');
                 selLabel.Layout.Row = 1; selLabel.Layout.Column = 1;
 
-                valField = CSSuiEditField(editGrid, 'Style', 'shadow_light', ...
+                valField = CSSuiEditField(editGrid, 'Style', appStyle, ...
                     'Placeholder', 'Select a row above');
                 valField.Layout.Row = 1; valField.Layout.Column = 2;
 
-                applyBtn = CSSuiButton(editGrid, 'Style', 'shadow', 'Text', 'Apply');
+                applyBtn = CSSuiButton(editGrid, 'Style', appStyle, 'Text', 'Apply');
                 applyBtn.Layout.Row = 1; applyBtn.Layout.Column = 3;
 
                 curRow   = [];
@@ -1040,7 +1046,7 @@ classdef DYNAMO < handle
                         'Indeterminate', 'on');
 
                     % Rerun DYNAMO with current options (uses runDYNAMO wrapper)
-                    obj.run();
+                    obj.runDYNAMO();
 
                     % Close progress dialog if open
                     if isvalid(progressDlg)
@@ -1412,13 +1418,13 @@ classdef DYNAMO < handle
                 % Build dialog
                 dlg = uifigure('Name', 'Select Features', 'Position', [300 300 300 400], 'WindowStyle', 'modal');
                 listbox = CSSuiListBox(dlg, 'Items', features, 'Value', selected, 'Multiselect', true, ...
-                    'Style', 'shadow_light', ...
+                    'Style', appStyle, ...
                     'Position', [20 80 260 280]);
 
                 result = [];
-                CSSuiButton(dlg, 'Style', 'shadow', 'Text', 'OK', 'Position', [150 20 50 30], ...
+                CSSuiButton(dlg, 'Style', appStyle, 'Text', 'OK', 'Position', [150 20 50 30], ...
                     'ButtonPushedFcn', @(~,~) setResult());
-                CSSuiButton(dlg, 'Style', 'shadow', 'Text', 'Cancel', 'Position', [210 20 60 30], ...
+                CSSuiButton(dlg, 'Style', appStyle, 'Text', 'Cancel', 'Position', [210 20 60 30], ...
                     'ButtonPushedFcn', @(~,~) delete(dlg));
 
                 uiwait(dlg);
@@ -1451,7 +1457,7 @@ classdef DYNAMO < handle
         end
     end
 
-    methods (Static, Access = protected)
+    methods (Static)
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % createSOPHsStruct
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1477,10 +1483,42 @@ classdef DYNAMO < handle
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % createSOPHparamfitStruct
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function [SOPH_paramfit] = createSOPHparamfitStruct(params, fitobj, gof, model_SOPH, wshed_img)
+        function [SOPH_paramfit] = createSOPHparamfitStruct(type, params, fitobj, gof, model_SOPH, wshed_img)
             %CREATESOPHPARAMFITSTRUCT  Pack parametric fit outputs into struct
+            %
+            %   type: 'power' or 'phase' — selects column names of the
+            %         returned params table.
+            %   params: N×6 numeric matrix [amp, fmean, fstd, pmean, pstd, theta]
+            %
+            %   .params is returned as a table.
+            %   power: Amplitude (peaks/min/bin), FreqMean (Hz), FreqStd (Hz),
+            %          SOpowerMean (dB), SOpowerStd (dB), Theta (rad), plus
+            %          (added by fitParamBasis annotation):
+            %          PrefPhaseArgmax (rad),  CouplingArgmax (proportion/phase-bin),
+            %          PrefPhaseCirc   (rad),  CouplingCirc   ([0,1] MRL),
+            %          PrefPhaseModel  (rad),  CouplingModel  (proportion/phase-bin).
+            %   phase: Amplitude (proportion/phase-bin), FreqMean (Hz), FreqStd (Hz),
+            %          SOphaseMean (rad), SOphaseStd (rad), Theta (rad).
+            %
+            %   NOTE: power Amplitude is peaks/min/bin; phase Amplitude and the argmax/model coupling columns are proportion/phase-bin (phase histogram is row-normalized upstream); CouplingCirc is dimensionless MRL in [0,1].
+            switch lower(type)
+                case 'power'
+                    vn      = {'Amplitude','FreqMean','FreqStd','SOpowerMean','SOpowerStd','Theta'};
+                    vn_full = [vn, {'PrefPhaseArgmax','CouplingArgmax', ...
+                                    'PrefPhaseCirc','CouplingCirc', ...
+                                    'PrefPhaseModel','CouplingModel'}];
+                case 'phase'
+                    vn      = {'Amplitude','FreqMean','FreqStd','SOphaseMean','SOphaseStd','Theta'};
+                    vn_full = vn;
+                otherwise
+                    error('createSOPHparamfitStruct:badType','type must be ''power'' or ''phase''.');
+            end
             SOPH_paramfit = struct;
-            SOPH_paramfit.params = params;
+            if isempty(params)
+                SOPH_paramfit.params = array2table(zeros(0,numel(vn_full)),'VariableNames',vn_full);
+            else
+                SOPH_paramfit.params = array2table(params,'VariableNames',vn);
+            end
             SOPH_paramfit.fitobj = fitobj;
             SOPH_paramfit.gof = gof;
             SOPH_paramfit.model_SOPH = model_SOPH;
@@ -1490,14 +1528,22 @@ classdef DYNAMO < handle
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % createSOPHsplinefitStruct
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function [SOPH_splinefit] = createSOPHsplinefitStruct(splinefit, coefs, spline_obj, knots_x, knots_y)
-            %CREATESOPHSPLINEFITSTRUCT  Pack spline fit outputs into struct
+        function [SOPH_splinefit] = createSOPHsplinefitStruct(splinefit, coefs, spline_obj, knots_x, knots_y, fit_SOfeature_bins, fit_freq_bins)
+            %CREATESOPHSPLINEFITSTRUCT  Pack spline fit outputs into struct.
+            %   fit_SOfeature_bins / fit_freq_bins (optional) are the
+            %   filtered fit-domain bins from spline_basis — required by
+            %   the GUI save path so the spline tiff metadata can carry
+            %   the bins page 2 was actually rendered on.
+            if nargin < 6, fit_SOfeature_bins = []; end
+            if nargin < 7, fit_freq_bins      = []; end
             SOPH_splinefit = struct;
             SOPH_splinefit.splinefit = splinefit;
             SOPH_splinefit.coefs = coefs;
             SOPH_splinefit.spline_obj = spline_obj;
             SOPH_splinefit.knots_x = knots_x;
             SOPH_splinefit.knots_y = knots_y;
+            SOPH_splinefit.fit_SOfeature_bins = fit_SOfeature_bins;
+            SOPH_splinefit.fit_freq_bins      = fit_freq_bins;
         end
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1533,23 +1579,47 @@ classdef DYNAMO < handle
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % writeTiff
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function writeTiff(filename,data)
+        function writeTiff(filename,data,description)
+            % Optional `description` (char/string/struct) is embedded in
+            % the ImageDescription tag of page 1 — used by SOPH writes
+            % to carry freq_bins / SO bins so downstream readers can
+            % label axes. `data` may be a single 2-D matrix or a cell
+            % array of matrices (one per page); pages may differ in
+            % size. Used by the spline writer to ship coefs on page 1
+            % and the rendered fit on page 2.
+
+            if nargin < 3, description = []; end
+            if isstruct(description), description = jsonencode(description); end
+
+            if iscell(data)
+                pages = data;
+            else
+                pages = {data};
+            end
 
             t = Tiff(filename, 'w');
+            cleaner = onCleanup(@() close(t)); %#ok<NASGU>
 
-            % Setup the tag structure
-            tagstruct.ImageLength = size(data, 1);
-            tagstruct.ImageWidth = size(data, 2);
-            tagstruct.Photometric = Tiff.Photometric.MinIsBlack;
-            tagstruct.BitsPerSample = 64;              % Use 64 for double precision
-            tagstruct.SamplesPerPixel = 1;
-            tagstruct.SampleFormat = Tiff.SampleFormat.IEEEFP; % Key for negative/floats
-            tagstruct.PlanarConfiguration = Tiff.PlanarConfiguration.Chunky;
+            for kk = 1:numel(pages)
+                page = pages{kk};
+                tagstruct = struct();
+                tagstruct.ImageLength = size(page, 1);
+                tagstruct.ImageWidth = size(page, 2);
+                tagstruct.Photometric = Tiff.Photometric.MinIsBlack;
+                tagstruct.BitsPerSample = 64;              % Use 64 for double precision
+                tagstruct.SamplesPerPixel = 1;
+                tagstruct.SampleFormat = Tiff.SampleFormat.IEEEFP; % Key for negative/floats
+                tagstruct.PlanarConfiguration = Tiff.PlanarConfiguration.Chunky;
+                if kk == 1 && ~isempty(description)
+                    tagstruct.ImageDescription = char(description);
+                end
 
-            % Write data
-            t.setTag(tagstruct);
-            t.write(data);
-            t.close();
+                t.setTag(tagstruct);
+                t.write(page);
+                if kk < numel(pages)
+                    t.writeDirectory();
+                end
+            end
 
         end
 

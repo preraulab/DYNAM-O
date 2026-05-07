@@ -294,7 +294,7 @@ tfp_timings.spect_pass1 = toc(t_stage);
 t_stage = tic;
 if isempty(artifacts)
     if verbose
-        disp('Performing artifact rejection...');
+        fprintf('Performing artifact rejection (%s)...\n', backend);
     end
     artifacts = detect_artifacts(data_time_range, Fs, 'hpFilt_high', artifact_filters.hpFilt_high, 'hpFilt_broad', artifact_filters.hpFilt_broad);
 else
@@ -306,7 +306,7 @@ tfp_timings.artifact = toc(t_stage);
 % Exclude artifacts, baseline_exclude, and times corresponding to stages not in baseline_stages from baseline computation
 t_stage = tic;
 exclude_stages = ~ismember(stage_vals, baseline_stages); %stages to use passed in
-exclude_stages_resamp = interp1(stage_times, single(exclude_stages), t_time_range, 'previous')~=0; % ~=0 excludes both 1 and NaN (when t_time_range exceeds the interp1 range)
+exclude_stages_resamp = interp1(stage_times, single(exclude_stages), t_time_range, 'previous')~=0;
 baseline_exclude = artifacts(:) | exclude_stages_resamp(:) | baseline_exclude(:);
 
 baseline = computeBaseline(spect, stimes, t_time_range, baseline_exclude, baseline_range, baseline_ptile);
@@ -314,7 +314,7 @@ tfp_timings.baseline_pass1 = toc(t_stage);
 
 %% Compute time-frequency peaks
 if verbose
-    disp('Extracting TF peaks from the spectrogram...');
+    fprintf('Extracting TF peaks from the spectrogram (%s)...\n', backend);
 end
 tfp = tic;
 
@@ -389,7 +389,7 @@ if double_watershed
 
     % Compute time-frequency peaks
     if verbose
-        disp('[2nd] Extracting TF peaks from the spectrogram...');
+        fprintf('[2nd] Extracting TF peaks from the spectrogram (%s)...\n', backend);
     end
     tfp = tic;
 
@@ -413,7 +413,7 @@ end
 %% Refine TFpeak frequency estimation using Hann windows
 if refinement
     if verbose
-        disp('Refining peaks...');
+        fprintf('Refining peaks (%s)...\n', backend);
     end
     rft = tic;
 
@@ -465,12 +465,11 @@ if verbose
     disp('Computing TF peak spectrogram...');
 end
 
-if exist(['multitaper_spectrogram_coder_mex.' mexext],'file')
-    [spect,stimes,sfreqs] = multitaper_spectrogram_mex(data_time_range, Fs, freq_range, taper_params, time_window_params, nfft, detrend_opt, weight, ploton, mts_verbose);
-else
-    [spect,stimes,sfreqs] = multitaper_spectrogram(data_time_range, Fs, freq_range, taper_params, time_window_params, nfft, detrend_opt, weight, ploton, mts_verbose);
-    warning(sprintf('Unable to use mex version of multitaper_spectrogram. Using compiled multitaper spectrogram function will greatly increase the speed of this computaton. \n\nFind mex code at:\n    https://github.com/preraulab/multitaper_toolbox')); %#ok<SPWRN>
-end
+% Dispatch via multitaper_spectrogram_dynamo: backend='rust' routes to
+% the f64 Rust path (multitaper_spectrogram_rust_mex), 'matlab' to the
+% existing Coder MEX (or pure-MATLAB fallback). Per-run backend is
+% read from getappdata(0,'dynamo_backend') set by runDYNAMO.
+[spect,stimes,sfreqs] = multitaper_spectrogram_dynamo(data_time_range, Fs, freq_range, taper_params, time_window_params, nfft, detrend_opt, weight, ploton, mts_verbose);
 end
 
 

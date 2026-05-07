@@ -18,23 +18,9 @@ SOPHs.SOphase_paramfit = [];
 params_power = []; model_SOPH_power = [];
 params_phase = []; model_SOPH_phase = [];
 
-if valid_powerhist
-    power_opts.plot_on = plot_each;
-    power_opts.verbose = verbose-1;
-    try
-        [params_power, fitobj_power, gof_power, model_SOPH_power, wshed_img_power] = param_basis_power(SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins, power_opts);
-        if isempty(fitobj_power)
-            fprintf(2, '  [WARN] param_basis_power returned no fit (see warning above).\n');
-        else
-            SOPHs.SOpower_paramfit = createSOPHparamfitStruct(params_power, fitobj_power, gof_power, model_SOPH_power, wshed_img_power);
-            pow_ok = true;
-        end
-    catch ME_pow
-        fprintf(2, '  [ERROR] param_basis_power failed: %s\n', ME_pow.message);
-        warning('runDYNAMO:fitParamBasis:power', 'param_basis_power failed: %s', ME_pow.message);
-    end
-end
-
+% Phase fit runs first so its model surface (model_SOPH_phase) is
+% available when the power table is annotated below with model-based
+% preferred-phase columns.
 if valid_phasehist
     phase_opts.plot_on = plot_each;
     phase_opts.verbose = verbose-1;
@@ -43,12 +29,39 @@ if valid_phasehist
         if isempty(fitobj_phase)
             fprintf(2, '  [WARN] param_basis_phase returned no fit (see warning above).\n');
         else
-            SOPHs.SOphase_paramfit = createSOPHparamfitStruct(params_phase, fitobj_phase, gof_phase, model_SOPH_phase, wshed_img_phase);
+            SOPHs.SOphase_paramfit = createSOPHparamfitStruct('phase', params_phase, fitobj_phase, gof_phase, model_SOPH_phase, wshed_img_phase);
             phase_ok = true;
         end
     catch ME_phase
         fprintf(2, '  [ERROR] param_basis_phase failed: %s\n', ME_phase.message);
         warning('runDYNAMO:fitParamBasis:phase', 'param_basis_phase failed: %s', ME_phase.message);
+    end
+end
+
+if valid_powerhist
+    power_opts.plot_on = plot_each;
+    power_opts.verbose = verbose-1;
+    try
+        [params_power, fitobj_power, gof_power, model_SOPH_power, wshed_img_power] = param_basis_power(SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins, power_opts);
+        if isempty(fitobj_power)
+            fprintf(2, '  [WARN] param_basis_power returned no fit (see warning above).\n');
+        else
+            SOPHs.SOpower_paramfit = createSOPHparamfitStruct('power', params_power, fitobj_power, gof_power, model_SOPH_power, wshed_img_power);
+            pow_ok = true;
+
+            % Annotate the power table with three preferred-phase
+            % estimators per mode (argmax / circular mean / model max).
+            % Skipped when the power fit produced zero modes (empty
+            % table already carries placeholder column names).
+            if ~isempty(SOPHs.SOpower_paramfit.params)
+                SOPHs.SOpower_paramfit.params = annotatePowerWithPreferredPhase( ...
+                    SOPHs.SOpower_paramfit.params, SOPHs.SOphase_mat, ...
+                    SOPHs.freq_bins, SOPHs.SOphase_bins, model_SOPH_phase);
+            end
+        end
+    catch ME_pow
+        fprintf(2, '  [ERROR] param_basis_power failed: %s\n', ME_pow.message);
+        warning('runDYNAMO:fitParamBasis:power', 'param_basis_power failed: %s', ME_pow.message);
     end
 end
 
