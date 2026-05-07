@@ -89,7 +89,7 @@ ht_inds = pow2db(stats_table.Height) > ht_db_min;
 filter_idx = dur_inds & bw_inds & pf_inds & ht_inds;
 
 if verbose
-    disp(['Number of Peaks After Rejection: ', num2str(sum(filter_idx)), newline, newline]);
+    disp(['Number of Peaks After Rejection: ', num2str(sum(filter_idx)), newline]);
 end
     
 end
