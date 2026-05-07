@@ -53,10 +53,40 @@ function runParamBasis(app)
         end
     end
 
-    % Fit parametric basis model
+    % Fit parametric basis model.
+    %
+    % Layered AutoCreate=false guard. runBatch already sets this at
+    % batch scope, but we also set it here so the protection holds when:
+    %   - a custom driver calls runParamBasis directly (no runBatch),
+    %   - a callback inside the batch loop temporarily flips it back,
+    %   - the user's MATLAB session has a startup script that resets it
+    %     between batch iterations.
+    % The guard is scoped to this function via onCleanup; the matlab
+    % backend's explicit parpool() in setup_parallel_pool is unaffected.
+    pool_guard_orig_ = []; %#ok<NASGU>
+    if exist('parallel.Settings', 'class') == 8 || ...
+            (exist('ver','builtin')~=0 && any(strcmp({ver().Name}, 'Parallel Computing Toolbox')))
+        try
+            ps_ = parallel.Settings;
+            pool_guard_orig_ = ps_.Pool.AutoCreate;
+            ps_.Pool.AutoCreate = false;
+            pool_guard_cleanup_ = onCleanup( ...
+                @() restore_pool_autocreate_(pool_guard_orig_)); %#ok<NASGU>
+        catch
+            % no-op — best-effort guard.
+        end
+    end
+
     app.TextArea.addnl('   Running parametric basis...');
     app.TextArea.addnl('   Generating parametric basis figure...');
     app.fitParamBasis();
+    % If a pool was nevertheless spawned during fitParamBasis (some
+    % MATLAB toolbox internals ignore AutoCreate), kill it now so the
+    % next channel doesn't inherit an idle pool.
+    p_ = []; try, p_ = gcp('nocreate'); catch, end
+    if ~isempty(p_)
+        try, delete(p_); catch, end
+    end
     fh = gcf;
 
     % Optionally save the parametric basis figure (overwrite-gated)
@@ -130,3 +160,11 @@ function runParamBasis(app)
             'Both parametric power and phase fits failed.');
     end
 end % runParamBasis
+
+function restore_pool_autocreate_(orig)
+    if isempty(orig), return, end
+    try
+        parallel.Settings.Pool.AutoCreate = orig;
+    catch
+    end
+end

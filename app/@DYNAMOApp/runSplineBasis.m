@@ -53,10 +53,29 @@ function runSplineBasis(app)
         end
     end
 
-    % Fit spline basis model
+    % Fit spline basis model. Layered AutoCreate=false guard mirrors
+    % runParamBasis — see the comment block there for why this is
+    % needed even though runBatch already sets it at batch scope.
+    pool_guard_orig_ = []; %#ok<NASGU>
+    if exist('parallel.Settings', 'class') == 8 || ...
+            (exist('ver','builtin')~=0 && any(strcmp({ver().Name}, 'Parallel Computing Toolbox')))
+        try
+            ps_ = parallel.Settings;
+            pool_guard_orig_ = ps_.Pool.AutoCreate;
+            ps_.Pool.AutoCreate = false;
+            pool_guard_cleanup_ = onCleanup( ...
+                @() restore_pool_autocreate_(pool_guard_orig_)); %#ok<NASGU>
+        catch
+        end
+    end
+
     app.TextArea.addnl(   'Running spline basis...');
     app.TextArea.addnl('   Generating spline basis figure...');
     app.fitSplineBasis();
+    p_ = []; try, p_ = gcp('nocreate'); catch, end
+    if ~isempty(p_)
+        try, delete(p_); catch, end
+    end
     fh = gcf;
 
     % Optionally save the spline basis figure (overwrite-gated)
@@ -159,3 +178,11 @@ function runSplineBasis(app)
         save(p, '-struct', 'S');
     end
 end % runSplineBasis
+
+function restore_pool_autocreate_(orig)
+    if isempty(orig), return, end
+    try
+        parallel.Settings.Pool.AutoCreate = orig;
+    catch
+    end
+end
