@@ -68,8 +68,8 @@ function runParamBasis(app)
             (exist('ver','builtin')~=0 && any(strcmp({ver().Name}, 'Parallel Computing Toolbox')))
         try
             ps_ = parallel.Settings;
-            pool_guard_orig_ = ps_.Pool.AutoCreate;
-            ps_.Pool.AutoCreate = false;
+            pool_guard_orig_ = ps_.Pool.AutoCreate.ActiveValue;
+            ps_.Pool.AutoCreate.TemporaryValue = false;
             pool_guard_cleanup_ = onCleanup( ...
                 @() restore_pool_autocreate_(pool_guard_orig_)); %#ok<NASGU>
         catch
@@ -166,7 +166,8 @@ end % runParamBasis
 function restore_pool_autocreate_(orig)
     if isempty(orig), return, end
     try
-        parallel.Settings.Pool.AutoCreate = orig;
+        parallel.Settings.Pool.AutoCreate.TemporaryValue = orig;
+        clearTemporaryValue(parallel.Settings.Pool.AutoCreate);
     catch
     end
 end

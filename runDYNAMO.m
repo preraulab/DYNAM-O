@@ -325,8 +325,8 @@ if strcmp(backend, 'rust')
             (exist('ver','builtin')~=0 && any(strcmp({ver().Name}, 'Parallel Computing Toolbox')))
         try
             ps = parallel.Settings;
-            pool_autocreate_orig = ps.Pool.AutoCreate;
-            ps.Pool.AutoCreate = false;
+            pool_autocreate_orig = ps.Pool.AutoCreate.ActiveValue;
+            ps.Pool.AutoCreate.TemporaryValue = false;
             pool_autocreate_cleanup = onCleanup( ...
                 @() restore_pool_autocreate(pool_autocreate_orig)); %#ok<NASGU>
         catch ME
@@ -543,10 +543,12 @@ end
 function restore_pool_autocreate(orig)
     % Restore the original parallel.Settings.Pool.AutoCreate value at
     % function exit. Skip if we never captured one (Parallel Computing
-    % Toolbox absent or initial read failed).
+    % Toolbox absent or initial read failed). Clear our session-scoped
+    % override so the Setting falls back to the user's persistent value.
     if isempty(orig), return, end
     try
-        parallel.Settings.Pool.AutoCreate = orig;
+        parallel.Settings.Pool.AutoCreate.TemporaryValue = orig;
+        clearTemporaryValue(parallel.Settings.Pool.AutoCreate);
     catch
         % no-op — toolbox unloaded mid-run, etc.
     end

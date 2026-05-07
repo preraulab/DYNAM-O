@@ -38,9 +38,14 @@ function runBatch(app, dataList, stagingList)
     if exist('parallel.Settings', 'class') == 8 || ...
             (exist('ver','builtin')~=0 && any(strcmp({ver().Name}, 'Parallel Computing Toolbox')))
         try
+            % Use TemporaryValue so the change is scoped to this MATLAB
+            % session (cleared on exit). PersonalValue would persist
+            % across sessions, which is too sticky for an ephemeral
+            % batch-level guard. Read .ActiveValue (not the Setting
+            % object directly) to capture the current effective value.
             ps_ = parallel.Settings;
-            pool_autocreate_orig_ = ps_.Pool.AutoCreate;
-            ps_.Pool.AutoCreate = false;
+            pool_autocreate_orig_ = ps_.Pool.AutoCreate.ActiveValue;
+            ps_.Pool.AutoCreate.TemporaryValue = false;
             pool_autocreate_cleanup_ = onCleanup( ...
                 @() restore_pool_autocreate_(pool_autocreate_orig_)); %#ok<NASGU>
         catch ME_pool_
@@ -630,10 +635,15 @@ end % runBatch
 function restore_pool_autocreate_(orig)
     % Restore the original parallel.Settings.Pool.AutoCreate value at
     % batch exit. Skip if we never captured one (Parallel Computing
-    % Toolbox absent or initial read failed).
+    % Toolbox absent or initial read failed). Clear TemporaryValue so
+    % the Setting falls back to whatever persistent value the user has.
     if isempty(orig), return, end
     try
-        parallel.Settings.Pool.AutoCreate = orig;
+        % Clear our session-scoped override; the Setting reverts to
+        % its persistent (PersonalValue / FactoryValue) state, which
+        % equals `orig` we captured on entry.
+        parallel.Settings.Pool.AutoCreate.TemporaryValue = orig;
+        clearTemporaryValue(parallel.Settings.Pool.AutoCreate);
     catch
         % no-op — toolbox unloaded mid-run, etc.
     end
