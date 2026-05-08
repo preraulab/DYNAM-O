@@ -27,9 +27,15 @@ function runDataSummaryFigure(app)
     end
 
     % ---- Ensure SOPHs are available ----
+    % Unified loader: in-memory → SOPHs.mat → TIFF + aux reconstruction.
+    % displaySummaryPlot needs SOpower_norm + SOpower_times for the
+    % SO-power overlay; both come from auxiliary_data via the loader
+    % (SOpower_times is synthesised from Fs + retain_Fs + window_params).
     if isempty(app.SOPHs)
-        if isfile(sophMat)
-            app.SOPHs = load(sophMat).SOPHs;
+        SOPHs_resolved = app.loadOrReconstructSOPHs(app.channel, app.input_fbase);
+        if isfield(SOPHs_resolved, 'SOpower_mat') || ...
+                isfield(SOPHs_resolved, 'SOphase_mat')
+            app.SOPHs = SOPHs_resolved;
         else
             runStatsTable(app);   % Compute from scratch
         end

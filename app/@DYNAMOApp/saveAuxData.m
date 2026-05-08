@@ -21,11 +21,16 @@ function saveAuxData(app)
         return
     end
 
-    % Ensure SOPHs are available (needed for SOpower_norm field)
+    % Ensure SOPHs are available (needed for SOpower_norm field).
+    % Try the unified loader first (in-memory → SOPHs.mat → TIFF + aux).
+    % Note: when reconstructing from TIFF we still need the timeseries,
+    % which comes from a *previous* aux file; in the post-batch
+    % standalone-rerun case we'll fall through to runStatsTable.
     if isempty(app.SOPHs)
-        SOPHmat = fullfile(chanDir, 'SOPHs', [app.input_fbase '_SOPHs_' app.channel '.mat']);
-        if isfile(SOPHmat)
-            app.SOPHs = load(SOPHmat).SOPHs;
+        SOPHs_resolved = app.loadOrReconstructSOPHs(app.channel, app.input_fbase);
+        if isfield(SOPHs_resolved, 'SOpower_norm') && ...
+                ~isempty(SOPHs_resolved.SOpower_norm)
+            app.SOPHs = SOPHs_resolved;
         else
             app.anything_run = 1;
             app.TextArea.addnl('   Computing SOPHs for auxiliary data...');

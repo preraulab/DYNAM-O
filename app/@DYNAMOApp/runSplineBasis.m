@@ -43,9 +43,14 @@ function runSplineBasis(app)
     end
 
     % ---- Ensure SOPHs are available ----
+    % Unified loader: in-memory → SOPHs.mat → TIFF + aux reconstruction.
+    % Spline fitting only needs the histogram matrices + bins, so the
+    % slim reconstruction is sufficient when SOPHs.mat is absent.
     if isempty(app.SOPHs)
-        if isfile(sophMat)
-            app.SOPHs = load(sophMat).SOPHs;
+        SOPHs_resolved = app.loadOrReconstructSOPHs(app.channel, app.input_fbase);
+        if isfield(SOPHs_resolved, 'SOpower_mat') || ...
+                isfield(SOPHs_resolved, 'SOphase_mat')
+            app.SOPHs = SOPHs_resolved;
         else
             app.anything_run = 1;
             app.TextArea.addnl('   Running DYNAMO (computing SOPHs)...');

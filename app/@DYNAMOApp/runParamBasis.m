@@ -43,9 +43,15 @@ function runParamBasis(app)
     end
 
     % ---- Ensure SOPHs are available ----
+    % Try the unified loader first: in-memory → SOPHs.mat → TIFF + aux
+    % reconstruction. The slim TIFF reconstruction is sufficient for
+    % paramfit (only matrices + bins are needed), so SOPHs.mat is
+    % optional when the per-subject TIFFs are present.
     if isempty(app.SOPHs)
-        if isfile(sophMat)
-            app.SOPHs = load(sophMat).SOPHs;
+        SOPHs_resolved = app.loadOrReconstructSOPHs(app.channel, app.input_fbase);
+        if isfield(SOPHs_resolved, 'SOpower_mat') || ...
+                isfield(SOPHs_resolved, 'SOphase_mat')
+            app.SOPHs = SOPHs_resolved;
         else
             app.anything_run = 1;
             app.TextArea.addnl('   Running DYNAMO (computing SOPHs)...');
