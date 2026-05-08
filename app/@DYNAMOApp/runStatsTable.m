@@ -58,33 +58,36 @@ function runStatsTable(app)
     end
 
     % --- (1) Load whatever we can from disk into memory ---
-    % Overwrite means "ignore existing artifacts, recompute everything"
-    % — clear in-memory state AND skip the disk-load shortcuts below.
-    % Without this gate, a prior run that left only slim TIFF outputs
-    % on disk would short-circuit runDYNAMO and downstream stages
-    % (e.g. saveAuxData) would come up missing SOpower_norm.
+    % `stats_table` is dual-role: it's an OUTPUT of this stage, but also
+    % an INPUT to runDYNAMO's CSV-reuse path (skips computeTFPeaks).
+    % Always try to load it from disk so the user's CSV-stats workflow
+    % works even with overwrite ON — the only effect of overwrite is
+    % that downstream output artifacts (SOPHs / aux / paramfit /
+    % splinefit) are rewritten from scratch.
+    %
+    % SOPHs, by contrast, are pure OUTPUTS of this stage. With overwrite
+    % ON, skip the disk-load so a prior run's slim TIFF reconstruction
+    % (which lacks SOpower_norm) can't short-circuit the recompute path.
     if overwrite
-        app.SOPHs       = [];
-        app.stats_table = [];
-    else
-        if isempty(app.stats_table)
-            T_loaded = app.loadStatsTable(app.channel, app.input_fbase);
-            if ~isempty(T_loaded)
-                app.TextArea.addnl('   Loaded stats_table from disk.');
-                app.stats_table = T_loaded;
-            end
+        app.SOPHs = [];
+    end
+    if isempty(app.stats_table)
+        T_loaded = app.loadStatsTable(app.channel, app.input_fbase);
+        if ~isempty(T_loaded)
+            app.TextArea.addnl('   Loaded stats_table from disk.');
+            app.stats_table = T_loaded;
         end
-        if isempty(app.SOPHs)
-            SOPHs_loaded = app.loadOrReconstructSOPHs(app.channel, app.input_fbase);
-            % loadOrReconstructSOPHs can return a partially-populated struct
-            % (e.g. only freq_bins from a stale TIFF metadata read). Require
-            % at least one of the histogram matrices before promoting to
-            % app.SOPHs — otherwise the recompute branch below is correctly
-            % triggered. Mirrors the have_sophs check on the next block.
-            if isstruct(SOPHs_loaded) && ...
-                    (isfield(SOPHs_loaded,'SOpower_mat') || isfield(SOPHs_loaded,'SOphase_mat'))
-                app.SOPHs = SOPHs_loaded;
-            end
+    end
+    if isempty(app.SOPHs) && ~overwrite
+        SOPHs_loaded = app.loadOrReconstructSOPHs(app.channel, app.input_fbase);
+        % loadOrReconstructSOPHs can return a partially-populated struct
+        % (e.g. only freq_bins from a stale TIFF metadata read). Require
+        % at least one of the histogram matrices before promoting to
+        % app.SOPHs — otherwise the recompute branch below is correctly
+        % triggered. Mirrors the have_sophs check on the next block.
+        if isstruct(SOPHs_loaded) && ...
+                (isfield(SOPHs_loaded,'SOpower_mat') || isfield(SOPHs_loaded,'SOphase_mat'))
+            app.SOPHs = SOPHs_loaded;
         end
     end
 
