@@ -8,7 +8,10 @@ function writeSOPHsFormats(app, SOPHs, sophsDir, fbase, channel, formats, overwr
     %   fbase    : input filename base (subject id).
     %   channel  : channel string.
     %   formats  : cellstr of extensions to emit. Subset of
-    %              {'.tiff', '.h5'}. Legacy '.mat' is treated as '.h5'.
+    %              {'.tiff', '.mat'}. The .mat is HDF5 internally
+    %              (-v7.3) and saved via `save -struct slim` so each
+    %              SOPHs field lands as a TOP-LEVEL dataset (h5py
+    %              friendly).
     %   overwrite: logical.
     %
     %   Lossy direction warnings (one line per call):
@@ -16,13 +19,14 @@ function writeSOPHsFormats(app, SOPHs, sophsDir, fbase, channel, formats, overwr
     %     - tiff → h5 : SOphase / timeseries / SOfiltered absent.
     %   Detected by inspecting which SOPHs fields are present.
     %
-    %   Layout: the .h5 is written via `save('-struct', slim, '-v7.3')`
+    %   Layout: the .mat is written via `save('-struct', slim, '-v7.3')`
     %   so every SOPHs field lands as a TOP-LEVEL HDF5 dataset (e.g.
-    %   /SOpower_mat, /freq_bins). Python access:
+    %   /SOpower_mat, /freq_bins) — readable directly via h5py /
+    %   h5dump despite the .mat extension:
     %     `with h5py.File(p,'r') as f: M = f['SOpower_mat'][:]`
-    %   The legacy `/SOPHs/<field>` group layout is still readable via
-    %   loadOrReconstructSOPHs, which falls back when no flat fields are
-    %   found at the top level.
+    %   The legacy `/SOPHs/<field>` group layout (a single 'SOPHs'
+    %   struct variable) is still readable via loadOrReconstructSOPHs,
+    %   which falls back when no flat fields are found at the top level.
     %
     %   Fields excluded from the saved .h5 (carried in the in-memory
     %   canonical only): SO{power,phase}_paramfit, SO{power,phase}_splinefit.

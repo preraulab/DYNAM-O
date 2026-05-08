@@ -11,17 +11,18 @@ function files = dynamo_files_for_components(subject, channel, components)
 %   dynamo_seed_index_from_cache classifies):
 %
 %       'aux'      → <chan>/auxiliary_data/<subj>_auxiliary_data_<chan>.{h5,mat}
-%       'SOPHs'    → <chan>/SOPHs/<subj>_SOPHs_<chan>.{h5,mat}
+%       'SOPHs'    → <chan>/SOPHs/<subj>_SOPHs_<chan>.mat
 %                  + <chan>/SOPHs/<subj>_SOPHs_power_<chan>.tiff
 %                  + <chan>/SOPHs/<subj>_SOPHs_phase_<chan>.tiff
-%       'TFpeaks'  → <chan>/TFpeaks/<subj>_stats_table_<chan>.{h5,mat,csv}
-%       'paramfit' → <chan>/param_basis/<subj>_SOpower_paramfit_<chan>.{h5,mat,csv}
-%                  → <chan>/param_basis/<subj>_SOphase_paramfit_<chan>.{h5,mat,csv}
-%       'spline'   → <chan>/spline_basis/<subj>_SOpower_splinefit_<chan>.{h5,mat,tiff}
-%                  → <chan>/spline_basis/<subj>_SOphase_splinefit_<chan>.{h5,mat,tiff}
+%       'TFpeaks'  → <chan>/TFpeaks/<subj>_stats_table_<chan>.{mat,csv}
+%       'paramfit' → <chan>/param_basis/<subj>_SOpower_paramfit_<chan>.{mat,csv}
+%                  → <chan>/param_basis/<subj>_SOphase_paramfit_<chan>.{mat,csv}
+%       'spline'   → <chan>/spline_basis/<subj>_SOpower_splinefit_<chan>.{mat,tiff}
+%                  → <chan>/spline_basis/<subj>_SOphase_splinefit_<chan>.{mat,tiff}
 %
-%   The .mat companions are listed for backward-compat with pre-revamp
-%   runs; new runs emit only the .h5 variant for the binary slot.
+%   `aux` is the only component whose binary slot is `.h5` by default;
+%   the others stay on `.mat` (HDF5 internally — externally readable
+%   via h5py — but the `.mat` extension is what MATLAB load() uses).
 %
 %   The synth includes both .mat and .csv (or .tiff) companion files even
 %   though a given run may have saved only one format — downstream
@@ -55,8 +56,6 @@ function files = dynamo_files_for_components(subject, channel, components)
                 files{end+1} = sprintf('%s/auxiliary_data/%s_auxiliary_data_%s.mat', ...
                     channel, subject, channel); %#ok<AGROW>
             case 'SOPHs'
-                files{end+1} = sprintf('%s/SOPHs/%s_SOPHs_%s.h5', ...
-                    channel, subject, channel); %#ok<AGROW>
                 files{end+1} = sprintf('%s/SOPHs/%s_SOPHs_%s.mat', ...
                     channel, subject, channel); %#ok<AGROW>
                 files{end+1} = sprintf('%s/SOPHs/%s_SOPHs_power_%s.tiff', ...
@@ -64,33 +63,23 @@ function files = dynamo_files_for_components(subject, channel, components)
                 files{end+1} = sprintf('%s/SOPHs/%s_SOPHs_phase_%s.tiff', ...
                     channel, subject, channel); %#ok<AGROW>
             case 'TFpeaks'
-                files{end+1} = sprintf('%s/TFpeaks/%s_stats_table_%s.h5', ...
-                    channel, subject, channel); %#ok<AGROW>
                 files{end+1} = sprintf('%s/TFpeaks/%s_stats_table_%s.mat', ...
                     channel, subject, channel); %#ok<AGROW>
                 files{end+1} = sprintf('%s/TFpeaks/%s_stats_table_%s.csv', ...
                     channel, subject, channel); %#ok<AGROW>
             case 'paramfit'
-                files{end+1} = sprintf('%s/param_basis/%s_SOpower_paramfit_%s.h5', ...
-                    channel, subject, channel); %#ok<AGROW>
                 files{end+1} = sprintf('%s/param_basis/%s_SOpower_paramfit_%s.mat', ...
                     channel, subject, channel); %#ok<AGROW>
                 files{end+1} = sprintf('%s/param_basis/%s_SOpower_paramfit_%s.csv', ...
-                    channel, subject, channel); %#ok<AGROW>
-                files{end+1} = sprintf('%s/param_basis/%s_SOphase_paramfit_%s.h5', ...
                     channel, subject, channel); %#ok<AGROW>
                 files{end+1} = sprintf('%s/param_basis/%s_SOphase_paramfit_%s.mat', ...
                     channel, subject, channel); %#ok<AGROW>
                 files{end+1} = sprintf('%s/param_basis/%s_SOphase_paramfit_%s.csv', ...
                     channel, subject, channel); %#ok<AGROW>
             case 'spline'
-                files{end+1} = sprintf('%s/spline_basis/%s_SOpower_splinefit_%s.h5', ...
-                    channel, subject, channel); %#ok<AGROW>
                 files{end+1} = sprintf('%s/spline_basis/%s_SOpower_splinefit_%s.mat', ...
                     channel, subject, channel); %#ok<AGROW>
                 files{end+1} = sprintf('%s/spline_basis/%s_SOpower_splinefit_%s.tiff', ...
-                    channel, subject, channel); %#ok<AGROW>
-                files{end+1} = sprintf('%s/spline_basis/%s_SOphase_splinefit_%s.h5', ...
                     channel, subject, channel); %#ok<AGROW>
                 files{end+1} = sprintf('%s/spline_basis/%s_SOphase_splinefit_%s.mat', ...
                     channel, subject, channel); %#ok<AGROW>

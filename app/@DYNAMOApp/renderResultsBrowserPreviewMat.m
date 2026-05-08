@@ -20,7 +20,14 @@ function renderResultsBrowserPreviewMat(app, p)
 
     % --- Smart cases (peek var names, then load only what's needed) ---
     try
-        if any(strcmp(names, 'SOPHs'))
+        % SOPHs MAT comes in two layouts:
+        %   - legacy nested:  one 'SOPHs' struct variable
+        %   - new flat:       top-level vars (SOpower_mat, freq_bins, ...)
+        % Both route to previewMatSOPHs, which handles either shape.
+        is_flat_sophs = (any(strcmp(names, 'SOpower_mat')) || ...
+                         any(strcmp(names, 'SOphase_mat'))) && ...
+                        ~any(strcmp(names, 'aggregate'));
+        if any(strcmp(names, 'SOPHs')) || is_flat_sophs
             app.previewMatSOPHs(p);                    return
         end
         if any(strcmp(names, 'SOpower_paramfit')) || ...
