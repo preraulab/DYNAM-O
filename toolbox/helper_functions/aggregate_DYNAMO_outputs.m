@@ -600,22 +600,35 @@ for ii = 1:total
         continue
     end
     pages{end+1} = M;            %#ok<AGROW>
-    ids(end+1,1) = {fbase};      %#ok<AGROW>
+
+    % Prefer the embedded subject_id over the filename-derived fbase
+    % when it's present and non-empty — defensive against renamed
+    % files that have lost their original DYNAM-O naming.
+    embeddedId = '';
+    metaParsed = struct();
+    try
+        info = imfinfo(p);
+        if isfield(info, 'ImageDescription') && ~isempty(info(1).ImageDescription)
+            metaParsed = jsondecode(info(1).ImageDescription);
+            if isfield(metaParsed, 'subject_id')
+                embeddedId = char(strtrim(string(metaParsed.subject_id)));
+            end
+        end
+    catch
+        metaParsed = struct();
+    end
+    if ~isempty(embeddedId)
+        ids(end+1,1) = {embeddedId};   %#ok<AGROW>
+    else
+        ids(end+1,1) = {fbase};        %#ok<AGROW>
+    end
 
     if isempty(freq_bins) || isempty(so_bins)
-        try
-            info = imfinfo(p);
-            if isfield(info, 'ImageDescription') && ~isempty(info(1).ImageDescription)
-                meta = jsondecode(info(1).ImageDescription);
-                if isempty(freq_bins) && isfield(meta,'freq_bins')
-                    freq_bins = meta.freq_bins(:);
-                end
-                if isempty(so_bins) && ~isempty(binsField) && isfield(meta, binsField)
-                    so_bins = meta.(binsField)(:);
-                end
-            end
-        catch
-            % ImageDescription missing/unparseable — leave bins empty.
+        if isempty(freq_bins) && isfield(metaParsed,'freq_bins')
+            freq_bins = metaParsed.freq_bins(:);
+        end
+        if isempty(so_bins) && ~isempty(binsField) && isfield(metaParsed, binsField)
+            so_bins = metaParsed.(binsField)(:);
         end
     end
 end

@@ -38,24 +38,12 @@ function plotAggregateSOHist(app, ax, filePath, axis_kind)
                 % single subject's gap doesn't poison the aggregate
                 % cell (matches the .mat branch's mean(...,'omitnan')).
                 info  = imfinfo(filePath);
-                % Page-order subject IDs live in <base>_subjectIDs.txt
-                % alongside the aggregate; if present, map them to
-                % the subject filter mask. Otherwise we have no ID
-                % handle and have to include every page.
+                % Per-page subject IDs are resolved through a four-way
+                % fallback (embedded JSON → sidecar → per-subject TIFFs
+                % → runs JSONL) so the aggregate works "TIFF alone".
                 pageMask = true(1, numel(info));
-                pageIds  = {};
-                try
-                    [d, nm, ~] = fileparts(filePath);
-                    idsTxt = fullfile(d, [nm '_subjectIDs.txt']);
-                    if isfile(idsTxt)
-                        fid = fopen(idsTxt, 'r');
-                        c   = onCleanup(@() fclose(fid)); %#ok<NASGU>
-                        pageIds = textscan(fid, '%s', 'Delimiter', '\n', 'WhiteSpace', '');
-                        pageIds = strtrim(pageIds{1});
-                    end
-                catch
-                    pageIds = {};
-                end
+                pageIds  = app.recoverAggregateSubjectIDs( ...
+                    filePath, axis_kind, numel(info));
                 if numel(pageIds) == numel(info)
                     pageMask = app.activeSubjectMask(pageIds);
                 end

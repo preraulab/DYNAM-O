@@ -97,12 +97,19 @@ function runStatsTable(app)
     end
 
     if ~isempty(soph_targets)
+        % Embed subject_id alongside bin axes so downstream readers
+        % (aggregator, results browser, stats path) can identify the
+        % subject from the TIFF alone. Mirrors the aggregate-TIFF's
+        % subjectIDs array.
+        subjectId = char(app.input_fbase);
         powMeta = jsonencode(struct( ...
             'freq_bins',    SOPHs.freq_bins(:).', ...
-            'SOpower_bins', SOPHs.SOpower_bins(:).'));
+            'SOpower_bins', SOPHs.SOpower_bins(:).', ...
+            'subject_id',   subjectId));
         phaMeta = jsonencode(struct( ...
             'freq_bins',    SOPHs.freq_bins(:).', ...
-            'SOphase_bins', SOPHs.SOphase_bins(:).'));
+            'SOphase_bins', SOPHs.SOphase_bins(:).', ...
+            'subject_id',   subjectId));
         wrote_any = false;
         for ii = 1:numel(soph_targets)
             t = soph_targets{ii};

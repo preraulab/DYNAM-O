@@ -106,22 +106,71 @@ end
 
 
 function [stack, ids, freq_bins, so_bins] = loadSOPHStackForStats_(app, channel, axisKind)
+    % Stack loader for the stats path. Tries the .mat aggregate first
+    % (carries IDs as a struct field). Falls back to the TIFF
+    % aggregate, with subject IDs resolved via the four-way fallback
+    % so the path works "TIFF alone" too.
     stack = []; ids = {}; freq_bins = []; so_bins = [];
     aggDir = fullfile(app.ResultsBrowserOutputDirField.Value, 'aggregates', channel);
-    cand   = fullfile(aggDir, [channel '_aggregate_SOPHs_' axisKind '.mat']);
-    if ~isfile(cand), return, end
+
+    matCand  = fullfile(aggDir, [channel '_aggregate_SOPHs_' axisKind '.mat']);
+    if isfile(matCand)
+        try
+            S = load(matCand);
+            if isfield(S, 'aggregate'), agg = S.aggregate; else, agg = S; end
+            fld = ['SO' axisKind '_mat'];
+            if isfield(agg, fld) && ~isempty(agg.(fld))
+                stack = agg.(fld);
+                if isfield(agg, 'subjectIDs'), ids = agg.subjectIDs; end
+                if isfield(agg, 'freq_bins'),  freq_bins = agg.freq_bins(:); end
+                bk = ['SO' axisKind '_bins'];
+                if isfield(agg, bk),           so_bins   = agg.(bk)(:); end
+                return
+            end
+        catch
+            % Fall through to TIFF path.
+        end
+    end
+
+    tiffCand = fullfile(aggDir, [channel '_aggregate_SOPHs_' axisKind '.tiff']);
+    if ~isfile(tiffCand), return, end
     try
-        S = load(cand);
+        info = imfinfo(tiffCand);
     catch
         return
     end
-    if isfield(S, 'aggregate'), agg = S.aggregate; else, agg = S; end
-    fld = ['SO' axisKind '_mat'];
-    if ~isfield(agg, fld) || isempty(agg.(fld)), return, end
-    stack = agg.(fld);
-    if isfield(agg, 'subjectIDs'), ids = agg.subjectIDs; end
-    if isfield(agg, 'freq_bins'), freq_bins = agg.freq_bins(:); end
-    if isfield(agg, ['SO' axisKind '_bins']), so_bins = agg.(['SO' axisKind '_bins'])(:); end
+    if isempty(info), return, end
+
+    nP = numel(info);
+    pages = cell(1, nP);
+    for pp = 1:nP
+        try
+            pages{pp} = double(imread(tiffCand, pp));
+        catch
+            pages{pp} = [];
+        end
+    end
+    keep = ~cellfun(@isempty, pages);
+    if ~any(keep), return, end
+    pages = pages(keep);
+    stack = cat(3, pages{:});
+
+    % Bin axes from page-1 ImageDescription (writer embeds them).
+    try
+        if isfield(info, 'ImageDescription') && ~isempty(info(1).ImageDescription)
+            meta = jsondecode(info(1).ImageDescription);
+            if isfield(meta, 'freq_bins'), freq_bins = meta.freq_bins(:); end
+            bk = ['SO' axisKind '_bins'];
+            if isfield(meta, bk), so_bins = meta.(bk)(:); end
+        end
+    catch
+    end
+
+    % Page-order subject IDs via the four-way fallback resolver.
+    rawIds = app.recoverAggregateSubjectIDs(tiffCand, axisKind, nP);
+    if ~isempty(rawIds)
+        ids = rawIds(keep);
+    end
 end
 
 

@@ -28,16 +28,25 @@ function writeSOPHsAggregate(app, partial, outDir, channelName, axis, label)
         t = Tiff(tiffPath, 'w');
         cleaner = onCleanup(@() close(t));
         % Build a JSON ImageDescription for the first page so
-        % downstream readers can recover bins directly from the
-        % TIFF (no sidecar required).
+        % downstream readers can recover bins AND per-page subject
+        % IDs directly from the TIFF (no sidecar required). The
+        % subjectIDs array is keyed in TIFF page order so a reader
+        % can map page index → subject ID without the .txt sidecar
+        % or the runs index. Sidecar still written below for
+        % external tools that don't parse JSON tags.
         tiffDesc = '';
         fb = []; sb = [];
         if isfield(partial,'freq_bins'), fb = partial.freq_bins; end
         if isfield(partial,'so_bins'),   sb = partial.so_bins;   end
-        if ~isempty(fb) || ~isempty(sb)
+        idsRow = {};
+        if ~isempty(partial.tiff_ids)
+            idsRow = reshape(cellstr(partial.tiff_ids), 1, []);
+        end
+        if ~isempty(fb) || ~isempty(sb) || ~isempty(idsRow)
             metaStruct = struct();
-            if ~isempty(fb), metaStruct.freq_bins = fb(:).'; end
-            if ~isempty(sb), metaStruct.(['SO' axis '_bins']) = sb(:).'; end
+            if ~isempty(fb),     metaStruct.freq_bins = fb(:).'; end
+            if ~isempty(sb),     metaStruct.(['SO' axis '_bins']) = sb(:).'; end
+            if ~isempty(idsRow), metaStruct.subjectIDs = idsRow; end
             tiffDesc = jsonencode(metaStruct);
         end
         for kk = 1:numel(partial.tiff_pages)
