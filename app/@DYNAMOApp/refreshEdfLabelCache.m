@@ -68,9 +68,11 @@ function refreshEdfLabelCache(app, varargin)
     pathSet = containers.Map('KeyType', 'char', 'ValueType', 'logical');
     for k = 1:numel(paths), pathSet(paths{k}) = true; end
     cachedKeys = keys(app.EdfLabelCache_);
+    nPruned = 0;
     for k = 1:numel(cachedKeys)
         if ~pathSet.isKey(cachedKeys{k})
             remove(app.EdfLabelCache_, cachedKeys{k});
+            nPruned = nPruned + 1;
         end
     end
 
@@ -97,6 +99,11 @@ function refreshEdfLabelCache(app, varargin)
     nNewFiles = sum(toScan);
 
     if nNewFiles == 0 && ~strcmp(showMode, 'force')
+        % Cache fully warm. If files were pruned (deletion-only update),
+        % the user still wants to see the new coverage numbers.
+        if nPruned > 0
+            try, app.reportChannelCoverage(); catch, end
+        end
         return
     end
 
@@ -151,6 +158,11 @@ function refreshEdfLabelCache(app, varargin)
     elapsed = toc(t0);
     try, app.TextArea.addnl(sprintf('Pre-flight complete: cached %d/%d file(s) in %.1fs.', ...
             done, nNewFiles, elapsed)); catch, end
+
+    % Show channel coverage across the (possibly updated) file list. Same
+    % report fires on add/remove via the mutation hooks at all DataList
+    % write sites, so the user always sees the current numbers.
+    try, app.reportChannelCoverage(); catch, end
 end
 
 
