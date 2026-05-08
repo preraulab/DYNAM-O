@@ -151,6 +151,48 @@ else
     [header, signalHeader, data] = read_EDF(edf_fpath, ...
         'Channels', channels, 'References', References);
 end
+
+% read_EDF demotes per-channel resolution failures (UnknownChannel,
+% ParseError, RefCollision) to warnings and silently drops the offending
+% entry from its return — see apply_channel_derivations.m. That means a
+% partial-failure load returns fewer columns than the caller asked for,
+% which would mis-align positional indexing downstream (runBatch does
+% `app.data = bulk_data(:, ii)` against the original channel list,
+% hitting an out-of-bounds error on the first dropped entry and quietly
+% pulling the wrong signal under the wrong name on the entries before
+% it). Fail loudly here with a list of dropped specs so the user can fix
+% their channel configuration instead of getting silently bad output.
+if numel(signalHeader) < numel(channels)
+    returned_labels = {signalHeader.signal_labels};
+    expected_labels = cell(1, numel(channels));
+    for kk = 1:numel(channels)
+        spec = channels{kk};
+        eq = strfind(spec, '=');
+        if isempty(eq)
+            expected_labels{kk} = strtrim(spec);
+        else
+            expected_labels{kk} = strtrim(spec(1:eq(1)-1));
+        end
+    end
+    matched = false(1, numel(channels));
+    used    = false(1, numel(returned_labels));
+    for kk = 1:numel(expected_labels)
+        for jj = 1:numel(returned_labels)
+            if ~used(jj) && strcmp(expected_labels{kk}, returned_labels{jj})
+                matched(kk) = true;
+                used(jj)    = true;
+                break
+            end
+        end
+    end
+    dropped = channels(~matched);
+    error('load_data:DroppedChannels', ...
+        ['read_EDF returned %d of %d requested channels — the following ', ...
+         'channel specs were dropped (see warnings above for individual ', ...
+         'reasons): %s'], ...
+        numel(signalHeader), numel(channels), strjoin(dropped, ' | '));
+end
+
 % read_EDF returns signal_cells as a row cell of row vectors. Naive
 % cell2mat would horizontally concatenate them into 1 x (N*C) garbage
 % — single-channel callers got a harmless 1 x N row, but multi-channel

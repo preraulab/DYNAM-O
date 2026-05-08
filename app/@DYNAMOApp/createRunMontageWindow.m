@@ -559,6 +559,36 @@ function createRunMontageWindow(app)
                 ok = false; msg = sprintf('channel "%s": %s', chansState{k}, mm); return
             end
         end
+
+        % Reject duplicate output names. Two channels sharing the same
+        % output name would both write to the same <OutputDir>/<name>/
+        % directory, producing file collisions and stale-state bugs in
+        % the second iteration (downstream stages can resurrect outputs
+        % from the first channel under the second channel's identity).
+        % The outname rule mirrors runBatch.m: text before '=' if
+        % present, otherwise the whole spec. Comparison is case-
+        % insensitive so the check matches case-insensitive filesystems
+        % (macOS, Windows).
+        outnames = cell(1, numel(chansState));
+        for k = 1:numel(chansState)
+            spec = chansState{k};
+            eq = strfind(spec, '=');
+            if isempty(eq)
+                outnames{k} = strtrim(spec);
+            else
+                outnames{k} = strtrim(spec(1:eq(1)-1));
+            end
+        end
+        [u, ia] = unique(lower(outnames), 'stable');
+        if numel(u) ~= numel(outnames)
+            dup_idx = setdiff(1:numel(outnames), ia);
+            dup_name = outnames{dup_idx(1)};
+            ok  = false;
+            msg = sprintf(['duplicate output name "%s" — two or more channels would write ' ...
+                           'to the same output folder. Rename one (edit the Output Name ' ...
+                           'column) so every channel has a unique name.'], dup_name);
+            return
+        end
     end
 
     function [ok, msg, leaves] = checkLeaves(expr, labels)
