@@ -62,12 +62,21 @@ assert(isfolder(root), 'convert_dynamo_mats_to_v73:badRoot', ...
 % may have parked alongside their results.
 dynamo_subdirs = {'SOPHs', 'stats_table', 'param_basis', 'spline_basis', ...
     'auxiliary_data', 'aggregates'};
-listing = struct('name', {}, 'folder', {}, 'bytes', {});
+% Collect each dir() result into a cell, then vertcat at the end.
+% Pre-allocating a typed struct fails because dir()'s field set varies
+% across MATLAB releases (date / datenum / isdir).
+chunks = cell(1, numel(dynamo_subdirs));
 for kk = 1:numel(dynamo_subdirs)
     found = dir(fullfile(root, '**', dynamo_subdirs{kk}, '**', '*.mat'));
     if ~isempty(found)
-        listing = [listing, found(:).']; %#ok<AGROW>
+        chunks{kk} = found(:);
     end
+end
+chunks(cellfun(@isempty, chunks)) = [];
+if isempty(chunks)
+    listing = dir(fullfile(root, '__no_match__'));   % typed empty struct
+else
+    listing = vertcat(chunks{:});
 end
 % Deduplicate by absolute path — `aggregates/<channel>/SOPHs/...` would
 % otherwise be matched twice (once via 'aggregates', once via 'SOPHs').
