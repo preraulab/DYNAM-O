@@ -115,10 +115,10 @@ function runBatch(app, dataList, stagingList)
     nChannels = length(app.ChannelList);
     app.ProgressBar.reset();
     app.ProgressBar.LabelPrefix = '';
-    % Note: ProgressBar.N is set below, after channelListSafe and the
-    % unique-outname count are computed (the work unit is one canonical
-    % outname per file, not one input spec per file).
-    app.ProgressBar.start;
+    % ProgressBar.N must be set BEFORE start() — start() snapshots N
+    % into the JS startAnim message, so a later N assignment doesn't
+    % propagate. Set it after channelListSafe / nUniqueOutnames is
+    % computed (further down) and start() is then invoked there.
 
     % ---------------------------------------------------------------
     %   MAIN BATCH LOOP
@@ -177,6 +177,7 @@ function runBatch(app, dataList, stagingList)
     end
     nUniqueOutnames = sum(primarySpecMask);
     app.ProgressBar.N = nFiles * nUniqueOutnames;
+    app.ProgressBar.start;
 
     % Pre-create every output subdirectory that enabled analysis steps
     % will write to. mkdir is idempotent but each call costs a syscall,
