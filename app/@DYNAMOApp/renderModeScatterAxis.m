@@ -107,6 +107,13 @@ function ok = renderModeScatterAxis(app, ax, channelName, axisKind)
     else
         scatter(ax, x, y, sz, cv, 'filled', ...
             'MarkerEdgeColor', [0 0 0], 'LineWidth', 0.25);
+        % Returning to 2-D: undo any aspect-ratio / camera state that
+        % may have stuck through the linkprop or from a prior 3-D
+        % render. cla(ax,'reset') clears most of this, but the linked
+        % camera View can re-propagate from a sibling axis the moment
+        % we re-link, so be explicit.
+        view(ax, 2);
+        axis(ax, 'normal');     % PlotBoxAspectRatio / DataAspectRatio → auto
     end
     if isContinuous
         cmap = resolveModeScatterColormap(cmapName, 256);
