@@ -1389,6 +1389,11 @@ function createRunMontageWindow(app)
         % first two cols of tableData match that shape.
         validateChannelSamplingRates(app, chansState, tableData(:, [1 2]));
         app.refreshChannelTooltips();
+        % Print the channel-level coverage table now that ChannelList
+        % is committed — flips the report from "raw EDF labels" mode
+        % to "configured channels" mode (or refreshes the latter when
+        % the user edits the composer between runs).
+        try, app.reportChannelCoverage(); catch, end
         if isvalid(d), delete(d); end
     end
 
