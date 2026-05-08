@@ -452,21 +452,65 @@ for ii = 1:total
     progFcn(ii, total);
     fbase = lst(ii).fbase;
     p     = lst(ii).path;
-    try
-        S = load(p);
-    catch ME
-        warnings_out{end+1} = sprintf('load failed: %s — %s', p, ME.message); %#ok<AGROW>
-        continue
+    % Per-file diagnostic so a hang during load() identifies the offending
+    % file by name (load() is uninterruptible from the UI thread, so without
+    % this you only see the file index advance, not which path stalled).
+    di = dir(p);
+    if isempty(di)
+        fprintf('  [stack_sophs %d/%d] missing: %s\n', ii, total, p);
+    else
+        fprintf('  [stack_sophs %d/%d] loading %s (%.1f MB)\n', ...
+            ii, total, p, di(1).bytes/1e6);
     end
-    SOPHs = locate_sophs_struct(S);
-    if isempty(SOPHs) || ~isfield(SOPHs, field) || isempty(SOPHs.(field))
+    % Try a partial read via matfile so we only pull the histogram + bins
+    % (the saved SOPHs struct also carries the full SOpower / SOphase
+    % timeseries at EEG Fs, which we don't need for aggregation). Partial
+    % field reads only work on -v7.3 saves; on legacy v7 files the matfile
+    % path silently full-loads, so we fall back to load() either way.
+    M = []; freq_local = []; bins_local = [];
+    used_partial = false;
+    try
+        mf = matfile(p);
+        info = whos(mf);
+        sn = '';
+        for jj = 1:numel(info)
+            if strcmp(info(jj).class, 'struct') && ...
+                    (strcmpi(info(jj).name, 'SOPHs') || numel(info) == 1)
+                sn = info(jj).name; break
+            end
+        end
+        if ~isempty(sn)
+            M          = mf.(sn).(field);
+            freq_local = mf.(sn).freq_bins;
+            bins_local = mf.(sn).(binsField);
+            used_partial = true;
+        end
+    catch
+        used_partial = false;
+    end
+    if ~used_partial
+        try
+            S = load(p);
+        catch ME
+            warnings_out{end+1} = sprintf('load failed: %s — %s', p, ME.message); %#ok<AGROW>
+            continue
+        end
+        SOPHs = locate_sophs_struct(S);
+        if isempty(SOPHs) || ~isfield(SOPHs, field) || isempty(SOPHs.(field))
+            warnings_out{end+1} = sprintf('%s has no %s — skipping', p, field); %#ok<AGROW>
+            continue
+        end
+        M = SOPHs.(field);
+        if isfield(SOPHs, 'freq_bins'), freq_local = SOPHs.freq_bins; end
+        if isfield(SOPHs, binsField),   bins_local = SOPHs.(binsField); end
+    end
+    if isempty(M)
         warnings_out{end+1} = sprintf('%s has no %s — skipping', p, field); %#ok<AGROW>
         continue
     end
-    M = SOPHs.(field);
     if isempty(stacks)
-        if isfield(SOPHs, 'freq_bins'), freq_bins = SOPHs.freq_bins; end
-        if isfield(SOPHs, binsField),   bins      = SOPHs.(binsField); end
+        if ~isempty(freq_local), freq_bins = freq_local; end
+        if ~isempty(bins_local), bins      = bins_local; end
         canon = size(M);
     else
         if ~isequal(size(M), canon)

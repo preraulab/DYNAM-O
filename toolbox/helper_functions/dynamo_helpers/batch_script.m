@@ -126,7 +126,7 @@ for ii = 1:length(scoring_fpaths)
 
     % Saving
     save(output_stats_name,'stats_table');
-    save(output_SOPH_name,'SOPHs');
+    save(output_SOPH_name,'SOPHs','-v7.3');
 
 end
 

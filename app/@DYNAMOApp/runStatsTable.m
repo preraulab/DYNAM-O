@@ -115,7 +115,7 @@ function runStatsTable(app)
             switch t.kind
                 case 'tiff_power', app.writeTiff(t.path, SOPHs.SOpower_mat, powMeta);
                 case 'tiff_phase', app.writeTiff(t.path, SOPHs.SOphase_mat, phaMeta);
-                case 'mat',        save(t.path, 'SOPHs');
+                case 'mat',        save(t.path, 'SOPHs', '-v7.3');
             end
         end
     end
