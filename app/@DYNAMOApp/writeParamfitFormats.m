@@ -62,6 +62,16 @@ function writeParamfitFormats(app, fitData, base, axis_kind, freq_bins, so_bins,
                 if ~isempty(subject_id)
                     fitData_with_id.subject_id = char(subject_id);
                 end
+                % Strip CSV-reconstruction provenance flags so a future
+                % reload from this .mat doesn't keep flagging itself slim.
+                if isfield(fitData_with_id, 'from_csv')
+                    fitData_with_id = rmfield(fitData_with_id, 'from_csv');
+                end
+                if isstruct(fitData_with_id.fitobj) && ...
+                        isfield(fitData_with_id.fitobj, 'from_csv')
+                    fitData_with_id.fitobj = ...
+                        rmfield(fitData_with_id.fitobj, 'from_csv');
+                end
                 S.(varName) = fitData_with_id; %#ok<STRNU>
                 save(p, '-struct', 'S', '-v7.3');
                 if strcmp(axis_kind,'power')

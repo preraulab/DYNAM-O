@@ -27,8 +27,12 @@ function saveAuxData(app)
     end
     requested = {aux_choice};
 
-    target = [auxBase aux_choice];
-    if ~overwrite && isfile(target)
+    % Skip when EITHER format already covers the binary slot — a user
+    % flipping between .h5 and .mat shouldn't double up the artifact
+    % unless they ask to overwrite.
+    h5Path  = [auxBase '.h5'];
+    matPath = [auxBase '.mat'];
+    if ~overwrite && (isfile(h5Path) || isfile(matPath))
         app.TextArea.addnl('   Skipping auxiliary data (file already exists).');
         return
     end

@@ -99,7 +99,7 @@ function runSplineBasis(app)
             end
         end
 
-        app.TextArea.addnl(   'Running spline basis...');
+        app.TextArea.addnl('   Running spline basis...');
         app.TextArea.addnl('   Generating spline basis figure...');
         app.fitSplineBasis();
         p_ = []; try, p_ = gcp('nocreate'); catch, end

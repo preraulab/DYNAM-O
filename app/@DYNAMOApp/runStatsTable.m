@@ -72,7 +72,13 @@ function runStatsTable(app)
     end
     if isempty(app.SOPHs)
         SOPHs_loaded = app.loadOrReconstructSOPHs(app.channel, app.input_fbase);
-        if ~isempty(fieldnames(SOPHs_loaded))
+        % loadOrReconstructSOPHs can return a partially-populated struct
+        % (e.g. only freq_bins from a stale TIFF metadata read). Require
+        % at least one of the histogram matrices before promoting to
+        % app.SOPHs — otherwise the recompute branch below is correctly
+        % triggered. Mirrors the have_sophs check on the next block.
+        if isstruct(SOPHs_loaded) && ...
+                (isfield(SOPHs_loaded,'SOpower_mat') || isfield(SOPHs_loaded,'SOphase_mat'))
             app.SOPHs = SOPHs_loaded;
         end
     end

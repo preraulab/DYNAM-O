@@ -56,18 +56,14 @@ function SOPHs = loadOrReconstructSOPHs(app, channel, fbase)
     % --- TIFF + aux reconstruction ---
     powTiff  = fullfile(sophsDir, [fbase '_SOPHs_power_' channel '.tiff']);
     phaTiff  = fullfile(sophsDir, [fbase '_SOPHs_phase_' channel '.tiff']);
-    auxBase  = fullfile(chanDir, 'auxiliary_data', ...
-        [fbase '_auxiliary_data_' channel]);
-    auxPath = '';
-    for ap = {[auxBase '.h5'], [auxBase '.mat']}
-        if isfile(ap{1}), auxPath = ap{1}; break, end
-    end
 
     SOPHs = readSOPHTiffPair_(powTiff, phaTiff);
-    if ~isempty(fieldnames(SOPHs)) && ~isempty(auxPath)
+    if ~isempty(fieldnames(SOPHs))
         try
-            AD = load(auxPath).auxiliary_data;
-            if isfield(AD, 'SOpower_norm')
+            % Route through loadAuxData so both the new .h5 (h5read) and
+            % legacy .mat (load) layouts resolve via a single entry point.
+            AD = app.loadAuxData(channel, fbase);
+            if ~isempty(AD) && isfield(AD, 'SOpower_norm')
                 SOPHs.SOpower_norm = AD.SOpower_norm;
                 N         = numel(AD.SOpower_norm);
                 retainFs  = true;

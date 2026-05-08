@@ -8,7 +8,6 @@ function runDataSummaryFigure(app)
     % Channel/output dirs prepared once in runBatch; reuse cached paths
     chanDir    = fullfile(app.OutputDirEditField.Value, app.channel);
     summaryDir = fullfile(chanDir, 'figures', 'summary');
-    sophMat    = fullfile(chanDir, 'SOPHs', [app.input_fbase '_SOPHs_' app.channel '.mat']);
 
     % ---- Skip-when-cached gate ----
     % If the dropdown is '--' there's nothing to write, and if

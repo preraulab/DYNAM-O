@@ -59,6 +59,13 @@ function write_aux_h5_(p, S)
     for ii = 1:numel(fn)
         v = S.(fn{ii});
         path = ['/' fn{ii}];
+        % h5create rejects zero-size extents — skip empty fields
+        % uniformly across all type branches. Realistic for subjects
+        % with no staging events (empty stage_times / stage_vals) or
+        % no excluded samples (empty artifacts).
+        if isempty(v)
+            continue
+        end
         if ischar(v) || isstring(v)
             sval = string(v);
             if isscalar(sval)
@@ -74,10 +81,6 @@ function write_aux_h5_(p, S)
             h5create(p, path, sz, 'Datatype', 'int8');
             h5write(p, path, iv);
         elseif isnumeric(v)
-            if isempty(v)
-                % Skip empty fields — h5create rejects zero-size.
-                continue
-            end
             iv = double(v);
             sz = size_for_h5_(iv);
             h5create(p, path, sz, 'Datatype', 'double');
