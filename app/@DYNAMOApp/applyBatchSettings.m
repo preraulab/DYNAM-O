@@ -141,6 +141,15 @@ function applyBatchSettings(app, S)
 
     try, app.refreshSOHistogramsAvailability(); catch, end
 
+    % Re-run the full pre-flight validation now that everything is set.
+    % Programmatic .Value writes don't fire ValueChangedFcn, so the
+    % per-field clearIsError handlers wired in finalizeUI never run on
+    % load — stale red-border IsError flags from before the load would
+    % otherwise persist. updateRunErrorList re-validates from scratch
+    % and rebuilds app.run_error_list, which is what the Run button
+    % gates on.
+    try, app.updateRunErrorList(); catch, end
+
     % --- Surface skipped paths ------------------------------------------
     if ~isempty(missing_data) || ~isempty(missing_staging) || ~isempty(missing_outdir)
         showMissingPathsDialog(app, missing_data, missing_staging, missing_outdir);
