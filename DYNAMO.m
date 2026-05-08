@@ -21,11 +21,11 @@ classdef DYNAMO < handle
     %       spline_basis_power_options: struct - spline basis options (power)
     %       spline_basis_phase_options: struct - spline basis options (phase)
     %       stats_table: table - precomputed TF peak table (bypass detection)
-    %       verbose: logical - flag for printing progress (default: true)
-    %       plot_on: logical - whether to show summary figure (default: true)
-    %       save_output_image: logical - save summary image to disk (default: false)
-    %       output_fname: char - output filename for saved figure
-    %       fit_SOPH: logical - compute SOPH model fits (default: true)
+    %       app: logical - launch the options GUI from the constructor (default: false)
+    %
+    %   The OOP runDYNAMO method always runs with plot_on/fit_param_basis/
+    %   fit_spline_basis disabled — call displaySummaryPlot, fitParamBasis,
+    %   and fitSplineBasis separately on the resulting object.
     %
     %   Public Properties:
     %       stats_table, SOPHs, spect, stimes, sfreqs,
@@ -64,8 +64,7 @@ classdef DYNAMO < handle
     %       d.runDYNAMO();
     %
     %       % Update detection parameters programmatically, then re-run
-    %       opts = detection_opts();
-    %       opts.peak_power_thresh = 3;
+    %       opts = detection_opts('quality_setting', 'precision');
     %       d.updateOptions('detection_options', opts);
     %       d.runDYNAMO();
     %

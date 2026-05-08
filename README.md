@@ -200,8 +200,10 @@ cd <workspace>/DYNAM-O_dev/rust_bridge
 build_rust_mex
 ```
 
-Produces four `.mex*` files in `rust_bridge/` with the extension for your
-platform (`.mexmaca64`, `.mexmaci64`, `.mexa64`, or `.mexw64`).
+Produces five `.mex*` files in `rust_bridge/` with the extension for your
+platform (`.mexmaca64`, `.mexmaci64`, `.mexa64`, or `.mexw64`):
+`extract_tfpeaks_mex`, `mask_spectrogram_mex`, `refine_peaks_mex`,
+`tfpeak_histogram_mex`, and `multitaper_spectrogram_rust_mex`.
 
 </details>
 
@@ -505,7 +507,7 @@ opts = detection_opts('quality_setting', 'default', 'trim_vol', 0.8, ...);
 
 | Parameter | Default | Description |
 |---|---|---|
-| `quality_setting` | `'default'` | Preset (see above) |
+| `quality_setting` | `''` | Preset name (see above); empty → use individual params below |
 | `double_watershed` | `true` | Use two-pass watershed (1 s + 2 s windows) |
 | `downsample_spect` | `[2, 2]` | `[time_factor, freq_factor]` pre-watershed decimation |
 | `seg_time` | `30` s | Segment duration for parallel processing |
@@ -548,21 +550,24 @@ opts = SOpowerphasehist_opts('SOpower_norm_method', 'p5shift123', 'SOPH_stages',
 
 | Parameter | Default | Description |
 |---|---|---|
-| `freq_range` | `[0, 40]` Hz | Frequency axis range |
+| `freq_range` | `[0, 30]` Hz | Frequency axis range |
 | `freq_binsizestep` | `[1, 0.2]` Hz | Frequency `[bin size, step]` |
 | `SO_freqrange` | `[0.3, 1.5]` Hz | Slow-oscillation band definition |
 | `SOpower_norm_method` | `'p2shift1234'` | Normalization method (see below) |
-| `SOpower_binsizestep` | adaptive | SO-power `[bin size, step]` |
+| `SOpower_range` | `[]` (adaptive) | SO-power axis `[min, max]`; empty → from data |
+| `SOpower_binsizestep` | `[]` (adaptive) | SO-power `[bin size, step]`; empty → 10/100 of range |
+| `SOphase_range` | `[-π, π]` rad | SO-phase axis range |
 | `SOphase_binsizestep` | `[2π/5, 2π/100]` rad | SO-phase `[bin size, step]` |
 | `SOPH_stages` | `[1, 2, 3]` | Stages included (NREM by default) |
 | `SOpower_min_time_in_bin` | `10` min | Min time-in-bin for SO-power axis |
-| `SOphase_min_peak_at_freq` | `1` | Min peaks per frequency row in SO-phase |
+| `SOphase_min_peak_at_freq` | `0` | Min peaks per frequency row in SO-phase |
 | `SOphase_norm_dim` | `1` | Dimension for SO-phase row normalization |
 | `SOpower_outlier_threshold` | `3` SD | Exclude SO-power outliers |
 | `compute_rate` | `true` | Output peaks/min (rate) vs raw count |
 | `SOpower_retain_Fs` | `true` | Upsample SO-power timeseries to EEG Fs |
-| `tapers` | `[5, 9]` | Multitaper params for SO-power |
-| `window_params` | `[5, 0.5]` s | SO-power spectrogram window |
+| `SOpower_tapers` | `[5, 9]` | Multitaper params for SO-power |
+| `SOpower_window_params` | `[5, 0.5]` s | SO-power spectrogram window |
+| `SOphase_filter` | `[]` | Custom filter for SO-phase (auto if empty) |
 
 **SO-power normalization methods:**
 
@@ -643,6 +648,9 @@ Optional 9th output. Struct with per-stage wallclock seconds.
 | `peak_stage` | `computePeakStage` |
 | `peak_sopower` | `computePeakSOpower` |
 | `peak_sophase` | `computePeakSOphase` |
+| `soph_histograms` | Coarse total of the four `soph_*` substages below |
+| `soph_sopower_compute` | SO-power timeseries computation (multitaper) |
+| `soph_sophase_compute` | SO-phase timeseries computation (Hilbert) |
 | `soph_sopower_hist` | `SOpowerHistogram` (2D binning) |
 | `soph_sophase_hist` | `SOphaseHistogram` |
 | `plot_summary` | `displaySummaryPlot` (if `plot_on=true`) |
@@ -973,15 +981,17 @@ DYNAM-O_dev/
 ├── tests/                           matlab.unittest suite (see Unit tests)
 │   ├── run_all_tests.m              Folder runner — assertSuccess for CI
 │   ├── test_simulation_truth.m      Both-backends-vs-ground-truth assertions
+│   ├── test_settings_roundtrip.m    Run-settings JSON round-trip checks
 │   └── simulation_test.mat          Synthetic data + true_values fixture
 ├── rust_bridge/                     Rust backend (MEX wrappers around dynamo_rs)
 │   ├── README.md                    Per-platform build guide
 │   ├── build_rust_mex.m             MATLAB-side compile script
-│   ├── extract_tfpeaks_mex.c        Pass-1 / pass-2 extraction MEX
-│   ├── mask_spectrogram_mex.c       Pass-2 mask MEX
-│   ├── refine_peaks_mex.c           Hann refinement MEX
-│   ├── tfpeak_histogram_mex.c       SOpower / SOphase histogram MEX
-│   └── *.mex{a64,maca64,maci64,w64} Platform-specific binaries
+│   ├── extract_tfpeaks_mex.c               Pass-1 / pass-2 extraction MEX
+│   ├── mask_spectrogram_mex.c              Pass-2 mask MEX
+│   ├── refine_peaks_mex.c                  Hann refinement MEX
+│   ├── tfpeak_histogram_mex.c              SOpower / SOphase histogram MEX
+│   ├── multitaper_spectrogram_rust_mex.c   Multitaper spectrogram MEX
+│   └── *.mex{a64,maca64,maci64,w64}        Platform-specific binaries
 ├── app/                             GUI lives here (compile target for mcc -m)
 │   ├── @DYNAMOApp/          Class folder (split-file methods)
 │   │   ├── DYNAMOApp.m      Properties + constructor + most methods

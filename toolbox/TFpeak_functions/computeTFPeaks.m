@@ -20,7 +20,7 @@ function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, art
 %       features (opt):            [1xf] char or cell array of char -
 %                                  features to be extracted from each peak region. Can be any subset of
 %                                  {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData',
-%                                   'PeakFrequency', 'Peakiness', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. Default = 'all'
+%                                   'PeakFrequency', 'Peakiness', 'PeakTime', 'PeakStage', 'SegmentNum', 'Volume'} or 'all'. Default = 'all'
 %       display_peaks (opt):       logical - whether to display all detected TF-peaks overlaid on spectrogram in a new figure
 %       artifacts (opt):           [nx1] logical - boolean indicating artifact time points. Default = logical([]), run detect_artifacts()
 %       artifact_filters (opt):    struct with 2 digitalFilter fields "hpFilt_high","hpFilt_broad" -
@@ -57,7 +57,10 @@ function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, art
 %                                  Default = [], to be set by quality_setting
 %       merge_thresh (opt):        scalar - threshold weight value for when to stop merge rule.
 %                                  Default = [], to be set by quality_setting
-%       quality_setting (opt):     character - Quality settings for the algorithm. Default = 'default'
+%       quality_setting (opt):     character - Quality settings preset for the algorithm. Default = ''
+%                                  When non-empty, overrides downsample_spect, seg_time, and merge_thresh.
+%                                  When empty (default), individual params are used; their defaults
+%                                  match the 'default' preset values.
 %                                       'stokes_2023': matches Stokes et al. 2023 SLEEP paper settings exactly
 %                                           downsample_spect = [];
 %                                           seg_time = 60; (seconds)

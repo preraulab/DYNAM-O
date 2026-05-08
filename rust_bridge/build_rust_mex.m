@@ -1,5 +1,5 @@
 function build_rust_mex()
-%BUILD_RUST_MEX  Compile the 3 MEX wrappers that bridge MATLAB to dynamo_rs.
+%BUILD_RUST_MEX  Compile the 5 MEX wrappers that bridge MATLAB to dynamo_rs.
 %
 %   Usage:
 %       cd /path/to/DYNAM-O_dev/rust_bridge
@@ -16,10 +16,13 @@ function build_rust_mex()
 %          include/dynamo_rs.h
 %     3. A supported C++ compiler is configured via `mex -setup C++`.
 %
-%   Produces in the current directory:
-%       extract_tfpeaks_mex.mexmaci64  (or .mexa64 / .mexw64)
-%       refine_peaks_mex.<ext>
-%       tfpeak_histogram_mex.<ext>
+%   Produces in the current directory (with .mexmaca64 / .mexmaci64 /
+%   .mexa64 / .mexw64 extension for the host platform):
+%       extract_tfpeaks_mex
+%       refine_peaks_mex
+%       tfpeak_histogram_mex
+%       mask_spectrogram_mex
+%       multitaper_spectrogram_rust_mex
 %
 %   The MEX binaries link against libdynamo_rs.dylib at runtime. We embed
 %   an rpath pointing at DYNAM-O_rs/rust/target/release so MATLAB can find
