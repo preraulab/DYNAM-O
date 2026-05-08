@@ -62,6 +62,28 @@ function aggregateResultsRoot(app)
 
     aggregatesRoot = fullfile(root, 'aggregates');
 
+    % --- Pre-flight format pick ----------------------------
+    % Detect which of the four aggregable file types are actually
+    % present in the discovered inventory and ask the user (via a
+    % CSSuiListBox multiselect) which to roll up. Skipped types
+    % don't pay the load/scan cost. Cancel here aborts the run.
+    presentFmts  = app.detectAggregateFormats(root, channels, filesByChannel);
+    selectedFmts = app.pickAggregateFormats(presentFmts);
+    % pickAggregateFormats sentinel: [] (numeric) = user cancelled,
+    % {} (empty cell) = nothing of any type was found in this run.
+    if isnumeric(selectedFmts) && isempty(selectedFmts)
+        app.appendResultsBrowserLog('Aggregate: cancelled at file-type picker.');
+        app.renderResultsBrowserPreviewPlaceholder('idle');
+        return
+    end
+    if iscell(selectedFmts) && isempty(selectedFmts)
+        app.appendResultsBrowserLog('Aggregate: no aggregable files found under root.');
+        app.renderResultsBrowserPreviewPlaceholder('idle');
+        return
+    end
+    app.appendResultsBrowserLog(sprintf( ...
+        '  picked file types: %s', strjoin(selectedFmts, ', ')));
+
     % --- Pre-flight overwrite check ------------------------
     % If the aggregates/ tree already has any files, ask once
     % up-front instead of forcing the user to dismiss a
@@ -131,7 +153,7 @@ function aggregateResultsRoot(app)
             chDir   = chSpec;   % legacy path: full channel directory
             chFiles = {};
         end
-        app.aggregateOneChannel(chDir, aggregatesRoot, [], chFiles);
+        app.aggregateOneChannel(chDir, aggregatesRoot, [], chFiles, selectedFmts);
     end
 
     app.destroyAggregateProgressGrid();

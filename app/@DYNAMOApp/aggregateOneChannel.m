@@ -1,4 +1,4 @@
-function aggregateOneChannel(app, channelDir, aggregatesRoot, categories, files)
+function aggregateOneChannel(app, channelDir, aggregatesRoot, categories, files, formats)
     % aggregateOneChannel  Build aggregates inside
     % <aggregatesRoot>/<channelName>/ from per-subject inputs in
     % channelDir. `categories` is an optional cell-array subset of
@@ -6,13 +6,18 @@ function aggregateOneChannel(app, channelDir, aggregatesRoot, categories, files)
     % default writes all four. `files` is an optional cell array
     % of absolute paths from the JSONL index — when provided, the
     % aggregator skips dir() entirely and pulls per-category lists
-    % from this in-memory list instead.
+    % from this in-memory list instead. `formats` is an optional
+    % subset of {'paramfit_csv','paramfit_mat','sophs_mat','sophs_tiff'}
+    % limiting which file-format stacks are built (default: all four).
 
     if nargin < 4 || isempty(categories)
         categories = {'paramPower','paramPhase','sophsPower','sophsPhase'};
     end
     if nargin < 5
         files = {};
+    end
+    if nargin < 6 || isempty(formats)
+        formats = {'paramfit_csv','paramfit_mat','sophs_mat','sophs_tiff'};
     end
     wants = @(c) any(strcmp(categories, c));
 
@@ -39,7 +44,7 @@ function aggregateOneChannel(app, channelDir, aggregatesRoot, categories, files)
 
     try
         R = aggregate_DYNAMO_outputs(channelDir, ...
-            'Files', files, 'ProgressFcn', progressCb);
+            'Files', files, 'Formats', formats, 'ProgressFcn', progressCb);
     catch ME
         app.appendResultsBrowserLog(sprintf('[%s] failed: %s', channelName, ME.message));
         return

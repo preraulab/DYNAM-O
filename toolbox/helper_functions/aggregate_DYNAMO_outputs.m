@@ -47,9 +47,10 @@ function result = aggregate_DYNAMO_outputs(channelDir, opts)
 %   files that were dropped (dedupe collisions or load errors).
 
 arguments
-    channelDir  (1,:) char
-    opts.Files  (1,:) cell        = {}
-    opts.ProgressFcn               = []     % @(catName,stage,ii,total) -> []
+    channelDir   (1,:) char
+    opts.Files   (1,:) cell        = {}
+    opts.Formats (1,:) cell        = {'paramfit_csv','paramfit_mat','sophs_mat','sophs_tiff'}
+    opts.ProgressFcn                = []    % @(catName,stage,ii,total) -> []
 end
 
 if isempty(opts.ProgressFcn)
@@ -57,6 +58,16 @@ if isempty(opts.ProgressFcn)
 else
     progress = opts.ProgressFcn;
 end
+
+% Format gate: when a per-format flag is off we still walk the
+% category but skip the corresponding stack_* call so we don't pay
+% the load cost. The empty result fields propagate to the writers,
+% which noop on empty input.
+fmtSet         = struct();
+fmtSet.csv     = any(strcmp(opts.Formats, 'paramfit_csv'));
+fmtSet.matTab  = any(strcmp(opts.Formats, 'paramfit_mat'));
+fmtSet.sophMat = any(strcmp(opts.Formats, 'sophs_mat'));
+fmtSet.sophTif = any(strcmp(opts.Formats, 'sophs_tiff'));
 
 result.paramPower  = empty_paramfit_struct();
 result.paramPhase  = empty_paramfit_struct();
@@ -124,8 +135,14 @@ for ci = 1:numel(cats)
             catName = cat.name;
             progCsv = @(ii,total) progress(catName, 'csv', ii, total);
             progMat = @(ii,total) progress(catName, 'mat', ii, total);
-            [csv_table, csv_ids, w1] = stack_table_files(csvKept, 'csv', progCsv);
-            [mat_table, mat_ids, w2] = stack_table_files(matKept, 'mat', progMat);
+            csv_table = table.empty; csv_ids = {}; w1 = {};
+            mat_table = table.empty; mat_ids = {}; w2 = {};
+            if fmtSet.csv
+                [csv_table, csv_ids, w1] = stack_table_files(csvKept, 'csv', progCsv);
+            end
+            if fmtSet.matTab
+                [mat_table, mat_ids, w2] = stack_table_files(matKept, 'mat', progMat);
+            end
             result.warnings = [result.warnings, w1, w2];
             result.(cat.name).csv_table  = csv_table;
             result.(cat.name).mat_table  = mat_table;
@@ -149,8 +166,15 @@ for ci = 1:numel(cats)
             catName = cat.name;
             progMat  = @(ii,total) progress(catName, 'mat',  ii, total);
             progTiff = @(ii,total) progress(catName, 'tiff', ii, total);
-            [mat_struct, mat_ids, w3]              = stack_sophs_mat_files(matKept, axis, progMat);
-            [tiff_pages, tiff_ids, w4, fbT, sbT]   = stack_sophs_tiff_files(tiffKept, axis, progTiff);
+            mat_struct = struct(); mat_ids  = {}; w3 = {};
+            tiff_pages = {};       tiff_ids = {}; w4 = {};
+            fbT = []; sbT = [];
+            if fmtSet.sophMat
+                [mat_struct, mat_ids, w3]            = stack_sophs_mat_files(matKept, axis, progMat);
+            end
+            if fmtSet.sophTif
+                [tiff_pages, tiff_ids, w4, fbT, sbT] = stack_sophs_tiff_files(tiffKept, axis, progTiff);
+            end
             result.warnings = [result.warnings, w3, w4];
 
             % Capture freq + SO-axis bins for the aggregate. Prefer the
