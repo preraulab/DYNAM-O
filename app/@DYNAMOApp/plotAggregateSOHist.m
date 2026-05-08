@@ -21,12 +21,21 @@ function plotAggregateSOHist(app, ax, filePath, axis_kind)
                 if isfield(agg, 'freq_bins'), freq_bins = agg.freq_bins(:); end
                 if isfield(agg, binsField),   bins      = agg.(binsField)(:); end
             case '.tiff'
-                info = imfinfo(filePath);
-                accum = double(imread(filePath, 1));
+                % Per-pixel mean across subjects with NaN omitted so a
+                % single subject's gap doesn't poison the aggregate
+                % cell (matches the .mat branch's mean(...,'omitnan')).
+                info  = imfinfo(filePath);
+                first = double(imread(filePath, 1));
+                accum = first;  accum(~isfinite(first)) = 0;
+                cnt   = double(isfinite(first));
                 for pp = 2:numel(info)
-                    accum = accum + double(imread(filePath, pp));
+                    page = double(imread(filePath, pp));
+                    finite = isfinite(page);
+                    accum(finite) = accum(finite) + page(finite);
+                    cnt           = cnt + finite;
                 end
-                M = accum / numel(info);
+                M = accum ./ cnt;
+                M(cnt == 0) = NaN;   % all-NaN cell stays NaN
                 % First try the TIFF's own ImageDescription tag;
                 % aggregates and per-subject TIFFs written by
                 % current DYNAMO carry bins there as JSON.
