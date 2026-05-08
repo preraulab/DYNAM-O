@@ -320,11 +320,29 @@ classdef DYNAMO < handle
             obj.validateStaging();
             assert(obj.isInitialized(), 'DYNAMO object is not fully initialized.');
 
+            % Forward an existing stats_table when one is already loaded
+            % (e.g. from .csv reuse). runDYNAMO's 'stats_table' kwarg
+            % short-circuits computeTFPeaks; only the spectrogram +
+            % SOpower/SOphase peak features + histogram binning run.
+            extra_args = {};
+            if ~isempty(obj.stats_table)
+                ST = obj.stats_table;
+                % SubjectID is a writer-side annotation for self-
+                % identification on disk; the inner pipeline is keyed
+                % off PeakTime / PeakFrequency only and rejects non-
+                % numeric columns via 'real' validation.
+                if istable(ST) && any(strcmpi(ST.Properties.VariableNames, 'SubjectID'))
+                    ST = removevars(ST, 'SubjectID');
+                end
+                extra_args = [extra_args, {'stats_table', ST}];
+            end
+
             [obj.stats_table, obj.spect, obj.stimes, obj.sfreqs,...
                 obj.data_time_range, obj.t_time_range, obj.artifacts, obj.SOPHs] = runDYNAMO(...
                 obj.data, obj.Fs, obj.stage_times, obj.stage_vals, obj.time_range, ...
                 obj.baseline_options, obj.detection_options, obj.SOPH_options, ...
-                'fit_param_basis', false, 'fit_spline_basis', false, 'plot_on', false);
+                'fit_param_basis', false, 'fit_spline_basis', false, 'plot_on', false, ...
+                extra_args{:});
         end
 
         function obj = updateOptions(obj, varargin)

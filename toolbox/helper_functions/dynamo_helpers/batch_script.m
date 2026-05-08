@@ -124,7 +124,8 @@ for ii = 1:length(scoring_fpaths)
     % separately)
     close all;
 
-    % Saving
+    % Saving — .mat is HDF5 internally (-v7.3) so h5py / h5dump can
+    % read these files directly without a MATLAB round-trip.
     save(output_stats_name,'stats_table','-v7.3');
     save(output_SOPH_name,'SOPHs','-v7.3');
 

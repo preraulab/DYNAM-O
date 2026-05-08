@@ -5,17 +5,18 @@ function SOPHs = loadOrReconstructSOPHs(app, channel, fbase)
     %   Resolution order:
     %     1. app.SOPHs already loaded in memory (current batch step) →
     %        return as-is.
-    %     2. <chan>/SOPHs/<fbase>_SOPHs_<chan>.mat → load and return.
-    %     3. Reconstruct from the slim outputs:
+    %     2. <chan>/SOPHs/<fbase>_SOPHs_<chan>.h5  → load and return.
+    %     3. <chan>/SOPHs/<fbase>_SOPHs_<chan>.mat → load (legacy).
+    %     4. Reconstruct from the slim outputs:
     %          - <chan>/SOPHs/<fbase>_SOPHs_power_<chan>.tiff
     %            → SOpower_mat, SOpower_bins, freq_bins (page-1 JSON)
     %          - <chan>/SOPHs/<fbase>_SOPHs_phase_<chan>.tiff
     %            → SOphase_mat, SOphase_bins, freq_bins (page-1 JSON)
-    %          - <chan>/auxiliary_data/<fbase>_auxiliary_data_<chan>.mat
+    %          - <chan>/auxiliary_data/<fbase>_auxiliary_data_<chan>.{h5,mat}
     %            → SOpower_norm, SOpower_norm_method, SOpower_retain_Fs,
     %              SOpower_window_params, Fs (used to synthesise
     %              SOpower_times via synthesizeSOpowerTimes).
-    %     4. Empty struct on total miss; the caller decides what to do
+    %     5. Empty struct on total miss; the caller decides what to do
     %        (typically: rerun the batch step from scratch).
     %
     %   Reconstructed SOPHs is NOT a 1:1 replica of the .mat — it lacks
@@ -30,33 +31,42 @@ function SOPHs = loadOrReconstructSOPHs(app, channel, fbase)
         return
     end
 
-    chanDir = fullfile(app.OutputDirEditField.Value, channel);
-    sophMat = fullfile(chanDir, 'SOPHs', [fbase '_SOPHs_' channel '.mat']);
-    if isfile(sophMat)
+    chanDir  = fullfile(app.OutputDirEditField.Value, channel);
+    sophsDir = fullfile(chanDir, 'SOPHs');
+    sophBase = fullfile(sophsDir, [fbase '_SOPHs_' channel]);
+    for binPath = {[sophBase '.h5'], [sophBase '.mat']}
+        p = binPath{1};
+        if ~isfile(p), continue, end
         try
-            S = load(sophMat);
-            if isfield(S, 'SOPHs')
+            S = load(p);
+            % Two layouts on disk:
+            %   - new flat: top-level vars (SOpower_mat, freq_bins, ...).
+            %   - legacy nested: a single 'SOPHs' struct variable.
+            if isfield(S, 'SOPHs') && isstruct(S.SOPHs)
                 SOPHs = S.SOPHs;
-            elseif isstruct(S) && isfield(S, 'SOpower_mat')
+            elseif isstruct(S) && (isfield(S,'SOpower_mat') || isfield(S,'freq_bins'))
                 SOPHs = S;
             end
             if ~isempty(fieldnames(SOPHs)), return, end
         catch
-            % fall through to TIFF reconstruction
+            % fall through to next candidate / TIFF reconstruction
         end
     end
 
     % --- TIFF + aux reconstruction ---
-    sophsDir = fullfile(chanDir, 'SOPHs');
     powTiff  = fullfile(sophsDir, [fbase '_SOPHs_power_' channel '.tiff']);
     phaTiff  = fullfile(sophsDir, [fbase '_SOPHs_phase_' channel '.tiff']);
-    auxMat   = fullfile(chanDir, 'auxiliary_data', ...
-        [fbase '_auxiliary_data_' channel '.mat']);
+    auxBase  = fullfile(chanDir, 'auxiliary_data', ...
+        [fbase '_auxiliary_data_' channel]);
+    auxPath = '';
+    for ap = {[auxBase '.h5'], [auxBase '.mat']}
+        if isfile(ap{1}), auxPath = ap{1}; break, end
+    end
 
     SOPHs = readSOPHTiffPair_(powTiff, phaTiff);
-    if ~isempty(fieldnames(SOPHs)) && isfile(auxMat)
+    if ~isempty(fieldnames(SOPHs)) && ~isempty(auxPath)
         try
-            AD = load(auxMat).auxiliary_data;
+            AD = load(auxPath).auxiliary_data;
             if isfield(AD, 'SOpower_norm')
                 SOPHs.SOpower_norm = AD.SOpower_norm;
                 N         = numel(AD.SOpower_norm);

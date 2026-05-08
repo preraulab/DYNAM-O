@@ -43,16 +43,9 @@ function runDataSummaryFigure(app)
 
     % ---- Ensure stats_table is available ----
     if isempty(app.stats_table)
-        statsBase = fullfile(chanDir, 'TFpeaks', [app.input_fbase '_stats_table_' app.channel]);
-        csvPath = [statsBase '.csv'];
-        matPath = [statsBase '.mat'];
-        matExists = isfile(matPath);
-        csvExists = isfile(csvPath);
-
-        if matExists
-            app.stats_table = load(matPath,'stats_table').stats_table;
-        elseif csvExists
-            app.stats_table = csv2table(csvPath);
+        T_loaded = app.loadStatsTable(app.channel, app.input_fbase);
+        if ~isempty(T_loaded)
+            app.stats_table = T_loaded;
         else
             runStatsTable(app);      % Compute from scratch
         end

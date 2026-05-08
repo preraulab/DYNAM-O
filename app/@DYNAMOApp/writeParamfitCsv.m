@@ -1,4 +1,4 @@
-function writeParamfitCsv(filename, PF, axis_kind, freq_bins, so_bins)
+function writeParamfitCsv(filename, PF, axis_kind, freq_bins, so_bins, subject_id)
 %writeParamfitCsv  Write a parametric-fit CSV with a fixed-format
 %   comment header carrying everything needed to reconstruct
 %   model_SOPH from the params table alone:
@@ -61,6 +61,9 @@ cleaner = onCleanup(@() local_safe_fclose(fid)); %#ok<NASGU>
 
 fprintf(fid, '# DYNAM-O parametric fit\n');
 fprintf(fid, '# version: 1\n');
+if nargin >= 6 && ~isempty(subject_id)
+    fprintf(fid, '# subject_id: %s\n', char(subject_id));
+end
 fprintf(fid, '# fit_type: %s\n', axis_kind);
 fprintf(fid, '# n_modes: %d\n', n_modes);
 fprintf(fid, '# background.xxx: %.17g\n', xxx);

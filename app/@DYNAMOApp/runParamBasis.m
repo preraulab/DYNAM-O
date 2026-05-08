@@ -1,182 +1,185 @@
 function runParamBasis(app)
-    % runParamBasis  Fit the parametric basis model and save results/figures.
+    % runParamBasis  Resolve paramfit + emit requested formats.
     %
-    %   Loads SOPHs if needed, calls fitParamBasis, and saves:
-    %     - Parametric fit figure (if SaveParamImagesCheckBox is checked)
-    %     - SOpower/SOphase parametric fit data (.csv, .mat, or both)
-    %       according to ParametricBasisDropDown selection.
+    %   Three-step pattern:
+    %     1. Load: try in-memory → .h5 → legacy .mat → .csv (per axis).
+    %     2. Reuse: if both axes loaded, skip the fit.
+    %     3. Fit: call fitParamBasis when no on-disk artifact is available.
+    %
+    %   Outputs (gated by ParametricBasisDropDown + SaveParamImagesCheckBox):
+    %     - .csv per axis (with `#`-preamble metadata)
+    %     - .h5 per axis (struct with params, fitobj, gof, model_SOPH,
+    %       wshed_img; fitobj is a real cfit when fit was just run, or a
+    %       struct stand-in when reconstructed from CSV).
+    %     - .png/.tiff parametric basis figure.
 
     % Channel/output dirs prepared once in runBatch; reuse cached paths
     chanDir        = fullfile(app.OutputDirEditField.Value, app.channel);
     paramDir       = fullfile(chanDir, 'param_basis');
     paramFigDir    = fullfile(chanDir, 'figures', 'param_basis');
-    sophMat        = fullfile(chanDir, 'SOPHs', [app.input_fbase '_SOPHs_' app.channel '.mat']);
     paramPowerBase = fullfile(paramDir, [app.input_fbase '_SOpower_paramfit_' app.channel]);
     paramPhaseBase = fullfile(paramDir, [app.input_fbase '_SOphase_paramfit_' app.channel]);
 
-    % ---- Skip-when-cached gate ----
-    % Build the list of files this stage would emit under the
-    % current dropdown choices. If overwrite is off AND every
-    % one already exists, the (expensive) fitParamBasis call
-    % is pure waste — bail out early.
-    overwrite = app.OverwriteExistingFilesCheckBox.Value;
-    expected  = {};
+    % ---- Resolve requested formats ----
+    overwrite    = app.OverwriteExistingFilesCheckBox.Value;
     basis_choice = app.ParametricBasisDropDown.Value;
+
+    formats = {};
     if ~strcmp(basis_choice, '--')
-        if any(strcmp(basis_choice, {'.csv','All'}))
-            expected{end+1} = [paramPowerBase '.csv']; %#ok<AGROW>
-            expected{end+1} = [paramPhaseBase '.csv']; %#ok<AGROW>
-        end
-        if any(strcmp(basis_choice, {'.mat','All'}))
-            expected{end+1} = [paramPowerBase '.mat']; %#ok<AGROW>
-            expected{end+1} = [paramPhaseBase '.mat']; %#ok<AGROW>
-        end
+        if any(strcmp(basis_choice, {'.csv','All'})), formats{end+1} = '.csv'; end
+        if any(strcmp(basis_choice, {'.mat','All'})), formats{end+1} = '.mat'; end
     end
     fig_choice = app.ParametricFiguresDropDown.Value;
+
+    % ---- Skip-when-cached gate ----
+    pow_have   = present_(paramPowerBase, formats);
+    phase_have = present_(paramPhaseBase, formats);
+    pow_missing   = setdiff(formats, pow_have);
+    phase_missing = setdiff(formats, phase_have);
+
+    figPath = '';
+    fig_missing = false;
     if app.SaveParamImagesCheckBox.Value && ~strcmp(fig_choice,'--')
-        expected{end+1} = fullfile(paramFigDir, ...
-            [app.input_fbase '_param_basis_figure_' app.channel fig_choice]); %#ok<AGROW>
+        figPath = fullfile(paramFigDir, ...
+            [app.input_fbase '_param_basis_figure_' app.channel fig_choice]);
+        fig_missing = ~isfile(figPath);
     end
-    if ~overwrite && ~isempty(expected) && all(cellfun(@isfile, expected))
+
+    if ~overwrite && isempty(pow_missing) && isempty(phase_missing) && ...
+            ~fig_missing && ~isempty(formats)
         app.TextArea.addnl('   Skipping parametric basis (outputs already exist).');
         return
     end
 
-    % ---- Ensure SOPHs are available ----
-    % Try the unified loader first: in-memory → SOPHs.mat → TIFF + aux
-    % reconstruction. The slim TIFF reconstruction is sufficient for
-    % paramfit (only matrices + bins are needed), so SOPHs.mat is
-    % optional when the per-subject TIFFs are present.
-    if isempty(app.SOPHs)
-        SOPHs_resolved = app.loadOrReconstructSOPHs(app.channel, app.input_fbase);
-        if isfield(SOPHs_resolved, 'SOpower_mat') || ...
-                isfield(SOPHs_resolved, 'SOphase_mat')
-            app.SOPHs = SOPHs_resolved;
-        else
-            app.anything_run = 1;
-            app.TextArea.addnl('   Running DYNAMO (computing SOPHs)...');
-            runStatsTable(app);
-        end
-    end
+    % ---- Try to load existing paramfits ----
+    loaded = app.loadParamfit(app.channel, app.input_fbase);
+    pow_loaded   = ~isempty(loaded.SOpower_paramfit);
+    phase_loaded = ~isempty(loaded.SOphase_paramfit);
 
-    % Fit parametric basis model.
-    %
-    % Layered AutoCreate=false guard. runBatch already sets this at
-    % batch scope, but we also set it here so the protection holds when:
-    %   - a custom driver calls runParamBasis directly (no runBatch),
-    %   - a callback inside the batch loop temporarily flips it back,
-    %   - the user's MATLAB session has a startup script that resets it
-    %     between batch iterations.
-    % The guard is scoped to this function via onCleanup; the matlab
-    % backend's explicit parpool() in setup_parallel_pool is unaffected.
-    pool_guard_orig_ = [];
-    pool_guard_mode_ = 'none';
-    if exist('parallel.Settings', 'class') == 8 || ...
-            (exist('ver','builtin')~=0 && any(strcmp({ver().Name}, 'Parallel Computing Toolbox')))
-        try
-            ps_ = parallel.Settings;
-            raw_ = ps_.Pool.AutoCreate;
-            if isa(raw_, 'matlab.settings.Setting')
-                pool_guard_orig_ = raw_.ActiveValue;
-                ps_.Pool.AutoCreate.TemporaryValue = false;
-                pool_guard_mode_ = 'temporary';
-            else
-                pool_guard_orig_ = logical(raw_);
-                ps_.Pool.AutoCreate = false;
-                pool_guard_mode_ = 'direct';
+    % If both axes loaded AND the figure already exists (or wasn't asked
+    % for), we can skip the fit entirely and just write missing formats.
+    can_skip_fit = pow_loaded && phase_loaded && ...
+                   (~app.SaveParamImagesCheckBox.Value || strcmp(fig_choice,'--') || ~fig_missing);
+
+    if can_skip_fit
+        if isempty(app.SOPHs), app.SOPHs = struct(); end
+        app.SOPHs.SOpower_paramfit = loaded.SOpower_paramfit;
+        app.SOPHs.SOphase_paramfit = loaded.SOphase_paramfit;
+        % SOPHs binning/freq still needed by the writers — make sure
+        % SOPHs is fully populated. loadOrReconstructSOPHs handles this.
+        if ~isfield(app.SOPHs,'freq_bins')
+            S = app.loadOrReconstructSOPHs(app.channel, app.input_fbase);
+            f = fieldnames(S);
+            for ii = 1:numel(f)
+                if ~isfield(app.SOPHs, f{ii})
+                    app.SOPHs.(f{ii}) = S.(f{ii});
+                end
             end
-            pool_guard_cleanup_ = onCleanup( ...
-                @() restore_pool_autocreate_(pool_guard_orig_, pool_guard_mode_)); %#ok<NASGU>
-        catch
-            % no-op — best-effort guard.
         end
-    end
+    else
+        % ---- Ensure SOPHs are available for fitting ----
+        if isempty(app.SOPHs)
+            SOPHs_resolved = app.loadOrReconstructSOPHs(app.channel, app.input_fbase);
+            if isfield(SOPHs_resolved, 'SOpower_mat') || ...
+                    isfield(SOPHs_resolved, 'SOphase_mat')
+                app.SOPHs = SOPHs_resolved;
+            else
+                app.anything_run = 1;
+                app.TextArea.addnl('   Running DYNAMO (computing SOPHs)...');
+                runStatsTable(app);
+            end
+        end
 
-    app.TextArea.addnl('   Running parametric basis...');
-    app.TextArea.addnl('   Generating parametric basis figure...');
-    dynamo_pool_trace('runParamBasis: before fitParamBasis');
-    app.fitParamBasis();
-    dynamo_pool_trace('runParamBasis: after fitParamBasis');
-    % If a pool was nevertheless spawned during fitParamBasis (some
-    % MATLAB toolbox internals ignore AutoCreate), kill it now so the
-    % next channel doesn't inherit an idle pool.
-    p_ = []; try, p_ = gcp('nocreate'); catch, end
-    if ~isempty(p_)
-        try, delete(p_); catch, end
-    end
-    fh = gcf;
+        % AutoCreate=false guard (see runBatch comment block).
+        pool_guard_orig_ = [];
+        pool_guard_mode_ = 'none';
+        if exist('parallel.Settings', 'class') == 8 || ...
+                (exist('ver','builtin')~=0 && any(strcmp({ver().Name}, 'Parallel Computing Toolbox')))
+            try
+                ps_ = parallel.Settings;
+                raw_ = ps_.Pool.AutoCreate;
+                if isa(raw_, 'matlab.settings.Setting')
+                    pool_guard_orig_ = raw_.ActiveValue;
+                    ps_.Pool.AutoCreate.TemporaryValue = false;
+                    pool_guard_mode_ = 'temporary';
+                else
+                    pool_guard_orig_ = logical(raw_);
+                    ps_.Pool.AutoCreate = false;
+                    pool_guard_mode_ = 'direct';
+                end
+                pool_guard_cleanup_ = onCleanup( ...
+                    @() restore_pool_autocreate_(pool_guard_orig_, pool_guard_mode_)); %#ok<NASGU>
+            catch
+            end
+        end
 
-    % Optionally save the parametric basis figure (overwrite-gated)
-    if app.SaveParamImagesCheckBox.Value && ~strcmp(fig_choice,'--')
-        figPath = fullfile(paramFigDir, ...
-            [app.input_fbase '_param_basis_figure_' app.channel fig_choice]);
-        if overwrite || ~isfile(figPath)
+        app.TextArea.addnl('   Running parametric basis...');
+        app.TextArea.addnl('   Generating parametric basis figure...');
+        dynamo_pool_trace('runParamBasis: before fitParamBasis');
+        app.fitParamBasis();
+        dynamo_pool_trace('runParamBasis: after fitParamBasis');
+        p_ = []; try, p_ = gcp('nocreate'); catch, end
+        if ~isempty(p_)
+            try, delete(p_); catch, end
+        end
+        fh = gcf;
+
+        % Optionally save the parametric basis figure (overwrite-gated)
+        if ~isempty(figPath) && (overwrite || ~isfile(figPath))
             app.anything_run = 1;
             app.output_param_name = figPath;
             app.TextArea.addnl('   Saving parametric basis figure...');
             exportgraphics(fh, figPath, 'Resolution', 300);
         end
+        close all;
     end
-    close all;
 
-    % Save parametric fit data — fitParamBasis leaves *_paramfit
-    % empty when its sub-fit failed; skip those saves so a failed
-    % phase fit doesn't prevent saving the (good) power fit.
-    % Per-file overwrite gating ensures we don't re-write existing
-    % outputs unless the user asked for it.
-    pow_have   = ~isempty(app.SOPHs.SOpower_paramfit);
-    phase_have = ~isempty(app.SOPHs.SOphase_paramfit);
-    if ~pow_have
-        app.TextArea.addnl('   Skipping parametric power save (fit failed).');
+    % ---- Save parametric fit data ----
+    pow_have_data   = isfield(app.SOPHs,'SOpower_paramfit') && ~isempty(app.SOPHs.SOpower_paramfit);
+    phase_have_data = isfield(app.SOPHs,'SOphase_paramfit') && ~isempty(app.SOPHs.SOphase_paramfit);
+
+    if ~pow_have_data
+        app.TextArea.addnl('   Skipping parametric power save (fit failed or absent).');
+        if isempty(app.partial_failures), app.partial_failures = {}; end
         app.partial_failures{end+1} = 'parametric power fit';
     end
-    if ~phase_have
-        app.TextArea.addnl('   Skipping parametric phase save (fit failed).');
+    if ~phase_have_data
+        app.TextArea.addnl('   Skipping parametric phase save (fit failed or absent).');
+        if isempty(app.partial_failures), app.partial_failures = {}; end
         app.partial_failures{end+1} = 'parametric phase fit';
     end
-    if ~strcmp(basis_choice,'--')
-        save_csv = any(strcmp(basis_choice, {'.csv','All'}));
-        save_mat = any(strcmp(basis_choice, {'.mat','All'}));
-        if pow_have
-            if save_csv, write_paramfit_csv([paramPowerBase '.csv'], app.SOPHs.SOpower_paramfit, 'power', app.SOPHs.SOpower_bins); end
-            if save_mat, write_paramfit_mat([paramPowerBase '.mat'], app.SOPHs.SOpower_paramfit, 'SOpower_paramfit');             end
-        end
-        if phase_have
-            if save_csv, write_paramfit_csv([paramPhaseBase '.csv'], app.SOPHs.SOphase_paramfit, 'phase', app.SOPHs.SOphase_bins); end
-            if save_mat, write_paramfit_mat([paramPhaseBase '.mat'], app.SOPHs.SOphase_paramfit, 'SOphase_paramfit');             end
-        end
+
+    write_pow   = formats; if ~overwrite, write_pow   = pow_missing;   end
+    write_phase = formats; if ~overwrite, write_phase = phase_missing; end
+
+    if pow_have_data && ~isempty(write_pow)
+        app.writeParamfitFormats( ...
+            app.SOPHs.SOpower_paramfit, paramPowerBase, 'power', ...
+            app.SOPHs.freq_bins, app.SOPHs.SOpower_bins, app.input_fbase, ...
+            write_pow, overwrite);
+    end
+    if phase_have_data && ~isempty(write_phase)
+        app.writeParamfitFormats( ...
+            app.SOPHs.SOphase_paramfit, paramPhaseBase, 'phase', ...
+            app.SOPHs.freq_bins, app.SOPHs.SOphase_bins, app.input_fbase, ...
+            write_phase, overwrite);
     end
 
-    function write_paramfit_csv(p, fitData, axis_kind, bins)
-        if ~overwrite && isfile(p), return, end
-        app.TextArea.addnl(sprintf('   Saving parametric %s as .csv...', axis_kind));
-        if strcmp(axis_kind,'power')
-            app.output_paramfit_power_name = p;
-        else
-            app.output_paramfit_phase_name = p;
-        end
-        app.writeParamfitCsv(p, fitData, axis_kind, app.SOPHs.freq_bins, bins);
-    end
-
-    function write_paramfit_mat(p, fitData, varName)
-        if ~overwrite && isfile(p), return, end
-        app.TextArea.addnl(sprintf('   Saving %s as .mat...', varName));
-        if contains(varName,'power')
-            app.output_paramfit_power_name = p;
-        else
-            app.output_paramfit_phase_name = p;
-        end
-        S.(varName) = fitData; %#ok<STRNU>
-        save(p, '-struct', 'S', '-v7.3');
-    end
-
-    % If both fits failed, surface that to the per-stage try/catch in
-    % runBatch so the subject is logged as "partially run".
-    if ~pow_have && ~phase_have
+    if ~pow_have_data && ~phase_have_data
         error('DYNAMOApp:runParamBasis:bothFitsFailed', ...
-            'Both parametric power and phase fits failed.');
+            'Both parametric power and phase fits failed or are absent.');
     end
-end % runParamBasis
+end
+
+
+function have = present_(base, formats)
+    have = {};
+    if any(strcmp(formats, '.csv')) && isfile([base '.csv']), have{end+1} = '.csv'; end
+    if any(strcmp(formats, '.mat')) && (isfile([base '.mat']) || isfile([base '.h5']))
+        have{end+1} = '.mat';
+    end
+end
+
 
 function restore_pool_autocreate_(orig, mode)
     if isempty(orig) || strcmp(mode, 'none'), return, end
