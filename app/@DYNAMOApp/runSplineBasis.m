@@ -28,9 +28,10 @@ function runSplineBasis(app)
     pow_missing   = setdiff(formats, pow_have);
     phase_missing = setdiff(formats, phase_have);
 
+    plot_figure = app.SaveSplineImagesCheckBox.Value && ~strcmp(fig_choice,'--');
     figPath = '';
     fig_missing = false;
-    if app.SaveSplineImagesCheckBox.Value && ~strcmp(fig_choice,'--')
+    if plot_figure
         figPath = fullfile(splineFigDir, ...
             [app.input_fbase '_spline_basis_figure_' app.channel fig_choice]);
         fig_missing = ~isfile(figPath);
@@ -106,19 +107,20 @@ function runSplineBasis(app)
         end
 
         app.TextArea.addnl('   Running spline basis...');
-        app.TextArea.addnl('   Generating spline basis figure...');
-        app.fitSplineBasis();
+        if plot_figure
+            app.TextArea.addnl('   Generating spline basis figure...');
+        end
+        app.fitSplineBasis(plot_figure);
         p_ = []; try, p_ = gcp('nocreate'); catch, end
         if ~isempty(p_)
             try, delete(p_); catch, end
         end
-        fh = gcf;
 
-        if ~isempty(figPath) && (overwrite || ~isfile(figPath))
+        if plot_figure && (overwrite || ~isfile(figPath))
             app.anything_run = 1;
             app.TextArea.addnl('   Saving spline figure...');
             app.output_spline_name = figPath;
-            exportgraphics(fh, figPath, 'Resolution', 300);
+            exportgraphics(gcf, figPath, 'Resolution', 300);
         end
         close all;
     end

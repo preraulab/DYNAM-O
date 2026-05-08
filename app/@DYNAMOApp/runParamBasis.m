@@ -37,9 +37,10 @@ function runParamBasis(app)
     pow_missing   = setdiff(formats, pow_have);
     phase_missing = setdiff(formats, phase_have);
 
+    plot_figure = app.SaveParamImagesCheckBox.Value && ~strcmp(fig_choice,'--');
     figPath = '';
     fig_missing = false;
-    if app.SaveParamImagesCheckBox.Value && ~strcmp(fig_choice,'--')
+    if plot_figure
         figPath = fullfile(paramFigDir, ...
             [app.input_fbase '_param_basis_figure_' app.channel fig_choice]);
         fig_missing = ~isfile(figPath);
@@ -120,22 +121,25 @@ function runParamBasis(app)
         end
 
         app.TextArea.addnl('   Running parametric basis...');
-        app.TextArea.addnl('   Generating parametric basis figure...');
+        if plot_figure
+            app.TextArea.addnl('   Generating parametric basis figure...');
+        end
         dynamo_pool_trace('runParamBasis: before fitParamBasis');
-        app.fitParamBasis();
+        app.fitParamBasis(plot_figure);
         dynamo_pool_trace('runParamBasis: after fitParamBasis');
         p_ = []; try, p_ = gcp('nocreate'); catch, end
         if ~isempty(p_)
             try, delete(p_); catch, end
         end
-        fh = gcf;
 
-        % Optionally save the parametric basis figure (overwrite-gated)
-        if ~isempty(figPath) && (overwrite || ~isfile(figPath))
+        % Save the parametric basis figure (overwrite-gated). Only
+        % grab gcf when we asked fitParamBasis to render — otherwise
+        % gcf would return a stale handle from a prior stage.
+        if plot_figure && (overwrite || ~isfile(figPath))
             app.anything_run = 1;
             app.output_param_name = figPath;
             app.TextArea.addnl('   Saving parametric basis figure...');
-            exportgraphics(fh, figPath, 'Resolution', 300);
+            exportgraphics(gcf, figPath, 'Resolution', 300);
         end
         close all;
     end
