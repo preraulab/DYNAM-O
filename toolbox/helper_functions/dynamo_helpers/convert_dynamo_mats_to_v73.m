@@ -1,22 +1,22 @@
-function report = convert_sophs_to_v73(root, varargin)
-%CONVERT_SOPHS_TO_V73  Re-save legacy v7 SOPHs .mat files as -v7.3.
+function report = convert_dynamo_mats_to_v73(root, varargin)
+%CONVERT_DYNAMO_MATS_TO_V73  Re-save legacy v7 DYNAM-O .mat outputs as -v7.3.
 %
-%   Walks ROOT recursively for files inside any 'SOPHs' subdirectory and
-%   re-saves them with the -v7.3 flag so that the DYNAM-O aggregator
-%   (stack_sophs_mat_files) can do partial-field reads via matfile().
-%   Files already in v7.3 (HDF5) format are skipped. Other .mat files
-%   under ROOT (paramfit, stats_table, splinefit, auxiliary_data) are
-%   left alone — only files in a 'SOPHs' folder are touched.
+%   Walks ROOT recursively and re-saves any .mat file living in a known
+%   DYNAM-O output subdirectory (SOPHs/, stats_table/, param_basis/,
+%   spline_basis/, auxiliary_data/, or under aggregates/) with the -v7.3
+%   flag so that downstream readers can use matfile() partial-field
+%   access. Files already in v7.3 (HDF5) format are skipped. Files under
+%   any other directory are left alone.
 %
 %   Usage:
-%       convert_sophs_to_v73(root)
-%       convert_sophs_to_v73(root, 'DryRun', true)     % preview only
-%       convert_sophs_to_v73(root, 'Verbose', false)
-%       convert_sophs_to_v73(root, 'Parallel', true)   % parfor over files
+%       convert_dynamo_mats_to_v73(root)
+%       convert_dynamo_mats_to_v73(root, 'DryRun', true)     % preview only
+%       convert_dynamo_mats_to_v73(root, 'Verbose', false)
+%       convert_dynamo_mats_to_v73(root, 'Parallel', true)   % parfor over files
 %
 %   Inputs:
 %       root      char/string - results root, channel folder, or any
-%                  ancestor directory containing per-subject SOPHs/ subdirs
+%                  ancestor directory containing DYNAM-O output subdirs
 %
 %   Name-Value:
 %       'DryRun'    logical - list what would be converted without writing
@@ -30,7 +30,7 @@ function report = convert_sophs_to_v73(root, varargin)
 %
 %   Output:
 %       report - struct with fields:
-%           .scanned    - total .mat files seen under SOPHs/ folders
+%           .scanned    - total .mat files seen under DYNAM-O output subdirs
 %           .converted  - cell of paths re-saved as v7.3
 %           .skipped    - cell of {path, reason} for files left alone
 %           .failed     - cell of {path, errmsg} for files that errored
@@ -52,11 +52,30 @@ dryRun   = logical(ip.Results.DryRun);
 verbose  = logical(ip.Results.Verbose);
 parallel = logical(ip.Results.Parallel);
 
-assert(isfolder(root), 'convert_sophs_to_v73:badRoot', ...
+assert(isfolder(root), 'convert_dynamo_mats_to_v73:badRoot', ...
     'Root not a folder: %s', root);
 
-% Find every .mat under any 'SOPHs' subdirectory at any depth.
-listing = dir(fullfile(root, '**', 'SOPHs', '*.mat'));
+% Walk every .mat under the known DYNAM-O output subdirectories. The
+% subdir names below are the leaf folders the App writes into per
+% channel (plus 'aggregates' which sits at the results root). Anchoring
+% on these names keeps us from rewriting unrelated .mat files the user
+% may have parked alongside their results.
+dynamo_subdirs = {'SOPHs', 'stats_table', 'param_basis', 'spline_basis', ...
+    'auxiliary_data', 'aggregates'};
+listing = struct('name', {}, 'folder', {}, 'bytes', {});
+for kk = 1:numel(dynamo_subdirs)
+    found = dir(fullfile(root, '**', dynamo_subdirs{kk}, '**', '*.mat'));
+    if ~isempty(found)
+        listing = [listing, found(:).']; %#ok<AGROW>
+    end
+end
+% Deduplicate by absolute path — `aggregates/<channel>/SOPHs/...` would
+% otherwise be matched twice (once via 'aggregates', once via 'SOPHs').
+if ~isempty(listing)
+    paths = arrayfun(@(s) fullfile(s.folder, s.name), listing, 'UniformOutput', false);
+    [~, keep] = unique(paths, 'stable');
+    listing = listing(keep);
+end
 n = numel(listing);
 
 % Per-file outcome captured in a struct array so the parfor branch can
@@ -64,8 +83,8 @@ n = numel(listing);
 out(n) = struct('path', '', 'bytes', 0, 'status', '', 'reason', '', 'elapsed', 0);
 
 if verbose
-    fprintf('convert_sophs_to_v73: scanning %s\n', root);
-    fprintf('  found %d candidate file(s) under SOPHs/ subdirs\n', n);
+    fprintf('convert_dynamo_mats_to_v73: scanning %s\n', root);
+    fprintf('  found %d candidate file(s) under DYNAM-O output subdirs\n', n);
     if dryRun,    fprintf('  DRY RUN — no files will be written\n'); end
     if parallel,  fprintf('  PARALLEL mode — print order may interleave\n'); end
 end

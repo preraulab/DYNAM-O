@@ -184,7 +184,7 @@ function runSplineBasis(app)
             app.output_splinefit_phase_name = p;
         end
         S.(varName) = fitData; %#ok<STRNU>
-        save(p, '-struct', 'S');
+        save(p, '-struct', 'S', '-v7.3');
     end
 end % runSplineBasis
 

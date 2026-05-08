@@ -16,7 +16,7 @@ function writeSOPHsAggregate(app, partial, outDir, channelName, axis, label)
 
     if hasMat
         aggregate = partial.mat_struct; %#ok<NASGU>
-        save([base '.mat'], 'aggregate');
+        save([base '.mat'], 'aggregate', '-v7.3');
         fld = ['SO' axis '_mat'];
         app.appendResultsBrowserLog(sprintf('  [%s] wrote %s.mat (size %s)', ...
             channelName, [channelName '_aggregate_SOPHs_' axis], ...

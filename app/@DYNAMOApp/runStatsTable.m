@@ -91,7 +91,7 @@ function runStatsTable(app)
             app.output_stats_name = p;
             switch lower(ext)
                 case '.csv', table2csv(stats_table, p);
-                case '.mat', save(p, 'stats_table');
+                case '.mat', save(p, 'stats_table', '-v7.3');
             end
         end
     end

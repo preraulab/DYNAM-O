@@ -48,5 +48,5 @@ function saveAuxData(app)
 
     app.output_aux_name = fullfile(auxDir, ...
         [app.input_fbase '_auxiliary_data_' app.channel '.mat']);
-    save(app.output_aux_name,'auxiliary_data');
+    save(app.output_aux_name,'auxiliary_data','-v7.3');
 end

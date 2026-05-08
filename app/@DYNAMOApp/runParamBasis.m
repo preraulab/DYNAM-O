@@ -161,7 +161,7 @@ function runParamBasis(app)
             app.output_paramfit_phase_name = p;
         end
         S.(varName) = fitData; %#ok<STRNU>
-        save(p, '-struct', 'S');
+        save(p, '-struct', 'S', '-v7.3');
     end
 
     % If both fits failed, surface that to the per-stage try/catch in
