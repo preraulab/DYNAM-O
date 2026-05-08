@@ -58,28 +58,33 @@ function runStatsTable(app)
     end
 
     % --- (1) Load whatever we can from disk into memory ---
+    % Overwrite means "ignore existing artifacts, recompute everything"
+    % — clear in-memory state AND skip the disk-load shortcuts below.
+    % Without this gate, a prior run that left only slim TIFF outputs
+    % on disk would short-circuit runDYNAMO and downstream stages
+    % (e.g. saveAuxData) would come up missing SOpower_norm.
     if overwrite
         app.SOPHs       = [];
         app.stats_table = [];
-    end
-
-    if isempty(app.stats_table)
-        T_loaded = app.loadStatsTable(app.channel, app.input_fbase);
-        if ~isempty(T_loaded)
-            app.TextArea.addnl('   Loaded stats_table from disk.');
-            app.stats_table = T_loaded;
+    else
+        if isempty(app.stats_table)
+            T_loaded = app.loadStatsTable(app.channel, app.input_fbase);
+            if ~isempty(T_loaded)
+                app.TextArea.addnl('   Loaded stats_table from disk.');
+                app.stats_table = T_loaded;
+            end
         end
-    end
-    if isempty(app.SOPHs)
-        SOPHs_loaded = app.loadOrReconstructSOPHs(app.channel, app.input_fbase);
-        % loadOrReconstructSOPHs can return a partially-populated struct
-        % (e.g. only freq_bins from a stale TIFF metadata read). Require
-        % at least one of the histogram matrices before promoting to
-        % app.SOPHs — otherwise the recompute branch below is correctly
-        % triggered. Mirrors the have_sophs check on the next block.
-        if isstruct(SOPHs_loaded) && ...
-                (isfield(SOPHs_loaded,'SOpower_mat') || isfield(SOPHs_loaded,'SOphase_mat'))
-            app.SOPHs = SOPHs_loaded;
+        if isempty(app.SOPHs)
+            SOPHs_loaded = app.loadOrReconstructSOPHs(app.channel, app.input_fbase);
+            % loadOrReconstructSOPHs can return a partially-populated struct
+            % (e.g. only freq_bins from a stale TIFF metadata read). Require
+            % at least one of the histogram matrices before promoting to
+            % app.SOPHs — otherwise the recompute branch below is correctly
+            % triggered. Mirrors the have_sophs check on the next block.
+            if isstruct(SOPHs_loaded) && ...
+                    (isfield(SOPHs_loaded,'SOpower_mat') || isfield(SOPHs_loaded,'SOphase_mat'))
+                app.SOPHs = SOPHs_loaded;
+            end
         end
     end
 

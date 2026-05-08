@@ -43,7 +43,13 @@ function runSplineBasis(app)
     end
 
     % ---- Try to load existing splinefits ----
-    loaded = app.loadSplinefit(app.channel, app.input_fbase);
+    % Overwrite means "ignore existing artifacts, re-fit" — skip the
+    % loader entirely so the fit branch always runs.
+    if overwrite
+        loaded = struct('SOpower_splinefit', [], 'SOphase_splinefit', []);
+    else
+        loaded = app.loadSplinefit(app.channel, app.input_fbase);
+    end
     pow_loaded   = ~isempty(loaded.SOpower_splinefit);
     phase_loaded = ~isempty(loaded.SOphase_splinefit);
 

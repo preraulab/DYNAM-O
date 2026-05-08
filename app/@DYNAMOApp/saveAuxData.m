@@ -37,8 +37,8 @@ function saveAuxData(app)
         return
     end
 
-    % --- Step 1: load whatever exists (no-op when overwrite forces recompute) ---
-    if isempty(app.auxiliary_data)
+    % --- Step 1: load whatever exists (skipped when overwrite is on) ---
+    if isempty(app.auxiliary_data) && ~overwrite
         loaded = app.loadAuxData(app.channel, app.input_fbase);
         if ~isempty(loaded)
             app.auxiliary_data = loaded;
