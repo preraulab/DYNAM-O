@@ -10,4 +10,5 @@ function addDataFiles(app, filePaths)
     filePaths = setdiff(filePaths, app.DataList, 'stable');
     app.DataList = [app.DataList, filePaths];
     updateDataListBox(app);
+    app.refreshEdfLabelCache();
 end

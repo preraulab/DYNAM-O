@@ -141,6 +141,12 @@ function applyBatchSettings(app, S)
 
     try, app.refreshSOHistogramsAvailability(); catch, end
 
+    % File list was just replaced; bring the EDF label cache in sync
+    % so the composer (and the run-time pre-flight) doesn't need to
+    % re-scan everything on first use. Path-keyed: files in common
+    % with the previous session keep their cached headers.
+    try, app.refreshEdfLabelCache(); catch, end
+
     % Re-run the full pre-flight validation now that everything is set.
     % Programmatic .Value writes don't fire ValueChangedFcn, so the
     % per-field clearIsError handlers wired in finalizeUI never run on

@@ -29,31 +29,39 @@ function createRunMontageWindow(app)
 
     nFiles = length(app.DataList);
 
-    % chan_map: label -> {file_index_array, fs_array}
-    % Tracks which files contain each channel and at what sample rate.
-    % EDF header reads are fast — no progress dialog. The composer
-    % is built inline; users were finding the popup waitbar
-    % distracting for what amounts to a sub-second scan in the
-    % typical case.
-    chan_map = containers.Map('KeyType','char','ValueType','any');
+    % Bring the per-file label cache up to date. Header reads are fast
+    % in the typical case — refreshEdfLabelCache stays silent for
+    % small file lists and only puts up a progress dialog when there's
+    % a meaningful number of new files to scan (default threshold:
+    % 10). Files already in the cache from a prior composer-open or a
+    % run-time pre-flight are reused without re-reading.
+    app.refreshEdfLabelCache('ProgressMessage', 'Composer: scanning EDF headers');
 
+    % chan_map: label -> {file_index_array, fs_array}
+    % Re-derived from the cache for this composer view. (We could
+    % consume the cache directly, but the {indices, rates} shape is
+    % what the rest of this function expects for the Available
+    % Channels coverage column.)
+    chan_map = containers.Map('KeyType','char','ValueType','any');
     for ii = 1:nFiles
-        try
-            [~, signalHeader] = read_EDF(app.DataList{ii});
-            for jj = 1:length(signalHeader)
-                lbl = strtrim(signalHeader(jj).signal_labels);
-                fs  = signalHeader(jj).sampling_frequency;
-                if isKey(chan_map, lbl)
-                    entry = chan_map(lbl);
-                    entry{1}(end+1) = ii;
-                    entry{2}(end+1) = fs;
-                    chan_map(lbl) = entry;
-                else
-                    chan_map(lbl) = {ii, fs};
-                end
+        p_ = app.DataList{ii};
+        if ~app.EdfLabelCache_.isKey(p_)
+            % The header read failed during refresh — skip; warning
+            % was already emitted.
+            continue
+        end
+        entry = app.EdfLabelCache_(p_);
+        for jj = 1:numel(entry.labels)
+            lbl = entry.labels{jj};
+            fs  = entry.fs(jj);
+            if isKey(chan_map, lbl)
+                rec = chan_map(lbl);
+                rec{1}(end+1) = ii;
+                rec{2}(end+1) = fs;
+                chan_map(lbl) = rec;
+            else
+                chan_map(lbl) = {ii, fs};
             end
-        catch ME
-            warning('Failed to read file: %s\n%s', app.DataList{ii}, ME.message);
         end
     end
 

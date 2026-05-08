@@ -98,6 +98,7 @@ classdef DYNAMOApp < matlab.apps.AppBase & DYNAMO
         SOPHPlotBoxAspectRatio_ = [0.335*8.5, 0.3*11, 1]   % [W H 1] — matches displaySummaryPlot's SO-Power/Phase boxes (≈ 2.8475 × 3.3 in). Applied to every SOPH render via pbaspect.
         MatPreviewCache_ = struct('path','', 'S', struct())   % caches the last loaded .mat so generic-browser node clicks don't reload
         RunLogger_       = []                                  % DYNAMORunLogger for the active batch (open during runBatch only)
+        EdfLabelCache_   = []                                  % containers.Map: abs_path -> struct('labels', cellstr, 'fs', doubleArr, 'mtime', datetime). Built lazily by refreshEdfLabelCache; survives across composer opens; invalidated incrementally on DataList mutations.
 
         % --- Right-column tab group (viewers) ---
         AnalysisTab                     matlab.ui.container.Tab         % Outer tab — "Aggregate Data"; attached/detached at runtime
@@ -645,6 +646,7 @@ classdef DYNAMOApp < matlab.apps.AppBase & DYNAMO
             % (`[app.DataList, filePaths]`) on the next "Add File" click.
             app.DataList = reshape(cellstr(uniqueValidLines), 1, []);
             app.updateDataListBox;
+            app.refreshEdfLabelCache();
 
             % Only show dedicated window if there are skipped or duplicate files
             if isempty(invalidLines) && isempty(duplicateLines)
@@ -847,6 +849,7 @@ classdef DYNAMOApp < matlab.apps.AppBase & DYNAMO
             if ~isempty(files)
                 app.DataList = [app.DataList, files];
                 updateDataListBox(app);
+                app.refreshEdfLabelCache();
             end
         end
         function DataAddFileButtonPushed(app, ~, ~)
@@ -871,6 +874,7 @@ classdef DYNAMOApp < matlab.apps.AppBase & DYNAMO
             if ~isempty(files)
                 app.DataList = [app.DataList, files];
                 updateDataListBox(app);
+                app.refreshEdfLabelCache();
             end
         end
         function DataAddFolderButtonPushed(app, ~, ~)
@@ -888,6 +892,7 @@ classdef DYNAMOApp < matlab.apps.AppBase & DYNAMO
             if isempty(selected), return; end
             app.DataList = setdiff(app.DataList, selected, 'stable');
             updateDataListBox(app);
+            app.refreshEdfLabelCache();
         end
         function DataRemoveButtonPushed(app, ~, ~)
             % DataRemoveButtonPushed  Thin callback shim — see removeSelectedDataFiles.
