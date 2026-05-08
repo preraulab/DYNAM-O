@@ -6,7 +6,6 @@ tests/*
 !tests/test_*.m
 !tests/run_all_tests.m
 !tests/simulation_test.mat
-!tests/make_test_edfs.m
 *.asv
 .aider*
 .claude/
