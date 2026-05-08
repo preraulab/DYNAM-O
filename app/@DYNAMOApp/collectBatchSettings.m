@@ -13,6 +13,12 @@ function S = collectBatchSettings(app)
     %   applyBatchSettings, so it is the canonical "reloadable batch
     %   settings" payload.
     %
+    %   Note on construction: struct(field, value, ...) collapses to a 0x0
+    %   struct array when any value is empty (the MATLAB "empty value
+    %   pitfall"). That silently dropped the whole sub-block from the
+    %   serialised JSON whenever a user hadn't set a numeric/string field
+    %   yet. We use direct field assignment everywhere here to avoid that.
+    %
     %   See also: applyBatchSettings, generate_run_log, load_run_log.
     %
     % =====================================================================
@@ -27,49 +33,68 @@ function S = collectBatchSettings(app)
     S.output_dir    = char(app.OutputDirEditField.Value);
     S.metadata_file = char(app.MetadataFile_);
 
-    S.save_toggles = struct( ...
-        'save_logs',           logical(app.SaveLogsSwitch.Value), ...
-        'save_spline_images',  logical(app.SaveSplineImagesCheckBox.Value), ...
-        'save_param_images',   logical(app.SaveParamImagesCheckBox.Value), ...
-        'save_data_summary',   logical(app.SaveDataSummaryCheckBox.Value), ...
-        'save_aux_data',       logical(app.SaveAuxDataCheckBox.Value), ...
-        'save_spline_basis',   logical(app.SaveSplineBasisCheckBox.Value), ...
-        'save_param_basis',    logical(app.SaveParamBasisCheckBox.Value), ...
-        'save_sophs',          logical(app.SaveSOPHsCheckBox.Value), ...
-        'save_peak_stats',     logical(app.SavePeakStatsCheckBox.Value));
+    S.save_toggles = struct();
+    S.save_toggles.save_logs           = logical(app.SaveLogsSwitch.Value);
+    S.save_toggles.save_spline_images  = logical(app.SaveSplineImagesCheckBox.Value);
+    S.save_toggles.save_param_images   = logical(app.SaveParamImagesCheckBox.Value);
+    S.save_toggles.save_data_summary   = logical(app.SaveDataSummaryCheckBox.Value);
+    S.save_toggles.save_aux_data       = logical(app.SaveAuxDataCheckBox.Value);
+    S.save_toggles.save_spline_basis   = logical(app.SaveSplineBasisCheckBox.Value);
+    S.save_toggles.save_param_basis    = logical(app.SaveParamBasisCheckBox.Value);
+    S.save_toggles.save_sophs          = logical(app.SaveSOPHsCheckBox.Value);
+    S.save_toggles.save_peak_stats     = logical(app.SavePeakStatsCheckBox.Value);
 
-    S.formats = struct( ...
-        'spline_figures',      char(app.SplineFiguresDropDown.Value), ...
-        'parametric_figures',  char(app.ParametricFiguresDropDown.Value), ...
-        'data_summary',        char(app.DataSummaryDropDown.Value), ...
-        'auxiliary_data',      char(app.AuxiliaryDataDropDown.Value), ...
-        'spline_basis',        char(app.SplineBasisDropDown.Value), ...
-        'parametric_basis',    char(app.ParametricBasisDropDown.Value), ...
-        'so_power_histograms', char(app.SOPowerHistogramsDropDown.Value), ...
-        'peak_stats_table',    char(app.PeakStatsTableDropDown.Value));
+    S.formats = struct();
+    S.formats.spline_figures      = char(app.SplineFiguresDropDown.Value);
+    S.formats.parametric_figures  = char(app.ParametricFiguresDropDown.Value);
+    S.formats.data_summary        = char(app.DataSummaryDropDown.Value);
+    S.formats.auxiliary_data      = char(app.AuxiliaryDataDropDown.Value);
+    S.formats.spline_basis        = char(app.SplineBasisDropDown.Value);
+    S.formats.parametric_basis    = char(app.ParametricBasisDropDown.Value);
+    S.formats.so_power_histograms = char(app.SOPowerHistogramsDropDown.Value);
+    S.formats.peak_stats_table    = char(app.PeakStatsTableDropDown.Value);
 
-    S.runtime = struct( ...
-        'overwrite_existing', logical(app.OverwriteExistingFilesCheckBox.Value), ...
-        'run_in_reverse',     logical(app.RunInReverse.Value));
+    S.runtime = struct();
+    S.runtime.overwrite_existing = logical(app.OverwriteExistingFilesCheckBox.Value);
+    S.runtime.run_in_reverse     = logical(app.RunInReverse.Value);
 
-    S.channels = struct( ...
-        'channel_spec',   char(app.ChannelEditField.Value), ...
-        'reference_spec', char(app.ReferenceEditField.Value));
+    S.channels = struct();
+    S.channels.channel_spec   = char(app.ChannelEditField.Value);
+    S.channels.reference_spec = char(app.ReferenceEditField.Value);
 
-    S.staging_config = struct( ...
-        'delimiter',     char(app.DelimeterOptionField.Value), ...
-        'header_rows',   double(app.HeaderRowsEditField.Value), ...
-        'times_column',  double(app.TimesColumnEditField.Value), ...
-        'stages_column', double(app.StagesColumnEditField.Value), ...
-        'resample_on',   logical(app.ResampleSwitch.Value), ...
-        'resample_fs',   double(app.ResampleFsEditField.Value));
+    % Direct assignment is critical here: any of the numeric fields can be
+    % empty before the user touches them, and struct(...) with an empty
+    % value collapses the whole sub-struct to 0x0 — the prior bug that
+    % silently stripped staging_config from saved JSONs.
+    S.staging_config = struct();
+    S.staging_config.delimiter     = char(app.DelimeterOptionField.Value);
+    S.staging_config.header_rows   = scalar_or_nan_(app.HeaderRowsEditField.Value);
+    S.staging_config.times_column  = scalar_or_nan_(app.TimesColumnEditField.Value);
+    S.staging_config.stages_column = scalar_or_nan_(app.StagesColumnEditField.Value);
+    S.staging_config.resample_on   = logical(app.ResampleSwitch.Value);
+    S.staging_config.resample_fs   = scalar_or_nan_(app.ResampleFsEditField.Value);
 
-    S.stage_labels = struct( ...
-        'Wake',     char(app.WakeEditField.Value), ...
-        'REM',      char(app.REMEditField.Value), ...
-        'N1',       char(app.N1EditField.Value), ...
-        'N2',       char(app.N2EditField.Value), ...
-        'N3',       char(app.N3EditField.Value), ...
-        'Unknown',  char(app.UnknownEditField.Value), ...
-        'Artifact', char(app.ArtifactEditField.Value));
+    S.stage_labels = struct();
+    S.stage_labels.Wake     = char(app.WakeEditField.Value);
+    S.stage_labels.REM      = char(app.REMEditField.Value);
+    S.stage_labels.N1       = char(app.N1EditField.Value);
+    S.stage_labels.N2       = char(app.N2EditField.Value);
+    S.stage_labels.N3       = char(app.N3EditField.Value);
+    S.stage_labels.Unknown  = char(app.UnknownEditField.Value);
+    S.stage_labels.Artifact = char(app.ArtifactEditField.Value);
+end
+
+
+function v = scalar_or_nan_(x)
+    % Numeric field passthrough that converts MATLAB-empty (`[]`, the
+    % default of an unset CSSuiNumericField) to NaN. NaN survives JSON
+    % round-trip via the encode_specials sentinel ("__nan__") so the
+    % distinction "field never set" carries through to the load side,
+    % where applyBatchSettings's setNumeric coerces NaN back to empty
+    % via the no-op double() / clamp() chain in CSSuiNumericField.
+    if isempty(x)
+        v = NaN;
+    else
+        v = double(x);
+    end
 end

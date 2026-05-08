@@ -193,8 +193,15 @@ end
 
 function setNumeric(S, fname, ctrl)
     if isfield(S, fname)
+        v = S.(fname);
+        % NaN sentinel from collectBatchSettings's scalar_or_nan_ marks
+        % a never-set numeric field; assigning NaN to a CSSuiNumericField
+        % would render the literal text "NaN", so coerce back to empty.
+        if isscalar(v) && isnumeric(v) && isnan(v)
+            v = [];
+        end
         try
-            ctrl.Value = double(S.(fname));
+            ctrl.Value = double(v);
         catch
         end
     end
