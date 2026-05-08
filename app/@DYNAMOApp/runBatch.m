@@ -218,40 +218,6 @@ function runBatch(app, dataList, stagingList)
         safeNameToCol(channelListSafe{primarySpecIdxList(kk)})   = kk;
     end
 
-    % Pre-flight summary dialog: if anything is unresolved, give the
-    % user one last chance to bail out and fix the channel list before
-    % committing to the run. Skipped entirely when every file resolves
-    % every outname (no nag dialog on a clean configuration).
-    anyUnresolved = any(perFileResolved < nUniqueOutnames);
-    if anyUnresolved
-        proceed = app.preflightSummaryDialog( ...
-            perFileResolved, resolves, dataList, ...
-            primarySpecIdxList, channelListSafe);
-        if ~proceed
-            cancelMsg = 'Run cancelled by user at pre-flight summary.';
-            app.TextArea.addnl(cancelMsg);
-            try, app.appendRunLog([cancelMsg, newline]); catch, end
-            fprintf('\n%s\n', cancelMsg);
-            warning(warnState);
-            set(0, 'DefaultFigureVisible', 'on');
-            try, app.stopLogConsoleTimer(); catch, end
-            try, app.refreshLogConsole();    catch, end
-            if ~isempty(app.consolelog_fid) && app.consolelog_fid > 0
-                fclose(app.consolelog_fid); app.consolelog_fid = []; end
-            diary off;
-            if ~isempty(app.runlog_fid) && app.runlog_fid > 0
-                fclose(app.runlog_fid); app.runlog_fid = []; end
-            try, if ~isempty(app.RunLogger_), app.RunLogger_.close(); end, catch, end
-            app.RunLogger_ = [];
-            app.RunBatchButton.Enabled  = true;
-            app.StopBatchButton.Enabled = false;
-            app.resetRunUiState;
-            app.ProgressBar.reset();
-            app.ProgressBar.Enabled = false;
-            return
-        end
-    end
-
     expectedWorkUnits = sum(perFileResolved);
     if expectedWorkUnits == 0
         % Nothing will resolve in any file. Use upper bound so the
