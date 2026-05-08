@@ -19,7 +19,8 @@ d = fileparts(filePath);
 for hop = 1:6
     settingsDir = fullfile(d, 'settings');
     if isfolder(settingsDir)
-        files = dir(fullfile(settingsDir, 'run_settings_*.json'));
+        files = [dir(fullfile(settingsDir, 'batch_settings_*.json'));
+                 dir(fullfile(settingsDir, 'run_settings_*.json'))];
         if ~isempty(files)
             [~, idx] = max([files.datenum]);
             try

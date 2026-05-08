@@ -3,7 +3,7 @@ function tf = is_dynamo_results_dir(root)
 %by the DYNAMOApp batch run. Each save category in the batch dialog
 %is independently optional, so accept the directory if any of the
 %following signals is present:
-%  - <root>/settings/run_settings_*.json          (always emitted)
+%  - <root>/settings/batch_settings_*.json (or legacy run_settings_*.json) — always emitted
 %  - one of root's immediate subdirs contains any of:
 %      param_basis/  SOPHs/  TFpeaks/  spline_basis/
 %      figures/      auxiliary_data/
@@ -12,7 +12,8 @@ function tf = is_dynamo_results_dir(root)
 tf = false;
 if ~isfolder(root), return, end
 
-if ~isempty(dir(fullfile(root,'settings','run_settings_*.json')))
+if ~isempty(dir(fullfile(root,'settings','batch_settings_*.json'))) || ...
+        ~isempty(dir(fullfile(root,'settings','run_settings_*.json')))
     tf = true; return
 end
 

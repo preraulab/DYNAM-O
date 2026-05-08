@@ -76,7 +76,7 @@ if isempty(run_start)
     run_start = char(dtime);
 end
 run_ID = run_start;
-fname = sprintf('run_settings_%s.json', run_start);
+fname = sprintf('batch_settings_%s.json', run_start);
 
 % Assemble payload.
 options = struct();

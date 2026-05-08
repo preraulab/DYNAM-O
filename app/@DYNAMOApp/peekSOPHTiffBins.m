@@ -1,7 +1,8 @@
 function [freq_bins, bins] = peekSOPHTiffBins(~, filePath, info, axis_kind)
     % Recover (freq_bins, SO{power,phase}_bins) from a SOPH TIFF.
     % Order: ImageDescription JSON tag → sidecar *_bins.csv →
-    % run_settings_*.json walk. Returns [] for whichever can't
+    % batch_settings_*.json walk (legacy run_settings_*.json
+    % accepted). Returns [] for whichever can't
     % be recovered; caller falls back to pixel indices.
     import results_browser.*
     freq_bins = []; bins = [];

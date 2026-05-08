@@ -157,7 +157,7 @@ for ci = 1:numel(cats)
             % bins already pulled out of stack_sophs_mat_files; if those
             % weren't populated (TIFF-only run), try (1) the TIFF
             % ImageDescription, (2) any whole-struct .mat in the folder,
-            % (3) the run_settings_*.json file at the results root.
+            % (3) the batch_settings_*.json file at the results root.
             freqBins = []; soBins = [];
             if ~isempty(fieldnames(mat_struct))
                 if isfield(mat_struct,'freq_bins'),  freqBins = mat_struct.freq_bins; end
@@ -562,14 +562,16 @@ end
 
 function [freq_bins, so_bins] = peek_bins_from_settings(channelDir, axis_kind)
 %PEEK_BINS_FROM_SETTINGS  Reconstruct freq_bins (and SOphase_bins) from a
-%`<root>/settings/run_settings_*.json` file emitted by the DYNAMOApp.
+%`<root>/settings/batch_settings_*.json` file emitted by the DYNAMOApp
+%(or legacy `run_settings_*.json` from runs prior to the rename).
 %SOpower_bins are adaptive per subject and cannot be recovered this way.
 freq_bins = [];
 so_bins   = [];
 root = fileparts(channelDir);
 settingsDir = fullfile(root, 'settings');
 if ~isfolder(settingsDir), return, end
-files = dir(fullfile(settingsDir, 'run_settings_*.json'));
+files = [dir(fullfile(settingsDir, 'batch_settings_*.json'));
+         dir(fullfile(settingsDir, 'run_settings_*.json'))];
 if isempty(files), return, end
 % Use the most recent settings file.
 [~, idx] = max([files.datenum]);

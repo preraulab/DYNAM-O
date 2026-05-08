@@ -20,7 +20,7 @@ function renderResultsBrowserPreviewError(app, root)
         'batch run. Each save category is independently optional, so this'
         'folder is accepted if ANY of the following is present:'
         ''
-        '  • settings/run_settings_*.json               (always emitted by a run)'
+        '  • settings/batch_settings_*.json             (always emitted by a run)'
         ''
         '  • a channel subdirectory containing any of:'
         '       param_basis/        — parametric power/phase fit tables'

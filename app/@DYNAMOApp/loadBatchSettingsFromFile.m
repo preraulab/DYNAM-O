@@ -2,8 +2,9 @@ function loadBatchSettingsFromFile(app)
     % loadBatchSettingsFromFile  Restore batch run settings from a JSON file.
     %
     %   Reads a file previously written by saveBatchSettingsToFile (or by
-    %   the auto-emitted run_settings_<timestamp>.json that runBatch
-    %   produces), then:
+    %   the auto-emitted batch_settings_<timestamp>.json that runBatch
+    %   produces — also accepts legacy run_settings_*.json files from
+    %   pre-rename runs), then:
     %     - Tolerantly merges each of the 7 DYNAM-O option structs into the
     %       app's current options (unknown fields are warned, missing fields
     %       are left at the current default).

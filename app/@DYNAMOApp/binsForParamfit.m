@@ -6,8 +6,9 @@ function [freq_bins, so_bins] = binsForParamfit(~, S, p, axis_kind)
     %        a sub-struct called 'SOPH_options' or 'SOPHs').
     %     3. recover_soph_bins_from_run_settings on the file path —
     %        same fallback the SOPH TIFF preview uses, walks up
-    %        to find run_settings_*.json and reconstructs the bin
-    %        centers from the recorded ranges.
+    %        to find batch_settings_*.json (or legacy
+    %        run_settings_*.json) and reconstructs the bin centers
+    %        from the recorded ranges.
     %   Returns [] for whichever can't be recovered; the caller
     %   (styleSOPHAxes) treats [] as "use bin indices" so the
     %   image still renders, just with integer ticks.
