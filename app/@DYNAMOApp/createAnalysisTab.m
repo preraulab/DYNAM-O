@@ -185,14 +185,14 @@ end
 
 
 function onModeScatterColormapChanged_(app, kind, newValue)
-    % onModeScatterColormapChanged_  Persist the new colormap name into
-    % the corresponding app property and trigger a redraw.
+    % onModeScatterColormapChanged_  Persist the new colormap name and
+    % route through the in-place updater so layout doesn't churn.
     nm = strtrim(char(newValue));
     switch kind
         case 'power', app.ModeScatterColormapPower_ = nm;
         case 'phase', app.ModeScatterColormapPhase_ = nm;
     end
-    app.redrawModeScatter();
+    app.updateModeScatterData();
 end
 
 

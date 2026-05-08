@@ -46,14 +46,21 @@ function refreshModeScatterDropdowns(app, axisKind)
 
     switch axisKind
         case 'power'
-            xPref = 'SOpowerMean';
-            cPref = 'PrefPhaseCirc';
+            xPref  = 'SOpowerMean';
+            cPrefs = {'PrefPhaseCirc'};
         case 'phase'
-            xPref = 'SOphaseMean';
-            cPref = 'SOphaseMean';
+            xPref  = 'SOphaseMean';
+            % PrefPhaseCirc isn't on phase paramfits (it's appended only
+            % to power fits by annotatePowerWithPreferredPhase); fall
+            % back to SOphaseMean when absent.
+            cPrefs = {'PrefPhaseCirc', 'SOphaseMean'};
         otherwise
-            xPref = 'Amplitude';
-            cPref = 'ID';
+            xPref  = 'Amplitude';
+            cPrefs = {'ID'};
+    end
+    cPref = cPrefs{1};
+    for ii = 1:numel(cPrefs)
+        if ismember(cPrefs{ii}, cDD.Items), cPref = cPrefs{ii}; break, end
     end
 
     if ~isstruct(app.ModeScatter_DropdownsInited_)

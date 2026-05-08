@@ -145,6 +145,7 @@ classdef DYNAMOApp < matlab.apps.AppBase & DYNAMO
         ModeScatterColormapPhase_       = 'hsv'
         ModeScatter_TableCache_         % containers.Map keyed "<chan>|<axis>" -> table; cleared on aggregate refresh
         ModeScatter_DropdownsInited_    % struct with .power/.phase booleans — tracks first populated refresh per axis
+        ModeScatter_AxState_     = []   % struct .sel (cell), .pairs (cell of [axP axPh]) — set by redrawModeScatter, consumed by updateModeScatterData
         SOHistogramsSplitter            matlab.ui.container.Panel  % Draggable bar between channel listbox and inner tabs
         SOHistogramsSplitter_Drag_      % Saved figure WindowButton callbacks during a splitter drag
 
