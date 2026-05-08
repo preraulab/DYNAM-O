@@ -66,4 +66,11 @@ function updateModeScatterData(app)
         end
         if ~isempty(yLimPh), ylim(ax, yLimPh); end
     end
+
+    % Re-establish the linkprop bindings. We're reusing the same axes
+    % handles so the previous link object is still valid in principle,
+    % but each render flips axes between 2-D and 3-D and replaces the
+    % scatter object — re-linking is cheap and ensures view/camera
+    % syncing covers any axis that just transitioned to scatter3.
+    app.linkModeScatterAxes(powerAxes, phaseAxes);
 end

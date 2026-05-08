@@ -13,7 +13,7 @@ function refreshModeScatterDropdowns(app, axisKind)
     %   The "first populated refresh" is tracked per-dropdown
     %   in UserData so user picks of '(none)' aren't clobbered
     %   on subsequent refreshes.
-    [xDD, yDD, sDD, cDD] = app.modeScatterDropdowns(axisKind);
+    [xDD, yDD, sDD, cDD, zDD] = app.modeScatterDropdowns(axisKind);
 
     sel = app.SOHistogramsChannelListBox.Value;
     if ischar(sel) || isstring(sel), sel = cellstr(sel); end
@@ -36,11 +36,13 @@ function refreshModeScatterDropdowns(app, axisKind)
     end
 
     xyItems    = [{'(none)'}, sort(numericCols)];
+    zItems     = xyItems;                     % Z is also numeric-only
     sizeItems  = [{'(none)'}, sort(numericCols)];
     colorItems = [{'(none)'}, sort(allCols)];
 
     xDD.Items = xyItems;
     yDD.Items = xyItems;
+    zDD.Items = zItems;
     sDD.Items = sizeItems;
     cDD.Items = colorItems;
 
@@ -70,6 +72,7 @@ function refreshModeScatterDropdowns(app, axisKind)
 
     pickDefault(xDD, xPref,        inited);
     pickDefault(yDD, 'FreqMean',   inited);
+    pickDefault(zDD, '(none)',     inited);     % default 2-D
     pickDefault(sDD, 'Amplitude',  inited);
     pickDefault(cDD, cPref,        inited);
 

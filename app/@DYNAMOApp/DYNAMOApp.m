@@ -129,10 +129,12 @@ classdef DYNAMOApp < matlab.apps.AppBase & DYNAMO
         ModeScatterPlaceholderAxes
         ModeScatterPowerXDropDown       % CSSuiDropdown
         ModeScatterPowerYDropDown       % CSSuiDropdown
+        ModeScatterPowerZDropDown       % CSSuiDropdown — '(none)' = 2-D, anything else flips axis to scatter3
         ModeScatterPowerSizeDropDown    % CSSuiDropdown
         ModeScatterPowerColorDropDown   % CSSuiDropdown
         ModeScatterPhaseXDropDown       % CSSuiDropdown
         ModeScatterPhaseYDropDown       % CSSuiDropdown
+        ModeScatterPhaseZDropDown       % CSSuiDropdown — '(none)' = 2-D, anything else flips axis to scatter3
         ModeScatterPhaseSizeDropDown    % CSSuiDropdown
         ModeScatterPhaseColorDropDown   % CSSuiDropdown
         % Free-text colormap names per axis kind (e.g. 'hsv', 'jet',
@@ -146,6 +148,7 @@ classdef DYNAMOApp < matlab.apps.AppBase & DYNAMO
         ModeScatter_TableCache_         % containers.Map keyed "<chan>|<axis>" -> table; cleared on aggregate refresh
         ModeScatter_DropdownsInited_    % struct with .power/.phase booleans — tracks first populated refresh per axis
         ModeScatter_AxState_     = []   % struct .sel (cell), .pairs (cell of [axP axPh]) — set by redrawModeScatter, consumed by updateModeScatterData
+        ModeScatter_Links_       = []   % struct with .power / .phase linkprop handles. Must be retained on the app: linkprop returns an object whose lifetime IS the link, so dropping the reference breaks the linkage.
         SOHistogramsSplitter            matlab.ui.container.Panel  % Draggable bar between channel listbox and inner tabs
         SOHistogramsSplitter_Drag_      % Saved figure WindowButton callbacks during a splitter drag
 

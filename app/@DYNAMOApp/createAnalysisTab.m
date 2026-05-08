@@ -103,11 +103,13 @@ function createAnalysisTab(app)
 
     % Dropdown row layout:
     %   col 1 = row labels ("Power" / "Phase")
-    %   cols 2-5 = X / Y / Size / Color dropdowns
-    %   col 6   = Colormap (free-text CSSuiEditField, e.g. 'hsv', 'jet')
+    %   cols 2-6 = X / Y / Z / Size / Color dropdowns
+    %             Z defaults to '(none)' = 2-D scatter; setting Z to any
+    %             numeric column flips that axis to scatter3.
+    %   col 7   = Colormap (free-text CSSuiEditField, e.g. 'hsv', 'jet')
     %   headers in row 1, controls on row 2 (Power) and row 3 (Phase).
     app.ModeScatterDropdownGrid               = uigridlayout(modeGrid);
-    app.ModeScatterDropdownGrid.ColumnWidth   = {78,'1x','1x','1x','1x','1x'};
+    app.ModeScatterDropdownGrid.ColumnWidth   = {78,'1x','1x','1x','1x','1x','1x'};
     app.ModeScatterDropdownGrid.RowHeight     = {18, 36, 36};
     app.ModeScatterDropdownGrid.RowSpacing    = 4;
     app.ModeScatterDropdownGrid.ColumnSpacing = 8;
@@ -115,7 +117,7 @@ function createAnalysisTab(app)
     app.ModeScatterDropdownGrid.Layout.Row    = 1;
     app.ModeScatterDropdownGrid.Layout.Column = 1;
 
-    headers = {'X','Y','Size','Color','Colormap'};
+    headers = {'X','Y','Z','Size','Color','Colormap'};
     for cc = 1:numel(headers)
         L = CSSuiLabel(app.ModeScatterDropdownGrid, ...
             'Style', app.AppStyle, 'FontSize','12px', 'Text', headers{cc});
@@ -132,31 +134,33 @@ function createAnalysisTab(app)
     cbPha = @(s,e) onModeScatterDropDownChanged(app, 'phase');
     [app.ModeScatterPowerXDropDown, ...
      app.ModeScatterPowerYDropDown, ...
+     app.ModeScatterPowerZDropDown, ...
      app.ModeScatterPowerSizeDropDown, ...
      app.ModeScatterPowerColorDropDown] = ...
         local_addDropdownRow(app, app.ModeScatterDropdownGrid, 2, cbPow);
     [app.ModeScatterPhaseXDropDown, ...
      app.ModeScatterPhaseYDropDown, ...
+     app.ModeScatterPhaseZDropDown, ...
      app.ModeScatterPhaseSizeDropDown, ...
      app.ModeScatterPhaseColorDropDown] = ...
         local_addDropdownRow(app, app.ModeScatterDropdownGrid, 3, cbPha);
 
-    % Per-axis colormap free-text fields (col 6, rows 2 and 3). Triggers
-    % the same redraw path as the four dropdowns so changes apply
+    % Per-axis colormap free-text fields (col 7, rows 2 and 3). Triggers
+    % the same redraw path as the dropdowns so changes apply
     % immediately. Empty / unrecognized names fall back to parula.
     app.ModeScatterColormapPowerField = CSSuiEditField(app.ModeScatterDropdownGrid, ...
         'Style', app.AppStyle, ...
         'Value', app.ModeScatterColormapPower_, ...
         'ValueChangedFcn', @(s,e) onModeScatterColormapChanged_(app, 'power', e.Value));
     app.ModeScatterColormapPowerField.Layout.Row    = 2;
-    app.ModeScatterColormapPowerField.Layout.Column = 6;
+    app.ModeScatterColormapPowerField.Layout.Column = 7;
 
     app.ModeScatterColormapPhaseField = CSSuiEditField(app.ModeScatterDropdownGrid, ...
         'Style', app.AppStyle, ...
         'Value', app.ModeScatterColormapPhase_, ...
         'ValueChangedFcn', @(s,e) onModeScatterColormapChanged_(app, 'phase', e.Value));
     app.ModeScatterColormapPhaseField.Layout.Row    = 3;
-    app.ModeScatterColormapPhaseField.Layout.Column = 6;
+    app.ModeScatterColormapPhaseField.Layout.Column = 7;
 
     % Plot panel: stable uipanel; redrawModeScatter replaces children
     % with one (axPower, axPhase) pair per selected channel using
@@ -196,21 +200,26 @@ function onModeScatterColormapChanged_(app, kind, newValue)
 end
 
 
-function [xDD, yDD, sDD, cDD] = local_addDropdownRow(app, parent, gridRow, cb)
-    % local_addDropdownRow  Place X/Y/Size/Color dropdowns into one
-    %   row of the Mode Scatter dropdown grid (cols 2..5). All four
+function [xDD, yDD, zDD, sDD, cDD] = local_addDropdownRow(app, parent, gridRow, cb)
+    % local_addDropdownRow  Place X/Y/Z/Size/Color dropdowns into one
+    %   row of the Mode Scatter dropdown grid (cols 2..6). All five
     %   share the same ValueChangedFcn so the renderer redraws the
-    %   axis they belong to.
+    %   axis they belong to. Z defaults to '(none)' which keeps the
+    %   plot 2-D; setting it to a numeric column flips that axis to
+    %   scatter3.
     xDD = CSSuiDropdown(parent, 'Style', app.AppStyle, ...
         'Items', {'(none)'}, 'ValueChangedFcn', cb);
     xDD.Layout.Row = gridRow; xDD.Layout.Column = 2;
     yDD = CSSuiDropdown(parent, 'Style', app.AppStyle, ...
         'Items', {'(none)'}, 'ValueChangedFcn', cb);
     yDD.Layout.Row = gridRow; yDD.Layout.Column = 3;
+    zDD = CSSuiDropdown(parent, 'Style', app.AppStyle, ...
+        'Items', {'(none)'}, 'ValueChangedFcn', cb);
+    zDD.Layout.Row = gridRow; zDD.Layout.Column = 4;
     sDD = CSSuiDropdown(parent, 'Style', app.AppStyle, ...
         'Items', {'(none)'}, 'ValueChangedFcn', cb);
-    sDD.Layout.Row = gridRow; sDD.Layout.Column = 4;
+    sDD.Layout.Row = gridRow; sDD.Layout.Column = 5;
     cDD = CSSuiDropdown(parent, 'Style', app.AppStyle, ...
         'Items', {'(none)'}, 'ValueChangedFcn', cb);
-    cDD.Layout.Row = gridRow; cDD.Layout.Column = 5;
+    cDD.Layout.Row = gridRow; cDD.Layout.Column = 6;
 end

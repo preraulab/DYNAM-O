@@ -44,6 +44,7 @@ function redrawModeScatter(app)
     end
 
     applySharedLimits_(app, sel, powerAxes, phaseAxes);
+    app.linkModeScatterAxes(powerAxes, phaseAxes);
 
     % Cache for in-place updates. updateModeScatterData revalidates
     % these handles before reusing.

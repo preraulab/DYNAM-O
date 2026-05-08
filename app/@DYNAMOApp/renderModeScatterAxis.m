@@ -11,11 +11,13 @@ function ok = renderModeScatterAxis(app, ax, channelName, axisKind)
     cla(ax, 'reset');
     ok = false;
 
-    [xDD, yDD, sDD, cDD] = app.modeScatterDropdowns(axisKind);
+    [xDD, yDD, sDD, cDD, zDD] = app.modeScatterDropdowns(axisKind);
     xCol     = char(xDD.Value);
     yCol     = char(yDD.Value);
     sizeCol  = char(sDD.Value);
     colorCol = char(cDD.Value);
+    zCol     = char(zDD.Value);
+    use3D    = ~strcmp(zCol, '(none)');
 
     T = app.loadParamfitAggregateForChannel(channelName, axisKind);
     if isempty(T) || ~istable(T)
@@ -39,6 +41,16 @@ function ok = renderModeScatterAxis(app, ax, channelName, axisKind)
         text(ax, 0.5, 0.5, '(X/Y must be numeric)', ...
             'HorizontalAlignment','center');
         return
+    end
+    if use3D
+        if ~ismember(zCol, vn) || ~isnumeric(T.(zCol))
+            % Selected Z column either vanished from this aggregate or
+            % is non-numeric — silently degrade to 2-D rather than
+            % erroring; the user can re-pick from the dropdown.
+            use3D = false;
+        else
+            z = T.(zCol);
+        end
     end
 
     % Marker size: rescale to 16..144 pixels² when a numeric Size
@@ -87,8 +99,15 @@ function ok = renderModeScatterAxis(app, ax, channelName, axisKind)
         end
     end
 
-    scatter(ax, x, y, sz, cv, 'filled', ...
-        'MarkerEdgeColor', [0 0 0], 'LineWidth', 0.25);
+    if use3D
+        scatter3(ax, x, y, z, sz, cv, 'filled', ...
+            'MarkerEdgeColor', [0 0 0], 'LineWidth', 0.25);
+        view(ax, 3);   % default 3-D azimuth/elevation; linkprop ties siblings
+        zlabel(ax, zCol, 'Interpreter','none');
+    else
+        scatter(ax, x, y, sz, cv, 'filled', ...
+            'MarkerEdgeColor', [0 0 0], 'LineWidth', 0.25);
+    end
     if isContinuous
         cmap = resolveModeScatterColormap(cmapName, 256);
         colormap(ax, cmap);
