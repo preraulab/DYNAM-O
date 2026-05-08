@@ -25,6 +25,7 @@ function S = collectBatchSettings(app)
     S.data_files    = reshape(cellstr(app.DataList),    1, []);
     S.staging_files = reshape(cellstr(app.StagingList), 1, []);
     S.output_dir    = char(app.OutputDirEditField.Value);
+    S.metadata_file = char(app.MetadataFile_);
 
     S.save_toggles = struct( ...
         'save_logs',           logical(app.SaveLogsSwitch.Value), ...

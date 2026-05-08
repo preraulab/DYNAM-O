@@ -16,22 +16,71 @@ function createAnalysisTab(app)
     %   updateAggregateDataTabVisibility based on what aggregate data
     %   is present under the current results root.
 
+    % --- Top-level wrapper: metadata bar (row 1) + content (row 2) ---
+    %     Wrapping the existing 3-column SOHistogramsGrid in a parent
+    %     keeps the metadata picker out of the splittable region so
+    %     resizing the channel column doesn't squish the path field.
+    analysisTabGrid               = uigridlayout(app.AnalysisTab);
+    analysisTabGrid.ColumnWidth   = {'1x'};
+    analysisTabGrid.RowHeight     = {32, '1x'};
+    analysisTabGrid.RowSpacing    = 4;
+    analysisTabGrid.Padding       = [0 0 0 0];
+
+    % Metadata bar (mirrored to MetadataFileEditField in Batch Setup).
+    metaBar               = uigridlayout(analysisTabGrid);
+    metaBar.ColumnWidth   = {110, '1x', 96, 96};
+    metaBar.RowHeight     = {'1x'};
+    metaBar.ColumnSpacing = 6;
+    metaBar.Padding       = [5 0 5 0];
+    metaBar.Layout.Row    = 1;
+    metaBar.Layout.Column = 1;
+
+    metaLbl = CSSuiLabel(metaBar, 'Style', app.AppStyle, ...
+        'FontSize','12.5px','FontWeight','700','Text','Metadata:');
+    metaLbl.Layout.Row = 1; metaLbl.Layout.Column = 1;
+
+    app.MetadataFileFieldAggregate = CSSuiEditField(metaBar, ...
+        'Style', app.AppStyle, ...
+        'Value', char(app.MetadataFile_), ...
+        'ValueChangedFcn', @(s,e) app.setMetadataFile(e.Value));
+    app.MetadataFileFieldAggregate.Layout.Row    = 1;
+    app.MetadataFileFieldAggregate.Layout.Column = 2;
+
+    app.MetadataBrowseButtonAggregate = CSSuiButton(metaBar, ...
+        'Style', app.AppStyle, ...
+        'Text', 'Browse...', ...
+        'ButtonPushedFcn', @(s,e) app.pickMetadataFileViaDialog());
+    app.MetadataBrowseButtonAggregate.Layout.Row    = 1;
+    app.MetadataBrowseButtonAggregate.Layout.Column = 3;
+
+    app.MetadataClearButtonAggregate = CSSuiButton(metaBar, ...
+        'Style', app.AppStyle, ...
+        'Text', 'Clear', ...
+        'ButtonPushedFcn', @(s,e) app.setMetadataFile(''));
+    app.MetadataClearButtonAggregate.Layout.Row    = 1;
+    app.MetadataClearButtonAggregate.Layout.Column = 4;
+
     % --- Outer 3-column layout: selector on left | draggable splitter |
     %     inner tabgroup on right. SplitterWidth_ caches the col-2 size
     %     so the drag handler can recompute new col-1 width without
     %     re-reading the layout. The splitter is a thin uipanel whose
     %     ButtonDownFcn arms figure-level WindowButtonMotion / Up
     %     handlers for the duration of the drag.
-    app.SOHistogramsGrid               = uigridlayout(app.AnalysisTab);
+    app.SOHistogramsGrid               = uigridlayout(analysisTabGrid);
     app.SOHistogramsGrid.ColumnWidth   = {180, 6, '1x'};
     app.SOHistogramsGrid.RowHeight     = {'1x'};
     app.SOHistogramsGrid.ColumnSpacing = 0;
     app.SOHistogramsGrid.Padding       = [5 5 5 5];
+    app.SOHistogramsGrid.Layout.Row    = 2;
+    app.SOHistogramsGrid.Layout.Column = 1;
 
-    % --- Channel selector panel (left) ---
+    % --- Channel selector + Group-by panel (left) ---
+    %     Rows 1-2: Channel listbox header + multiselect listbox (1x)
+    %     Rows 3-4: Group-by label + dropdown
+    %     Rows 5-6: Group-filter label + multiselect listbox (90px)
     app.SOHistogramsSelectorPanel             = uigridlayout(app.SOHistogramsGrid);
     app.SOHistogramsSelectorPanel.ColumnWidth = {'1x'};
-    app.SOHistogramsSelectorPanel.RowHeight   = {18, '1x'};
+    app.SOHistogramsSelectorPanel.RowHeight   = {18, '1x', 14, 28, 14, 90};
     app.SOHistogramsSelectorPanel.RowSpacing  = 2;
     app.SOHistogramsSelectorPanel.Padding     = [0 0 0 0];
     app.SOHistogramsSelectorPanel.Layout.Row    = 1;
@@ -51,6 +100,34 @@ function createAnalysisTab(app)
         'ValueChangedFcn', @(src,evt) onSOHistogramsSelectionChanged(app));
     app.SOHistogramsChannelListBox.Layout.Row    = 2;
     app.SOHistogramsChannelListBox.Layout.Column = 1;
+
+    % --- Group-by (row 3-4) ---
+    gbLbl = CSSuiLabel(app.SOHistogramsSelectorPanel, ...
+        'Style', app.AppStyle, ...
+        'FontSize','12px', 'Text','Group by:');
+    gbLbl.Layout.Row = 3; gbLbl.Layout.Column = 1;
+    app.ModeScatterGroupByDropDown = CSSuiDropdown( ...
+        app.SOHistogramsSelectorPanel, ...
+        'Style', app.AppStyle, ...
+        'Items', {'(none)'}, ...
+        'Value', '(none)', ...
+        'ValueChangedFcn', @(s,e) onGroupByChanged_(app));
+    app.ModeScatterGroupByDropDown.Layout.Row    = 4;
+    app.ModeScatterGroupByDropDown.Layout.Column = 1;
+
+    % --- Group filter (row 5-6) ---
+    gfLbl = CSSuiLabel(app.SOHistogramsSelectorPanel, ...
+        'Style', app.AppStyle, ...
+        'FontSize','12px', 'Text','Group filter:');
+    gfLbl.Layout.Row = 5; gfLbl.Layout.Column = 1;
+    app.ModeScatterGroupFilterListBox = CSSuiListBox( ...
+        app.SOHistogramsSelectorPanel, ...
+        'Style', app.AppStyle, ...
+        'Multiselect', true, ...
+        'Items', {}, ...
+        'ValueChangedFcn', @(s,e) onGroupFilterChanged_(app));
+    app.ModeScatterGroupFilterListBox.Layout.Row    = 6;
+    app.ModeScatterGroupFilterListBox.Layout.Column = 1;
 
     % --- Splitter (middle) ---
     app.SOHistogramsSplitter = uipanel(app.SOHistogramsGrid, ...
@@ -185,6 +262,23 @@ function createAnalysisTab(app)
     % whenever forceRefresh fires (post-aggregate, transitions, etc.).
     app.ModeScatter_TableCache_ = containers.Map( ...
         'KeyType','char','ValueType','any');
+end
+
+
+function onGroupByChanged_(app)
+    % Group-by column changed → repopulate the filter listbox with the
+    % new column's levels, then redraw both Mean SOPH and Mode Scatter.
+    try, app.refreshGroupByControls(); catch, end
+    try, app.redrawSOHistograms();     catch, end
+    try, app.updateModeScatterData();  catch, end
+end
+
+
+function onGroupFilterChanged_(app)
+    % Group-filter selection changed → no need to re-populate items;
+    % just push the new filter through both renders.
+    try, app.redrawSOHistograms();    catch, end
+    try, app.updateModeScatterData(); catch, end
 end
 
 

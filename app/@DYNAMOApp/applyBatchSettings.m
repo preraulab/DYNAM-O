@@ -69,6 +69,21 @@ function applyBatchSettings(app, S)
         end
     end
 
+    % --- Metadata file (subject demographics CSV/TSV/XLSX) --------------
+    if isfield(S, 'metadata_file')
+        mf = char(S.metadata_file);
+        if isempty(mf) || isfile(mf)
+            app.setMetadataFile(mf);
+        else
+            % Keep the path on the field so the user sees what was missing,
+            % but don't try to load it. setMetadataFile('') leaves the
+            % field empty; we'd rather show the broken path so they can
+            % browse for a new one.
+            try, app.MetadataFileEditField.Value      = mf; catch, end
+            try, app.MetadataFileFieldAggregate.Value = mf; catch, end
+        end
+    end
+
     % --- Save toggles ---------------------------------------------------
     if isfield(S, 'save_toggles') && isstruct(S.save_toggles)
         t = S.save_toggles;

@@ -26,6 +26,23 @@ function ok = renderModeScatterAxis(app, ax, channelName, axisKind)
             'HorizontalAlignment','center');
         return
     end
+    % Apply the active subject Group-by + Group-filter mask. The table
+    % has one row per (subject, mode) so we can mask directly on its
+    % ID column. activeSubjectMask is an identity (all-true) when no
+    % metadata or no Group-by is configured, so this is a no-op for the
+    % default flow.
+    if ismember('ID', T.Properties.VariableNames) && height(T) > 0
+        keepMask = app.activeSubjectMask(T.ID);
+        if any(~keepMask)
+            T = T(keepMask, :);
+        end
+    end
+    if isempty(T) || height(T) == 0
+        axis(ax, 'off');
+        text(ax, 0.5, 0.5, '(no rows in active group filter)', ...
+            'HorizontalAlignment','center');
+        return
+    end
     vn = T.Properties.VariableNames;
     if ~ismember(xCol, vn) || ~ismember(yCol, vn) ...
             || strcmp(xCol,'(none)') || strcmp(yCol,'(none)')

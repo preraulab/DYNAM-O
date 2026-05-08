@@ -26,7 +26,10 @@ function createBatchSetupTab(app)
 
     app.FileInputGrid                   = uigridlayout(app.FileSelectionGrid);
     app.FileInputGrid.ColumnWidth       = {'1x', '1x'};
-    app.FileInputGrid.RowHeight         = {30, 20, '1x', button_height};
+    % Row 5 hosts the optional Metadata-CSV picker (label + path field +
+    % Browse/Clear). Separate from the file-list rows because metadata is
+    % single-path and post-aggregation, not a per-subject input list.
+    app.FileInputGrid.RowHeight         = {30, 20, '1x', button_height, 32};
     app.FileInputGrid.ColumnSpacing     = 15;
     app.FileInputGrid.RowSpacing        = 0;
     app.FileInputGrid.Padding           = [5 0 10 0];
@@ -303,6 +306,46 @@ function createBatchSetupTab(app)
     app.StagingMoveDownButton.Row    = 1;
     app.StagingMoveDownButton.Column = 7;
     app.StagingMoveDownButton.HTMLComponent.Tooltip       = 'Move current staging file down';
+
+    % ============================================================
+    %   METADATA (optional, row 5 spans both columns)
+    % ============================================================
+    %   First column matches the EDF filename (with or without .edf —
+    %   the loader strips it). Joined lazily into the Mode Scatter and
+    %   Mean SOPH plots — no batch re-run needed when the CSV changes.
+    metaBar               = uigridlayout(app.FileInputGrid);
+    metaBar.ColumnWidth   = {130, '1x', 96, 96};
+    metaBar.RowHeight     = {'1x'};
+    metaBar.ColumnSpacing = 6;
+    metaBar.Padding       = [0 2 0 2];
+    metaBar.Layout.Row    = 5;
+    metaBar.Layout.Column = [1 2];
+
+    metaLbl = CSSuiLabel(metaBar, 'Style', app.AppStyle, ...
+        'FontSize','12.5px', 'FontWeight','700', ...
+        'Text','Metadata (optional):');
+    metaLbl.Layout.Row = 1; metaLbl.Layout.Column = 1;
+
+    app.MetadataFileEditField = CSSuiEditField(metaBar, ...
+        'Style', app.AppStyle, ...
+        'Value', char(app.MetadataFile_), ...
+        'ValueChangedFcn', @(s,e) app.setMetadataFile(e.Value));
+    app.MetadataFileEditField.Layout.Row    = 1;
+    app.MetadataFileEditField.Layout.Column = 2;
+
+    app.MetadataBrowseButtonBatch = CSSuiButton(metaBar, ...
+        'Style', app.AppStyle, ...
+        'Text', 'Browse...', ...
+        'ButtonPushedFcn', @(s,e) app.pickMetadataFileViaDialog());
+    app.MetadataBrowseButtonBatch.Layout.Row    = 1;
+    app.MetadataBrowseButtonBatch.Layout.Column = 3;
+
+    app.MetadataClearButtonBatch = CSSuiButton(metaBar, ...
+        'Style', app.AppStyle, ...
+        'Text', 'Clear', ...
+        'ButtonPushedFcn', @(s,e) app.setMetadataFile(''));
+    app.MetadataClearButtonBatch.Layout.Row    = 1;
+    app.MetadataClearButtonBatch.Layout.Column = 4;
 
     % ============================================================
     %   RUNTIME OPTIONS (right column)

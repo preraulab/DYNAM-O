@@ -149,6 +149,31 @@ classdef DYNAMOApp < matlab.apps.AppBase & DYNAMO
         ModeScatter_DropdownsInited_    % struct with .power/.phase booleans — tracks first populated refresh per axis
         ModeScatter_AxState_     = []   % struct .sel (cell), .pairs (cell of [axP axPh]) — set by redrawModeScatter, consumed by updateModeScatterData
         ModeScatter_Links_       = []   % struct with .power / .phase linkprop handles. Must be retained on the app: linkprop returns an object whose lifetime IS the link, so dropping the reference breaks the linkage.
+
+        % --- Subject metadata (lazy-joined into aggregates) ---
+        % Metadata file picker lives in two surfaces (Batch Setup +
+        % Aggregate Data); both fields write through setMetadataFile,
+        % which is the single source of truth. MetadataTable_ is the
+        % cached readtable() result with the first column canonicalised
+        % to 'ID'; cleared whenever MetadataFile_ changes.
+        MetadataFile_                 = ''   % canonical absolute path (char)
+        MetadataTable_                = []   % cached table from loadSubjectMetadata
+        MetadataFileEditField         % CSSuiEditField (Batch Setup)
+        MetadataFileFieldAggregate    % CSSuiEditField (Aggregate Data tab)
+        MetadataBrowseButtonBatch     % CSSuiButton
+        MetadataBrowseButtonAggregate % CSSuiButton
+        MetadataClearButtonBatch      % CSSuiButton
+        MetadataClearButtonAggregate  % CSSuiButton
+
+        % --- Group-by panel (drives filtering + stats) ---
+        ModeScatterGroupByDropDown      % CSSuiDropdown — column to split subjects on; '(none)' = no grouping
+        ModeScatterGroupFilterListBox   % CSSuiListBox (Multiselect=true) — which level values to include
+
+        % --- Group Stats inner tab (multicomp_test hooks) ---
+        GroupStatsTab                   matlab.ui.container.Tab
+        GroupStatsHintLabel             % CSSuiLabel — "select 2 levels" hint when not ready
+        GroupStatsScatterTable          matlab.ui.control.Table  % per-paramfit-column results
+        GroupStatsSOPHPanel             matlab.ui.container.Panel  % hosts mean A / mean B / sig overlay axes
         SOHistogramsSplitter            matlab.ui.container.Panel  % Draggable bar between channel listbox and inner tabs
         SOHistogramsSplitter_Drag_      % Saved figure WindowButton callbacks during a splitter drag
 

@@ -49,5 +49,13 @@ function T = loadParamfitAggregateForChannel(app, channelName, axisKind)
         T = [];
     end
 
+    % Lazy join the user's subject metadata onto the aggregate. Identity
+    % when no metadata file is set; otherwise an outerjoin on a
+    % .edf-tolerant ID match. Cache the joined result so dropdown
+    % changes don't rerun the join.
+    if ~isempty(T) && istable(T)
+        T = app.joinMetadataToAggregate(T, channelName, axisKind);
+    end
+
     app.ModeScatter_TableCache_(key) = T;
 end

@@ -16,7 +16,20 @@ function plotAggregateSOHist(app, ax, filePath, axis_kind)
                 else,                           agg = S;
                 end
                 if isfield(agg, field) && ~isempty(agg.(field))
-                    M = mean(agg.(field), 3, 'omitnan');
+                    stack = agg.(field);
+                    % Apply the active subject filter (Group-by + Group-
+                    % filter listbox). When metadata isn't loaded /
+                    % no Group-by is selected, the mask is all-true
+                    % and this is a no-op.
+                    if isfield(agg, 'subjectIDs')
+                        mask = app.activeSubjectMask(agg.subjectIDs);
+                        if any(~mask) && size(stack, 3) == numel(mask)
+                            stack = stack(:, :, mask);
+                        end
+                    end
+                    if ~isempty(stack)
+                        M = mean(stack, 3, 'omitnan');
+                    end
                 end
                 if isfield(agg, 'freq_bins'), freq_bins = agg.freq_bins(:); end
                 if isfield(agg, binsField),   bins      = agg.(binsField)(:); end
@@ -25,17 +38,45 @@ function plotAggregateSOHist(app, ax, filePath, axis_kind)
                 % single subject's gap doesn't poison the aggregate
                 % cell (matches the .mat branch's mean(...,'omitnan')).
                 info  = imfinfo(filePath);
-                first = double(imread(filePath, 1));
-                accum = first;  accum(~isfinite(first)) = 0;
-                cnt   = double(isfinite(first));
-                for pp = 2:numel(info)
-                    page = double(imread(filePath, pp));
-                    finite = isfinite(page);
-                    accum(finite) = accum(finite) + page(finite);
-                    cnt           = cnt + finite;
+                % Page-order subject IDs live in <base>_subjectIDs.txt
+                % alongside the aggregate; if present, map them to
+                % the subject filter mask. Otherwise we have no ID
+                % handle and have to include every page.
+                pageMask = true(1, numel(info));
+                pageIds  = {};
+                try
+                    [d, nm, ~] = fileparts(filePath);
+                    idsTxt = fullfile(d, [nm '_subjectIDs.txt']);
+                    if isfile(idsTxt)
+                        fid = fopen(idsTxt, 'r');
+                        c   = onCleanup(@() fclose(fid)); %#ok<NASGU>
+                        pageIds = textscan(fid, '%s', 'Delimiter', '\n', 'WhiteSpace', '');
+                        pageIds = strtrim(pageIds{1});
+                    end
+                catch
+                    pageIds = {};
                 end
-                M = accum ./ cnt;
-                M(cnt == 0) = NaN;   % all-NaN cell stays NaN
+                if numel(pageIds) == numel(info)
+                    pageMask = app.activeSubjectMask(pageIds);
+                end
+
+                first = []; idxFirst = find(pageMask, 1, 'first');
+                if isempty(idxFirst)
+                    M = [];   % no subjects survive the filter
+                else
+                    first = double(imread(filePath, idxFirst));
+                    accum = first;  accum(~isfinite(first)) = 0;
+                    cnt   = double(isfinite(first));
+                    for pp = (idxFirst + 1):numel(info)
+                        if ~pageMask(pp), continue, end
+                        page = double(imread(filePath, pp));
+                        finite = isfinite(page);
+                        accum(finite) = accum(finite) + page(finite);
+                        cnt           = cnt + finite;
+                    end
+                    M = accum ./ cnt;
+                    M(cnt == 0) = NaN;   % all-NaN cell stays NaN
+                end
                 % First try the TIFF's own ImageDescription tag;
                 % aggregates and per-subject TIFFs written by
                 % current DYNAMO carry bins there as JSON.
