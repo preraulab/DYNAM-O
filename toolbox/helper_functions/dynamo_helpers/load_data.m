@@ -1,8 +1,8 @@
-function [data, Fs, stage_times, stage_vals] = load_data(varargin)
+function [data, Fs, stage_times, stage_vals, signal_labels] = load_data(varargin)
 %LOAD_DATA  Load EEG data and sleep staging from EDF and delimited text files
 %
 %   Usage:
-%       [data, Fs, stage_times, stage_vals] = load_data(edf_fpath, scoring_fpath, stage_col, time_col, channels, ...)
+%       [data, Fs, stage_times, stage_vals, signal_labels] = load_data(edf_fpath, scoring_fpath, stage_col, time_col, channels, ...)
 %
 %   Required Inputs:
 %       edf_fpath:      char or cell - path(s) to EDF file(s) -- required
@@ -21,10 +21,24 @@ function [data, Fs, stage_times, stage_vals] = load_data(varargin)
 %       resample_freq:  double - target resampling frequency in Hz (default: [])
 %
 %   Outputs:
-%       data:           [N x C] double - EEG data matrix (samples x channels)
-%       Fs:             double - sampling frequency in Hz
+%       data:           [N x K] double - EEG data matrix (samples x loaded
+%                       channels). K may be < numel(channels) when read_EDF
+%                       silently drops requested specs (UnknownChannel,
+%                       ParseError, RefCollision); see signal_labels for the
+%                       canonical mapping back to outname.
+%       Fs:             [1 x K] double - sampling frequencies (Hz), aligned to
+%                       columns of data.
 %       stage_times:    [1 x T] double - sleep stage onset times in seconds
-%       stage_vals:     [1 x T] double - sleep stage values (0=Unk, 1=N3, 2=N2, 3=N1, 4=REM, 5=Wake)
+%       stage_vals:     [1 x T] double - sleep stage values (0=Unk, 1=N3, 2=N2,
+%                       3=N1, 4=REM, 5=Wake)
+%       signal_labels:  {1 x K} cellstr - output labels emitted by read_EDF for
+%                       each column of data. For aliased channel specs
+%                       ('OUT = expr') this is the alias; for unaliased
+%                       plain-label specs it is the spec text. Callers should
+%                       align by this list, not by position in the input
+%                       'channels' cell, since the variant-fallback pattern
+%                       ({'A', 'A=B', 'A=C'}) intentionally yields exactly
+%                       one column per outname per file.
 %
 % =========================================================================
 %                  DYNAM-O Toolbox  |  Prerau Laboratory
@@ -151,48 +165,6 @@ else
     [header, signalHeader, data] = read_EDF(edf_fpath, ...
         'Channels', channels, 'References', References);
 end
-
-% read_EDF demotes per-channel resolution failures (UnknownChannel,
-% ParseError, RefCollision) to warnings and silently drops the offending
-% entry from its return — see apply_channel_derivations.m. That means a
-% partial-failure load returns fewer columns than the caller asked for,
-% which would mis-align positional indexing downstream (runBatch does
-% `app.data = bulk_data(:, ii)` against the original channel list,
-% hitting an out-of-bounds error on the first dropped entry and quietly
-% pulling the wrong signal under the wrong name on the entries before
-% it). Fail loudly here with a list of dropped specs so the user can fix
-% their channel configuration instead of getting silently bad output.
-if numel(signalHeader) < numel(channels)
-    returned_labels = {signalHeader.signal_labels};
-    expected_labels = cell(1, numel(channels));
-    for kk = 1:numel(channels)
-        spec = channels{kk};
-        eq = strfind(spec, '=');
-        if isempty(eq)
-            expected_labels{kk} = strtrim(spec);
-        else
-            expected_labels{kk} = strtrim(spec(1:eq(1)-1));
-        end
-    end
-    matched = false(1, numel(channels));
-    used    = false(1, numel(returned_labels));
-    for kk = 1:numel(expected_labels)
-        for jj = 1:numel(returned_labels)
-            if ~used(jj) && strcmp(expected_labels{kk}, returned_labels{jj})
-                matched(kk) = true;
-                used(jj)    = true;
-                break
-            end
-        end
-    end
-    dropped = channels(~matched);
-    error('load_data:DroppedChannels', ...
-        ['read_EDF returned %d of %d requested channels — the following ', ...
-         'channel specs were dropped (see warnings above for individual ', ...
-         'reasons): %s'], ...
-        numel(signalHeader), numel(channels), strjoin(dropped, ' | '));
-end
-
 % read_EDF returns signal_cells as a row cell of row vectors. Naive
 % cell2mat would horizontally concatenate them into 1 x (N*C) garbage
 % — single-channel callers got a harmless 1 x N row, but multi-channel
@@ -201,9 +173,14 @@ end
 data = cellfun(@(x) x(:), data, 'UniformOutput', false);
 data = cell2mat(data);
 
-% signalHeader is now ordered to match channels (including any rereferenced
-% virtual channels), so sampling frequencies are already in the right order.
-Fs = [signalHeader.sampling_frequency];
+% signalHeader is ordered to match the SUCCESSFULLY-LOADED channels (which
+% may be a strict subset of `channels` — the variant-fallback pattern
+% {'A', 'A=B', 'A=C'} intentionally drops same-outname duplicates after
+% the first one resolves, and unresolvable specs are demoted to warnings
+% in apply_channel_derivations). Expose the labels alongside Fs/data so
+% callers can align by outname instead of by position in the input list.
+Fs            = [signalHeader.sampling_frequency];
+signal_labels = reshape({signalHeader.signal_labels}, 1, []);
 
 % Test to see whether start time is valid
 time_str = header.recording_starttime;

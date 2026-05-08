@@ -114,8 +114,10 @@ function runBatch(app, dataList, stagingList)
     nFiles    = length(dataList);
     nChannels = length(app.ChannelList);
     app.ProgressBar.reset();
-    app.ProgressBar.N = nFiles * nChannels;
     app.ProgressBar.LabelPrefix = '';
+    % Note: ProgressBar.N is set below, after channelListSafe and the
+    % unique-outname count are computed (the work unit is one canonical
+    % outname per file, not one input spec per file).
     app.ProgressBar.start;
 
     % ---------------------------------------------------------------
@@ -144,6 +146,7 @@ function runBatch(app, dataList, stagingList)
     % directory like CFS_LM/ instead of CFS_C3 - mean(A1,A2)/.
     channelList      = app.ChannelList;
     channelListSafe  = cell(size(channelList));
+    channelListAlias = cell(size(channelList));   % raw outname (alias text emitted by read_EDF)
     for ii = 1:numel(channelList)
         spec = channelList{ii};
         eq = strfind(spec, '=');
@@ -152,15 +155,36 @@ function runBatch(app, dataList, stagingList)
         else
             outname = strtrim(spec(1:eq(1)-1));
         end
-        channelListSafe{ii} = app.fixFilename(outname,'');
+        channelListAlias{ii} = outname;
+        channelListSafe{ii}  = app.fixFilename(outname,'');
     end
+
+    % Variant-fallback semantics: when the user lists multiple specs that
+    % share an output name (e.g. {'C4-A1', 'C4-A1 = [C4-A1 - A]',
+    % 'C4-A1 = [C4-A1 - B]'}), the first variant per file that resolves
+    % "wins" and the rest are silently skipped — see the RefCollision
+    % comment in apply_channel_derivations.m. So the unit of work is one
+    % canonical outname per file, not one input spec per file. Mark which
+    % input specs are "primary" (first-occurrence) to drive both the
+    % progress-bar count and the inner-loop iteration.
+    primarySpecMask = false(1, numel(channelList));
+    seen = containers.Map('KeyType', 'char', 'ValueType', 'logical');
+    for ii = 1:numel(channelListSafe)
+        if ~seen.isKey(channelListSafe{ii})
+            seen(channelListSafe{ii})   = true;
+            primarySpecMask(ii)         = true;
+        end
+    end
+    nUniqueOutnames = sum(primarySpecMask);
+    app.ProgressBar.N = nFiles * nUniqueOutnames;
 
     % Pre-create every output subdirectory that enabled analysis steps
     % will write to. mkdir is idempotent but each call costs a syscall,
-    % so doing this once per (channel) rather than per (channel x runner)
-    % saves O(N_channels * N_runners) mkdir calls per batch.
+    % so doing this once per (canonical outname) rather than once per
+    % (input spec) skips redundant calls when the user lists multiple
+    % variants for the same outname.
     outDir = app.OutputDirEditField.Value;
-    for ii = 1:numel(channelListSafe)
+    for ii = find(primarySpecMask)
         chanDir = fullfile(outDir, channelListSafe{ii});
         if app.SavePeakStatsCheckBox.Value || app.SaveSOPHsCheckBox.Value
             mkdir(fullfile(chanDir, 'TFpeaks'));
@@ -234,12 +258,12 @@ function runBatch(app, dataList, stagingList)
             app.input_fbase, jj, nFiles));
         app.TextArea.addnl(sprintf('Loading staging and EDF data (%d channel(s))...', nChannels));
 
-        bulk_data        = [];
-        bulk_Fs          = [];
-        bulk_stage_times = [];
-        bulk_stage_vals  = [];
-        subject_loaded_ok    = false;
-        channel_load_failed  = false(1, nChannels);
+        bulk_data          = [];
+        bulk_Fs            = [];
+        bulk_stage_times   = [];
+        bulk_stage_vals    = [];
+        bulk_signal_labels = {};   % aliases that read_EDF actually emitted
+        subject_loaded_ok  = false;
         t_load = tic;
         % Push resampling down into load_data: it pipes TargetFs
         % into read_EDF (References-defined fast path) AND also
@@ -259,7 +283,7 @@ function runBatch(app, dataList, stagingList)
             drawnow;
         end
         try
-            [bulk_data, bulk_Fs, bulk_stage_times, bulk_stage_vals] = load_data( ...
+            [bulk_data, bulk_Fs, bulk_stage_times, bulk_stage_vals, bulk_signal_labels] = load_data( ...
                 dataList{jj}, ...
                 stagingList{jj}, ...
                 app.StagesColumnEditField.Value, ...
@@ -289,14 +313,15 @@ function runBatch(app, dataList, stagingList)
                   || contains(lower(e_load.message), 'requested array exceeds');
 
             if is_oom && nChannels > 1
-                % Out-of-memory on the bulk read: fall back to
-                % loading one channel at a time, stitching the
-                % columns into bulk_data as we go. Channels that
-                % still fail individually are flagged in
-                % channel_load_failed so the inner loop skips
-                % them but processes the survivors.
+                % Out-of-memory on the bulk read: fall back to one canonical
+                % outname at a time. Variant-fallback siblings of an outname
+                % that already loaded are skipped to honor the same "first
+                % match wins" semantics as the bulk derived-channels
+                % pipeline (otherwise per-channel reads, which can't
+                % trigger RefCollision, would happily load BOTH variants
+                % and put two signals into the same output dir).
                 msg = sprintf( ...
-                    'Out of memory on bulk read of %d channel(s). Reverting to channel-by-channel load to save memory.', ...
+                    'Out of memory on bulk read of %d channel spec(s). Reverting to per-outname load to save memory.', ...
                     nChannels);
                 app.TextArea.addnl(['   ' msg]);
                 fprintf('\n%s\n', msg);
@@ -307,11 +332,19 @@ function runBatch(app, dataList, stagingList)
                 % partially allocated before retrying.
                 bulk_data = []; bulk_Fs = [];
                 bulk_stage_times = []; bulk_stage_vals = [];
+                bulk_signal_labels = {};
 
-                per_ch_ok = false(1, nChannels);
+                outname_loaded = containers.Map('KeyType', 'char', 'ValueType', 'logical');
                 for ii_fb = 1:nChannels
+                    safe_name = channelListSafe{ii_fb};
+                    if outname_loaded.isKey(safe_name)
+                        % An earlier variant already produced data for
+                        % this canonical outname. Don't try this fallback
+                        % spec — it would just duplicate the column.
+                        continue
+                    end
                     try
-                        [d_ii, f_ii, st_ii, sv_ii] = load_data( ...
+                        [d_ii, f_ii, st_ii, sv_ii, lbl_ii] = load_data( ...
                             dataList{jj}, ...
                             stagingList{jj}, ...
                             app.StagesColumnEditField.Value, ...
@@ -325,19 +358,24 @@ function runBatch(app, dataList, stagingList)
                             app.REMUserInput,      app.N1UserInput, ...
                             app.N2UserInput,       app.N3UserInput, ...
                             app.UnknownUserInput });
+                        if isempty(d_ii) || size(d_ii, 2) == 0
+                            % read_EDF dropped this spec (UnknownChannel,
+                            % ParseError, etc.). Try the next variant.
+                            continue
+                        end
                         if isempty(bulk_data)
-                            bulk_data        = nan(size(d_ii, 1), nChannels);
-                            bulk_Fs          = nan(1, nChannels);
+                            bulk_data        = nan(size(d_ii, 1), 0);
+                            bulk_Fs          = nan(1, 0);
                             bulk_stage_times = st_ii;
                             bulk_stage_vals  = sv_ii;
                         end
-                        bulk_data(:, ii_fb) = d_ii;
-                        bulk_Fs(ii_fb)      = f_ii(1);
-                        per_ch_ok(ii_fb)    = true;
+                        bulk_data          = [bulk_data, d_ii(:)]; %#ok<AGROW>
+                        bulk_Fs            = [bulk_Fs, f_ii(1)];   %#ok<AGROW>
+                        bulk_signal_labels = [bulk_signal_labels, lbl_ii(1)]; %#ok<AGROW>
+                        outname_loaded(safe_name) = true;
                     catch e_ch
-                        channel_load_failed(ii_fb) = true;
                         chFailMsg = sprintf( ...
-                            'Channel %s: per-channel fallback load failed (%s).', ...
+                            'Channel %s: per-outname fallback load failed (%s).', ...
                             channelList{ii_fb}, e_ch.message);
                         app.TextArea.addnl(['   ' chFailMsg]);
                         fprintf('   %s\n', chFailMsg);
@@ -345,25 +383,24 @@ function runBatch(app, dataList, stagingList)
                     end
                 end
 
-                if any(per_ch_ok)
+                if ~isempty(bulk_data)
                     if app.use_no_stages
-                        first_ok_ii = find(per_ch_ok, 1);
-                        bulk_stage_times = [0, size(bulk_data, 1) / bulk_Fs(first_ok_ii)];
+                        bulk_stage_times = [0, size(bulk_data, 1) / bulk_Fs(1)];
                         bulk_stage_vals  = [2, 2];
                     end
                     subject_loaded_ok = true;
                 else
                     allFailMsg = sprintf( ...
-                        'Subject %s: bulk read OOM and every per-channel retry also failed. All %d channel(s) skipped.', ...
-                        app.input_fbase, nChannels);
+                        'Subject %s: bulk read OOM and every per-outname retry also failed. All %d outname(s) skipped.', ...
+                        app.input_fbase, nUniqueOutnames);
                     app.TextArea.addnl(allFailMsg);
                     fprintf('\nERROR — %s\n', allFailMsg);
                     try, app.appendRunLog([allFailMsg, newline]); catch, end
                 end
             else
                 loadFailMsg = sprintf( ...
-                    'Subject %s: load failed. All %d channel(s) skipped.', ...
-                    app.input_fbase, nChannels);
+                    'Subject %s: load failed. All %d outname(s) skipped.', ...
+                    app.input_fbase, nUniqueOutnames);
                 app.TextArea.addnl(loadFailMsg);
                 fprintf('\nERROR — %s\n%s\n', loadFailMsg, getReport(e_load, 'basic'));
                 app.appendRunLog(sprintf('%s\n%s\n', loadFailMsg, e_load.message));
@@ -371,7 +408,39 @@ function runBatch(app, dataList, stagingList)
             drawnow;
         end
 
+        % Build the (input-spec → bulk_data column) mapping for this file.
+        % Read_EDF returned bulk_signal_labels[k] = the alias of whichever
+        % spec resolved at column k. For each PRIMARY spec (first occurrence
+        % of an outname), find the matching column. Specs whose outname is
+        % nowhere in bulk_signal_labels are flagged as load-failed for this
+        % file. Non-primary specs are silently skipped — by design they're
+        % fallback variants whose canonical outname is processed by the
+        % primary entry.
+        spec_col = zeros(1, nChannels);
+        if subject_loaded_ok
+            label_to_col = containers.Map('KeyType', 'char', 'ValueType', 'double');
+            for kk = 1:numel(bulk_signal_labels)
+                lbl = bulk_signal_labels{kk};
+                if ~label_to_col.isKey(lbl)
+                    label_to_col(lbl) = kk;
+                end
+            end
+            for ii = find(primarySpecMask)
+                if label_to_col.isKey(channelListAlias{ii})
+                    spec_col(ii) = label_to_col(channelListAlias{ii});
+                end
+            end
+        end
+
+        % Iterate over input specs, but only PRIMARY ones (first-occurrence
+        % per outname) do work; the rest are fallback variants and are
+        % silently skipped.
+        chan_progress = 0;
         for ii = 1:length(channelList)
+            if ~primarySpecMask(ii)
+                continue
+            end
+            chan_progress = chan_progress + 1;
             app.channel = channelListSafe{ii};
 
             % Update the progress-bar label so the user can see
@@ -380,7 +449,7 @@ function runBatch(app, dataList, stagingList)
             try
                 app.ProgressBar.LabelPrefix = sprintf( ...
                     'Subject %d/%d, Channel %d/%d', ...
-                    jj, nFiles, ii, nChannels);
+                    jj, nFiles, chan_progress, nUniqueOutnames);
             catch
                 % progress bar UI errors must never abort the batch
             end
@@ -388,7 +457,7 @@ function runBatch(app, dataList, stagingList)
             % Honor stop request before starting each new iteration
             if app.isStopBatchButtonPushed == true
                 haltMsg = sprintf('Run halted by user before subject %d/%d, channel %d/%d (%s | %s).', ...
-                    jj, nFiles, ii, nChannels, ...
+                    jj, nFiles, chan_progress, nUniqueOutnames, ...
                     app.input_fbase, app.channel);
                 try, app.appendRunLog([haltMsg, newline]); catch, end
                 try, fprintf('\n%s\n', haltMsg); catch, end
@@ -427,13 +496,11 @@ function runBatch(app, dataList, stagingList)
             stage_failures = {};
             t_iter = tic;
 
-            if ~subject_loaded_ok || channel_load_failed(ii)
-                % Either the whole subject failed to load, or
-                % we fell back to per-channel mode and this
-                % particular channel still failed. Either way,
-                % log load_failed and tick the progress bar so
-                % totals stay consistent with the planned work
-                % units.
+            if ~subject_loaded_ok || spec_col(ii) == 0
+                % Either the whole subject failed to load, or no variant
+                % for this canonical outname resolved against this file's
+                % EDF labels. Log load_failed and tick the progress bar
+                % so totals stay consistent with the planned work units.
                 if ~isempty(app.RunLogger_)
                     try
                         app.RunLogger_.recordSubject( ...
@@ -454,9 +521,12 @@ function runBatch(app, dataList, stagingList)
                 continue
             end
 
-            % Slice this channel from the bulk read.
-            app.data        = bulk_data(:, ii);
-            app.Fs          = bulk_Fs(ii);
+            % Slice this channel from the bulk read using the column that
+            % read_EDF actually emitted for this outname (positional
+            % `bulk_data(:, ii)` would be wrong — earlier specs may have
+            % been silently dropped or deduped).
+            app.data        = bulk_data(:, spec_col(ii));
+            app.Fs          = bulk_Fs(spec_col(ii));
             app.stage_times = bulk_stage_times;
             app.stage_vals  = bulk_stage_vals;
 
@@ -623,8 +693,8 @@ function runBatch(app, dataList, stagingList)
         batchTimeStr = sprintf('%.2fs', ss_t);
     end
     totalMsg = sprintf( ...
-        'Batch run complete. Total time: %s (%d subject(s) x %d channel(s) = %d run unit(s)).', ...
-        batchTimeStr, nFiles, nChannels, nFiles * nChannels);
+        'Batch run complete. Total time: %s (%d subject(s) x %d outname(s) = %d run unit(s)).', ...
+        batchTimeStr, nFiles, nUniqueOutnames, nFiles * nUniqueOutnames);
     app.TextArea.addnl(totalMsg);
     try, app.appendRunLog([totalMsg, newline]); catch, end
     fprintf('\n%s\n', totalMsg);
