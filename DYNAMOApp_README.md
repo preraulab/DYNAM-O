@@ -22,9 +22,10 @@ The goal of the DYNAM-O App is to provide a fully operational GUI — with stand
 8. [Running the Batch](#8-running-the-batch)
 9. [Monitoring and Stopping a Run](#9-monitoring-and-stopping-a-run)
 10. [Output Structure](#10-output-structure)
-11. [GUI Reference: Tabs](#11-gui-reference-tabs)
-12. [GUI Reference: Menus](#12-gui-reference-menus)
-13. [Programmatic API](#13-programmatic-api)
+11. [Saving and Reloading Batch Settings](#11-saving-and-reloading-batch-settings)
+12. [GUI Reference: Tabs](#12-gui-reference-tabs)
+13. [GUI Reference: Menus](#13-gui-reference-menus)
+14. [Programmatic API](#14-programmatic-api)
 
 ---
 
@@ -257,7 +258,7 @@ Selecting **All** saves every available format for that output type. Selecting *
 
 ### Save Logs Switch
 
-The **Save Logs** switch in the output options controls whether `logs/` and `settings/` are written at all. When it is **off**, the guarantees below about `file_log_*.txt`, `console_log_*.txt`, and `run_settings_*.txt` do not apply — no log or settings files are written for the run. Leave it on for any batch you may need to audit, reproduce, or resume after a crash.
+The **Save Logs** switch in the output options controls whether `logs/` and `settings/` are written at all. When it is **off**, the guarantees below about `file_log_*.txt`, `console_log_*.txt`, and `batch_settings_*.json` do not apply — no log or settings files are written for the run. Leave it on for any batch you may need to audit, reproduce, or resume after a crash.
 
 ---
 
@@ -271,7 +272,7 @@ Click the **DYNAM-O Settings** tab to access the embedded settings panel. Parame
 - **Parametric Basis Fit Options** — Power and phase parametric model settings
 - **Spline Basis Fit Options** — Power and phase spline model settings
 
-These settings are saved with each run to `<OutputDir>/settings/run_settings_<timestamp>.txt` for reproducibility (when Save Logs is on).
+These settings are saved with each run to `<OutputDir>/settings/batch_settings_<timestamp>.json` for reproducibility (when Save Logs is on). See [Saving and Reloading Batch Settings](#11-saving-and-reloading-batch-settings) for the full file contents and the load workflow.
 
 ---
 
@@ -391,19 +392,78 @@ Examples:
 | `EEG C3:A2`   | `EEG C3_A2` |
 | `C4/A1`       | `C4_A1` |
 
-### Log Files
+### Log and Settings Files
 
-| File | Contents |
-|------|----------|
-| `file_log_*.txt` | Per-subject-channel outcome (success, skipped-all-exist, or error message) |
-| `console_log_*.txt` | Full MATLAB console output for the entire run |
-| `run_settings_*.txt` | All DYNAM-O option structs used for the run |
+| File | Location | Contents |
+|------|----------|----------|
+| `file_log_*.txt`         | `<OutputDir>/logs/`     | Per-subject-channel outcome (success, skipped-all-exist, or error message) |
+| `console_log_*.txt`      | `<OutputDir>/logs/`     | Full MATLAB console output for the entire run |
+| `batch_settings_*.json`  | `<OutputDir>/settings/` | Snapshot of the configuration that produced the run — see below |
 
 All three files are only written when the **Save Logs** switch is on.
 
 ---
 
-## 11. GUI Reference: Tabs
+## 11. Saving and Reloading Batch Settings
+
+The `batch_settings_<timestamp>.json` file is the **complete, reloadable
+record** of a run's configuration. Loading it puts the GUI back into the
+exact state that produced the run — every field, every toggle, every
+analysis option. Use it to reproduce a study months later, hand a config
+to a collaborator, or recover from accidentally clearing the GUI.
+
+### What the file contains
+
+A single JSON object with two top-level keys:
+
+| Key | Contents |
+|-----|----------|
+| `options` | The seven DYNAM-O option structs (`SOPH_options`, `baseline_options`, `detection_options`, `param_basis_power_options`, `param_basis_phase_options`, `spline_basis_power_options`, `spline_basis_phase_options`) — every analysis parameter the run used. |
+| `batch_settings` | The GUI batch-level state: `data_files`, `staging_files`, `output_dir`, `save_toggles` (the Save Logs / SOPHs / Param Basis / Spline Basis / Aux Data / Peak Stats / Data Summary / images switches), `formats` (the per-output-type file format dropdowns), `runtime` (overwrite, run-in-reverse), `channels` (channel spec + reference spec), `staging_config` (delimiter, header rows, time/stage columns, resample on/off, target Fs), `stage_labels` (the seven stage-label-to-value mappings). |
+
+A `schema_version` and `run_start` timestamp sit alongside for forward
+compatibility.
+
+### Where it comes from
+
+- **Auto-emitted** at the start of every batch run when **Save Logs** is on —
+  written to `<OutputDir>/settings/batch_settings_<timestamp>.json`.
+- **Manually saved** via **Batch Settings → Save Batch Settings as JSON…**
+  in the menu bar. Use this to archive a configuration before kicking off
+  a long run, or to share a config without running it first.
+
+### Loading a saved file
+
+**Batch Settings → Load Batch Settings from JSON…** opens a file picker
+filtered to `*.json`. After picking a file, the GUI:
+
+1. Pulls in the file lists, output directory, save toggles, channel /
+   reference specs, stage label mapping, staging CSV config, and runtime
+   options.
+2. Validates each `data_files` and `staging_files` entry with `isfile`
+   and the `output_dir` with `isfolder`. Missing paths are skipped from
+   the lists (data/staging) or left blank (output dir), and a single
+   "Missing Paths" dialog summarizes what was dropped so the user can
+   fix paths after a directory move.
+3. Tolerantly merges each of the seven option structs into the current
+   defaults — fields the JSON has overwrite the current values, fields
+   the JSON is missing keep the current default, and fields the JSON
+   has but the current toolbox doesn't recognize are logged as a warning
+   and skipped. This means saved files from older toolbox versions
+   still load on a newer install (and vice-versa) without breaking.
+4. Re-runs the full pre-flight validation (`updateRunErrorList`) so any
+   stale red-border error indicators clear and the **RUN** button gates
+   correctly on the newly-loaded configuration.
+
+Legacy `run_settings_*.json` files (from runs prior to the rename) load
+fine — same loader, same logic. Files that pre-date the GUI-state
+addition (schema v1, options-only) load the seven analysis option
+structs but leave the file lists / output dir / save toggles untouched;
+the GUI shows an info dialog explaining this.
+
+---
+
+## 12. GUI Reference: Tabs
 
 ### File Selection Tab
 
@@ -425,15 +485,17 @@ Hosts the embedded DYNAMOOptions sub-app for configuring all analysis parameters
 
 ---
 
-## 12. GUI Reference: Menus
+## 13. GUI Reference: Menus
 
-### File Menu
+### Batch Settings Menu
 
 | Item | Description |
 |------|-------------|
 | **Load EDF File List...** | Load a text file of EDF paths (one per line) into the DATA list |
 | **Load Staging File List...** | Load a text file of staging file paths into the STAGING list |
 | **Show Run Log Console** | Toggle the floating live console output window |
+| **Save Batch Settings as JSON...** | Save the current GUI configuration (file lists, output dir, save toggles, channels, stage labels, all analysis options) to a `*.json` file you choose. The same file format the auto-emitted `batch_settings_<timestamp>.json` uses — see [Saving and Reloading Batch Settings](#11-saving-and-reloading-batch-settings). |
+| **Load Batch Settings from JSON...** | Restore the GUI from a `*.json` file written by Save Batch Settings or auto-emitted by a previous run. Missing paths are skipped with a summary dialog; analysis options are tolerantly merged so files from older toolbox versions still load. |
 
 ### Help Menu
 
@@ -444,7 +506,7 @@ Hosts the embedded DYNAMOOptions sub-app for configuring all analysis parameters
 
 ---
 
-## 13. Programmatic API
+## 14. Programmatic API
 
 The DYNAM-O App exposes a handful of helper methods for populating file lists and querying state from scripts. It does **not** expose a public method for launching a batch run non-interactively: the batch is driven by the RUN button and depends on internal GUI state, so scripts can pre-populate the manager but a human (or a simulated button click) is still required to start processing. Treat the API below as a convenience layer, not a headless-batch entry point.
 
