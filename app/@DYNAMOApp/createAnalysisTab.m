@@ -262,6 +262,63 @@ function createAnalysisTab(app)
     % whenever forceRefresh fires (post-aggregate, transitions, etc.).
     app.ModeScatter_TableCache_ = containers.Map( ...
         'KeyType','char','ValueType','any');
+
+    % --- Group Stats tab: two-group permutation tests via multicomp_test ---
+    %     Hidden until metadata is loaded AND a Group-by column is picked
+    %     AND exactly two values are selected in the Group-filter listbox.
+    %     Two views stacked vertically:
+    %       - Top: per-paramfit-column gpermtest table (FDR_1D corrected)
+    %       - Bottom: per-pixel SOPH gpermtest map (FDR_2D corrected)
+    app.GroupStatsTab       = uitab(app.AggregateViewsTabGroup);
+    app.GroupStatsTab.Title = 'Group Stats';
+
+    statsGrid               = uigridlayout(app.GroupStatsTab);
+    statsGrid.ColumnWidth   = {'1x'};
+    statsGrid.RowHeight     = {28, 90, 36, '1x'};
+    statsGrid.RowSpacing    = 6;
+    statsGrid.Padding       = [6 6 6 6];
+
+    app.GroupStatsHintLabel = CSSuiLabel(statsGrid, ...
+        'Style', app.AppStyle, ...
+        'FontSize','12.5px', ...
+        'Text', '');
+    app.GroupStatsHintLabel.Layout.Row    = 1;
+    app.GroupStatsHintLabel.Layout.Column = 1;
+
+    % Run-stats button + summary line
+    statsCtrlGrid               = uigridlayout(statsGrid);
+    statsCtrlGrid.ColumnWidth   = {180, 180, '1x'};
+    statsCtrlGrid.RowHeight     = {'1x'};
+    statsCtrlGrid.ColumnSpacing = 8;
+    statsCtrlGrid.Padding       = [0 0 0 0];
+    statsCtrlGrid.Layout.Row    = 3;
+    statsCtrlGrid.Layout.Column = 1;
+    runScatterBtn = CSSuiButton(statsCtrlGrid, 'Style', app.AppStyle, ...
+        'Text', 'Run scatter stats', ...
+        'ButtonPushedFcn', @(s,e) app.runGroupStatsScatter());
+    runScatterBtn.Layout.Row = 1; runScatterBtn.Layout.Column = 1;
+    runSOPHBtn = CSSuiButton(statsCtrlGrid, 'Style', app.AppStyle, ...
+        'Text', 'Run SOPH stats', ...
+        'ButtonPushedFcn', @(s,e) app.runGroupStatsSOPH());
+    runSOPHBtn.Layout.Row = 1; runSOPHBtn.Layout.Column = 2;
+
+    app.GroupStatsScatterTable = uitable(statsGrid, ...
+        'ColumnName', {'Column','Axis','tStat','p','p_adj','sig'}, ...
+        'RowName', {});
+    app.GroupStatsScatterTable.Layout.Row    = 2;
+    app.GroupStatsScatterTable.Layout.Column = 1;
+
+    app.GroupStatsSOPHPanel = uipanel(statsGrid, ...
+        'BackgroundColor','white', ...
+        'BorderType','none');
+    app.GroupStatsSOPHPanel.Layout.Row    = 4;
+    app.GroupStatsSOPHPanel.Layout.Column = 1;
+
+    % Refresh hint visibility on tab show. Wired via the tabgroup
+    % SelectionChangedFcn so we don't waste cycles when the user is on
+    % a different inner tab.
+    app.AggregateViewsTabGroup.SelectionChangedFcn = ...
+        @(s,e) onAggregateViewsTabChanged_(app, e);
 end
 
 
@@ -271,6 +328,12 @@ function onGroupByChanged_(app)
     try, app.refreshGroupByControls(); catch, end
     try, app.redrawSOHistograms();     catch, end
     try, app.updateModeScatterData();  catch, end
+    try, app.refreshGroupStatsHint();  catch, end
+end
+
+
+function onAggregateViewsTabChanged_(app, ~)
+    try, app.refreshGroupStatsHint(); catch, end
 end
 
 
@@ -279,6 +342,7 @@ function onGroupFilterChanged_(app)
     % just push the new filter through both renders.
     try, app.redrawSOHistograms();    catch, end
     try, app.updateModeScatterData(); catch, end
+    try, app.refreshGroupStatsHint(); catch, end
 end
 
 
