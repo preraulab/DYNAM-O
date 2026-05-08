@@ -176,7 +176,55 @@ function runBatch(app, dataList, stagingList)
         end
     end
     nUniqueOutnames = sum(primarySpecMask);
-    app.ProgressBar.N = nFiles * nUniqueOutnames;
+
+    % --- Pre-flight: header-only scan + dry-run resolution simulation --
+    % Bring the EDF label cache in sync with DataList (path-keyed —
+    % files already cached from a prior composer-open are skipped).
+    % Then simulate apply_channel_derivations against each file's
+    % labels to learn EXACTLY which (file, outname) pairs will produce
+    % a real work unit. This unlocks three things below:
+    %   (a) the progress bar can be sized to actual expected work
+    %       (sum(perFileResolved)), not the upper bound nFiles*K;
+    %   (b) files with zero resolving outnames skip the load_data
+    %       call entirely (no wasted EDF reads);
+    %   (c) primary specs whose outname won't resolve for this file
+    %       skip without entering the load logic.
+    try
+        app.refreshEdfLabelCache( ...
+            'ShowProgress',    'progressbar', ...
+            'ProgressMessage', 'Pre-flight: scanning EDF headers');
+    catch ME_pf
+        app.TextArea.addnl(sprintf('Note: pre-flight scan failed (%s); continuing without it.', ME_pf.message));
+    end
+    try
+        [resolves, perFileResolved] = app.simulateChannelResolution();
+    catch
+        % If the simulator throws for any reason, fall back to the
+        % old upper-bound behavior — the rest of the run loop still
+        % handles dropped channels correctly.
+        resolves        = true(nFiles, nUniqueOutnames);
+        perFileResolved = repmat(nUniqueOutnames, 1, nFiles);
+    end
+
+    % Map primary-spec index → column in `resolves`. The unique-
+    % outname column order in simulateChannelResolution matches the
+    % first-occurrence iteration over channelList, which is exactly
+    % `find(primarySpecMask)` — so iterate that and assign.
+    primarySpecIdxList = find(primarySpecMask);
+    primaryToCol       = zeros(1, numel(channelList));
+    safeNameToCol      = containers.Map('KeyType', 'char', 'ValueType', 'double');
+    for kk = 1:numel(primarySpecIdxList)
+        primaryToCol(primarySpecIdxList(kk))                     = kk;
+        safeNameToCol(channelListSafe{primarySpecIdxList(kk)})   = kk;
+    end
+
+    expectedWorkUnits = sum(perFileResolved);
+    if expectedWorkUnits == 0
+        % Nothing will resolve in any file. Use upper bound so the
+        % bar still completes; the load_failed branch below ticks it.
+        expectedWorkUnits = nFiles * nUniqueOutnames;
+    end
+    app.ProgressBar.N = expectedWorkUnits;
     app.ProgressBar.start;
 
     % Pre-create every output subdirectory that enabled analysis steps
@@ -245,6 +293,36 @@ function runBatch(app, dataList, stagingList)
             app.ProgressBar.reset();
             app.ProgressBar.Enabled = false;
             return
+        end
+
+        % --- Pre-flight short-circuit: if the simulator says no
+        % outname will resolve in this file, skip the load_data call
+        % entirely. Log one load_failed entry per primary outname so
+        % the run-log accounting matches the planned-work-units view,
+        % then advance to the next subject without paying for a full
+        % EDF read just to discover everything was dropped.
+        if perFileResolved(jj) == 0
+            preFailMsg = sprintf( ...
+                'Subject %s: pre-flight predicts 0 of %d outname(s) will resolve. Skipping (no EDF read).', ...
+                app.input_fbase, nUniqueOutnames);
+            app.TextArea.addnl(preFailMsg);
+            fprintf('\n%s\n', preFailMsg);
+            try, app.appendRunLog([preFailMsg, newline]); catch, end
+            if ~isempty(app.RunLogger_)
+                for ii_log = primarySpecIdxList
+                    try
+                        app.RunLogger_.recordSubject( ...
+                            app.input_fbase, channelListSafe{ii_log}, ...
+                            'InputFile',  dataList{jj}, ...
+                            'Components', {}, ...
+                            'Failures',   {'load'}, ...
+                            'Status',     'load_failed', ...
+                            'DurationSec', 0);
+                    catch
+                    end
+                end
+            end
+            continue
         end
 
         % --- Bulk EDF + staging read for this subject ---
@@ -344,6 +422,20 @@ function runBatch(app, dataList, stagingList)
                         % spec — it would just duplicate the column.
                         continue
                     end
+                    % Skip variants whose canonical outname the
+                    % pre-flight simulator already said won't resolve
+                    % anywhere in this file. Works for any spec
+                    % (primary or fallback variant) — keyed by safe
+                    % outname, not spec index. Saves one full
+                    % read_EDF round-trip per (never-resolving
+                    % outname × variant) attempt.
+                    fb_col = 0;
+                    if safeNameToCol.isKey(safe_name)
+                        fb_col = safeNameToCol(safe_name);
+                    end
+                    if fb_col > 0 && ~resolves(jj, fb_col)
+                        continue
+                    end
                     try
                         [d_ii, f_ii, st_ii, sv_ii, lbl_ii] = load_data( ...
                             dataList{jj}, ...
@@ -441,6 +533,29 @@ function runBatch(app, dataList, stagingList)
             if ~primarySpecMask(ii)
                 continue
             end
+
+            % Pre-flight short-circuit: simulator predicted no variant
+            % of this outname resolves for this file. Log once and
+            % move on without entering the load logic. Bar isn't
+            % ticked because expectedWorkUnits already excluded this
+            % iteration from the total.
+            outname_col = primaryToCol(ii);
+            if outname_col > 0 && ~resolves(jj, outname_col)
+                if ~isempty(app.RunLogger_)
+                    try
+                        app.RunLogger_.recordSubject( ...
+                            app.input_fbase, channelListSafe{ii}, ...
+                            'InputFile',  dataList{jj}, ...
+                            'Components', {}, ...
+                            'Failures',   {'load'}, ...
+                            'Status',     'load_failed', ...
+                            'DurationSec', 0);
+                    catch
+                    end
+                end
+                continue
+            end
+
             chan_progress = chan_progress + 1;
             app.channel = channelListSafe{ii};
 
