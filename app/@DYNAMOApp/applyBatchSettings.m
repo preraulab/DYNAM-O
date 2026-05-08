@@ -123,6 +123,7 @@ function applyBatchSettings(app, S)
         c = S.channels;
         setText(c, 'channel_spec',   app.ChannelEditField);
         setText(c, 'reference_spec', app.ReferenceEditField);
+        force_refresh_({app.ChannelEditField, app.ReferenceEditField});
         try, app.refreshChannelTooltips(); catch, end
         try, app.updateChannelInput();     catch, end
         try, app.updateReferenceInput();   catch, end
@@ -137,6 +138,16 @@ function applyBatchSettings(app, S)
         setNumeric(sc,  'stages_column', app.StagesColumnEditField);
         setLogical(sc,  'resample_on',   app.ResampleSwitch);
         setNumeric(sc,  'resample_fs',   app.ResampleFsEditField);
+        % CSSui widgets only push setValue commands to their HTML
+        % backends when Loaded_ is true at set-time AND the widget
+        % isn't currently mid-Update. If applyBatchSettings runs while
+        % a control is in either of those transitional states, the
+        % internal Value_ updates but the displayed text stays stale.
+        % Force a refresh on each affected control so the HTML
+        % re-renders from the current Value_.
+        force_refresh_({app.DelimeterOptionField, app.HeaderRowsEditField, ...
+            app.TimesColumnEditField, app.StagesColumnEditField, ...
+            app.ResampleSwitch, app.ResampleFsEditField});
         try, app.onResampleSwitchChanged(); catch, end
         try, app.updateDelimeterInput();    catch, end
     end
@@ -151,6 +162,9 @@ function applyBatchSettings(app, S)
         setText(sl, 'N3',       app.N3EditField);
         setText(sl, 'Unknown',  app.UnknownEditField);
         setText(sl, 'Artifact', app.ArtifactEditField);
+        force_refresh_({app.WakeEditField, app.REMEditField, ...
+            app.N1EditField, app.N2EditField, app.N3EditField, ...
+            app.UnknownEditField, app.ArtifactEditField});
         try, app.updateStagesInput(); catch, end
     end
 
@@ -223,6 +237,21 @@ function setDropdown(S, fname, ctrl)
     try, items = ctrl.Items; catch, end
     if isempty(items) || any(strcmp(items, val))
         try, ctrl.Value = val; catch, end
+    end
+end
+
+
+function force_refresh_(ctrls)
+    % Force CSSui widgets to re-render their HTML from the current
+    % internal Value_. Needed after applyBatchSettings sets values
+    % programmatically, because set.Value short-circuits the HTML
+    % update path when the widget isn't in a "ready and idle" state
+    % (Loaded_ true and Updating_ false). refresh() rebuilds the HTML
+    % unconditionally, which guarantees the displayed text matches.
+    for ii = 1:numel(ctrls)
+        c = ctrls{ii};
+        if isempty(c) || ~isvalid(c), continue, end
+        try, c.refresh(); catch, end
     end
 end
 
