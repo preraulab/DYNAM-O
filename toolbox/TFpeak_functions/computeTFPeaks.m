@@ -175,7 +175,8 @@ addOptional(p, 'verbose', true, @(x) validateattributes(x, {'logical', 'numeric'
 %Baseline struct parameters
 baseline_options = baseline_opts(); % get the default parameters
 addOptional(p, 'baseline_stages', baseline_options.baseline_stages, @(x) validateattributes(x,{'numeric'},{'real','vector'}));
-addOptional(p, 'baseline_exclude', baseline_options.baseline_exclude, @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
+addOptional(p, 'baseline_exclude', baseline_options.baseline_exclude, ...
+    @(x) isempty(x) || (islogical(x) || (isnumeric(x) && all(ismember(x(:), [0, 1])))));
 addOptional(p, 'baseline_ptile', baseline_options.baseline_ptile, @(x) validateattributes(x,{'numeric'},{'real','scalar'}));
 addOptional(p, 'baseline_trim', baseline_options.baseline_trim, @(x) isa(x,'numeric') && length(x) <= 2);
 
@@ -262,9 +263,14 @@ else
     end
 end
 
-% Set default baseline_exclude
+% Set default baseline_exclude. Coerce to logical here too — the
+% input parser accepts both logical and binary numeric so a
+% JSON-round-tripped settings struct (where logicals become
+% doubles) doesn't trip the downstream logical-only ops.
 if isempty(baseline_exclude)
     baseline_exclude = false(1, length(data));
+elseif ~islogical(baseline_exclude)
+    baseline_exclude = logical(baseline_exclude);
 end
 
 %% Timing struct — captures per-stage durations so runDYNAMO can print a
