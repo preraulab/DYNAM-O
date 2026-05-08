@@ -41,6 +41,12 @@ function saveAuxData(app)
     app.auxiliary_data.SOpower_norm          = app.SOPHs.SOpower_norm;
     app.auxiliary_data.stage_times           = app.stage_times;
     app.auxiliary_data.stage_vals            = app.stage_vals;
+    % Retain the two knobs needed to synthesise SOpower_times from
+    % Fs + numel(SOpower_norm) at read time, so we don't have to ship
+    % a separate (and identically-sized) times vector. See
+    % synthesizeSOpowerTimes.m.
+    app.auxiliary_data.SOpower_retain_Fs     = logical(app.SOPH_options.SOpower_retain_Fs);
+    app.auxiliary_data.SOpower_window_params = double(app.SOPH_options.SOpower_window_params(:).');
 
     auxiliary_data = app.auxiliary_data; %#ok<ADPROP>
 

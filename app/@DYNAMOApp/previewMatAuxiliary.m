@@ -53,8 +53,13 @@ function previewMatAuxiliary(app, p)
     axP.Layout.Row = 3; axP.Layout.Column = 1;
     if isfield(AD,'SOpower_norm') && ~isempty(AD.SOpower_norm) && ...
             isfield(AD,'Fs') && AD.Fs > 0
-        N    = numel(AD.SOpower_norm);
-        tHr  = (0:N-1) / double(AD.Fs) / 3600;
+        N         = numel(AD.SOpower_norm);
+        retainFs  = true;
+        winParams = [5, 0.5];
+        if isfield(AD, 'SOpower_retain_Fs'),     retainFs  = logical(AD.SOpower_retain_Fs); end
+        if isfield(AD, 'SOpower_window_params'), winParams = AD.SOpower_window_params;      end
+        tSec = app.synthesizeSOpowerTimes(N, AD.Fs, retainFs, winParams);
+        tHr  = tSec / 3600;
         plot(axP, tHr, double(AD.SOpower_norm), 'LineWidth', 1.2);
         methodStr = char(string(AD.SOpower_norm_method));
         switch methodStr
