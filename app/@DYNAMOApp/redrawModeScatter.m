@@ -112,15 +112,24 @@ function redrawModeScatter(app)
             sz = 36;
         end
 
-        % Color: numeric → continuous (default colormap);
-        % categorical (e.g. 'ID') → group index → hsv;
+        % Color: numeric → continuous (per-axis user colormap, default
+        % 'hsv' since the natural choice for the Color column is a
+        % phase angle);
+        % categorical (e.g. 'ID') → group index → user colormap;
         % '(none)' → uniform navy.
+        switch axisKind
+            case 'power', cmapName = app.ModeScatterColormapPower_;
+            case 'phase', cmapName = app.ModeScatterColormapPhase_;
+            otherwise,    cmapName = 'hsv';
+        end
+        applyCmap = false;
         if strcmp(colorCol, '(none)') || ~ismember(colorCol, vn)
             cv = repmat([0.20 0.40 0.80], numel(x), 1);
         else
             raw = T.(colorCol);
             if isnumeric(raw)
                 cv = double(raw);
+                applyCmap = true;
             else
                 if iscell(raw) || isstring(raw)
                     [g, ~] = findgroups(string(raw));
@@ -130,18 +139,46 @@ function redrawModeScatter(app)
                     g = ones(numel(x),1);
                 end
                 ng = max(1, max(g));
-                cmap = hsv(max(2, ng));
+                cmap = resolveColormap_(cmapName, max(2, ng));
                 cv = cmap(g, :);
             end
         end
 
         scatter(ax, x, y, sz, cv, 'filled', ...
             'MarkerEdgeColor', [0 0 0], 'LineWidth', 0.25);
+        if applyCmap
+            cmap = resolveColormap_(cmapName, 256);
+            colormap(ax, cmap);
+        end
         xlabel(ax, xCol, 'Interpreter','none');
         if strcmp(axisKind, 'power')
             ylabel(ax, yCol, 'Interpreter','none');
         end
         grid(ax, 'on');
         ok = true;
+    end
+end
+
+
+function cmap = resolveColormap_(name, n)
+    % resolveColormap_  Look up a colormap by name (e.g. 'jet', 'hsv',
+    % 'parula', 'gouldian', 'magma', 'viridis'). Returns an [n×3]
+    % matrix. Falls back to parula(n) if the name doesn't resolve to
+    % a function that returns a valid colormap. Empty/whitespace-only
+    % names also fall back, so the editbox can be cleared.
+    cmap = [];
+    nm   = strtrim(char(name));
+    if ~isempty(nm)
+        try
+            tmp = feval(nm, n);
+            if isnumeric(tmp) && size(tmp, 2) == 3 && size(tmp, 1) >= 2
+                cmap = tmp;
+            end
+        catch
+            % unknown name → fall through to parula
+        end
+    end
+    if isempty(cmap)
+        cmap = parula(n);
     end
 end

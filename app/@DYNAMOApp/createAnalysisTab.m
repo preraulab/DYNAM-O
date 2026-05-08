@@ -103,10 +103,11 @@ function createAnalysisTab(app)
 
     % Dropdown row layout:
     %   col 1 = row labels ("Power" / "Phase")
-    %   cols 2-5 = X / Y / Size / Color, headers in row 1, dropdowns
-    %             on row 2 (Power) and row 3 (Phase).
+    %   cols 2-5 = X / Y / Size / Color dropdowns
+    %   col 6   = Colormap (free-text CSSuiEditField, e.g. 'hsv', 'jet')
+    %   headers in row 1, controls on row 2 (Power) and row 3 (Phase).
     app.ModeScatterDropdownGrid               = uigridlayout(modeGrid);
-    app.ModeScatterDropdownGrid.ColumnWidth   = {78,'1x','1x','1x','1x'};
+    app.ModeScatterDropdownGrid.ColumnWidth   = {78,'1x','1x','1x','1x','1x'};
     app.ModeScatterDropdownGrid.RowHeight     = {18, 36, 36};
     app.ModeScatterDropdownGrid.RowSpacing    = 4;
     app.ModeScatterDropdownGrid.ColumnSpacing = 8;
@@ -114,8 +115,8 @@ function createAnalysisTab(app)
     app.ModeScatterDropdownGrid.Layout.Row    = 1;
     app.ModeScatterDropdownGrid.Layout.Column = 1;
 
-    headers = {'X','Y','Size','Color'};
-    for cc = 1:4
+    headers = {'X','Y','Size','Color','Colormap'};
+    for cc = 1:numel(headers)
         L = CSSuiLabel(app.ModeScatterDropdownGrid, ...
             'Style', app.AppStyle, 'FontSize','12px', 'Text', headers{cc});
         L.Layout.Row = 1; L.Layout.Column = cc + 1;
@@ -140,6 +141,23 @@ function createAnalysisTab(app)
      app.ModeScatterPhaseColorDropDown] = ...
         local_addDropdownRow(app, app.ModeScatterDropdownGrid, 3, cbPha);
 
+    % Per-axis colormap free-text fields (col 6, rows 2 and 3). Triggers
+    % the same redraw path as the four dropdowns so changes apply
+    % immediately. Empty / unrecognized names fall back to parula.
+    app.ModeScatterColormapPowerField = CSSuiEditField(app.ModeScatterDropdownGrid, ...
+        'Style', app.AppStyle, ...
+        'Value', app.ModeScatterColormapPower_, ...
+        'ValueChangedFcn', @(s,e) onModeScatterColormapChanged_(app, 'power', e.Value));
+    app.ModeScatterColormapPowerField.Layout.Row    = 2;
+    app.ModeScatterColormapPowerField.Layout.Column = 6;
+
+    app.ModeScatterColormapPhaseField = CSSuiEditField(app.ModeScatterDropdownGrid, ...
+        'Style', app.AppStyle, ...
+        'Value', app.ModeScatterColormapPhase_, ...
+        'ValueChangedFcn', @(s,e) onModeScatterColormapChanged_(app, 'phase', e.Value));
+    app.ModeScatterColormapPhaseField.Layout.Row    = 3;
+    app.ModeScatterColormapPhaseField.Layout.Column = 6;
+
     % Plot panel: stable uipanel; redrawModeScatter replaces children
     % with one (axPower, axPhase) pair per selected channel using
     % buildPairGrid's normalized-position layout.
@@ -163,6 +181,18 @@ function createAnalysisTab(app)
     % whenever forceRefresh fires (post-aggregate, transitions, etc.).
     app.ModeScatter_TableCache_ = containers.Map( ...
         'KeyType','char','ValueType','any');
+end
+
+
+function onModeScatterColormapChanged_(app, kind, newValue)
+    % onModeScatterColormapChanged_  Persist the new colormap name into
+    % the corresponding app property and trigger a redraw.
+    nm = strtrim(char(newValue));
+    switch kind
+        case 'power', app.ModeScatterColormapPower_ = nm;
+        case 'phase', app.ModeScatterColormapPhase_ = nm;
+    end
+    app.redrawModeScatter();
 end
 
 

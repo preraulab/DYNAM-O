@@ -135,6 +135,14 @@ classdef DYNAMOApp < matlab.apps.AppBase & DYNAMO
         ModeScatterPhaseYDropDown       % CSSuiDropdown
         ModeScatterPhaseSizeDropDown    % CSSuiDropdown
         ModeScatterPhaseColorDropDown   % CSSuiDropdown
+        % Free-text colormap names per axis kind (e.g. 'hsv', 'jet',
+        % 'gouldian'). Default 'hsv' because the most natural Color
+        % column is a phase angle, which wraps. Empty / unrecognized
+        % names fall back to parula in redrawModeScatter.
+        ModeScatterColormapPowerField   % CSSuiEditField
+        ModeScatterColormapPhaseField   % CSSuiEditField
+        ModeScatterColormapPower_       = 'hsv'
+        ModeScatterColormapPhase_       = 'hsv'
         ModeScatter_TableCache_         % containers.Map keyed "<chan>|<axis>" -> table; cleared on aggregate refresh
         ModeScatter_DropdownsInited_    % struct with .power/.phase booleans — tracks first populated refresh per axis
         SOHistogramsSplitter            matlab.ui.container.Panel  % Draggable bar between channel listbox and inner tabs
