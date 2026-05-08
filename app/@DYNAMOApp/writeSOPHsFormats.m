@@ -66,11 +66,11 @@ function writeSOPHsFormats(app, SOPHs, sophsDir, fbase, channel, formats, overwr
     powMeta = jsonencode(struct( ...
         'freq_bins',    soph_get_(SOPHs, 'freq_bins'), ...
         'SOpower_bins', soph_get_(SOPHs, 'SOpower_bins'), ...
-        'subject_id',   subjectId));
+        'subjectID',    subjectId));
     phaMeta = jsonencode(struct( ...
         'freq_bins',    soph_get_(SOPHs, 'freq_bins'), ...
         'SOphase_bins', soph_get_(SOPHs, 'SOphase_bins'), ...
-        'subject_id',   subjectId));
+        'subjectID',    subjectId));
 
     wrote_any = false;
     for ii = 1:numel(formats)
@@ -105,12 +105,12 @@ function writeSOPHsFormats(app, SOPHs, sophsDir, fbase, channel, formats, overwr
                         slim = rmfield(slim, drop_fields{kk});
                     end
                 end
-                % Embed subject_id as a top-level dataset so the .mat
+                % Embed subjectID as a top-level dataset so the .mat
                 % is self-identifying alongside the TIFF JSON metadata.
                 % save -struct flattens SOPHs to top-level vars so
                 % h5py / h5dump can read individual fields directly
                 % (-v7.3 .mat IS HDF5).
-                slim.subject_id = subjectId; %#ok<STRNU>
+                slim.subjectID = subjectId; %#ok<STRNU>
                 save(p, '-struct', 'slim', '-v7.3');
                 app.output_SOPH_name = p;
             otherwise

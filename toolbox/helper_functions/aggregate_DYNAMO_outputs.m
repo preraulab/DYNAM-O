@@ -662,16 +662,19 @@ for ii = 1:total
     end
     pages{end+1} = M;            %#ok<AGROW>
 
-    % Prefer the embedded subject_id over the filename-derived fbase
+    % Prefer the embedded subjectID over the filename-derived fbase
     % when it's present and non-empty — defensive against renamed
-    % files that have lost their original DYNAM-O naming.
+    % files that have lost their original DYNAM-O naming. Accept
+    % legacy `subject_id` (snake_case) for pre-rename TIFFs.
     embeddedId = '';
     metaParsed = struct();
     try
         info = imfinfo(p);
         if isfield(info, 'ImageDescription') && ~isempty(info(1).ImageDescription)
             metaParsed = jsondecode(info(1).ImageDescription);
-            if isfield(metaParsed, 'subject_id')
+            if isfield(metaParsed, 'subjectID')
+                embeddedId = char(strtrim(string(metaParsed.subjectID)));
+            elseif isfield(metaParsed, 'subject_id')
                 embeddedId = char(strtrim(string(metaParsed.subject_id)));
             end
         end

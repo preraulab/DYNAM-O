@@ -60,14 +60,19 @@ function aux = read_aux_h5_(p)
         catch
             continue
         end
-        % MATLAB returns string-class for H5T_STRING; coerce subject_id
-        % and norm_method back to char for downstream consistency.
+        % MATLAB returns string-class for H5T_STRING; coerce string
+        % fields back to char for downstream consistency.
         if isstring(v)
             if isscalar(v), v = char(v); else, v = cellstr(v); end
         end
         % Restore the logical class for fields that were stored as int8.
         if any(strcmp(name, {'artifacts','SOpower_retain_Fs'}))
             v = logical(v);
+        end
+        % Backward-compat: legacy aux .h5s used snake_case subject_id;
+        % normalize to the new canonical subjectID key.
+        if strcmp(name, 'subject_id')
+            name = 'subjectID';
         end
         aux.(name) = v;
     end

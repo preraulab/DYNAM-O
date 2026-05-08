@@ -10,8 +10,9 @@ function T = loadStatsTable(app, channel, fbase)
     %     4. <chan>/TFpeaks/<fbase>_stats_table_<chan>.csv   → csv2table.
     %     5. Empty table on total miss.
     %
-    %   The .h5 / .mat distinction is cosmetic — both are HDF5 written
-    %   via save(...,'-v7.3'); MATLAB's load() handles either.
+    %   .mat files are HDF5 internally (-v7.3) and externally readable
+    %   via h5py / h5dump despite the .mat extension; MATLAB's load()
+    %   handles them as a normal MAT-file.
     %
     %   See also: writeStatsTableFormats, csv2table, table2csv.
 
@@ -37,13 +38,19 @@ function T = loadStatsTable(app, channel, fbase)
             S = load(p);
             if isfield(S, 'stats_table') && istable(S.stats_table)
                 T = S.stats_table;
-                % Promote a separate 'subject_id' variable to a SubjectID
-                % column for parity with the CSV layout.
-                if isfield(S, 'subject_id') && ~isempty(S.subject_id) && ...
-                        ~any(strcmpi(T.Properties.VariableNames, 'SubjectID'))
-                    sid = char(string(S.subject_id));
-                    T.SubjectID = repmat({sid}, height(T), 1);
-                    T = movevars(T, 'SubjectID', 'Before', 1);
+                % Promote a separate subjectID variable to a column for
+                % parity with the CSV layout. Accept legacy `subject_id`
+                % (snake_case from pre-rename .mats) as a fallback.
+                sid_var = '';
+                if isfield(S, 'subjectID') && ~isempty(S.subjectID)
+                    sid_var = char(string(S.subjectID));
+                elseif isfield(S, 'subject_id') && ~isempty(S.subject_id)
+                    sid_var = char(string(S.subject_id));
+                end
+                if ~isempty(sid_var) && ...
+                        ~any(strcmpi(T.Properties.VariableNames, 'subjectID'))
+                    T.subjectID = repmat({sid_var}, height(T), 1);
+                    T = movevars(T, 'subjectID', 'Before', 1);
                 end
                 return
             end

@@ -9,7 +9,8 @@ function writeAuxFormats(app, auxiliary_data, auxBase, subject_id, formats, over
     %                    SOpower_window_params, stage_times, stage_vals).
     %   auxBase        : path prefix without extension.
     %   subject_id     : char (== fbase). Embedded as a top-level
-    %                    /subject_id dataset in .h5 / a struct field in .mat.
+    %                    /subjectID dataset in .h5 / a struct field
+    %                    `auxiliary_data.subjectID` in .mat.
     %   formats        : cellstr; subset of {'.h5', '.mat'}. The .h5
     %                    output is written via h5create+h5write per
     %                    field (top-level datasets, externally clean).
@@ -25,7 +26,7 @@ function writeAuxFormats(app, auxiliary_data, auxBase, subject_id, formats, over
     if ~iscell(formats), formats = {formats}; end
 
     if ~isempty(subject_id)
-        auxiliary_data.subject_id = char(subject_id);
+        auxiliary_data.subjectID = char(subject_id);
     end
 
     for ii = 1:numel(formats)

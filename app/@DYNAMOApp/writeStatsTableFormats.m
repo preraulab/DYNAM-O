@@ -9,8 +9,8 @@ function writeStatsTableFormats(app, stats_table, statsBase, subject_id, formats
     %                 '<chan>/TFpeaks/<fbase>_stats_table_<chan>'.
     %   subject_id  : char (== fbase). Embedded so artifacts are self-
     %                 identifying without filename parsing:
-    %                   - .csv : added as a `SubjectID` column.
-    %                   - .h5  : saved as a top-level `subject_id` var
+    %                   - .csv : added as a `subjectID` column.
+    %                   - .mat : saved as a top-level `subjectID` var
     %                            alongside `stats_table`.
     %   formats     : cellstr of extensions — subset of {'.csv', '.mat'}.
     %                 The `.mat` slot is HDF5 internally (-v7.3) so
@@ -39,7 +39,8 @@ function writeStatsTableFormats(app, stats_table, statsBase, subject_id, formats
                 p = [statsBase '.mat'];
                 if ~overwrite && isfile(p), continue, end
                 if ~wrote_any, app.TextArea.addnl('   Saving stats table...'); wrote_any = true; end
-                save(p, 'stats_table', 'subject_id', '-v7.3');
+                subjectID = subject_id; %#ok<NASGU>
+                save(p, 'stats_table', 'subjectID', '-v7.3');
                 app.output_stats_name = p;
             otherwise
                 % unrecognised — silently skip
@@ -50,10 +51,10 @@ end
 
 function T = ensure_subject_column_(T, subject_id)
     if ~istable(T) || isempty(subject_id), return, end
-    if any(strcmpi(T.Properties.VariableNames, 'SubjectID'))
+    if any(strcmpi(T.Properties.VariableNames, 'subjectID'))
         return
     end
     n = height(T);
-    T.SubjectID = repmat({subject_id}, n, 1);
-    T = movevars(T, 'SubjectID', 'Before', 1);
+    T.subjectID = repmat({subject_id}, n, 1);
+    T = movevars(T, 'subjectID', 'Before', 1);
 end

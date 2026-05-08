@@ -62,7 +62,7 @@ cleaner = onCleanup(@() local_safe_fclose(fid)); %#ok<NASGU>
 fprintf(fid, '# DYNAM-O parametric fit\n');
 fprintf(fid, '# version: 1\n');
 if nargin >= 6 && ~isempty(subject_id)
-    fprintf(fid, '# subject_id: %s\n', char(subject_id));
+    fprintf(fid, '# subjectID: %s\n', char(subject_id));
 end
 fprintf(fid, '# fit_type: %s\n', axis_kind);
 fprintf(fid, '# n_modes: %d\n', n_modes);

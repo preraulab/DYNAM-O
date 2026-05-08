@@ -60,7 +60,7 @@ function writeParamfitFormats(app, fitData, base, axis_kind, freq_bins, so_bins,
                 app.TextArea.addnl(sprintf('   Saving %s as .mat...', varName));
                 fitData_with_id = fitData;
                 if ~isempty(subject_id)
-                    fitData_with_id.subject_id = char(subject_id);
+                    fitData_with_id.subjectID = char(subject_id);
                 end
                 % Strip CSV-reconstruction provenance flags so a future
                 % reload from this .mat doesn't keep flagging itself slim.

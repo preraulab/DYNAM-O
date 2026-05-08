@@ -158,7 +158,11 @@ function id = recover_id_from_subject_tiff_(p)
         info = imfinfo(p);
         if isfield(info, 'ImageDescription') && ~isempty(info(1).ImageDescription)
             meta = jsondecode(info(1).ImageDescription);
-            if isfield(meta, 'subject_id')
+            % Prefer canonical `subjectID`; fall back to legacy
+            % `subject_id` for pre-rename per-subject TIFFs.
+            if isfield(meta, 'subjectID')
+                id = char(strtrim(string(meta.subjectID)));
+            elseif isfield(meta, 'subject_id')
                 id = char(strtrim(string(meta.subject_id)));
             end
         end
