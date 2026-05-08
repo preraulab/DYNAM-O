@@ -6,17 +6,23 @@ function [SOPH_paramfit] = createSOPHparamfitStruct(type, params, fitobj, gof, m
 %   params:  N×6 numeric matrix from param_basis_{power,phase}, with
 %            columns [amp0, fmean0, fstd0, pmean0, pstd0, theta0].
 %
-%   The returned .params field is a MATLAB table:
-%     power: Amplitude (peaks/min/bin), FreqMean (Hz), FreqStd (Hz),
+%   The returned .params field is a MATLAB table. The first column is
+%   `Density` — the rotgauss / vmGauss `amp` parameter, which (because
+%   the model is fit to a peak-density-style histogram) corresponds
+%   semantically to TF-peak density at the mode location. Renamed
+%   from the historical `Amplitude` to make the meaning explicit;
+%   the underlying mathematical model is unchanged.
+%
+%     power: Density (peaks/min/bin), FreqMean (Hz), FreqStd (Hz),
 %            SOpowerMean (dB), SOpowerStd (dB), Theta (rad),
 %            and (after fitParamBasis annotation) six additional columns:
 %            PrefPhaseArgmax (rad),  CouplingArgmax (proportion/phase-bin),
 %            PrefPhaseCirc   (rad),  CouplingCirc   ([0,1] MRL),
 %            PrefPhaseModel  (rad),  CouplingModel  (proportion/phase-bin).
-%     phase: Amplitude (proportion/phase-bin), FreqMean (Hz), FreqStd (Hz),
+%     phase: Density (proportion/phase-bin), FreqMean (Hz), FreqStd (Hz),
 %            SOphaseMean (rad), SOphaseStd (rad), Theta (rad).
 %
-%   NOTE: power Amplitude is peaks/min/bin; phase Amplitude and the argmax/model coupling columns are proportion/phase-bin (phase histogram is row-normalized upstream); CouplingCirc is dimensionless MRL in [0,1].
+%   NOTE: power Density is peaks/min/bin; phase Density and the argmax/model coupling columns are proportion/phase-bin (phase histogram is row-normalized upstream); CouplingCirc is dimensionless MRL in [0,1].
 %   Empty params produce an empty table with the right VariableNames so
 %   downstream isempty(...) checks still hold and column-name access
 %   (e.g. T.PrefPhaseModel) does not error on a zero-mode fit.
@@ -26,12 +32,12 @@ switch lower(type)
         % Declared up front so the empty-fallback table exposes all
         % columns; the annotation block in fitParamBasis appends real
         % values when params is non-empty.
-        vn      = {'Amplitude','FreqMean','FreqStd','SOpowerMean','SOpowerStd','Theta'};
+        vn      = {'Density','FreqMean','FreqStd','SOpowerMean','SOpowerStd','Theta'};
         vn_full = [vn, {'PrefPhaseArgmax','CouplingArgmax', ...
                         'PrefPhaseCirc','CouplingCirc', ...
                         'PrefPhaseModel','CouplingModel'}];
     case 'phase'
-        vn      = {'Amplitude','FreqMean','FreqStd','SOphaseMean','SOphaseStd','Theta'};
+        vn      = {'Density','FreqMean','FreqStd','SOphaseMean','SOphaseStd','Theta'};
         vn_full = vn;
     otherwise
         error('createSOPHparamfitStruct:badType','type must be ''power'' or ''phase''.');
