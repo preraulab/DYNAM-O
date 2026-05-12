@@ -483,6 +483,28 @@ end
 
 
 function baseline = computeBaseline(spect, stimes, t_time_range, baseline_exclude, baseline_range, baseline_ptile)
+% Rust fast path: dispatches to dynamo_rs::compute_baseline (validated to
+% <=1e-9 vs MATLAB on the synthetic-spectrogram battery — see
+% rust_bridge/validate_baseline_mex.m). The Rust implementation handles
+% the same nearest-neighbor exclusion interp, baseline_range trimming,
+% NaN-zero treatment, and Hyndman-Fan #5 percentile.
+if exist('baseline_mex', 'file') == 3
+    if isinf(baseline_range(1)) && baseline_range(1) < 0
+        bl_lo = -realmax;
+    else
+        bl_lo = baseline_range(1);
+    end
+    if isinf(baseline_range(2)) && baseline_range(2) > 0
+        bl_hi = realmax;
+    else
+        bl_hi = baseline_range(2);
+    end
+    baseline = baseline_mex(double(spect), double(stimes(:)), ...
+        double(t_time_range(:)), logical(baseline_exclude(:)), ...
+        [bl_lo, bl_hi], double(baseline_ptile));
+    return
+end
+
 % Get excluded baseline times occurring at spectrogram times
 baseline_exclude_stimes = logical(interp1(t_time_range, single(baseline_exclude), stimes, 'nearest')); % no need to use ~=0 since t_time_range matches stimes
 
