@@ -345,7 +345,7 @@ if strcmp(backend, 'rust')
                 pool_autocreate_mode = 'direct';
             end
             pool_autocreate_cleanup = onCleanup( ...
-                @() restore_pool_autocreate(pool_autocreate_orig, pool_autocreate_mode)); %#ok<NASGU>
+                @() restore_pool_autocreate(pool_autocreate_orig, pool_autocreate_mode));
         catch ME
             if verbose
                 fprintf('  Note: could not disable Pool.AutoCreate (%s)\n', ME.message);
