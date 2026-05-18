@@ -88,13 +88,13 @@ if have_phase, setappdata(f, 'phase_ax', ax(phase_ax_idx(3))); end
         set(hImg1, 'HitTest', 'off', 'PickableParts', 'none'); % images shouldn't capture datatips
         axis(ax_handles(1),'xy')
         ylabel(ax_handles(1), 'Frequency (Hz)');
-        title(ax_handles(1), 'Watershed Segmentation')
+        title(ax_handles(1), 'Mode Initialization')
 
         % --- Original histogram
         hImg2 = imagesc(ax_handles(2), x_bins, freq_bins, hist_mat');
         set(hImg2, 'HitTest', 'off', 'PickableParts', 'none');
         axis(ax_handles(2),'xy')
-        colorbar_noresize(ax_handles(2));
+        c2 = colorbar_noresize(ax_handles(2));
         colormap(ax_handles(2), cmap);
         xlabel(ax_handles(2), xlabel_str);
         title(ax_handles(2), ['Original ' type_str ' Histogram'])
@@ -163,7 +163,7 @@ if have_phase, setappdata(f, 'phase_ax', ax(phase_ax_idx(3))); end
                     [~, contours(k)] = contour(ax_handles(3), x_fine, freq_fine, cdata, 'w-', 'LineWidth', 2);
                     if isgraphics(contours(k))
                         % make contours non-pickable so they don't steal picks from markers
-                        set(contours(k), 'Visible','off', 'Tag','mode_contour', 'HitTest','off', 'PickableParts','none');
+                        set(contours(k), 'Visible','on', 'Tag','mode_contour', 'HitTest','off', 'PickableParts','none');
                     end
                 catch
                     contours(k) = gobjects(1);
@@ -179,12 +179,12 @@ if have_phase, setappdata(f, 'phase_ax', ax(phase_ax_idx(3))); end
             end
 
             % Colorbar, colormap and titles
-            c = colorbar_noresize(ax_handles(3));
-            c.Label.String = fitLabel;
-            c.Label.Rotation = -90;
-            c.Label.VerticalAlignment = "bottom";
+            c3 = colorbar_noresize(ax_handles(3));
+            c3.Label.String = fitLabel;
+            c3.Label.Rotation = -90;
+            c3.Label.VerticalAlignment = "bottom";
             colormap(ax_handles(3), cmap);
-            title(ax_handles(3), ['Model ' type_str ' Histogram and Modes'])
+            title(ax_handles(3), ['Mode ' type_str ' Histogram'])
 
             % Additional layout / scaling adjustments
             linkcaxes(ax_handles(2:3));
@@ -198,7 +198,25 @@ if have_phase, setappdata(f, 'phase_ax', ax(phase_ax_idx(3))); end
             axis(ax_handles(2),'tight')
             xlim(ax_handles(2), x_limits)
             ylim(ax_handles(2), freq_limits)
-            set(ax_handles, 'fontsize', 10)
+            set(ax_handles, 'fontsize', 12)
+
+            % Pin each colorbar to a fixed normalized gap from its axis's right
+            % edge. colorbar_noresize restores axes Position but does not move
+            % the colorbar, so MATLAB's initial placement (based on TightInset,
+            % tick labels, etc.) leaks through and causes inconsistent spacing
+            % between rows. Pinning equalises the spacing across all panels.
+            drawnow;
+            colorbar_gap = 0.005;  % figure-normalized units
+            cbars   = [c2, c3];
+            cb_axes = [ax_handles(2), ax_handles(3)];
+            for k = 1:numel(cbars)
+                if isgraphics(cbars(k))
+                    axp = cb_axes(k).Position;
+                    cp  = cbars(k).Position;
+                    cp(1) = axp(1) + axp(3) + colorbar_gap;
+                    cbars(k).Position = cp;
+                end
+            end
         end
     end
 

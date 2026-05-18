@@ -73,34 +73,35 @@ end
         axis(ax_handles(1),'xy')
         ylabel(ax_handles(1),'Frequency (Hz)')
         colormap(ax_handles(1), cmap_hist)
-        xlabel(ax_handles(1), labels.x)
-        title(ax_handles(1), sprintf('%s Histogram: %d Parameters', labels.name, numel(hist_mat)))
-        c = colorbar_noresize(ax_handles(1));
-        c.Label.String = labels.fitLabel;
-        c.Label.Rotation = -90;
-        c.Label.VerticalAlignment = "bottom";
+        title(ax_handles(1), sprintf('%s Histogram (%d)', labels.name, numel(hist_mat)))
+        c1 = colorbar_noresize(ax_handles(1));
+        c1.Label.String = labels.fitLabel;
+        c1.Label.Rotation = -90;
+        c1.Label.VerticalAlignment = "bottom";
 
         % Spline reconstruction
-        imagesc(ax_handles(2), knots_x, knots_y, fit_mat');
+        him = imagesc(ax_handles(2), knots_x, knots_y, fit_mat');
+        set(him, 'AlphaData', ~isnan(fit_mat'));
         axis(ax_handles(2),'xy')
         % ylabel('Frequency (Hz)')
-        colorbar_noresize(ax_handles(2));
+        c2 = colorbar_noresize(ax_handles(2));
         % c = colorbar_noresize;
         % c.Label.String = labels.fitLabel;
         % c.Label.Rotation = -90;
         % c.Label.VerticalAlignment = "bottom";
         colormap(ax_handles(2), cmap_fit)
-        xlabel(ax_handles(2), labels.x)
-        title(ax_handles(2), sprintf('Spline Reconstruction: %d Parameters', numel(coefs)))
+        % Use colormap floor as axis background so NaN entries render as the low end of the scale.
+        set(ax_handles(2), 'Color', cmap_fit(1,:));
+        title(ax_handles(2), sprintf('Spline Reconstruction (%d)', numel(coefs)))
 
         % Coefficients
         imagesc(ax_handles(3), 1:size(coefs,2), 1:size(coefs,1), coefs);
         axis(ax_handles(3),'xy');
         clim(ax_handles(3), max(coefs,[],'all')*[-1 1]);
-        c = colorbar_noresize(ax_handles(3));
-        c.Label.String = {'Coefficient'};
-        c.Label.Rotation = -90;
-        c.Label.VerticalAlignment = "bottom";
+        c3 = colorbar_noresize(ax_handles(3));
+        c3.Label.String = {'Coefficient'};
+        c3.Label.Rotation = -90;
+        c3.Label.VerticalAlignment = "bottom";
         colormap(ax_handles(3), flipud(redblue_equalized));
         xlabel(ax_handles(3), 'x coeff knots')
         ylabel(ax_handles(3), 'y coeff knots')
@@ -117,6 +118,37 @@ end
         ylim(ax_handles(1), opts.freq_limits)
         c_ptiles = prctile(hist_mat(hist_mat(:)~=0), opts.SOPH_clim_prctiles);
         clim(ax_handles(1), [c_ptiles(1) c_ptiles(2)]);
+
+        set(ax_handles, 'fontsize', 12);
+
+        % Pin each colorbar to a fixed normalized gap from its axis's right
+        % edge. colorbar_noresize restores axes Position but does not move
+        % the colorbar, so MATLAB's initial placement (based on TightInset,
+        % tick labels, etc.) leaks through and causes inconsistent spacing
+        % between rows. Pinning equalises the spacing across all 6 panels.
+        drawnow;
+        colorbar_gap = 0.005;  % figure-normalized units
+        cbars = [c1, c2, c3];
+        for k = 1:numel(cbars)
+            if isgraphics(cbars(k))
+                axp = ax_handles(k).Position;
+                cp  = cbars(k).Position;
+                cp(1) = axp(1) + axp(3) + colorbar_gap;
+                cbars(k).Position = cp;
+            end
+        end
+
+        % Single shared x-axis label centered between ax_handles(1) and ax_handles(2),
+        % aligned vertically to the ax_handles(3) xlabel.
+        xh  = xlabel(ax_handles(1), labels.x);
+        xh3 = get(ax_handles(3), 'XLabel');
+        xh.Units  = 'normalized';
+        xh3.Units = 'normalized';
+        p1 = ax_handles(1).Position;
+        p2 = ax_handles(2).Position;
+        center_fig = (p1(1) + p2(1) + p2(3)) / 2;
+        xh.Position(1) = (center_fig - p1(1)) / p1(3);
+        xh.Position(2) = xh3.Position(2);
     end
 
 % Top row: SO-Power
@@ -132,8 +164,6 @@ if have_phase
         opts_phase, freq_bins, magma, magma, ...
         struct('x', 'SO-Phase (rad)', 'name','SO-Phase', 'fitLabel', {{'Proportion'}}));
 end
-
-set(ax, 'fontsize', 10);
 
 % Restore visibility for interactive callers (batch runs set root
 % DefaultFigureVisible='off' so the figure stays hidden there).
