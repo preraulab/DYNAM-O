@@ -8,6 +8,8 @@ function [SOPHs] = fitParamBasis(SOPHs, power_opts, phase_opts, valid_powerhist,
 %   Power and phase fits run independently — a failure in one is reported
 %   but does not abort the other. The corresponding *_paramfit field is
 %   left empty to signal failure.
+if nargin < 2 || isempty(power_opts); power_opts = param_basis_opts('power'); end
+if nargin < 3 || isempty(phase_opts); phase_opts = param_basis_opts('phase'); end
 if nargin < 4 || isempty(valid_powerhist); valid_powerhist = true; end
 if nargin < 5 || isempty(valid_phasehist); valid_phasehist = true; end
 if nargin < 6 || isempty(verbose); verbose = true; end

@@ -8,6 +8,8 @@ function [SOPHs] = fitSplineBasis(SOPHs, power_opts, phase_opts, valid_powerhist
 %   Same isolation pattern as fitParamBasis: power and phase fits run
 %   independently, and a failure in one leaves the corresponding
 %   *_splinefit field empty rather than aborting the other.
+if nargin < 2 || isempty(power_opts); power_opts = spline_basis_opts('power'); end
+if nargin < 3 || isempty(phase_opts); phase_opts = spline_basis_opts('phase'); end
 if nargin < 4 || isempty(valid_powerhist); valid_powerhist = true; end
 if nargin < 5 || isempty(valid_phasehist); valid_phasehist = true; end
 if nargin < 6 || isempty(verbose); verbose = true; end
