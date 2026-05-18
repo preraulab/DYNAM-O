@@ -396,7 +396,7 @@ end
 if isempty(stats_table)
     % If no stats table provided
     [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, tfp_timings] = computeTFPeaks(data, Fs, stage_times, stage_vals,...
-        'time_range', time_range, 'verbose', verbose, detection_options, baseline_options);
+        'time_range', time_range, 'verbose', verbose, baseline_options, detection_options);
     % Fold computeTFPeaks' per-stage timings into our master struct
     % (spect_pass1, artifact, baseline_pass1, extract_pass1, spect_pass2,
     % baseline_pass2, extract_pass2, refine).
