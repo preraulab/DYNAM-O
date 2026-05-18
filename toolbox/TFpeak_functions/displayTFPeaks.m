@@ -87,7 +87,7 @@ need_eeg = ~isempty(data) && ~isempty(t);
 %% Create figure with full-size base axis, then split as needed
 fh = figure;
 base_ax = figdesign(1, 1, 'PaperType', 'usletter', 'orient', 'landscape', ...
-    'margins', [0.067917 0.05 0.083427 0.0456 0.08 0.0021714], ...
+    'margins', [0.067917 0.1 0.083427 0.1 0.08 0.05], ...
     'Position', [0.14041 0.19722 0.70262 0.61597]);
 
 hyp_ax   = gobjects(0);
@@ -151,6 +151,10 @@ end
 
 %% Plot EEG trace
 if need_eeg
+    % Remove the lowest tick on the spectrogram axis to avoid overlapping tick labels
+    yt = get(spect_ax, 'YTick');
+    set(spect_ax, 'YTick', yt(yt > yt(1)));
+
     axes(eeg_ax)
     plot(t/3600, data, 'linewidth', 1)
     min_trace = prctile(data, 1);
@@ -167,9 +171,9 @@ all_ax = [hyp_ax spect_ax eeg_ax];
 all_ax = all_ax(isgraphics(all_ax));
 linkaxes(all_ax, 'x');
 xlim(spect_ax, [min(stimes)/3600, max(stimes)/3600])
-set(all_ax, 'FontSize', 10)
+set(all_ax, 'FontSize', 16)
 if exist('th', 'var')
-    set(th, 'FontSize', 15)
+    set(th, 'FontSize', 20)
 end
 
 scrollzoompan;
