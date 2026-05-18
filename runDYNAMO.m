@@ -328,8 +328,6 @@ if strcmp(backend, 'rust')
     % We handle both and remember which mode we used so the onCleanup can
     % restore correctly. Track guard_mode in a local that the cleanup can
     % capture.
-    pool_autocreate_orig = [];
-    pool_autocreate_mode = 'none';
     if exist('parallel.Settings', 'class') == 8 || ...
             (exist('ver','builtin')~=0 && any(strcmp({ver().Name}, 'Parallel Computing Toolbox')))
         try
