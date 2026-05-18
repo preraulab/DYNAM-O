@@ -440,7 +440,7 @@ stats_table = removevars(stats_table, setdiff(stats_table.Properties.VariableNam
 
 %% Display detected TFpeaks on the most recent spectrogram used for TFpeak computation
 if display_peaks
-    displayTFPeaks(stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, stage_times, stage_vals);
+    displayTFPeaks(stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, Fs, artifacts, stage_times, stage_vals);
 end
 
 end
