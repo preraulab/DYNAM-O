@@ -72,6 +72,51 @@ function runBatch(app, dataList, stagingList)
     drawnow;
     buildOptionsStruct(app)
 
+    % Multi-subject runs with empty SOpower_range / SOpower_binsizestep
+    % produce adaptive per-subject SO-power bins. The downstream
+    % aggregator stacks those per-pixel, silently averaging
+    % physically different SOpower values across subjects. Warn
+    % once up front and let the user cancel or proceed.
+    if numel(dataList) > 1 && isstruct(app.SOPH_options)
+        sopr  = []; sopb = [];
+        if isfield(app.SOPH_options, 'SOpower_range')
+            sopr = app.SOPH_options.SOpower_range;
+        end
+        if isfield(app.SOPH_options, 'SOpower_binsizestep')
+            sopb = app.SOPH_options.SOpower_binsizestep;
+        end
+        if isempty(sopr) || isempty(sopb)
+            msg = sprintf(['SOpower_range and/or SOpower_binsizestep are empty.\n\n' ...
+                'With multiple subjects (%d) this means each subject gets its own ' ...
+                'SO-power bin edges (min..max of that subject''s normalized SOpower). ' ...
+                'The aggregate "Mean SOPH" then averages bin columns that span ' ...
+                'different SOpower values across subjects.\n\n' ...
+                'To get comparable SOPHs, set fixed values in SOPH_options ' ...
+                '(e.g. SOpower_range = [0 100] for percent norm, or ' ...
+                '[-30 30] for shift norm; SOpower_binsizestep = [size step]).\n\n' ...
+                'Proceed anyway?'], numel(dataList));
+            try
+                sel = uiconfirm(app.UIFigure, msg, 'Adaptive SOpower bins', ...
+                    'Options', {'Cancel', 'Proceed anyway'}, ...
+                    'DefaultOption', 'Cancel', ...
+                    'CancelOption',  'Cancel', ...
+                    'Icon', 'warning');
+            catch
+                sel = 'Proceed anyway'; % no UI available
+            end
+            if strcmp(sel, 'Cancel')
+                app.TextArea.Value = 'Run cancelled: set fixed SOpower bins first.';
+                app.resetRunUiState;
+                return
+            end
+            % Recorded to the run log only after the log file is
+            % opened below; queue it in TextArea now so it's visible
+            % in the GUI immediately.
+            app.TextArea.addnl( ...
+                'WARNING: SOpower bins are adaptive per subject — cross-subject aggregates will be invalid.');
+        end
+    end
+
     % Create required output subdirectories and initialise logs (if enabled)
     if app.SaveLogsSwitch.Value
         if ~exist(strcat(app.OutputDirEditField.Value,'/settings/'),'dir')

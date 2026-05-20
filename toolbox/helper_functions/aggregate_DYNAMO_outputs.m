@@ -595,6 +595,25 @@ for ii = 1:total
                 p, field, mat2str(size(M)), mat2str(canon)); %#ok<AGROW>
             continue
         end
+        % Bin-edge alignment: the per-pixel stack only makes sense
+        % when every subject's bin centers match the canonical grid.
+        % SOpower_bins default to adaptive per-subject (see
+        % SOpowerHistogram.m:265-272), so silently stacking would
+        % average physically different SOpower values together.
+        % Use a tight relative tolerance; tighten/relax as needed.
+        if ~isempty(bins) && ~isempty(bins_local) && ...
+                ~bins_match_(bins, bins_local)
+            warnings_out{end+1} = sprintf( ...
+                '%s has %s edges that don''t match the aggregate grid — skipping (re-run with fixed SOpower_range/SOpower_binsizestep across subjects)', ...
+                p, binsField); %#ok<AGROW>
+            continue
+        end
+        if ~isempty(freq_bins) && ~isempty(freq_local) && ...
+                ~bins_match_(freq_bins, freq_local)
+            warnings_out{end+1} = sprintf( ...
+                '%s has freq_bins that don''t match the aggregate grid — skipping', p); %#ok<AGROW>
+            continue
+        end
     end
     stacks{end+1} = M; %#ok<AGROW>
     ids(end+1, 1) = {fbase}; %#ok<AGROW>
@@ -660,12 +679,10 @@ for ii = 1:total
             p, mat2str(size(M)), mat2str(canon)); %#ok<AGROW>
         continue
     end
-    pages{end+1} = M;            %#ok<AGROW>
 
-    % Prefer the embedded subjectID over the filename-derived fbase
-    % when it's present and non-empty — defensive against renamed
-    % files that have lost their original DYNAM-O naming. Accept
-    % legacy `subject_id` (snake_case) for pre-rename TIFFs.
+    % Parse the embedded JSON BEFORE pushing M to pages, so a bin
+    % mismatch can skip this subject (TIFFs without embedded bins
+    % still pass — only when both sides have bins do we compare).
     embeddedId = '';
     metaParsed = struct();
     try
@@ -681,20 +698,36 @@ for ii = 1:total
     catch
         metaParsed = struct();
     end
+
+    fb_local = []; sb_local = [];
+    if isfield(metaParsed,'freq_bins'), fb_local = metaParsed.freq_bins(:); end
+    if ~isempty(binsField) && isfield(metaParsed, binsField)
+        sb_local = metaParsed.(binsField)(:);
+    end
+
+    % Bin-edge guard (see the .mat path for context): per-subject
+    % adaptive SOpower_bins would otherwise be silently averaged
+    % pixel-wise into the aggregate.
+    if ~isempty(so_bins) && ~isempty(sb_local) && ~bins_match_(so_bins, sb_local)
+        warnings_out{end+1} = sprintf( ...
+            '%s has %s edges that don''t match the aggregate grid — skipping (re-run with fixed SOpower_range/SOpower_binsizestep across subjects)', ...
+            p, binsField); %#ok<AGROW>
+        continue
+    end
+    if ~isempty(freq_bins) && ~isempty(fb_local) && ~bins_match_(freq_bins, fb_local)
+        warnings_out{end+1} = sprintf( ...
+            '%s has freq_bins that don''t match the aggregate grid — skipping', p); %#ok<AGROW>
+        continue
+    end
+
+    pages{end+1} = M;            %#ok<AGROW>
     if ~isempty(embeddedId)
         ids(end+1,1) = {embeddedId};   %#ok<AGROW>
     else
         ids(end+1,1) = {fbase};        %#ok<AGROW>
     end
-
-    if isempty(freq_bins) || isempty(so_bins)
-        if isempty(freq_bins) && isfield(metaParsed,'freq_bins')
-            freq_bins = metaParsed.freq_bins(:);
-        end
-        if isempty(so_bins) && ~isempty(binsField) && isfield(metaParsed, binsField)
-            so_bins = metaParsed.(binsField)(:);
-        end
-    end
+    if isempty(freq_bins) && ~isempty(fb_local), freq_bins = fb_local; end
+    if isempty(so_bins)   && ~isempty(sb_local), so_bins   = sb_local; end
 end
 end
 
@@ -750,4 +783,14 @@ b = [];
 if numel(rng) ~= 2 || numel(step) ~= 2, return, end
 n = round((rng(2) - rng(1)) / step(2)) + 1;
 b = linspace(rng(1), rng(2), n).';
+end
+
+function tf = bins_match_(a, b)
+%BINS_MATCH_  True if two bin-center vectors are equal within a tight
+%relative tolerance. Catches subjects that ran with adaptive (per-subject)
+%SOpower bins from being silently averaged into a common grid.
+a = a(:); b = b(:);
+if numel(a) ~= numel(b), tf = false; return, end
+scale = max(1, max(abs([a; b])));
+tf = all(abs(a - b) <= 1e-6 * scale);
 end

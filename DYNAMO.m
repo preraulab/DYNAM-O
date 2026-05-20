@@ -331,8 +331,11 @@ classdef DYNAMO < handle
                 % identification on disk; the inner pipeline is keyed
                 % off PeakTime / PeakFrequency only and rejects non-
                 % numeric columns via 'real' validation.
-                if istable(ST) && any(strcmpi(ST.Properties.VariableNames, 'SubjectID'))
-                    ST = removevars(ST, 'SubjectID');
+                if istable(ST)
+                    sid_hit = strcmpi(ST.Properties.VariableNames, 'SubjectID');
+                    if any(sid_hit)
+                        ST = removevars(ST, ST.Properties.VariableNames(sid_hit));
+                    end
                 end
                 extra_args = [extra_args, {'stats_table', ST}];
             end
