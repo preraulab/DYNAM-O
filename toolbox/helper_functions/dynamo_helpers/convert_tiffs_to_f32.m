@@ -100,7 +100,11 @@ for ii = 1:n
     % Parse page-1 JSON.
     meta = struct();
     if isfield(info, 'ImageDescription') && ~isempty(info(1).ImageDescription)
-        try, meta = jsondecode(info(1).ImageDescription); catch, meta = struct(); end
+        try
+            meta = jsondecode(info(1).ImageDescription);
+        catch
+            meta = struct();
+        end
     end
     if isfield(meta, 'subjectIDs')   % aggregate stack
         report.skipped{end+1, 1} = {p, 'aggregate (regenerate)'}; %#ok<AGROW>

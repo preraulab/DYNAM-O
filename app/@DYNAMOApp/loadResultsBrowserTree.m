@@ -115,6 +115,38 @@ function loadResultsBrowserTree(app)
     app.updateAggregateDataTabVisibility(false);
     app.appendResultsBrowserLog('Done.');
 
+    % Offer to migrate old-format outputs to the current app format.
+    % Detection samples the just-built in-memory cache (no extra disk
+    % walk). On accept, convert in place (.bak backups kept) and reload
+    % the tree so the view — and the new .bak files — are accurate; the
+    % reentrant load re-runs the seed/aggregate prompts once, so we
+    % return here to avoid showing them twice.
+    try
+        if app.resultsBrowserDetectLegacy()
+            sel = uiconfirm(app.UIFigure, ...
+                ['This results folder contains output files in an older ' ...
+                 'DYNAM-O format. Convert them to the current app format now? ' ...
+                 'Originals are kept as .bak.'], ...
+                'Out-of-date results format', ...
+                'Options', {'Convert', 'Skip'}, ...
+                'DefaultOption', 1, 'CancelOption', 2, 'Icon', 'question');
+            if strcmp(sel, 'Convert')
+                app.appendResultsBrowserLog('Converting old-format files to the current app format...');
+                drawnow;
+                rep = convert_dynamo_outputs_to_app(root, 'Verbose', false);
+                app.appendResultsBrowserLog(sprintf( ...
+                    '  Converted: aux=%d, TIFF=%d, stats=%d (skipped %d, failed %d).', ...
+                    numel(rep.aux.converted), numel(rep.tiff.converted), numel(rep.stats.converted), ...
+                    numel(rep.aux.skipped)  + numel(rep.tiff.skipped)  + numel(rep.stats.skipped), ...
+                    numel(rep.aux.failed)   + numel(rep.tiff.failed)   + numel(rep.stats.failed)));
+                app.loadResultsBrowserTree();   % reload converted tree (single reentry)
+                return
+            end
+        end
+    catch ME
+        app.appendResultsBrowserLog(sprintf('Format check skipped: %s', ME.message));
+    end
+
     % If no index existed at load time, offer to seed one from the
     % in-memory cache the walk just produced — no second disk pass.
     if ~haveIndex
