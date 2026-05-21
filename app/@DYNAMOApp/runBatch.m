@@ -648,6 +648,7 @@ function runBatch(app, dataList, stagingList)
             app.SOPHs            = [];
             app.stats_table      = [];
             app.auxiliary_data   = [];
+            app.artifacts        = [];
             app.Fs               = [];
 
             fprintf('\n--- Subject: %s | Channel: %s ---\n', app.input_fbase, app.channel);

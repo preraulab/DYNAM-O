@@ -102,6 +102,19 @@ function runStatsTable(app)
         % CSV-reuse path: skip TF-peak detection, run the rest of runDYNAMO.
         app.anything_run = 1;
         app.TextArea.addnl('   Reusing stats_table; computing SOPHs (skipping TF-peak extraction)...');
+        % The artifact mask is deterministic in (data, Fs) and was
+        % saved as auxiliary_data when this stats_table was first
+        % built. Reload it so runDYNAMO's SOPH-only branch reuses it
+        % instead of recomputing detect_artifacts (its dominant cost).
+        % runDYNAMO re-validates length and falls back to detection on
+        % mismatch, so a stale/absent mask is harmless.
+        if isempty(app.artifacts)
+            aux = app.loadAuxData(app.channel, app.input_fbase);
+            if isstruct(aux) && isfield(aux,'artifacts') && ~isempty(aux.artifacts)
+                app.artifacts = logical(aux.artifacts);
+                app.TextArea.addnl('   Reusing saved artifact mask (skipping artifact detection).');
+            end
+        end
         drawnow;
         app.runDYNAMO();
     else

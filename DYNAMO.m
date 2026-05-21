@@ -338,6 +338,15 @@ classdef DYNAMO < handle
                     end
                 end
                 extra_args = [extra_args, {'stats_table', ST}];
+
+                % Reuse an already-computed artifact mask so the
+                % SOPH-only path doesn't recompute detect_artifacts
+                % (its dominant cost). runDYNAMO validates the length
+                % against the data in time_range and falls back to
+                % detection on mismatch, so a stale/short mask is safe.
+                if ~isempty(obj.artifacts)
+                    extra_args = [extra_args, {'artifacts', obj.artifacts}];
+                end
             end
 
             [obj.stats_table, obj.spect, obj.stimes, obj.sfreqs,...
