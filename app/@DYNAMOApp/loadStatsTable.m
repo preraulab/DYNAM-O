@@ -61,6 +61,14 @@ function T = loadStatsTable(app, channel, fbase)
     if isfile(csvPath)
         try
             T = csv2table(csvPath);
+            % The compact CSV matches the app's 16-column schema and carries
+            % no subjectID column; recover it from the filename (fbase) for
+            % parity with the .mat/.h5 path.
+            if istable(T) && height(T) > 0 && ...
+                    ~any(strcmpi(T.Properties.VariableNames, 'subjectID'))
+                T.subjectID = repmat({char(fbase)}, height(T), 1);
+                T = movevars(T, 'subjectID', 'Before', 1);
+            end
         catch
         end
     end

@@ -8,8 +8,13 @@ function writeStatsTableFormats(app, stats_table, statsBase, subject_id, formats
     %   statsBase   : path prefix without extension, e.g.
     %                 '<chan>/TFpeaks/<fbase>_stats_table_<chan>'.
     %   subject_id  : char (== fbase). Embedded so artifacts are self-
-    %                 identifying without filename parsing:
-    %                   - .csv : added as a `subjectID` column.
+    %                 identifying:
+    %                   - .csv : NOT a column — the CSV matches the DYNAM-O
+    %                            desktop app's strict 16-column schema (no
+    %                            subjectID). loadStatsTable recovers the id
+    %                            from the filename. BoundingBox is decomposed
+    %                            into bbox_tl_s/bbox_tl_Hz/bbox_width_s/
+    %                            bbox_height_Hz.
     %                   - .mat : saved as a top-level `subjectID` var
     %                            alongside `stats_table`.
     %   formats     : cellstr of extensions — subset of {'.csv', '.mat'}.
@@ -32,7 +37,7 @@ function writeStatsTableFormats(app, stats_table, statsBase, subject_id, formats
                 p = [statsBase '.csv'];
                 if ~overwrite && isfile(p), continue, end
                 if ~wrote_any, app.TextArea.addnl('   Saving stats table...'); wrote_any = true; end
-                T = ensure_subject_column_(stats_table, subject_id);
+                T = stats_table_to_app_csv(stats_table);
                 table2csv(T, p);
                 app.output_stats_name = p;
             case '.mat'
@@ -49,12 +54,3 @@ function writeStatsTableFormats(app, stats_table, statsBase, subject_id, formats
 end
 
 
-function T = ensure_subject_column_(T, subject_id)
-    if ~istable(T) || isempty(subject_id), return, end
-    if any(strcmpi(T.Properties.VariableNames, 'subjectID'))
-        return
-    end
-    n = height(T);
-    T.subjectID = repmat({subject_id}, n, 1);
-    T = movevars(T, 'subjectID', 'Before', 1);
-end

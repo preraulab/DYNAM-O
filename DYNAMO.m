@@ -1630,12 +1630,17 @@ classdef DYNAMO < handle
             cleaner = onCleanup(@() close(t)); %#ok<NASGU>
 
             for kk = 1:numel(pages)
-                page = pages{kk};
+                % Write 32-bit float pages to match the DYNAM-O desktop app
+                % (Gray32Float), which validates dtype on read. All MATLAB
+                % readers do double(imread(...)), so the f64->f32 narrowing
+                % is transparent on this side; SOPH rates and spline coefs
+                % are well within single precision.
+                page = single(pages{kk});
                 tagstruct = struct();
                 tagstruct.ImageLength = size(page, 1);
                 tagstruct.ImageWidth = size(page, 2);
                 tagstruct.Photometric = Tiff.Photometric.MinIsBlack;
-                tagstruct.BitsPerSample = 64;              % Use 64 for double precision
+                tagstruct.BitsPerSample = 32;              % single precision (f32), app parity
                 tagstruct.SamplesPerPixel = 1;
                 tagstruct.SampleFormat = Tiff.SampleFormat.IEEEFP; % Key for negative/floats
                 tagstruct.PlanarConfiguration = Tiff.PlanarConfiguration.Chunky;

@@ -17,7 +17,7 @@ function aux = loadAuxData(app, channel, fbase)
 
     if ~isempty(app.auxiliary_data) && isstruct(app.auxiliary_data) && ...
             ~isempty(fieldnames(app.auxiliary_data))
-        aux = app.auxiliary_data;
+        aux = normalizeAuxStruct(app.auxiliary_data);
         return
     end
 
@@ -30,7 +30,7 @@ function aux = loadAuxData(app, channel, fbase)
 
     if isfile(h5p)
         try
-            aux = read_aux_h5_(h5p);
+            aux = normalizeAuxStruct(read_aux_h5_(h5p));
             if ~isempty(aux), return, end
         catch
         end
@@ -40,7 +40,7 @@ function aux = loadAuxData(app, channel, fbase)
         try
             S = load(matp, 'auxiliary_data');
             if isfield(S, 'auxiliary_data')
-                aux = S.auxiliary_data;
+                aux = normalizeAuxStruct(S.auxiliary_data);
                 return
             end
         catch

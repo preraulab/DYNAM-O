@@ -111,7 +111,18 @@ function runStatsTable(app)
         if isempty(app.artifacts)
             aux = app.loadAuxData(app.channel, app.input_fbase);
             if isstruct(aux) && isfield(aux,'artifacts') && ~isempty(aux.artifacts)
+                % Legacy per-sample mask.
                 app.artifacts = logical(aux.artifacts);
+                app.TextArea.addnl('   Reusing saved artifact mask (skipping artifact detection).');
+            elseif isstruct(aux) && isfield(aux,'is_compact') && aux.is_compact && ...
+                    ~isempty(app.data) && isfield(aux,'Fs') && ~isempty(aux.Fs)
+                % Compact schema: artifact_spans is authoritative (empty ->
+                % all-false mask, i.e. no artifacts). Expand against the
+                % loaded data length; runDYNAMO re-validates and falls back
+                % to detection on a length mismatch.
+                spans = zeros(0,2);
+                if isfield(aux,'artifact_spans'), spans = aux.artifact_spans; end
+                app.artifacts = spans_to_mask(spans, numel(app.data), double(aux.Fs));
                 app.TextArea.addnl('   Reusing saved artifact mask (skipping artifact detection).');
             end
         end

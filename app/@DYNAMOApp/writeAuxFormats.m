@@ -4,26 +4,38 @@ function writeAuxFormats(app, auxiliary_data, auxBase, subject_id, formats, over
     %   app.writeAuxFormats(auxiliary_data, auxBase, subject_id, ...
     %                       formats, overwrite)
     %
-    %   auxiliary_data : canonical struct (SOpower_norm, Fs, artifacts,
-    %                    SOpower_norm_method, SOpower_retain_Fs,
-    %                    SOpower_window_params, stage_times, stage_vals).
+    %   auxiliary_data : canonical struct in the compact schema
+    %                    (Fs, SOpower_norm [native grid], SOpower_t_start,
+    %                    SOpower_norm_method, SOpower_window_params,
+    %                    SOpower_freqrange, artifact_spans, stage_times,
+    %                    stage_vals [uint8]).
     %   auxBase        : path prefix without extension.
     %   subject_id     : char (== fbase). Embedded as a top-level
     %                    /subjectID dataset in .h5 / a struct field
     %                    `auxiliary_data.subjectID` in .mat.
     %   formats        : cellstr; subset of {'.h5', '.mat'}. The .h5
-    %                    output is written via h5create+h5write per
-    %                    field (top-level datasets, externally clean).
-    %                    The .mat output is the legacy fallback —
-    %                    save(...,'-v7.3'), HDF5 internally too but
-    %                    wrapped in MATLAB's MAT-file header so load()
-    %                    reads it back as a struct.
+    %                    output is written via the shared writeAuxH5 helper
+    %                    (top-level datasets, externally clean). The .mat
+    %                    output is the legacy fallback — save(...,'-v7.3'),
+    %                    HDF5 internally too but wrapped in MATLAB's MAT-file
+    %                    header so load() reads it back as a struct.
     %   overwrite      : logical.
     %
-    %   See also: loadAuxData, regenAuxData, saveAuxData.
+    %   See also: loadAuxData, regenAuxData, saveAuxData, writeAuxH5.
 
     if isempty(formats), return, end
     if ~iscell(formats), formats = {formats}; end
+
+    % Drop read-time-only / legacy fields so only the canonical compact
+    % schema is written. normalizeAuxStruct (on load) synthesizes
+    % is_compact / SOpower_step, and a normalized legacy struct may still
+    % carry artifacts / SOpower_retain_Fs — none of those belong on disk.
+    transient = {'is_compact', 'SOpower_step', 'artifacts', 'SOpower_retain_Fs'};
+    for tt = 1:numel(transient)
+        if isfield(auxiliary_data, transient{tt})
+            auxiliary_data = rmfield(auxiliary_data, transient{tt});
+        end
+    end
 
     if ~isempty(subject_id)
         auxiliary_data.subjectID = char(subject_id);
@@ -37,7 +49,7 @@ function writeAuxFormats(app, auxiliary_data, auxBase, subject_id, formats, over
                 if ~overwrite && isfile(p), continue, end
                 app.TextArea.addnl('Saving auxiliary data...');
                 if isfile(p), delete(p); end
-                write_aux_h5_(p, auxiliary_data);
+                writeAuxH5(p, auxiliary_data);
                 app.output_aux_name = p;
             case '.mat'
                 p = [auxBase '.mat'];
@@ -48,58 +60,5 @@ function writeAuxFormats(app, auxiliary_data, auxBase, subject_id, formats, over
             otherwise
                 % unsupported — silently skip
         end
-    end
-end
-
-
-function write_aux_h5_(p, S)
-    % Write each field of struct S as a top-level HDF5 dataset.
-    % Strings: written via H5T_STRING (MATLAB's 'string' datatype).
-    % Logicals: stored as int8 (HDF5 has no native bool).
-    fn = fieldnames(S);
-    for ii = 1:numel(fn)
-        v = S.(fn{ii});
-        path = ['/' fn{ii}];
-        % h5create rejects zero-size extents — skip empty fields
-        % uniformly across all type branches. Realistic for subjects
-        % with no staging events (empty stage_times / stage_vals) or
-        % no excluded samples (empty artifacts).
-        if isempty(v)
-            continue
-        end
-        if ischar(v) || isstring(v)
-            sval = string(v);
-            if isscalar(sval)
-                h5create(p, path, [1 1], 'Datatype', 'string');
-                h5write(p, path, sval);
-            else
-                h5create(p, path, size(sval), 'Datatype', 'string');
-                h5write(p, path, sval);
-            end
-        elseif islogical(v)
-            iv = int8(v);
-            sz = size_for_h5_(iv);
-            h5create(p, path, sz, 'Datatype', 'int8');
-            h5write(p, path, iv);
-        elseif isnumeric(v)
-            iv = double(v);
-            sz = size_for_h5_(iv);
-            h5create(p, path, sz, 'Datatype', 'double');
-            h5write(p, path, iv);
-        else
-            % Cells / structs / other types — skip with a warning.
-            warning('writeAuxFormats:skipField', ...
-                'Skipping unsupported aux field "%s" (class %s).', fn{ii}, class(v));
-        end
-    end
-end
-
-
-function sz = size_for_h5_(v)
-    % h5create wants a non-scalar size vector; for scalars return [1 1].
-    if isscalar(v)
-        sz = [1 1];
-    else
-        sz = size(v);
     end
 end

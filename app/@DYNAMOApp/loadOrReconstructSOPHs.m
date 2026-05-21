@@ -13,9 +13,9 @@ function SOPHs = loadOrReconstructSOPHs(app, channel, fbase)
     %          - <chan>/SOPHs/<fbase>_SOPHs_phase_<chan>.tiff
     %            → SOphase_mat, SOphase_bins, freq_bins (page-1 JSON)
     %          - <chan>/auxiliary_data/<fbase>_auxiliary_data_<chan>.{h5,mat}
-    %            → SOpower_norm, SOpower_norm_method, SOpower_retain_Fs,
-    %              SOpower_window_params, Fs (used to synthesise
-    %              SOpower_times via synthesizeSOpowerTimes).
+    %            → SOpower_norm (native grid), SOpower_norm_method, Fs;
+    %              SOpower_times reconstructed as t_start + i*step from
+    %              SOpower_t_start / SOpower_step (normalizeAuxStruct).
     %     5. Empty struct on total miss; the caller decides what to do
     %        (typically: rerun the batch step from scratch).
     %
@@ -65,20 +65,21 @@ function SOPHs = loadOrReconstructSOPHs(app, channel, fbase)
             AD = app.loadAuxData(channel, fbase);
             if ~isempty(AD) && isfield(AD, 'SOpower_norm')
                 SOPHs.SOpower_norm = AD.SOpower_norm;
-                N         = numel(AD.SOpower_norm);
-                retainFs  = true;
-                winParams = [5, 0.5];
-                if isfield(AD,'SOpower_retain_Fs')
-                    retainFs  = logical(AD.SOpower_retain_Fs);
+                N    = numel(AD.SOpower_norm);
+                % Reconstruct the timeline from t_start + i*step
+                % (normalizeAuxStruct guarantees both, native or legacy
+                % EEG-rate), replacing the old retain_Fs branch.
+                t0   = 0;          step = NaN;
+                if isfield(AD,'SOpower_t_start') && ~isempty(AD.SOpower_t_start)
+                    t0 = double(AD.SOpower_t_start);
                 end
-                if isfield(AD,'SOpower_window_params')
-                    winParams = double(AD.SOpower_window_params);
+                if isfield(AD,'SOpower_step') && ~isempty(AD.SOpower_step)
+                    step = double(AD.SOpower_step);
+                elseif isfield(AD,'Fs') && ~isempty(AD.Fs) && double(AD.Fs) > 0
+                    step = 1 / double(AD.Fs);
                 end
-                Fs_ = NaN;
-                if isfield(AD,'Fs'), Fs_ = double(AD.Fs); end
-                if isfinite(Fs_) && Fs_ > 0
-                    SOPHs.SOpower_times = app.synthesizeSOpowerTimes( ...
-                        N, Fs_, retainFs, winParams);
+                if isfinite(step)
+                    SOPHs.SOpower_times = t0 + (0:N-1) * step;
                 end
             end
         catch
