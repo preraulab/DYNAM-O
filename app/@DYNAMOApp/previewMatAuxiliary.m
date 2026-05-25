@@ -3,7 +3,7 @@ function previewMatAuxiliary(app, p)
     % and hypn_spect_ax(3): properties table on top, hypnogram
     % with artifacts in the middle, SOpower trace below.
     S  = load(p);
-    AD = S.auxiliary_data;
+    AD = normalizeAuxStruct(S.auxiliary_data);
 
     g = uigridlayout(app.ResultsBrowserPreviewBody);
     g.ColumnWidth = {'1x'};
@@ -28,17 +28,12 @@ function previewMatAuxiliary(app, p)
     axH.Layout.Row = 2; axH.Layout.Column = 1;
     try
         stage_t = double(AD.stage_times(:)') / 3600;     % hours
-        if isfield(AD,'artifacts') && ~isempty(AD.artifacts) && ...
-                isfield(AD,'Fs') && AD.Fs > 0
-            N    = numel(AD.artifacts);
-            tArt = (0:N-1) / double(AD.Fs) / 3600;       % hours
-            hypnoplot(axH, stage_t, double(AD.stage_vals(:)'), ...
-                'Artifacts', logical(AD.artifacts), ...
-                'ArtifactTimes', tArt, ...
-                'TimesUnit', 'hours');
-        else
-            hypnoplot(axH, stage_t, double(AD.stage_vals(:)'), ...
-                'TimesUnit', 'hours');
+        hypnoplot(axH, stage_t, double(AD.stage_vals(:)'), 'TimesUnit', 'hours');
+        % Artifact overlay drawn from [start_s,end_s] spans (normalizeAuxStruct
+        % guarantees AD.artifact_spans, synthesizing it from a legacy
+        % per-sample mask when needed). Shaded regions need no sample count.
+        if isfield(AD,'artifact_spans') && ~isempty(AD.artifact_spans)
+            draw_artifact_spans_(axH, AD.artifact_spans / 3600);   % seconds -> hours
         end
         title(axH, 'Sleep Hypnogram');
     catch ME
@@ -53,12 +48,17 @@ function previewMatAuxiliary(app, p)
     axP.Layout.Row = 3; axP.Layout.Column = 1;
     if isfield(AD,'SOpower_norm') && ~isempty(AD.SOpower_norm) && ...
             isfield(AD,'Fs') && AD.Fs > 0
-        N         = numel(AD.SOpower_norm);
-        retainFs  = true;
-        winParams = [5, 0.5];
-        if isfield(AD, 'SOpower_retain_Fs'),     retainFs  = logical(AD.SOpower_retain_Fs); end
-        if isfield(AD, 'SOpower_window_params'), winParams = AD.SOpower_window_params;      end
-        tSec = app.synthesizeSOpowerTimes(N, AD.Fs, retainFs, winParams);
+        N    = numel(AD.SOpower_norm);
+        % Reconstruct the native timeline from t_start + i*step
+        % (normalizeAuxStruct guarantees both, native or legacy EEG-rate).
+        t0   = 0;          step = 1 / double(AD.Fs);
+        if isfield(AD,'SOpower_t_start') && ~isempty(AD.SOpower_t_start)
+            t0 = double(AD.SOpower_t_start);
+        end
+        if isfield(AD,'SOpower_step') && ~isempty(AD.SOpower_step)
+            step = double(AD.SOpower_step);
+        end
+        tSec = t0 + (0:N-1) * step;
         tHr  = tSec / 3600;
         plot(axP, tHr, double(AD.SOpower_norm), 'LineWidth', 1.2);
         methodStr = char(string(AD.SOpower_norm_method));
@@ -79,5 +79,24 @@ function previewMatAuxiliary(app, p)
         axis(axP, 'off');
         text(axP, 0.5, 0.5, '(no SOpower_norm data)', ...
             'HorizontalAlignment','center', 'Color',[0.45 0.5 0.55]);
+    end
+end
+
+
+function draw_artifact_spans_(ax, spans_hr)
+    % Shade each [start, end] artifact span (in hours) across the axis.
+    if isempty(spans_hr), return, end
+    try
+        xr = xregion(ax, spans_hr(:,1), spans_hr(:,2));
+        set(xr, 'FaceColor', [0.85 0.2 0.2], 'FaceAlpha', 0.18, 'EdgeColor', 'none');
+    catch
+        % Older MATLAB without xregion: fall back to translucent patches.
+        yl = ylim(ax); held = ishold(ax); hold(ax, 'on');
+        for r = 1:size(spans_hr, 1)
+            x = [spans_hr(r,1) spans_hr(r,2) spans_hr(r,2) spans_hr(r,1)];
+            y = [yl(1) yl(1) yl(2) yl(2)];
+            patch(ax, x, y, [0.85 0.2 0.2], 'FaceAlpha', 0.18, 'EdgeColor', 'none');
+        end
+        if ~held, hold(ax, 'off'); end
     end
 end

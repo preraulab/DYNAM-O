@@ -1410,7 +1410,7 @@ classdef DYNAMOApp < matlab.apps.AppBase & DYNAMO
         % Pure file-format writer for the parametric-fit CSV — exposed so
         % external scripts (and the equivalence-test harness) can write
         % the same comment-headered CSV that runParamBasis writes.
-        writeParamfitCsv(filename, PF, axis_kind, freq_bins, so_bins);
+        writeParamfitCsv(filename, PF, axis_kind, freq_bins, so_bins, subject_id);
     end
 
     methods (Static, Access=protected)

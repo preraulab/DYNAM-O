@@ -5,17 +5,18 @@ function SOPHs = loadOrReconstructSOPHs(app, channel, fbase)
     %   Resolution order:
     %     1. app.SOPHs already loaded in memory (current batch step) →
     %        return as-is.
-    %     2. <chan>/SOPHs/<fbase>_SOPHs_<chan>.mat → load and return.
-    %     3. Reconstruct from the slim outputs:
+    %     2. <chan>/SOPHs/<fbase>_SOPHs_<chan>.h5  → load and return.
+    %     3. <chan>/SOPHs/<fbase>_SOPHs_<chan>.mat → load (legacy).
+    %     4. Reconstruct from the slim outputs:
     %          - <chan>/SOPHs/<fbase>_SOPHs_power_<chan>.tiff
     %            → SOpower_mat, SOpower_bins, freq_bins (page-1 JSON)
     %          - <chan>/SOPHs/<fbase>_SOPHs_phase_<chan>.tiff
     %            → SOphase_mat, SOphase_bins, freq_bins (page-1 JSON)
-    %          - <chan>/auxiliary_data/<fbase>_auxiliary_data_<chan>.mat
-    %            → SOpower_norm, SOpower_norm_method, SOpower_retain_Fs,
-    %              SOpower_window_params, Fs (used to synthesise
-    %              SOpower_times via synthesizeSOpowerTimes).
-    %     4. Empty struct on total miss; the caller decides what to do
+    %          - <chan>/auxiliary_data/<fbase>_auxiliary_data_<chan>.{h5,mat}
+    %            → SOpower_norm (native grid), SOpower_norm_method, Fs;
+    %              SOpower_times reconstructed as t_start + i*step from
+    %              SOpower_t_start / SOpower_step (normalizeAuxStruct).
+    %     5. Empty struct on total miss; the caller decides what to do
     %        (typically: rerun the batch step from scratch).
     %
     %   Reconstructed SOPHs is NOT a 1:1 replica of the .mat — it lacks
@@ -30,49 +31,55 @@ function SOPHs = loadOrReconstructSOPHs(app, channel, fbase)
         return
     end
 
-    chanDir = fullfile(app.OutputDirEditField.Value, channel);
-    sophMat = fullfile(chanDir, 'SOPHs', [fbase '_SOPHs_' channel '.mat']);
-    if isfile(sophMat)
+    chanDir  = fullfile(app.OutputDirEditField.Value, channel);
+    sophsDir = fullfile(chanDir, 'SOPHs');
+    sophBase = fullfile(sophsDir, [fbase '_SOPHs_' channel]);
+    for binPath = {[sophBase '.h5'], [sophBase '.mat']}
+        p = binPath{1};
+        if ~isfile(p), continue, end
         try
-            S = load(sophMat);
-            if isfield(S, 'SOPHs')
+            S = load(p);
+            % Two layouts on disk:
+            %   - new flat: top-level vars (SOpower_mat, freq_bins, ...).
+            %   - legacy nested: a single 'SOPHs' struct variable.
+            if isfield(S, 'SOPHs') && isstruct(S.SOPHs)
                 SOPHs = S.SOPHs;
-            elseif isstruct(S) && isfield(S, 'SOpower_mat')
+            elseif isstruct(S) && (isfield(S,'SOpower_mat') || isfield(S,'freq_bins'))
                 SOPHs = S;
             end
             if ~isempty(fieldnames(SOPHs)), return, end
         catch
-            % fall through to TIFF reconstruction
+            % fall through to next candidate / TIFF reconstruction
         end
     end
 
     % --- TIFF + aux reconstruction ---
-    sophsDir = fullfile(chanDir, 'SOPHs');
     powTiff  = fullfile(sophsDir, [fbase '_SOPHs_power_' channel '.tiff']);
     phaTiff  = fullfile(sophsDir, [fbase '_SOPHs_phase_' channel '.tiff']);
-    auxMat   = fullfile(chanDir, 'auxiliary_data', ...
-        [fbase '_auxiliary_data_' channel '.mat']);
 
     SOPHs = readSOPHTiffPair_(powTiff, phaTiff);
-    if ~isempty(fieldnames(SOPHs)) && isfile(auxMat)
+    if ~isempty(fieldnames(SOPHs))
         try
-            AD = load(auxMat).auxiliary_data;
-            if isfield(AD, 'SOpower_norm')
+            % Route through loadAuxData so both the new .h5 (h5read) and
+            % legacy .mat (load) layouts resolve via a single entry point.
+            AD = app.loadAuxData(channel, fbase);
+            if ~isempty(AD) && isfield(AD, 'SOpower_norm')
                 SOPHs.SOpower_norm = AD.SOpower_norm;
-                N         = numel(AD.SOpower_norm);
-                retainFs  = true;
-                winParams = [5, 0.5];
-                if isfield(AD,'SOpower_retain_Fs')
-                    retainFs  = logical(AD.SOpower_retain_Fs);
+                N    = numel(AD.SOpower_norm);
+                % Reconstruct the timeline from t_start + i*step
+                % (normalizeAuxStruct guarantees both, native or legacy
+                % EEG-rate), replacing the old retain_Fs branch.
+                t0   = 0;          step = NaN;
+                if isfield(AD,'SOpower_t_start') && ~isempty(AD.SOpower_t_start)
+                    t0 = double(AD.SOpower_t_start);
                 end
-                if isfield(AD,'SOpower_window_params')
-                    winParams = double(AD.SOpower_window_params);
+                if isfield(AD,'SOpower_step') && ~isempty(AD.SOpower_step)
+                    step = double(AD.SOpower_step);
+                elseif isfield(AD,'Fs') && ~isempty(AD.Fs) && double(AD.Fs) > 0
+                    step = 1 / double(AD.Fs);
                 end
-                Fs_ = NaN;
-                if isfield(AD,'Fs'), Fs_ = double(AD.Fs); end
-                if isfinite(Fs_) && Fs_ > 0
-                    SOPHs.SOpower_times = app.synthesizeSOpowerTimes( ...
-                        N, Fs_, retainFs, winParams);
+                if isfinite(step)
+                    SOPHs.SOpower_times = t0 + (0:N-1) * step;
                 end
             end
         catch

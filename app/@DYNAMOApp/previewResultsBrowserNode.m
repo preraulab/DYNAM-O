@@ -43,6 +43,8 @@ function previewResultsBrowserNode(app, evt)
                 app.renderResultsBrowserPreviewText(p);
             case '.mat'
                 app.renderResultsBrowserPreviewMat(p);
+            case {'.h5','.hdf5'}
+                app.renderResultsBrowserPreviewH5(p);
             otherwise
                 app.renderResultsBrowserPreviewMessage(...
                     sprintf('Preview not available for %s files.', ext));

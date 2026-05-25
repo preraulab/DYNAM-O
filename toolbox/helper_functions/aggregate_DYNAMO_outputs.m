@@ -123,10 +123,10 @@ for ci = 1:numel(cats)
         case 'table'
             if useIndex
                 csvList = list_paramfit_from_index(opts.Files, catDir, cat.tag, channelName, '.csv');
-                matList = list_paramfit_from_index(opts.Files, catDir, cat.tag, channelName, '.mat');
+                matList = list_paramfit_from_index(opts.Files, catDir, cat.tag, channelName, {'.h5','.mat'});
             else
                 csvList = list_paramfit_files(catDir, cat.tag, channelName, '.csv');
-                matList = list_paramfit_files(catDir, cat.tag, channelName, '.mat');
+                matList = list_paramfit_files(catDir, cat.tag, channelName, {'.h5','.mat'});
             end
             [csvKept, csvDropped] = dedupe_by_subject(csvList);
             [matKept, matDropped] = dedupe_by_subject(matList);
@@ -155,7 +155,7 @@ for ci = 1:numel(cats)
                 matList  = list_sophs_struct_from_index(opts.Files, catDir, channelName);
                 tiffList = list_sophs_axis_from_index(opts.Files, catDir, channelName, axis);
             else
-                matList  = list_sophs_struct_files(catDir, channelName, '.mat');
+                matList  = list_sophs_struct_files(catDir, channelName, {'.h5','.mat'});
                 tiffList = list_sophs_axis_files(catDir, channelName, axis, '.tiff');
             end
 
@@ -249,40 +249,55 @@ end
 function lst = list_paramfit_from_index(allFiles, dirPath, tag, channelName, ext)
 %LIST_PARAMFIT_FROM_INDEX  Filter the index file list for paramfit-shaped
 %   entries under dirPath. Same return shape as list_paramfit_files; no
-%   filesystem access.
-suffix = ['_' tag '_' channelName ext];
-lst = struct('fbase', {}, 'path', {});
-for ii = 1:numel(allFiles)
-    p = char(allFiles{ii});
-    [parent, base, e] = fileparts(p);
-    if ~strcmp([base e], '') && ~strcmp(parent, dirPath), continue, end
-    fname = [base e];
-    if ~endsWith(fname, suffix), continue, end
-    fbase = extractBefore(fname, length(fname) - length(suffix) + 1);
-    if isempty(fbase), continue, end
-    lst(end+1).fbase = fbase; %#ok<AGROW>
-    lst(end).path    = p;
+%   filesystem access. `ext` may be a char or a cellstr.
+exts = ensure_cellstr_(ext);
+seen = struct();
+lst  = struct('fbase', {}, 'path', {});
+for ee = 1:numel(exts)
+    suffix = ['_' tag '_' channelName exts{ee}];
+    for ii = 1:numel(allFiles)
+        p = char(allFiles{ii});
+        [parent, base, e] = fileparts(p);
+        if ~strcmp([base e], '') && ~strcmp(parent, dirPath), continue, end
+        fname = [base e];
+        if ~endsWith(fname, suffix), continue, end
+        fbase = extractBefore(fname, length(fname) - length(suffix) + 1);
+        if isempty(fbase), continue, end
+        key = matlab.lang.makeValidName(fbase);
+        if isfield(seen, key), continue, end
+        seen.(key) = 1;
+        lst(end+1).fbase = fbase; %#ok<AGROW>
+        lst(end).path    = p;
+    end
 end
 end
 
 function lst = list_sophs_struct_from_index(allFiles, dirPath, channelName)
 %LIST_SOPHS_STRUCT_FROM_INDEX  Filter the index file list for whole-SOPHs
-%   .mat entries under dirPath, excluding the per-axis variants.
-suffix = ['_SOPHs_' channelName '.mat'];
-lst = struct('fbase', {}, 'path', {});
-for ii = 1:numel(allFiles)
-    p = char(allFiles{ii});
-    [parent, base, e] = fileparts(p);
-    if ~strcmp(parent, dirPath), continue, end
-    fname = [base e];
-    if contains(fname, '_SOPHs_power_') || contains(fname, '_SOPHs_phase_')
-        continue
+%   binary entries under dirPath (.h5 first, .mat fallback), excluding
+%   the per-axis variants.
+exts = {'.h5', '.mat'};
+seen = struct();
+lst  = struct('fbase', {}, 'path', {});
+for ee = 1:numel(exts)
+    suffix = ['_SOPHs_' channelName exts{ee}];
+    for ii = 1:numel(allFiles)
+        p = char(allFiles{ii});
+        [parent, base, e] = fileparts(p);
+        if ~strcmp(parent, dirPath), continue, end
+        fname = [base e];
+        if contains(fname, '_SOPHs_power_') || contains(fname, '_SOPHs_phase_')
+            continue
+        end
+        if ~endsWith(fname, suffix), continue, end
+        fbase = extractBefore(fname, length(fname) - length(suffix) + 1);
+        if isempty(fbase), continue, end
+        key = matlab.lang.makeValidName(fbase);
+        if isfield(seen, key), continue, end
+        seen.(key) = 1;
+        lst(end+1).fbase = fbase; %#ok<AGROW>
+        lst(end).path    = p;
     end
-    if ~endsWith(fname, suffix), continue, end
-    fbase = extractBefore(fname, length(fname) - length(suffix) + 1);
-    if isempty(fbase), continue, end
-    lst(end+1).fbase = fbase; %#ok<AGROW>
-    lst(end).path    = p;
 end
 end
 
@@ -306,36 +321,56 @@ end
 
 function lst = list_paramfit_files(dirPath, tag, channelName, ext)
 %LIST_PARAMFIT_FILES  Find per-subject files matching <fbase>_<tag>_<channel><ext>.
-suffix = ['_' tag '_' channelName ext];
-files = dir(fullfile(dirPath, ['*' suffix]));
-lst = struct('fbase', {}, 'path', {});
-for ii = 1:numel(files)
-    fname = files(ii).name;
-    if ~endsWith(fname, suffix), continue, end
-    fbase = extractBefore(fname, length(fname) - length(suffix) + 1);
-    if isempty(fbase), continue, end
-    lst(end+1).fbase = fbase; %#ok<AGROW>
-    lst(end).path    = fullfile(dirPath, fname);
+%   `ext` may be a char (single extension) or a cellstr (extensions tried
+%   in order; per-fbase, the first match wins).
+exts = ensure_cellstr_(ext);
+seen = struct(); % fbase token -> 1
+lst  = struct('fbase', {}, 'path', {});
+for ee = 1:numel(exts)
+    suffix = ['_' tag '_' channelName exts{ee}];
+    files = dir(fullfile(dirPath, ['*' suffix]));
+    for ii = 1:numel(files)
+        fname = files(ii).name;
+        if ~endsWith(fname, suffix), continue, end
+        fbase = extractBefore(fname, length(fname) - length(suffix) + 1);
+        if isempty(fbase), continue, end
+        key = matlab.lang.makeValidName(fbase);
+        if isfield(seen, key), continue, end
+        seen.(key) = 1;
+        lst(end+1).fbase = fbase; %#ok<AGROW>
+        lst(end).path    = fullfile(dirPath, fname);
+    end
 end
 end
 
+
+function exts = ensure_cellstr_(ext)
+if iscell(ext), exts = ext; else, exts = {char(string(ext))}; end
+end
+
 function lst = list_sophs_struct_files(dirPath, channelName, ext)
-%LIST_SOPHS_STRUCT_FILES  Find per-subject *_SOPHs_<channel>.mat (whole struct).
-suffix = ['_SOPHs_' channelName ext];
-files = dir(fullfile(dirPath, ['*' suffix]));
-lst = struct('fbase', {}, 'path', {});
-for ii = 1:numel(files)
-    fname = files(ii).name;
-    % Skip the per-axis variants (*_SOPHs_power_*, *_SOPHs_phase_*) so we
-    % only pick up the whole-struct file.
-    if contains(fname, '_SOPHs_power_') || contains(fname, '_SOPHs_phase_')
-        continue
+%LIST_SOPHS_STRUCT_FILES  Find per-subject *_SOPHs_<channel><ext> (binary).
+%   `ext` may be a char or a cellstr; first-match-per-fbase wins.
+exts = ensure_cellstr_(ext);
+seen = struct();
+lst  = struct('fbase', {}, 'path', {});
+for ee = 1:numel(exts)
+    suffix = ['_SOPHs_' channelName exts{ee}];
+    files = dir(fullfile(dirPath, ['*' suffix]));
+    for ii = 1:numel(files)
+        fname = files(ii).name;
+        if contains(fname, '_SOPHs_power_') || contains(fname, '_SOPHs_phase_')
+            continue
+        end
+        if ~endsWith(fname, suffix), continue, end
+        fbase = extractBefore(fname, length(fname) - length(suffix) + 1);
+        if isempty(fbase), continue, end
+        key = matlab.lang.makeValidName(fbase);
+        if isfield(seen, key), continue, end
+        seen.(key) = 1;
+        lst(end+1).fbase = fbase; %#ok<AGROW>
+        lst(end).path    = fullfile(dirPath, fname);
     end
-    if ~endsWith(fname, suffix), continue, end
-    fbase = extractBefore(fname, length(fname) - length(suffix) + 1);
-    if isempty(fbase), continue, end
-    lst(end+1).fbase = fbase; %#ok<AGROW>
-    lst(end).path    = fullfile(dirPath, fname);
 end
 end
 
@@ -493,21 +528,39 @@ for ii = 1:total
     % path silently full-loads, so we fall back to load() either way.
     M = []; freq_local = []; bins_local = [];
     used_partial = false;
+    % Try a partial read. Two layouts on disk:
+    %   - new flat: top-level datasets (matfile vars at root).
+    %   - legacy nested: a single 'SOPHs' struct variable.
+    % matfile() works on -v7.3 saves regardless of file extension
+    % (.h5 or .mat); h5read works on either too. We use matfile here
+    % so the same code path works for both flat and nested layouts.
     try
         mf = matfile(p);
         info = whos(mf);
-        sn = '';
-        for jj = 1:numel(info)
-            if strcmp(info(jj).class, 'struct') && ...
-                    (strcmpi(info(jj).name, 'SOPHs') || numel(info) == 1)
-                sn = info(jj).name; break
-            end
-        end
-        if ~isempty(sn)
-            M          = mf.(sn).(field);
-            freq_local = mf.(sn).freq_bins;
-            bins_local = mf.(sn).(binsField);
+        % Flat layout: the histogram + bins are top-level vars.
+        flat_names = {info.name};
+        if any(strcmp(flat_names, field)) && ...
+                any(strcmp(flat_names, 'freq_bins')) && ...
+                any(strcmp(flat_names, binsField))
+            M          = mf.(field);
+            freq_local = mf.freq_bins;
+            bins_local = mf.(binsField);
             used_partial = true;
+        else
+            % Nested fallback: locate a struct variable carrying SOPHs.
+            sn = '';
+            for jj = 1:numel(info)
+                if strcmp(info(jj).class, 'struct') && ...
+                        (strcmpi(info(jj).name, 'SOPHs') || numel(info) == 1)
+                    sn = info(jj).name; break
+                end
+            end
+            if ~isempty(sn)
+                M          = mf.(sn).(field);
+                freq_local = mf.(sn).freq_bins;
+                bins_local = mf.(sn).(binsField);
+                used_partial = true;
+            end
         end
     catch
         used_partial = false;
@@ -542,6 +595,25 @@ for ii = 1:total
                 p, field, mat2str(size(M)), mat2str(canon)); %#ok<AGROW>
             continue
         end
+        % Bin-edge alignment: the per-pixel stack only makes sense
+        % when every subject's bin centers match the canonical grid.
+        % SOpower_bins default to adaptive per-subject (see
+        % SOpowerHistogram.m:265-272), so silently stacking would
+        % average physically different SOpower values together.
+        % Use a tight relative tolerance; tighten/relax as needed.
+        if ~isempty(bins) && ~isempty(bins_local) && ...
+                ~bins_match_(bins, bins_local)
+            warnings_out{end+1} = sprintf( ...
+                '%s has %s edges that don''t match the aggregate grid — skipping (re-run with fixed SOpower_range/SOpower_binsizestep across subjects)', ...
+                p, binsField); %#ok<AGROW>
+            continue
+        end
+        if ~isempty(freq_bins) && ~isempty(freq_local) && ...
+                ~bins_match_(freq_bins, freq_local)
+            warnings_out{end+1} = sprintf( ...
+                '%s has freq_bins that don''t match the aggregate grid — skipping', p); %#ok<AGROW>
+            continue
+        end
     end
     stacks{end+1} = M; %#ok<AGROW>
     ids(end+1, 1) = {fbase}; %#ok<AGROW>
@@ -555,9 +627,17 @@ out.(binsField) = bins;
 end
 
 function S = locate_sophs_struct(loaded)
-%LOCATE_SOPHS_STRUCT  Find the SOPHs struct inside a loaded MAT.
+%LOCATE_SOPHS_STRUCT  Find the SOPHs struct inside a loaded MAT/H5.
+%   Two on-disk layouts are supported:
+%     - flat (new): top-level vars (SOpower_mat, SOphase_mat, freq_bins, ...).
+%       The whole `loaded` struct IS the SOPHs.
+%     - nested (legacy): a single struct variable named 'SOPHs' (or any
+%       struct field that carries SOpower_mat/SOphase_mat).
+S = [];
+if isstruct(loaded) && (isfield(loaded,'SOpower_mat') || isfield(loaded,'SOphase_mat'))
+    S = loaded; return
+end
 fn = fieldnames(loaded);
-S  = [];
 for ii = 1:numel(fn)
     v = loaded.(fn{ii});
     if isstruct(v) && (isfield(v, 'SOpower_mat') || isfield(v, 'SOphase_mat'))
@@ -599,38 +679,55 @@ for ii = 1:total
             p, mat2str(size(M)), mat2str(canon)); %#ok<AGROW>
         continue
     end
-    pages{end+1} = M;            %#ok<AGROW>
 
-    % Prefer the embedded subject_id over the filename-derived fbase
-    % when it's present and non-empty — defensive against renamed
-    % files that have lost their original DYNAM-O naming.
+    % Parse the embedded JSON BEFORE pushing M to pages, so a bin
+    % mismatch can skip this subject (TIFFs without embedded bins
+    % still pass — only when both sides have bins do we compare).
     embeddedId = '';
     metaParsed = struct();
     try
         info = imfinfo(p);
         if isfield(info, 'ImageDescription') && ~isempty(info(1).ImageDescription)
             metaParsed = jsondecode(info(1).ImageDescription);
-            if isfield(metaParsed, 'subject_id')
+            if isfield(metaParsed, 'subjectID')
+                embeddedId = char(strtrim(string(metaParsed.subjectID)));
+            elseif isfield(metaParsed, 'subject_id')
                 embeddedId = char(strtrim(string(metaParsed.subject_id)));
             end
         end
     catch
         metaParsed = struct();
     end
+
+    fb_local = []; sb_local = [];
+    if isfield(metaParsed,'freq_bins'), fb_local = metaParsed.freq_bins(:); end
+    if ~isempty(binsField) && isfield(metaParsed, binsField)
+        sb_local = metaParsed.(binsField)(:);
+    end
+
+    % Bin-edge guard (see the .mat path for context): per-subject
+    % adaptive SOpower_bins would otherwise be silently averaged
+    % pixel-wise into the aggregate.
+    if ~isempty(so_bins) && ~isempty(sb_local) && ~bins_match_(so_bins, sb_local)
+        warnings_out{end+1} = sprintf( ...
+            '%s has %s edges that don''t match the aggregate grid — skipping (re-run with fixed SOpower_range/SOpower_binsizestep across subjects)', ...
+            p, binsField); %#ok<AGROW>
+        continue
+    end
+    if ~isempty(freq_bins) && ~isempty(fb_local) && ~bins_match_(freq_bins, fb_local)
+        warnings_out{end+1} = sprintf( ...
+            '%s has freq_bins that don''t match the aggregate grid — skipping', p); %#ok<AGROW>
+        continue
+    end
+
+    pages{end+1} = M;            %#ok<AGROW>
     if ~isempty(embeddedId)
         ids(end+1,1) = {embeddedId};   %#ok<AGROW>
     else
         ids(end+1,1) = {fbase};        %#ok<AGROW>
     end
-
-    if isempty(freq_bins) || isempty(so_bins)
-        if isempty(freq_bins) && isfield(metaParsed,'freq_bins')
-            freq_bins = metaParsed.freq_bins(:);
-        end
-        if isempty(so_bins) && ~isempty(binsField) && isfield(metaParsed, binsField)
-            so_bins = metaParsed.(binsField)(:);
-        end
-    end
+    if isempty(freq_bins) && ~isempty(fb_local), freq_bins = fb_local; end
+    if isempty(so_bins)   && ~isempty(sb_local), so_bins   = sb_local; end
 end
 end
 
@@ -686,4 +783,14 @@ b = [];
 if numel(rng) ~= 2 || numel(step) ~= 2, return, end
 n = round((rng(2) - rng(1)) / step(2)) + 1;
 b = linspace(rng(1), rng(2), n).';
+end
+
+function tf = bins_match_(a, b)
+%BINS_MATCH_  True if two bin-center vectors are equal within a tight
+%relative tolerance. Catches subjects that ran with adaptive (per-subject)
+%SOpower bins from being silently averaged into a common grid.
+a = a(:); b = b(:);
+if numel(a) ~= numel(b), tf = false; return, end
+scale = max(1, max(abs([a; b])));
+tf = all(abs(a - b) <= 1e-6 * scale);
 end

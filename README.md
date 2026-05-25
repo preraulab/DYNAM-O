@@ -750,18 +750,25 @@ SOPH(x,y) = Σₙ basis_n(x,y; ampₙ, fmeanₙ, fstdₙ, pmeanₙ, pstdₙ, θ�
 
 | Format | What it contains | Reconstruct? |
 |---|---|---|
-| `.csv` | Per-mode params table (`Amplitude, FreqMean, FreqStd, …, Theta`, plus phase-coupling annotation columns for power) **and a fixed-format comment header** carrying `background.{xxx,yyy,zzz}`, `unit_row` (phase only), `gof.{sse,rsquare,dfe,adjrsquare,rmse}`, the source `freq_bins` / `SOpower_bins` (or `SOphase_bins`), and the **raw fitobj coefficients** (`fitobj_coefnames` + `fitobj_coefvalues` JSON arrays). Header lines start with `# ` and are skipped by both MATLAB `readtable` (`'CommentStyle','#'`) and pandas (`comment='#'`). | ✅ full — use `fitobj_coefvalues` for exact reconstruction |
+| `.csv` | Per-mode params table (`Density, FreqMean, FreqStd, …, Theta`, plus phase-coupling annotation columns for power) **and a fixed-format comment header** carrying `background.{xxx,yyy,zzz}`, `unit_row` (phase only), `gof.{sse,rsquare,dfe,adjrsquare,rmse}`, the source `freq_bins` / `SOpower_bins` (or `SOphase_bins`), and the **raw fitobj coefficients** (`fitobj_coefnames` + `fitobj_coefvalues` JSON arrays). Header lines start with `# ` and are skipped by both MATLAB `readtable` (`'CommentStyle','#'`) and pandas (`comment='#'`). | ✅ full — use `fitobj_coefvalues` for exact reconstruction |
 | `.mat`  | Full `*_paramfit` struct — params table, `fitobj` (MATLAB `cfit`), `gof` struct, `model_SOPH` (rendered model), `wshed_img` (watershed segmentation). | ✅ full + cfit + rendered model + watershed |
 | `All`   | both | ✅ |
 
-> ⚠️ **Phase Amplitude is not the raw fit coefficient.** For phase fits,
+> The `Density` column is the rotgauss / vmGauss `amp` parameter, named
+> for what it represents semantically: TF-peak density at the mode
+> location (peaks/min/bin for power fits, proportion/phase-bin for
+> phase fits). Renamed from the historical `Amplitude` to disambiguate
+> from spectral amplitude; the underlying mathematical model is
+> unchanged.
+
+> ⚠️ **Phase Density is not the raw fit coefficient.** For phase fits,
 > `param_basis_phase.m` overwrites `params(:,1)` after fitting with an
 > *empirical* no-sin amplitude (the model surface value at the peak's
 > location with the sinusoidal background zeroed out) so that the
-> `Amplitude` column reflects a human-interpretable peak height. Power
+> `Density` column reflects a human-interpretable peak height. Power
 > fits do **not** apply this transformation. **For exact reconstruction
 > of phase `model_SOPH`, use `fitobj_coefvalues` from the header — not
-> the `Amplitude` column.** Power fits can be reconstructed either way
+> the `Density` column.** Power fits can be reconstructed either way
 > (the values agree).
 
 The Results Browser CSV preview detects the comment header and

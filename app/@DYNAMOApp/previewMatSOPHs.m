@@ -1,8 +1,16 @@
 function previewMatSOPHs(app, p)
     % Per-subject SOPHs.mat → two tabs (Power / Phase).
+    %
+    % Accepts both layouts: legacy nested (single 'SOPHs' struct var)
+    % and new flat (top-level SOpower_mat / SOphase_mat / freq_bins
+    % datasets). plotAggregateSOHist resolves either at render time, so
+    % we just need to verify at least one histogram axis is present.
     S = load(p);
-    if ~isfield(S, 'SOPHs')
-        app.renderResultsBrowserPreviewMessage('SOPHs variable missing.');
+    has_nested = isfield(S, 'SOPHs') && isstruct(S.SOPHs) && ...
+        (isfield(S.SOPHs,'SOpower_mat') || isfield(S.SOPHs,'SOphase_mat'));
+    has_flat = isfield(S, 'SOpower_mat') || isfield(S, 'SOphase_mat');
+    if ~has_nested && ~has_flat
+        app.renderResultsBrowserPreviewMessage('SOPHs histogram fields missing.');
         return
     end
     tg = uitabgroup(app.ResultsBrowserPreviewBody, ...

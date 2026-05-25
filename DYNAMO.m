@@ -320,11 +320,41 @@ classdef DYNAMO < handle
             obj.validateStaging();
             assert(obj.isInitialized(), 'DYNAMO object is not fully initialized.');
 
+            % Forward an existing stats_table when one is already loaded
+            % (e.g. from .csv reuse). runDYNAMO's 'stats_table' kwarg
+            % short-circuits computeTFPeaks; only the spectrogram +
+            % SOpower/SOphase peak features + histogram binning run.
+            extra_args = {};
+            if ~isempty(obj.stats_table)
+                ST = obj.stats_table;
+                % SubjectID is a writer-side annotation for self-
+                % identification on disk; the inner pipeline is keyed
+                % off PeakTime / PeakFrequency only and rejects non-
+                % numeric columns via 'real' validation.
+                if istable(ST)
+                    sid_hit = strcmpi(ST.Properties.VariableNames, 'SubjectID');
+                    if any(sid_hit)
+                        ST = removevars(ST, ST.Properties.VariableNames(sid_hit));
+                    end
+                end
+                extra_args = [extra_args, {'stats_table', ST}];
+
+                % Reuse an already-computed artifact mask so the
+                % SOPH-only path doesn't recompute detect_artifacts
+                % (its dominant cost). runDYNAMO validates the length
+                % against the data in time_range and falls back to
+                % detection on mismatch, so a stale/short mask is safe.
+                if ~isempty(obj.artifacts)
+                    extra_args = [extra_args, {'artifacts', obj.artifacts}];
+                end
+            end
+
             [obj.stats_table, obj.spect, obj.stimes, obj.sfreqs,...
                 obj.data_time_range, obj.t_time_range, obj.artifacts, obj.SOPHs] = runDYNAMO(...
                 obj.data, obj.Fs, obj.stage_times, obj.stage_vals, obj.time_range, ...
                 obj.baseline_options, obj.detection_options, obj.SOPH_options, ...
-                'fit_param_basis', false, 'fit_spline_basis', false, 'plot_on', false);
+                'fit_param_basis', false, 'fit_spline_basis', false, 'plot_on', false, ...
+                extra_args{:});
         end
 
         function obj = updateOptions(obj, varargin)
@@ -1600,12 +1630,17 @@ classdef DYNAMO < handle
             cleaner = onCleanup(@() close(t)); %#ok<NASGU>
 
             for kk = 1:numel(pages)
-                page = pages{kk};
+                % Write 32-bit float pages to match the DYNAM-O desktop app
+                % (Gray32Float), which validates dtype on read. All MATLAB
+                % readers do double(imread(...)), so the f64->f32 narrowing
+                % is transparent on this side; SOPH rates and spline coefs
+                % are well within single precision.
+                page = single(pages{kk});
                 tagstruct = struct();
                 tagstruct.ImageLength = size(page, 1);
                 tagstruct.ImageWidth = size(page, 2);
                 tagstruct.Photometric = Tiff.Photometric.MinIsBlack;
-                tagstruct.BitsPerSample = 64;              % Use 64 for double precision
+                tagstruct.BitsPerSample = 32;              % single precision (f32), app parity
                 tagstruct.SamplesPerPixel = 1;
                 tagstruct.SampleFormat = Tiff.SampleFormat.IEEEFP; % Key for negative/floats
                 tagstruct.PlanarConfiguration = Tiff.PlanarConfiguration.Chunky;

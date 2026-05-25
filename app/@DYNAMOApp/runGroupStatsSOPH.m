@@ -113,10 +113,13 @@ function [stack, ids, freq_bins, so_bins] = loadSOPHStackForStats_(app, channel,
     stack = []; ids = {}; freq_bins = []; so_bins = [];
     aggDir = fullfile(app.ResultsBrowserOutputDirField.Value, 'aggregates', channel);
 
-    matCand  = fullfile(aggDir, [channel '_aggregate_SOPHs_' axisKind '.mat']);
-    if isfile(matCand)
+    binCands = { ...
+        fullfile(aggDir, [channel '_aggregate_SOPHs_' axisKind '.h5']), ...
+        fullfile(aggDir, [channel '_aggregate_SOPHs_' axisKind '.mat'])};
+    for ci = 1:numel(binCands)
+        if ~isfile(binCands{ci}), continue, end
         try
-            S = load(matCand);
+            S = load(binCands{ci});
             if isfield(S, 'aggregate'), agg = S.aggregate; else, agg = S; end
             fld = ['SO' axisKind '_mat'];
             if isfield(agg, fld) && ~isempty(agg.(fld))
@@ -128,7 +131,7 @@ function [stack, ids, freq_bins, so_bins] = loadSOPHStackForStats_(app, channel,
                 return
             end
         catch
-            % Fall through to TIFF path.
+            % Try next candidate / fall through to TIFF path.
         end
     end
 

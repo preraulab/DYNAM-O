@@ -10,16 +10,19 @@ function files = dynamo_files_for_components(subject, channel, components)
 %   Component → file path mapping (the inverse of what
 %   dynamo_seed_index_from_cache classifies):
 %
-%       'aux'      → <chan>/auxiliary_data/<subj>_auxiliary_data_<chan>.mat
+%       'aux'      → <chan>/auxiliary_data/<subj>_auxiliary_data_<chan>.{h5,mat}
 %       'SOPHs'    → <chan>/SOPHs/<subj>_SOPHs_<chan>.mat
 %                  + <chan>/SOPHs/<subj>_SOPHs_power_<chan>.tiff
 %                  + <chan>/SOPHs/<subj>_SOPHs_phase_<chan>.tiff
-%       'TFpeaks'  → <chan>/TFpeaks/<subj>_stats_table_<chan>.mat
-%                  + <chan>/TFpeaks/<subj>_stats_table_<chan>.csv
+%       'TFpeaks'  → <chan>/TFpeaks/<subj>_stats_table_<chan>.{mat,csv}
 %       'paramfit' → <chan>/param_basis/<subj>_SOpower_paramfit_<chan>.{mat,csv}
 %                  → <chan>/param_basis/<subj>_SOphase_paramfit_<chan>.{mat,csv}
 %       'spline'   → <chan>/spline_basis/<subj>_SOpower_splinefit_<chan>.{mat,tiff}
 %                  → <chan>/spline_basis/<subj>_SOphase_splinefit_<chan>.{mat,tiff}
+%
+%   `aux` is the only component whose binary slot is `.h5` by default;
+%   the others stay on `.mat` (HDF5 internally — externally readable
+%   via h5py — but the `.mat` extension is what MATLAB load() uses).
 %
 %   The synth includes both .mat and .csv (or .tiff) companion files even
 %   though a given run may have saved only one format — downstream
@@ -48,6 +51,8 @@ function files = dynamo_files_for_components(subject, channel, components)
         c = char(c);
         switch c
             case 'aux'
+                files{end+1} = sprintf('%s/auxiliary_data/%s_auxiliary_data_%s.h5', ...
+                    channel, subject, channel); %#ok<AGROW>
                 files{end+1} = sprintf('%s/auxiliary_data/%s_auxiliary_data_%s.mat', ...
                     channel, subject, channel); %#ok<AGROW>
             case 'SOPHs'
