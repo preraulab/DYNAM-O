@@ -9,3 +9,4 @@ tests/*
 *.asv
 .aider*
 .claude/
+.codegraph/
