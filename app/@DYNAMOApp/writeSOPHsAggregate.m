@@ -33,7 +33,9 @@ function writeSOPHsAggregate(app, partial, outDir, channelName, axis, label)
         % subjectIDs array is keyed in TIFF page order so a reader
         % can map page index → subject ID without the .txt sidecar
         % or the runs index. Sidecar still written below for
-        % external tools that don't parse JSON tags.
+        % external tools that don't parse JSON tags. Naming
+        % convention: camelCase `subjectID` for one, `subjectIDs`
+        % for many — matches the per-subject TIFF singular form.
         tiffDesc = '';
         fb = []; sb = [];
         if isfield(partial,'freq_bins'), fb = partial.freq_bins; end

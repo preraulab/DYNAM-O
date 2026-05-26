@@ -191,6 +191,13 @@ addOptional(p, 'spline_basis_power_options', spline_basis_opts('power'), @(x) is
 addOptional(p, 'spline_basis_phase_options', spline_basis_opts('phase'), @(x) isstruct(x));
 % additional inputs to control the outputs from runDYNAMO()
 addOptional(p, 'stats_table', [], @(x) validateattributes(x, {'double','table'}, {'real','2d'}));
+% Precomputed artifact mask (row/col logical or numeric over the data
+% within time_range). When supplied alongside a stats_table, the
+% stats-table branch reuses it instead of recomputing detect_artifacts
+% (the dominant cost of a SOPH-only re-run). The mask is deterministic
+% in (data, Fs), so a previously-saved mask is exactly what detection
+% would produce again. Ignored (recomputed) on length mismatch.
+addOptional(p, 'artifacts', [], @(x) isempty(x) || ((islogical(x) || isnumeric(x)) && isvector(x)));
 addOptional(p, 'verbose', default_verbose, @(x) validateattributes(x, {'logical', 'numeric'}, {'scalar'}));
 addOptional(p, 'plot_on', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'save_output_image', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
@@ -422,7 +429,21 @@ else
     t_time_range = t_full(time_range_inds);
     [spect, stimes, sfreqs] = deal([]);
     t_stage = tic;
-    artifacts = detect_artifacts(data_time_range, Fs);
+    if ~isempty(artifacts) && numel(artifacts) == numel(data_time_range)
+        % Reuse the supplied mask (saved from the run that built this
+        % stats_table). detect_artifacts returns a row vector, so match
+        % that orientation for downstream isexcluded consumers.
+        artifacts = logical(reshape(artifacts, 1, []));
+        if verbose
+            disp('Reusing provided artifact mask (skipping detection).');
+        end
+    else
+        if ~isempty(artifacts) && verbose
+            fprintf(['Provided artifact mask length (%d) does not match data ' ...
+                'in time range (%d) — recomputing.\n'], numel(artifacts), numel(data_time_range));
+        end
+        artifacts = detect_artifacts(data_time_range, Fs);
+    end
     timings.artifact = toc(t_stage);
 end
 

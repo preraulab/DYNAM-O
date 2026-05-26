@@ -8,8 +8,8 @@ function refreshModeScatterDropdowns(app, axisKind)
     %   Each dropdown gets a leading '(none)' option. Current
     %   selections are preserved when still valid; on the very
     %   first populated refresh we apply axis-specific defaults
-    %     Power: X=SOpowerMean, Y=FreqMean, Size=Amplitude, Color=PrefPhaseCirc
-    %     Phase: X=SOphaseMean, Y=FreqMean, Size=Amplitude, Color=PrefPhaseCirc
+    %     Power: X=SOpowerMean, Y=FreqMean, Size=Density, Color=PrefPhaseCirc
+    %     Phase: X=SOphaseMean, Y=FreqMean, Size=Density, Color=PrefPhaseCirc
     %   The "first populated refresh" is tracked per-dropdown
     %   in UserData so user picks of '(none)' aren't clobbered
     %   on subsequent refreshes.
@@ -57,7 +57,7 @@ function refreshModeScatterDropdowns(app, axisKind)
             % back to SOphaseMean when absent.
             cPrefs = {'PrefPhaseCirc', 'SOphaseMean'};
         otherwise
-            xPref  = 'Amplitude';
+            xPref  = 'Density';
             cPrefs = {'ID'};
     end
     cPref = cPrefs{1};
@@ -73,7 +73,7 @@ function refreshModeScatterDropdowns(app, axisKind)
     pickDefault(xDD, xPref,        inited);
     pickDefault(yDD, 'FreqMean',   inited);
     pickDefault(zDD, '(none)',     inited);     % default 2-D
-    pickDefault(sDD, 'Amplitude',  inited);
+    pickDefault(sDD, 'Density',    inited);
     pickDefault(cDD, cPref,        inited);
 
     app.ModeScatter_DropdownsInited_.(axisKind) = true;

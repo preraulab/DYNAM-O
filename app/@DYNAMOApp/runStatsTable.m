@@ -1,14 +1,23 @@
 function runStatsTable(app)
-    % runStatsTable  Run DYNAMO and save TF-peak stats and SO-Power Histograms.
+    % runStatsTable  Resolve stats_table + SOPHs and emit requested formats.
     %
-    %   Calls app.run() to execute the DYNAMO pipeline, then saves:
-    %     - stats_table: TF-peak statistics table (.csv, .mat, or both)
-    %     - SOPHs: SO-Power Histograms (.tiff, .mat, or both)
+    %   Three-step pattern:
+    %     1. Load: try in-memory → .h5 → legacy .mat → .csv (stats only).
+    %     2. Reuse: when only stats_table is present (CSV reuse case),
+    %        forward it into runDYNAMO via the 'stats_table' kwarg so
+    %        computeTFPeaks is skipped — only the spectrogram +
+    %        SOpower / SOphase + SOPH binning steps run.
+    %     3. Recompute: full runDYNAMO when both are missing.
     %
-    %   Skips execution if all output files already exist and
-    %   OverwriteExistingFilesCheckBox is unchecked.
+    %   Outputs:
+    %     stats_table : .csv and/or .h5 (legacy .mat read-only).
+    %     SOPHs       : per-axis .tiff pair and/or .h5 (flat top-level
+    %                   datasets via save -struct).
+    %
+    %   Skips wholly when every requested format already exists on disk
+    %   and OverwriteExistingFilesCheckBox is unchecked.
 
-    % Channel/output dirs prepared once in runBatch; reuse cached paths
+    % --- (0) Paths and requested-format resolution ---
     chanDir     = fullfile(app.OutputDirEditField.Value, app.channel);
     tfpeaksDir  = fullfile(chanDir, 'TFpeaks');
     sophsDir    = fullfile(chanDir, 'SOPHs');
@@ -17,53 +26,109 @@ function runStatsTable(app)
     sophPowBase = fullfile(sophsDir,   [app.input_fbase '_SOPHs_power_' app.channel]);
     sophPhaBase = fullfile(sophsDir,   [app.input_fbase '_SOPHs_phase_' app.channel]);
 
-    stats_csv = [statsBase '.csv'];
-    stats_mat = [statsBase '.mat'];
-    SOPH_mat  = [sophBase  '.mat'];
-
-    % ---- (0) Build the list of files this stage would emit
-    %      under the current (checkbox + dropdown) choices.
-    %      Used both for the skip-when-cached gate at compute
-    %      time AND for per-file save gating below — so a
-    %      run with .csv on disk but the user requesting .mat
-    %      still writes .mat instead of being silently skipped.
     overwrite = app.OverwriteExistingFilesCheckBox.Value;
 
     stats_choice = app.PeakStatsTableDropDown.Value;
-    stats_expected = {};
+    stats_formats = {};
     if app.SavePeakStatsCheckBox.Value && ~strcmp(stats_choice,'--')
-        if any(strcmp(stats_choice, {'.csv','All'})), stats_expected{end+1} = stats_csv; end
-        if any(strcmp(stats_choice, {'.mat','All'})), stats_expected{end+1} = stats_mat; end
+        if any(strcmp(stats_choice, {'.csv','All'})), stats_formats{end+1} = '.csv'; end
+        if any(strcmp(stats_choice, {'.mat','All'})), stats_formats{end+1} = '.mat'; end
     end
 
     soph_choice = app.SOPowerHistogramsDropDown.Value;
-    soph_targets = {};   % each entry: struct('path', ..., 'kind', 'tiff_power'|'tiff_phase'|'mat')
+    soph_formats = {};
     if app.SaveSOPHsCheckBox.Value && ~strcmp(soph_choice,'--')
-        if any(strcmp(soph_choice, {'.tiff','All'}))
-            soph_targets{end+1} = struct('path', [sophPowBase '.tiff'], 'kind', 'tiff_power');
-            soph_targets{end+1} = struct('path', [sophPhaBase '.tiff'], 'kind', 'tiff_phase');
+        if any(strcmp(soph_choice, {'.tiff','All'})), soph_formats{end+1} = '.tiff'; end
+        if any(strcmp(soph_choice, {'.mat','All'})),  soph_formats{end+1} = '.mat';  end
+    end
+
+    % --- Existence-driven skip-when-cached gate ---
+    % Legacy .mat counts as satisfying the binary slot for skip logic
+    % so a pre-existing .mat dataset doesn't get redundantly re-emitted.
+    stats_have = stats_present_(statsBase);
+    soph_have  = soph_present_(sophBase, sophPowBase, sophPhaBase);
+
+    stats_missing = setdiff(stats_formats, stats_have);
+    soph_missing  = setdiff(soph_formats,  soph_have);
+
+    if ~overwrite && isempty(stats_missing) && isempty(soph_missing) && ...
+            ~isempty([stats_formats, soph_formats])
+        app.TextArea.addnl('   Skipping stats / SOPHs (all requested outputs already exist).');
+        return
+    end
+
+    % --- (1) Load whatever we can from disk into memory ---
+    % `stats_table` is dual-role: it's an OUTPUT of this stage, but also
+    % an INPUT to runDYNAMO's CSV-reuse path (skips computeTFPeaks).
+    % Always try to load it from disk so the user's CSV-stats workflow
+    % works even with overwrite ON — the only effect of overwrite is
+    % that downstream output artifacts (SOPHs / aux / paramfit /
+    % splinefit) are rewritten from scratch.
+    %
+    % SOPHs, by contrast, are pure OUTPUTS of this stage. With overwrite
+    % ON, skip the disk-load so a prior run's slim TIFF reconstruction
+    % (which lacks SOpower_norm) can't short-circuit the recompute path.
+    if overwrite
+        app.SOPHs = [];
+    end
+    if isempty(app.stats_table)
+        T_loaded = app.loadStatsTable(app.channel, app.input_fbase);
+        if ~isempty(T_loaded)
+            app.TextArea.addnl('   Loaded stats_table from disk.');
+            app.stats_table = T_loaded;
         end
-        if any(strcmp(soph_choice, {'.mat','All'}))
-            soph_targets{end+1} = struct('path', SOPH_mat, 'kind', 'mat');
+    end
+    if isempty(app.SOPHs) && ~overwrite
+        SOPHs_loaded = app.loadOrReconstructSOPHs(app.channel, app.input_fbase);
+        % loadOrReconstructSOPHs can return a partially-populated struct
+        % (e.g. only freq_bins from a stale TIFF metadata read). Require
+        % at least one of the histogram matrices before promoting to
+        % app.SOPHs — otherwise the recompute branch below is correctly
+        % triggered. Mirrors the have_sophs check on the next block.
+        if isstruct(SOPHs_loaded) && ...
+                (isfield(SOPHs_loaded,'SOpower_mat') || isfield(SOPHs_loaded,'SOphase_mat'))
+            app.SOPHs = SOPHs_loaded;
         end
     end
 
-    % ---- (1) Make sure SOPHs + stats_table are in memory ----
-    % The overwrite flag gates the on-disk cache: when checked,
-    % previous in-memory copies are cleared and the disk-load
-    % shortcut is skipped so we always recompute via runDYNAMO.
-    if overwrite
-        app.SOPHs       = [];
-        app.stats_table = [];
-    end
-    need_compute = isempty(app.SOPHs) || isempty(app.stats_table);
-    if need_compute && ~overwrite && isfile(SOPH_mat) && isfile(stats_mat)
-        app.TextArea.addnl('   Loading cached SOPHs and stats table...');
-        app.SOPHs       = load(SOPH_mat).SOPHs;
-        app.stats_table = load(stats_mat).stats_table;
-        need_compute    = false;
-    end
-    if need_compute
+    % --- (2) Decide whether to (re)compute ---
+    have_stats = ~isempty(app.stats_table);
+    have_sophs = ~isempty(app.SOPHs) && ...
+                 (isstruct(app.SOPHs) && (isfield(app.SOPHs,'SOpower_mat') || isfield(app.SOPHs,'SOphase_mat')));
+
+    if have_stats && have_sophs
+        % nothing to compute — fall through to write
+    elseif have_stats && ~have_sophs
+        % CSV-reuse path: skip TF-peak detection, run the rest of runDYNAMO.
+        app.anything_run = 1;
+        app.TextArea.addnl('   Reusing stats_table; computing SOPHs (skipping TF-peak extraction)...');
+        % The artifact mask is deterministic in (data, Fs) and was
+        % saved as auxiliary_data when this stats_table was first
+        % built. Reload it so runDYNAMO's SOPH-only branch reuses it
+        % instead of recomputing detect_artifacts (its dominant cost).
+        % runDYNAMO re-validates length and falls back to detection on
+        % mismatch, so a stale/absent mask is harmless.
+        if isempty(app.artifacts)
+            aux = app.loadAuxData(app.channel, app.input_fbase);
+            if isstruct(aux) && isfield(aux,'artifacts') && ~isempty(aux.artifacts)
+                % Legacy per-sample mask.
+                app.artifacts = logical(aux.artifacts);
+                app.TextArea.addnl('   Reusing saved artifact mask (skipping artifact detection).');
+            elseif isstruct(aux) && isfield(aux,'is_compact') && aux.is_compact && ...
+                    ~isempty(app.data) && isfield(aux,'Fs') && ~isempty(aux.Fs)
+                % Compact schema: artifact_spans is authoritative (empty ->
+                % all-false mask, i.e. no artifacts). Expand against the
+                % loaded data length; runDYNAMO re-validates and falls back
+                % to detection on a length mismatch.
+                spans = zeros(0,2);
+                if isfield(aux,'artifact_spans'), spans = aux.artifact_spans; end
+                app.artifacts = spans_to_mask(spans, numel(app.data), double(aux.Fs));
+                app.TextArea.addnl('   Reusing saved artifact mask (skipping artifact detection).');
+            end
+        end
+        drawnow;
+        app.runDYNAMO();
+    else
         app.anything_run = 1;
         app.TextArea.addnl('   Running DYNAMO...');
         app.TextArea.addnl('   Computing TF peak stats table...');
@@ -71,59 +136,40 @@ function runStatsTable(app)
         app.runDYNAMO();
     end
 
-    stats_table = app.stats_table;
-    SOPHs       = app.SOPHs;
-
-    % ---- (2) Save according to user choices, with per-file
-    %      overwrite gating — write only the (format × file)
-    %      combinations that don't already exist (or all of
-    %      them when overwrite is on).
-    if ~isempty(stats_expected)
-        wrote_any = false;
-        for ii = 1:numel(stats_expected)
-            p = stats_expected{ii};
-            if ~overwrite && isfile(p), continue, end
-            if ~wrote_any
-                app.TextArea.addnl('   Saving stats table...');
-                wrote_any = true;
-            end
-            [~,~,ext] = fileparts(p);
-            app.output_stats_name = p;
-            switch lower(ext)
-                case '.csv', table2csv(stats_table, p);
-                case '.mat', save(p, 'stats_table', '-v7.3');
-            end
-        end
+    % --- (3) Write missing formats ---
+    write_stats = stats_formats;
+    write_sophs = soph_formats;
+    if ~overwrite
+        write_stats = stats_missing;
+        write_sophs = soph_missing;
     end
 
-    if ~isempty(soph_targets)
-        % Embed subject_id alongside bin axes so downstream readers
-        % (aggregator, results browser, stats path) can identify the
-        % subject from the TIFF alone. Mirrors the aggregate-TIFF's
-        % subjectIDs array.
-        subjectId = char(app.input_fbase);
-        powMeta = jsonencode(struct( ...
-            'freq_bins',    SOPHs.freq_bins(:).', ...
-            'SOpower_bins', SOPHs.SOpower_bins(:).', ...
-            'subject_id',   subjectId));
-        phaMeta = jsonencode(struct( ...
-            'freq_bins',    SOPHs.freq_bins(:).', ...
-            'SOphase_bins', SOPHs.SOphase_bins(:).', ...
-            'subject_id',   subjectId));
-        wrote_any = false;
-        for ii = 1:numel(soph_targets)
-            t = soph_targets{ii};
-            if ~overwrite && isfile(t.path), continue, end
-            if ~wrote_any
-                app.TextArea.addnl('   Saving SOPHs');
-                wrote_any = true;
-            end
-            app.output_SOPH_name = t.path;
-            switch t.kind
-                case 'tiff_power', app.writeTiff(t.path, SOPHs.SOpower_mat, powMeta);
-                case 'tiff_phase', app.writeTiff(t.path, SOPHs.SOphase_mat, phaMeta);
-                case 'mat',        save(t.path, 'SOPHs', '-v7.3');
-            end
-        end
+    if ~isempty(write_stats)
+        app.writeStatsTableFormats( ...
+            app.stats_table, statsBase, app.input_fbase, write_stats, overwrite);
     end
-end % runStatsTable
+    if ~isempty(write_sophs)
+        app.writeSOPHsFormats( ...
+            app.SOPHs, sophsDir, app.input_fbase, app.channel, write_sophs, overwrite);
+    end
+end
+
+
+function have = stats_present_(statsBase)
+    have = {};
+    if isfile([statsBase '.csv']), have{end+1} = '.csv'; end
+    if isfile([statsBase '.mat']) || isfile([statsBase '.h5'])
+        have{end+1} = '.mat';
+    end
+end
+
+
+function have = soph_present_(sophBase, sophPowBase, sophPhaBase)
+    have = {};
+    if isfile([sophPowBase '.tiff']) && isfile([sophPhaBase '.tiff'])
+        have{end+1} = '.tiff';
+    end
+    if isfile([sophBase '.mat']) || isfile([sophBase '.h5'])
+        have{end+1} = '.mat';
+    end
+end

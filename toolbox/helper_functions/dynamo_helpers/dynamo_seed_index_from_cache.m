@@ -11,13 +11,15 @@ function outPath = dynamo_seed_index_from_cache(rootDir, cache)
 %       <rootDir>/_runs/backfill_<host>_<yyyymmdd_HHmmss>_pid<pid>.jsonl
 %
 %   Recognized per-subject filename shapes (channel name == cache.dirs{ic}.name):
-%       <subj>_auxiliary_data_<chan>.mat   → component "aux"
-%       <subj>_SOPHs_<chan>.mat            → component "SOPHs"
-%       <subj>_stats_table_<chan>.mat      → component "TFpeaks"
-%       <subj>_SO{power,phase}_paramfit_<chan>.mat   → component "paramfit"
-%       <subj>_SO{power,phase}_splinefit_<chan>.mat  → component "spline"
+%       <subj>_auxiliary_data_<chan>.{h5,mat}            → component "aux"
+%       <subj>_SOPHs_<chan>.{h5,mat}                     → component "SOPHs"
+%       <subj>_stats_table_<chan>.{h5,mat}               → component "TFpeaks"
+%       <subj>_SO{power,phase}_paramfit_<chan>.{h5,mat}  → component "paramfit"
+%       <subj>_SO{power,phase}_splinefit_<chan>.{h5,mat} → component "spline"
 %
-%   Only .mat files contribute; sidecar .csv / .tiff are ignored.
+%   Only binary files contribute (.h5 first-class, .mat legacy); sidecar
+%   .csv / .tiff are ignored — they accompany a binary that already
+%   classifies the (subject, component) pair.
 %
 %   ∿∿∿  Prerau Laboratory MATLAB Codebase · sleepEEG.org  ∿∿∿
 
@@ -51,7 +53,7 @@ for ic = 1:numel(cache.dirs)
         for ifn = 1:numel(catNode.files)
             fname = catNode.files(ifn).name;
             [~, base, ext] = fileparts(fname);
-            if ~strcmp(ext, '.mat'), continue, end
+            if ~any(strcmp(ext, {'.h5','.mat'})), continue, end
             [subj, comp] = parse_per_subject_file(base, catName);
             if isempty(subj) || isempty(comp), continue, end
             key = sprintf('%s::%s', subj, chanName);
