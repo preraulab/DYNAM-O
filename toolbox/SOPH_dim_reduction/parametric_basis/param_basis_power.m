@@ -351,8 +351,19 @@ for ii = 1:max_peaks
         %Add a mode to the stack
         B0i = [B0i; mode_params(ii,:)];
     else
-        % Add a mode with mean parameters if beyond number of watershed peaks
-        B0i = [B0i; mean(B0i, 1)]; %#ok<*AGROW>
+        % Beyond watershed seeds: seed the next mode at the (x, y)
+        % argmax of the residual `SOPH - last_model_SOPH` (matching
+        % pursuit). Each added mode targets the largest currently-
+        % unfit feature. Falls back to mean(B0i) when the residual is
+        % everywhere non-positive (model already covers / overshoots),
+        % which matches the prior behaviour for saturated SOPHs.
+        [seed_row, found] = residual_max_seed( ...
+            SOPH, model_SOPH, power_bins, freq_bins, B0i, min_freq_diff);
+        if found
+            B0i = [B0i; seed_row]; %#ok<*AGROW>
+        else
+            B0i = [B0i; mean(B0i, 1)];
+        end
     end
 
     % Define upper and lower bounds for fitting

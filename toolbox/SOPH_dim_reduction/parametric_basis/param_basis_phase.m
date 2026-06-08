@@ -417,8 +417,22 @@ for ii = 1:max_peaks
         B0i = mode_params(select_idx,:);
         % ----------------------------------
     else
-        % Add a mode with mean parameters if beyond number of watershed peaks
-        B0i = [B0i; mean(B0i, 1)]; %#ok<*AGROW>
+        % Beyond watershed seeds: residual-max seed (matching pursuit),
+        % same as the power axis. Phase has no min_freq_diff option
+        % (the parser deliberately omits it), so the freq-exclusion
+        % mask is inert here and the helper just picks the absolute
+        % argmax. Falls back to mean(B0i) when the residual is
+        % everywhere non-positive. In practice phase rarely hits this
+        % branch — the wraparound watershed typically yields >= 6
+        % candidate regions on real SOPhH — so behaviour is unchanged
+        % in the common case.
+        [seed_row, found] = residual_max_seed( ...
+            SOPhH, model_SOPhH, phase_bins, freq_bins, B0i, 0);
+        if found
+            B0i = [B0i; seed_row]; %#ok<*AGROW>
+        else
+            B0i = [B0i; mean(B0i, 1)];
+        end
     end
 
     % Define upper and lower bounds for fitting
