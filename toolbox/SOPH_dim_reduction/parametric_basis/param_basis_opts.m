@@ -39,10 +39,10 @@ function default_params = param_basis_opts(type, varargin)
 %                                                                                    default for 'phase': 0.025)
 %       'kneedle_tol' - Double, iteration tolerance for the kneedle algorithm (default: 0.01)
 %       'UB_default' - Upper bounds for the fitting parameters - [amp0, fmean0, fstd0, pmean0, pstd0, theta0]
-%                                          (default for 'power': [nan,  nan,    5,     nan,    30,    pi/20],
+%                                          (default for 'power': [nan,  nan,    2.5,   nan,    30,    0.03],
 %                                           default for 'phase': [nan,  nan,    15,    inf,    2*pi,  pi/3])
 %       'LB_default' - Lower bounds for the fitting parameters - [amp0, fmean0, fstd0, pmean0, pstd0, theta0]
-%                                          (default for 'power': [nan,  nan,    0.1,   nan,    2.5,   -pi/20],
+%                                          (default for 'power': [nan,  nan,    0.1,   nan,    2.5,   -0.03],
 %                                           default for 'phase': [nan,  nan,    1,     -inf,   pi/5,  -pi/3])
 %       'plot_on' - Flag to plot: 0 plot nothing, 1: plot the final result, 2: plot iterations, 3: plot iterations and final (default: 1)
 %       'SOPH_clim_prctiles' - percentiles used to scale the heatmap color on SO feature histograms (default: [5, 98])
@@ -101,8 +101,8 @@ default_params_power.min_dr2 = 0.01;
 default_params_power.min_pctr2 = 0.01;
 default_params_power.kneedle_tol = 0.01;
 % fitted parameters follow this order: [amp0, fmean0, fstd0, pmean0, pstd0, theta0];
-default_params_power.UB_default =      [nan,  nan,    5,     nan,    30,    pi/20];
-default_params_power.LB_default =      [nan,  nan,    0.1,   nan,    2.5,   -pi/20];
+default_params_power.UB_default =      [nan,  nan,    2.5,   nan,    30,    0.03];
+default_params_power.LB_default =      [nan,  nan,    0.1,   nan,    2.5,   -0.03];
 default_params_power.plot_on = 1;
 default_params_power.SOPH_clim_prctiles = [5, 98];
 default_params_power.verbose = true;
