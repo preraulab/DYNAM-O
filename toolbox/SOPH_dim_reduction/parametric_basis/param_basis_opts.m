@@ -29,7 +29,7 @@ function default_params = param_basis_opts(type, varargin)
 %                              0  = use prefix modes only and ignore watershed modes
 %                              1  = append prefix modes before watershed modes
 %                              (default: -1)
-%       'max_overlap' - Maximum allowed mode overlap (default for 'power': 0.2,
+%       'max_overlap' - Maximum allowed mode overlap (default for 'power': 0.25,
 %                                                     default for 'phase': 0.15)
 %       'min_amp' - Minimum amplitude for a peak (default: height_min from watershed_params)
 %       'min_freq_diff' - Minimum allowed frequency difference (default: 0.5; only used for power histogram)
@@ -93,7 +93,7 @@ default_params_power.wshed_exp = false;
 default_params_power.max_peaks = 6;
 default_params_power.prefix_modes = [];
 default_params_power.prefix_modes_order = -1;
-default_params_power.max_overlap = 0.2;
+default_params_power.max_overlap = 0.25;
 default_params_power.min_amp = default_params_power.watershed_params(4);
 default_params_power.min_freq_diff = 0.5;
 default_params_power.criterion = 'minpctr2';
