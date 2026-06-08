@@ -12,8 +12,8 @@ function default_params = param_basis_opts(type, varargin)
 %                        histograms are parameterized (default: [-2, 20]; only used for power histogram)
 %       'phase_limits' - 1x2 vector of SO phase limits over which watershed is ran on spectrogram and 
 %                        histograms are parameterized (default: [-pi, pi]; only used for phase histogram)
-%       'freq_limits' - 1x2 vector of frequency limits over which watershed is ran on spectrogram and 
-%                        histograms are parameterized (default: [2, 16])
+%       'freq_limits' - 1x2 vector of frequency limits over which watershed is ran on spectrogram and
+%                        histograms are parameterized (default: [2, 18])
 %       'watershed_params' - Vector [merge_thresh, dur_min, bw_min, height_min, trim_vol]
 %           (default for 'power':   [nan,          4,       0.25,   0,          0.7],
 %            default for 'phase':   [nan,          pi/6,    2,      1e-4,       0.4])
@@ -86,7 +86,7 @@ assert(ismember(type, {'power', 'phase'}), 'Invalid type. Valid types are ''powe
 
 % Default parameter values for 'power'
 default_params_power.power_limits = [-2, 20];
-default_params_power.freq_limits = [2, 16];
+default_params_power.freq_limits = [2, 18];
 % watershed parameters follow this order: [merge_thresh, dur_min, bw_min, height_min, trim_vol]
 default_params_power.watershed_params =   [nan,          4,       0.25,   0,          0.7];
 default_params_power.wshed_exp = false;
@@ -109,7 +109,7 @@ default_params_power.verbose = true;
 
 % Default parameter values for 'phase'
 default_params_phase.phase_limits = [-pi, pi];
-default_params_phase.freq_limits = [2, 16];
+default_params_phase.freq_limits = [2, 18];
 % watershed parameters follow this order: [merge_thresh, dur_min, bw_min, height_min, trim_vol]
 default_params_phase.watershed_params =   [nan,          pi/6,    2,      1e-4,       0.4];
 default_params_phase.gauss_filt_std = [10, 5];
