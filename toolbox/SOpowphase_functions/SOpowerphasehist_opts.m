@@ -6,7 +6,7 @@ function opts = SOpowerphasehist_opts(varargin)
 %
 %   SOPOWERPHASEHIST_OPTS STRUCTURE PARAMETERS
 %       freq_range: 1x2 double - min and max frequencies of TF peak to include in the histograms (Hz).
-%                   Default = [0, 30]
+%                   Default = [2, 18]
 %       freq_binsizestep: 1x2 double - [size, step] frequency bin size and bin step for frequency
 %                         axis of SO power/phase histograms (Hz). Default = [1, 0.2]
 %       compute_rate: logical - histogram output in terms of TFpeaks/min instead of count.
@@ -91,7 +91,7 @@ function opts = SOpowerphasehist_opts(varargin)
 p = inputParser;
 
 %% General settings
-addOptional(p, 'freq_range', [0, 30], @(x) validateattributes(x,{'numeric'},{'real','finite','vector','numel',2}));
+addOptional(p, 'freq_range', [2, 18], @(x) validateattributes(x,{'numeric'},{'real','finite','vector','numel',2}));
 addOptional(p, 'freq_binsizestep', [1, 0.2], @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
 addOptional(p, 'compute_rate', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'SOPH_stages', 1:3, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','vector'})); % W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0

@@ -193,6 +193,28 @@ else
     % Sort peaks by height
     stats_table = sortrows(stats_table, 'Height', 'descend');
 
+    % Drop watershed seeds whose PeakFrequency sits within `min_freq_diff`
+    % of a higher-height seed already kept. Without this guard the
+    % watershed sometimes returns two near-duplicate seeds on the same
+    % ridge (e.g. f = 7.37 and 6.94 Hz, only 0.43 Hz apart) and both
+    % survive to the final fit as a duplicated alpha mode. Matches the
+    % same `min_freq_diff` threshold the iter-add revert criterion uses
+    % downstream so upstream (watershed) and downstream (revert) agree
+    % on what counts as "too close".
+    if min_freq_diff > 0 && height(stats_table) > 1
+        keep = false(height(stats_table), 1);
+        keep(1) = true;
+        kept_freqs = stats_table.PeakFrequency(1);
+        for kk = 2:height(stats_table)
+            f_kk = stats_table.PeakFrequency(kk);
+            if all(abs(kept_freqs - f_kk) >= min_freq_diff)
+                keep(kk) = true;
+                kept_freqs(end+1) = f_kk; %#ok<AGROW>
+            end
+        end
+        stats_table = stats_table(keep, :);
+    end
+
     % Extract the parameters from the watershed for initial conditions
     if wshed_exp
         amp0 = log(stats_table.Height);
@@ -329,8 +351,19 @@ for ii = 1:max_peaks
         %Add a mode to the stack
         B0i = [B0i; mode_params(ii,:)];
     else
-        % Add a mode with mean parameters if beyond number of watershed peaks
-        B0i = [B0i; mean(B0i, 1)]; %#ok<*AGROW>
+        % Beyond watershed seeds: seed the next mode at the (x, y)
+        % argmax of the residual `SOPH - last_model_SOPH` (matching
+        % pursuit). Each added mode targets the largest currently-
+        % unfit feature. Falls back to mean(B0i) when the residual is
+        % everywhere non-positive (model already covers / overshoots),
+        % which matches the prior behaviour for saturated SOPHs.
+        [seed_row, found] = residual_max_seed( ...
+            SOPH, model_SOPH, power_bins, freq_bins, B0i, min_freq_diff);
+        if found
+            B0i = [B0i; seed_row]; %#ok<*AGROW>
+        else
+            B0i = [B0i; mean(B0i, 1)];
+        end
     end
 
     % Define upper and lower bounds for fitting

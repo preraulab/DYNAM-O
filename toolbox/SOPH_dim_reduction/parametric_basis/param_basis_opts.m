@@ -12,8 +12,8 @@ function default_params = param_basis_opts(type, varargin)
 %                        histograms are parameterized (default: [-2, 20]; only used for power histogram)
 %       'phase_limits' - 1x2 vector of SO phase limits over which watershed is ran on spectrogram and 
 %                        histograms are parameterized (default: [-pi, pi]; only used for phase histogram)
-%       'freq_limits' - 1x2 vector of frequency limits over which watershed is ran on spectrogram and 
-%                        histograms are parameterized (default: [2, 16])
+%       'freq_limits' - 1x2 vector of frequency limits over which watershed is ran on spectrogram and
+%                        histograms are parameterized (default: [2, 18])
 %       'watershed_params' - Vector [merge_thresh, dur_min, bw_min, height_min, trim_vol]
 %           (default for 'power':   [nan,          4,       0.25,   0,          0.7],
 %            default for 'phase':   [nan,          pi/6,    2,      1e-4,       0.4])
@@ -29,7 +29,7 @@ function default_params = param_basis_opts(type, varargin)
 %                              0  = use prefix modes only and ignore watershed modes
 %                              1  = append prefix modes before watershed modes
 %                              (default: -1)
-%       'max_overlap' - Maximum allowed mode overlap (default for 'power': 0.2,
+%       'max_overlap' - Maximum allowed mode overlap (default for 'power': 0.25,
 %                                                     default for 'phase': 0.15)
 %       'min_amp' - Minimum amplitude for a peak (default: height_min from watershed_params)
 %       'min_freq_diff' - Minimum allowed frequency difference (default: 0.5; only used for power histogram)
@@ -39,10 +39,10 @@ function default_params = param_basis_opts(type, varargin)
 %                                                                                    default for 'phase': 0.025)
 %       'kneedle_tol' - Double, iteration tolerance for the kneedle algorithm (default: 0.01)
 %       'UB_default' - Upper bounds for the fitting parameters - [amp0, fmean0, fstd0, pmean0, pstd0, theta0]
-%                                          (default for 'power': [nan,  nan,    5,     nan,    30,    pi/20],
+%                                          (default for 'power': [nan,  nan,    2.5,   nan,    30,    0.03],
 %                                           default for 'phase': [nan,  nan,    15,    inf,    2*pi,  pi/3])
 %       'LB_default' - Lower bounds for the fitting parameters - [amp0, fmean0, fstd0, pmean0, pstd0, theta0]
-%                                          (default for 'power': [nan,  nan,    0.1,   nan,    2.5,   -pi/20],
+%                                          (default for 'power': [nan,  nan,    0.1,   nan,    2.5,   -0.03],
 %                                           default for 'phase': [nan,  nan,    1,     -inf,   pi/5,  -pi/3])
 %       'plot_on' - Flag to plot: 0 plot nothing, 1: plot the final result, 2: plot iterations, 3: plot iterations and final (default: 1)
 %       'SOPH_clim_prctiles' - percentiles used to scale the heatmap color on SO feature histograms (default: [5, 98])
@@ -86,14 +86,14 @@ assert(ismember(type, {'power', 'phase'}), 'Invalid type. Valid types are ''powe
 
 % Default parameter values for 'power'
 default_params_power.power_limits = [-2, 20];
-default_params_power.freq_limits = [2, 16];
+default_params_power.freq_limits = [2, 18];
 % watershed parameters follow this order: [merge_thresh, dur_min, bw_min, height_min, trim_vol]
 default_params_power.watershed_params =   [nan,          4,       0.25,   0,          0.7];
 default_params_power.wshed_exp = false;
 default_params_power.max_peaks = 6;
 default_params_power.prefix_modes = [];
 default_params_power.prefix_modes_order = -1;
-default_params_power.max_overlap = 0.2;
+default_params_power.max_overlap = 0.25;
 default_params_power.min_amp = default_params_power.watershed_params(4);
 default_params_power.min_freq_diff = 0.5;
 default_params_power.criterion = 'minpctr2';
@@ -101,15 +101,15 @@ default_params_power.min_dr2 = 0.01;
 default_params_power.min_pctr2 = 0.01;
 default_params_power.kneedle_tol = 0.01;
 % fitted parameters follow this order: [amp0, fmean0, fstd0, pmean0, pstd0, theta0];
-default_params_power.UB_default =      [nan,  nan,    5,     nan,    30,    pi/20];
-default_params_power.LB_default =      [nan,  nan,    0.1,   nan,    2.5,   -pi/20];
+default_params_power.UB_default =      [nan,  nan,    2.5,   nan,    30,    0.03];
+default_params_power.LB_default =      [nan,  nan,    0.1,   nan,    2.5,   -0.03];
 default_params_power.plot_on = 1;
 default_params_power.SOPH_clim_prctiles = [5, 98];
 default_params_power.verbose = true;
 
 % Default parameter values for 'phase'
 default_params_phase.phase_limits = [-pi, pi];
-default_params_phase.freq_limits = [2, 16];
+default_params_phase.freq_limits = [2, 18];
 % watershed parameters follow this order: [merge_thresh, dur_min, bw_min, height_min, trim_vol]
 default_params_phase.watershed_params =   [nan,          pi/6,    2,      1e-4,       0.4];
 default_params_phase.gauss_filt_std = [10, 5];
