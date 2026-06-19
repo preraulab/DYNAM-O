@@ -357,8 +357,13 @@ for ii = 1:max_peaks
         % unfit feature. Falls back to mean(B0i) when the residual is
         % everywhere non-positive (model already covers / overshoots),
         % which matches the prior behaviour for saturated SOPHs.
+        % Search only the analysis window (power_limits x freq_limits) so
+        % the seed never lands in out-of-window bins where the model is
+        % an unconstrained extrapolation.
         [seed_row, found] = residual_max_seed( ...
-            SOPH, model_SOPH, power_bins, freq_bins, B0i, min_freq_diff);
+            SOPH(valid_freq_bins, valid_power_bins), ...
+            model_SOPH(valid_freq_bins, valid_power_bins), ...
+            power_bins(valid_power_bins), freq_bins(valid_freq_bins), B0i, min_freq_diff);
         if found
             B0i = [B0i; seed_row]; %#ok<*AGROW>
         else
