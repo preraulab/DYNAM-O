@@ -321,7 +321,7 @@ if isgraphics(ax(2))
         c.Label.VerticalAlignment = "bottom";
     end
 
-    ylim(ax(2), freq_limits);
+    ylim(ax(2), [min(freq_bins) max(freq_bins)]);
     ylabel(ax(2), 'Frequency (Hz)');
 
     switch SOpower_norm_method
@@ -356,7 +356,7 @@ if isgraphics(ax(3))
         c.Label.VerticalAlignment = "bottom";
     end
 
-    ylim(ax(3), freq_limits);
+    ylim(ax(3), [min(freq_bins) max(freq_bins)]);
 
     if ~isgraphics(ax(2))
         ylabel(ax(3), 'Frequency (Hz)');
