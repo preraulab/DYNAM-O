@@ -160,7 +160,7 @@ if have_phase, setappdata(f, 'phase_ax', ax(phase_ax_idx(3))); end
                 end
                 try
                     % Capture the graphics object handle returned by contour
-                    [~, contours(k)] = contour(ax_handles(3), x_fine, freq_fine, cdata, 'w-', 'LineWidth', 2);
+                    [~, contours(k)] = contour(ax_handles(3), x_fine, freq_fine, cdata, 'w-', 'LineWidth', 0.5);
                     if isgraphics(contours(k))
                         % make contours non-pickable so they don't steal picks from markers
                         set(contours(k), 'Visible','on', 'Tag','mode_contour', 'HitTest','off', 'PickableParts','none');
