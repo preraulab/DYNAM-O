@@ -19,7 +19,7 @@ function default_params = param_basis_opts(type, varargin)
 %            default for 'phase':   [nan,          pi/6,    2,      1e-4,       0.4])
 %       'gauss_filt_std' - Standard deviation ([row, col]) for Gaussian filter to smooth spectrogram before watershed (default: [10, 5]; only used for phase histogram)
 %       'wshed_exp' - Flag for watershed expansion (default: false)
-%       'max_peaks' - Maximum number of peaks to fit (-1 for unlimited) (default: 6)
+%       'max_peaks' - Maximum number of peaks to fit (-1 for unlimited) (default for 'power': 6, 'phase': 3)
 %       'prefix_modes' - Prefix modes in the form of fitting parameters (default for 'power': [],
 %                                                                        default for 'phase': [],
 %                                                                        consider use for 'phase': [1e-3, 14, 4,  0,  pi/3, 0;
@@ -114,7 +114,7 @@ default_params_phase.freq_limits = [2, 18];
 default_params_phase.watershed_params =   [nan,          pi/6,    2,      1e-4,       0.4];
 default_params_phase.gauss_filt_std = [10, 5];
 default_params_phase.wshed_exp = false;
-default_params_phase.max_peaks = 6;
+default_params_phase.max_peaks = 3;
 default_params_phase.prefix_modes =  [];
 default_params_phase.prefix_modes_order = -1;
 default_params_phase.max_overlap = 0.15;

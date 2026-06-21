@@ -427,7 +427,9 @@ for ii = 1:max_peaks
         % candidate regions on real SOPhH — so behaviour is unchanged
         % in the common case.
         [seed_row, found] = residual_max_seed( ...
-            SOPhH, model_SOPhH, phase_bins, freq_bins, B0i, 0);
+            SOPhH(valid_freq_bins, valid_phase_bins), ...
+            model_SOPhH(valid_freq_bins, valid_phase_bins), ...
+            phase_bins(valid_phase_bins), freq_bins(valid_freq_bins), B0i, 0);
         if found
             B0i = [B0i; seed_row]; %#ok<*AGROW>
         else

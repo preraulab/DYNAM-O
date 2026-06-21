@@ -111,7 +111,7 @@ addOptional(p, 'SOpower_min_time_in_bin', 10, @(x) validateattributes(x,{'numeri
 % bins (range = min/max of normalized SOpower, width = range/10,
 % step = range/100); the empty-input branch in SOpowerHistogram.m
 % handles that fallback.
-addOptional(p, 'SOpower_range', [-5, 20], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
+addOptional(p, 'SOpower_range', [-5, 25], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
 addOptional(p, 'SOpower_binsizestep', [2.5, 0.25], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
 
 %% SOphase computation params
