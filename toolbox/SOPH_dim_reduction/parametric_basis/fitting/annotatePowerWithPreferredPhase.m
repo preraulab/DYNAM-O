@@ -4,33 +4,27 @@ function T = annotatePowerWithPreferredPhase(T, SOphase_mat, freq_bins, phase_bi
 %   T = annotatePowerWithPreferredPhase(T, SOphase_mat, freq_bins, ...
 %                                       phase_bins, model_SOPH_phase)
 %
-%   Appends six columns to a power-fit params table T, one (phase,
-%   magnitude) pair from each of three estimators:
+%   Appends a single (phase, magnitude) pair to a power-fit params
+%   table T, the model-based SO phase-coupling estimate:
 %
-%     PrefPhaseArgmax / CouplingArgmax  — argmax of the raw SO-phase
-%                                          histogram column at the
-%                                          mode's frequency.
-%     PrefPhaseCirc   / CouplingCirc    — weighted circular mean of
-%                                          the same column. Magnitude
-%                                          is the mean resultant length
-%                                          (Canolty PAC / PLV / vector
-%                                          strength), in [0,1].
-%     PrefPhaseModel  / CouplingModel   — argmax of the fitted phase
-%                                          parametric model evaluated
-%                                          at the mode's frequency.
-%                                          NaN-filled when MODEL_SOPH_PHASE
-%                                          is empty (phase fit failed).
+%     PrefPhaseModel  / CouplingModel  — argmax of the fitted phase
+%                                         parametric model evaluated at
+%                                         the mode's frequency. NaN-filled
+%                                         when MODEL_SOPH_PHASE is empty
+%                                         (phase fit failed).
 %
-%   T is expected to have at least a FreqMean column. Returns T with
-%   six new columns appended in the order listed above.
+%   SOPHASE_MAT is accepted for backward-compatible call sites but is no
+%   longer used: the model-based estimate reads the fitted phase surface
+%   (MODEL_SOPH_PHASE), not the raw SO-phase histogram.
+%
+%   T is expected to have at least a FreqMean column. Returns T with the
+%   two new columns appended.
 
 if isempty(T)
     return
 end
 f = T.FreqMean;
 
-[pa, ma] = get_mode_phase_argmax(f, SOphase_mat, freq_bins, phase_bins);
-[pc, rc] = get_mode_phase_circmean(f, SOphase_mat, freq_bins, phase_bins);
 if ~isempty(model_SOPH_phase)
     [pm, mm] = get_mode_phase_argmax(f, model_SOPH_phase, freq_bins, phase_bins);
 else
@@ -38,10 +32,6 @@ else
     mm = nan(size(f));
 end
 
-T.PrefPhaseArgmax = pa;
-T.CouplingArgmax  = ma;
-T.PrefPhaseCirc   = pc;
-T.CouplingCirc    = rc;
 T.PrefPhaseModel  = pm;
 T.CouplingModel   = mm;
 end

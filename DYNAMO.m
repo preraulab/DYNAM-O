@@ -1523,19 +1523,15 @@ classdef DYNAMO < handle
             %   power: Amplitude (peaks/min/bin), FreqMean (Hz), FreqStd (Hz),
             %          SOpowerMean (dB), SOpowerStd (dB), Theta (rad), plus
             %          (added by fitParamBasis annotation):
-            %          PrefPhaseArgmax (rad),  CouplingArgmax (proportion/phase-bin),
-            %          PrefPhaseCirc   (rad),  CouplingCirc   ([0,1] MRL),
             %          PrefPhaseModel  (rad),  CouplingModel  (proportion/phase-bin).
             %   phase: Amplitude (proportion/phase-bin), FreqMean (Hz), FreqStd (Hz),
             %          SOphaseMean (rad), SOphaseStd (rad), Theta (rad).
             %
-            %   NOTE: power Amplitude is peaks/min/bin; phase Amplitude and the argmax/model coupling columns are proportion/phase-bin (phase histogram is row-normalized upstream); CouplingCirc is dimensionless MRL in [0,1].
+            %   NOTE: power Amplitude is peaks/min/bin; phase Amplitude and the model coupling column are proportion/phase-bin (phase histogram is row-normalized upstream). The SO phase-coupling metric is model-based only (the older raw-histogram argmax and circular-mean estimators have been retired).
             switch lower(type)
                 case 'power'
                     vn      = {'Amplitude','FreqMean','FreqStd','SOpowerMean','SOpowerStd','Theta'};
-                    vn_full = [vn, {'PrefPhaseArgmax','CouplingArgmax', ...
-                                    'PrefPhaseCirc','CouplingCirc', ...
-                                    'PrefPhaseModel','CouplingModel'}];
+                    vn_full = [vn, {'PrefPhaseModel','CouplingModel'}];
                 case 'phase'
                     vn      = {'Amplitude','FreqMean','FreqStd','SOphaseMean','SOphaseStd','Theta'};
                     vn_full = vn;

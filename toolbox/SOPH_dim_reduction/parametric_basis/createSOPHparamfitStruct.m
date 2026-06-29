@@ -16,15 +16,13 @@ function [SOPH_paramfit] = createSOPHparamfitStruct(type, params, fitobj, gof, m
 %     power: Density (peaks/min/bin), FreqMean (Hz), FreqStd (Hz),
 %            SOpowerMean (dB), SOpowerStd (dB), Theta (rad),
 %            Volume (peaks/min — Density × area-under-mode),
-%            and (after fitParamBasis annotation) six additional columns:
-%            PrefPhaseArgmax (rad),  CouplingArgmax (proportion/phase-bin),
-%            PrefPhaseCirc   (rad),  CouplingCirc   ([0,1] MRL),
+%            and (after fitParamBasis annotation) two additional columns:
 %            PrefPhaseModel  (rad),  CouplingModel  (proportion/phase-bin).
 %     phase: Density (proportion/phase-bin), FreqMean (Hz), FreqStd (Hz),
 %            SOphaseMean (rad), SOphaseStd (rad), Theta (rad),
 %            Volume (proportion·rad·Hz — Density × area-under-mode).
 %
-%   NOTE: power Density is peaks/min/bin; phase Density and the argmax/model coupling columns are proportion/phase-bin (phase histogram is row-normalized upstream); CouplingCirc is dimensionless MRL in [0,1].
+%   NOTE: power Density is peaks/min/bin; phase Density and the model coupling column are proportion/phase-bin (phase histogram is row-normalized upstream). The SO phase-coupling metric is model-based only: PrefPhaseModel/CouplingModel are read from the fitted phase parametric surface (the older raw-histogram argmax and circular-mean estimators have been retired).
 %
 %   Volume column — closed-form integral of the fitted basis surface:
 %
@@ -53,14 +51,12 @@ function [SOPH_paramfit] = createSOPHparamfitStruct(type, params, fitobj, gof, m
 %   (e.g. T.PrefPhaseModel) does not error on a zero-mode fit.
 switch lower(type)
     case 'power'
-        % 13 names: 6 from the fit + Volume (derived) + 6 added by
+        % 9 names: 6 from the fit + Volume (derived) + 2 added by
         % fitParamBasis annotation. Declared up front so the empty-
         % fallback table exposes all columns; the annotation block
         % in fitParamBasis appends real values when params is non-empty.
         vn      = {'Density','FreqMean','FreqStd','SOpowerMean','SOpowerStd','Theta','Volume'};
-        vn_full = [vn, {'PrefPhaseArgmax','CouplingArgmax', ...
-                        'PrefPhaseCirc','CouplingCirc', ...
-                        'PrefPhaseModel','CouplingModel'}];
+        vn_full = [vn, {'PrefPhaseModel','CouplingModel'}];
     case 'phase'
         vn      = {'Density','FreqMean','FreqStd','SOphaseMean','SOphaseStd','Theta','Volume'};
         vn_full = vn;
