@@ -1523,7 +1523,7 @@ classdef DYNAMO < handle
             %   power: Amplitude (peaks/min/bin), FreqMean (Hz), FreqStd (Hz),
             %          SOpowerMean (dB), SOpowerStd (dB), Theta (rad), plus
             %          (added by fitParamBasis annotation):
-            %          PrefPhaseModel  (rad),  CouplingModel  (proportion/phase-bin).
+            %          PrefPhase  (rad),  Coupling  (proportion/phase-bin).
             %   phase: Amplitude (proportion/phase-bin), FreqMean (Hz), FreqStd (Hz),
             %          SOphaseMean (rad), SOphaseStd (rad), Theta (rad).
             %
@@ -1531,7 +1531,7 @@ classdef DYNAMO < handle
             switch lower(type)
                 case 'power'
                     vn      = {'Amplitude','FreqMean','FreqStd','SOpowerMean','SOpowerStd','Theta'};
-                    vn_full = [vn, {'PrefPhaseModel','CouplingModel'}];
+                    vn_full = [vn, {'PrefPhase','Coupling'}];
                 case 'phase'
                     vn      = {'Amplitude','FreqMean','FreqStd','SOphaseMean','SOphaseStd','Theta'};
                     vn_full = vn;

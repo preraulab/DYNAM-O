@@ -121,7 +121,7 @@ classdef DYNAMOApp < matlab.apps.AppBase & DYNAMO
         % one tab — pairs (power left, phase right) rendered per
         % channel. Each axis kind has independent X/Y/Size/Color
         % dropdowns since the available numeric columns differ
-        % (e.g. PrefPhaseModel / CouplingModel are power-only;
+        % (e.g. PrefPhase / Coupling are power-only;
         % SOphaseMean / SOphaseStd are phase-only).
         ModeScatterTab                  matlab.ui.container.Tab
         ModeScatterDropdownGrid         matlab.ui.container.GridLayout

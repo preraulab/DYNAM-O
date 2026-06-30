@@ -7,7 +7,7 @@ function T = annotatePowerWithPreferredPhase(T, SOphase_mat, freq_bins, phase_bi
 %   Appends a single (phase, magnitude) pair to a power-fit params
 %   table T, the model-based SO phase-coupling estimate:
 %
-%     PrefPhaseModel  / CouplingModel  — argmax of the fitted phase
+%     PrefPhase  / Coupling  — argmax of the fitted phase
 %                                         parametric model evaluated at
 %                                         the mode's frequency. NaN-filled
 %                                         when MODEL_SOPH_PHASE is empty
@@ -32,6 +32,6 @@ else
     mm = nan(size(f));
 end
 
-T.PrefPhaseModel  = pm;
-T.CouplingModel   = mm;
+T.PrefPhase  = pm;
+T.Coupling   = mm;
 end

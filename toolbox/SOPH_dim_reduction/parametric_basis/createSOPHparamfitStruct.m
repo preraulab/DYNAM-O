@@ -17,12 +17,12 @@ function [SOPH_paramfit] = createSOPHparamfitStruct(type, params, fitobj, gof, m
 %            SOpowerMean (dB), SOpowerStd (dB), Theta (rad),
 %            Volume (peaks/min — Density × area-under-mode),
 %            and (after fitParamBasis annotation) two additional columns:
-%            PrefPhaseModel  (rad),  CouplingModel  (proportion/phase-bin).
+%            PrefPhase  (rad),  Coupling  (proportion/phase-bin).
 %     phase: Density (proportion/phase-bin), FreqMean (Hz), FreqStd (Hz),
 %            SOphaseMean (rad), SOphaseStd (rad), Theta (rad),
 %            Volume (proportion·rad·Hz — Density × area-under-mode).
 %
-%   NOTE: power Density is peaks/min/bin; phase Density and the model coupling column are proportion/phase-bin (phase histogram is row-normalized upstream). The SO phase-coupling metric is model-based only: PrefPhaseModel/CouplingModel are read from the fitted phase parametric surface (the older raw-histogram argmax and circular-mean estimators have been retired).
+%   NOTE: power Density is peaks/min/bin; phase Density and the model coupling column are proportion/phase-bin (phase histogram is row-normalized upstream). The SO phase-coupling metric is model-based only: PrefPhase/Coupling are read from the fitted phase parametric surface (the older raw-histogram argmax and circular-mean estimators have been retired).
 %
 %   Volume column — closed-form integral of the fitted basis surface:
 %
@@ -48,7 +48,7 @@ function [SOPH_paramfit] = createSOPHparamfitStruct(type, params, fitobj, gof, m
 %
 %   Empty params produce an empty table with the right VariableNames so
 %   downstream isempty(...) checks still hold and column-name access
-%   (e.g. T.PrefPhaseModel) does not error on a zero-mode fit.
+%   (e.g. T.PrefPhase) does not error on a zero-mode fit.
 switch lower(type)
     case 'power'
         % 9 names: 6 from the fit + Volume (derived) + 2 added by
@@ -56,7 +56,7 @@ switch lower(type)
         % fallback table exposes all columns; the annotation block
         % in fitParamBasis appends real values when params is non-empty.
         vn      = {'Density','FreqMean','FreqStd','SOpowerMean','SOpowerStd','Theta','Volume'};
-        vn_full = [vn, {'PrefPhaseModel','CouplingModel'}];
+        vn_full = [vn, {'PrefPhase','Coupling'}];
     case 'phase'
         vn      = {'Density','FreqMean','FreqStd','SOphaseMean','SOphaseStd','Theta','Volume'};
         vn_full = vn;

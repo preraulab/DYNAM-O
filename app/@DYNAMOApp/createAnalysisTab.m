@@ -7,7 +7,7 @@ function createAnalysisTab(app)
     %     2. Mode Scatter — paramfit mode scatter, also as
     %                       power+phase pairs per channel. Power and
     %                       phase have non-overlapping numeric columns
-    %                       (e.g. PrefPhaseModel / SOphaseMean), so
+    %                       (e.g. PrefPhase / SOphaseMean), so
     %                       each axis kind gets its own X/Y/Size/Color
     %                       dropdown group, both visible at once.
     %
