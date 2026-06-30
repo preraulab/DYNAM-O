@@ -51,15 +51,16 @@ function [SOPH_paramfit] = createSOPHparamfitStruct(type, params, fitobj, gof, m
 %   (e.g. T.PrefPhase) does not error on a zero-mode fit.
 switch lower(type)
     case 'power'
-        % 9 names: 6 from the fit + Volume (derived) + 2 added by
-        % fitParamBasis annotation. Declared up front so the empty-
-        % fallback table exposes all columns; the annotation block
-        % in fitParamBasis appends real values when params is non-empty.
+        % 6 from the fit + Volume (derived) + 2 (PrefPhase/Coupling) and 10
+        % per-mode TF-peak summary columns (Pk*) added by fitParamBasis
+        % annotation. Declared up front so the empty-fallback table exposes
+        % all columns; the annotation blocks append real values when params
+        % is non-empty.
         vn      = {'Density','FreqMean','FreqStd','SOpowerMean','SOpowerStd','Theta','Volume'};
-        vn_full = [vn, {'PrefPhase','Coupling'}];
+        vn_full = [vn, {'PrefPhase','Coupling'}, pk_cols_()];
     case 'phase'
         vn      = {'Density','FreqMean','FreqStd','SOphaseMean','SOphaseStd','Theta','Volume'};
-        vn_full = vn;
+        vn_full = [vn, pk_cols_()];
     otherwise
         error('createSOPHparamfitStruct:badType','type must be ''power'' or ''phase''.');
 end
@@ -98,4 +99,12 @@ switch type
     otherwise
         vol = nan(size(density));
 end
+end
+
+
+function c = pk_cols_()
+% Per-mode TF-peak summary column names (appended by
+% annotateModesWithPeakStats). Must match the Rust mode_peaks Pk* columns.
+c = {'PkCount','PkFreq','PkDuration','PkBandwidth','PkHeight', ...
+     'PkVolume','PkArea','PkPeakiness','PkSOpower','PkSOphase'};
 end
