@@ -130,7 +130,12 @@ function renderResultsBrowserPreviewCsv(app, p)
                 L = [L; {''}];
             end
         end
-        bgKeys = {'background_xxx','background_yyy','background_zzz','unit_row'};
+        % Axis-specific background keys (power: PowSlope/FreqSlope/Offset;
+        % phase: SinAmp/SinPhase/Offset) plus the retired xxx/yyy/zzz; only
+        % the keys actually present in this CSV are shown below.
+        bgKeys = {'background_PowSlope','background_FreqSlope','background_Offset', ...
+                  'background_SinAmp','background_SinPhase', ...
+                  'background_xxx','background_yyy','background_zzz','unit_row'};
         bgPres = any(cellfun(@(k) isfield(H,k), bgKeys));
         if bgPres
             L = [L; {'--- background plane ---'}];

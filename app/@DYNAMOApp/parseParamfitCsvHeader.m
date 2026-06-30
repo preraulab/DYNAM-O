@@ -8,7 +8,9 @@ function hdr = parseParamfitCsvHeader(~, filename)
     %   coerced to double.
     %
     %   Common fields produced (when present in the file):
-    %     background_xxx, background_yyy, background_zzz
+    %     background_{PowSlope,FreqSlope,Offset} (power) /
+    %     background_{SinAmp,SinPhase,Offset} (phase)
+    %     (legacy: background_xxx, background_yyy, background_zzz)
     %     unit_row, n_modes, fit_type
     %     gof_sse, gof_rsquare, gof_dfe, gof_adjrsquare, gof_rmse
     %     freq_bins, SOpower_bins / SOphase_bins

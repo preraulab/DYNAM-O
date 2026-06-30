@@ -76,9 +76,13 @@ function pf = build_from_csv_(app, csvp, axisTag, soBinField)
     T   = readtable(csvp, 'CommentStyle', '#');
 
     fitobj = struct();
-    fitobj.xxx      = local_get_(hdr, 'background_xxx', NaN);
-    fitobj.yyy      = local_get_(hdr, 'background_yyy', NaN);
-    fitobj.zzz      = local_get_(hdr, 'background_zzz', NaN);
+    % Background coefficients map to the internal fitobj slots xxx/yyy/zzz
+    % positionally. The CSV header carries axis-specific keys (power:
+    % PowSlope/FreqSlope/Offset; phase: SinAmp/SinPhase/Offset); the retired
+    % xxx/yyy/zzz keys are accepted too so pre-rename CSVs still load.
+    fitobj.xxx      = local_get_(hdr, {'background_PowSlope','background_SinAmp','background_xxx'}, NaN);
+    fitobj.yyy      = local_get_(hdr, {'background_FreqSlope','background_SinPhase','background_yyy'}, NaN);
+    fitobj.zzz      = local_get_(hdr, {'background_Offset','background_zzz'}, NaN);
     fitobj.unit_row = local_get_(hdr, 'unit_row',       NaN);
     fitobj.coefnames  = local_get_(hdr, 'fitobj_coefnames',  {});
     fitobj.coefvalues = local_get_(hdr, 'fitobj_coefvalues', []);
@@ -106,7 +110,17 @@ end
 
 
 function v = local_get_(s, name, default)
-    if isfield(s, name)
+    % name may be a single field name or a cell of candidate names (first
+    % present wins) — used to accept axis-specific + legacy background keys.
+    if iscell(name)
+        for i = 1:numel(name)
+            if isfield(s, name{i})
+                v = s.(name{i});
+                return
+            end
+        end
+        v = default;
+    elseif isfield(s, name)
         v = s.(name);
     else
         v = default;
