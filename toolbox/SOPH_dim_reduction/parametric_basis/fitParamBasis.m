@@ -1,10 +1,10 @@
-function [SOPHs] = fitParamBasis(SOPHs, power_opts, phase_opts, valid_powerhist, valid_phasehist, verbose, plot_each, plot_both, stats_table, peak_assign_prob)
+function [SOPHs] = fitParamBasis(SOPHs, power_opts, phase_opts, valid_powerhist, valid_phasehist, verbose, plot_each, plot_both, stats_table)
 %FITPARAMBASIS  Fit the parametric basis to SOpower and SOphase histograms.
 %
 %   SOPHs = fitParamBasis(SOPHs, power_opts, phase_opts, ...
 %                         valid_powerhist, valid_phasehist, ...
 %                         verbose, plot_each, plot_both, ...
-%                         stats_table, peak_assign_prob)
+%                         stats_table)
 %
 %   Power and phase fits run independently — a failure in one is reported
 %   but does not abort the other. The corresponding *_paramfit field is
@@ -13,10 +13,11 @@ function [SOPHs] = fitParamBasis(SOPHs, power_opts, phase_opts, valid_powerhist,
 %   When STATS_TABLE (the per-peak TF-peak table) is supplied, each params
 %   table gets per-mode TF-peak summary columns (Pk*) via
 %   annotateModesWithPeakStats: the TF-peaks inside each mode's
-%   PEAK_ASSIGN_PROB confidence region (default 0.95). STATS_TABLE should
-%   already be restricted to the SOPH peak population (the caller passes
-%   stats_table(hist_peakidx,:)). The Pk* columns are added regardless
-%   (0/NaN without stats) so the params-table schema is stable.
+%   peak_assign_prob confidence region from the corresponding options
+%   struct (default 0.95). STATS_TABLE should already be restricted to the
+%   SOPH peak population (the caller passes stats_table(hist_peakidx,:)).
+%   The Pk* columns are added regardless (0/NaN without stats) so the
+%   params-table schema is stable.
 if nargin < 2 || isempty(power_opts); power_opts = param_basis_opts('power'); end
 if nargin < 3 || isempty(phase_opts); phase_opts = param_basis_opts('phase'); end
 if nargin < 4 || isempty(valid_powerhist); valid_powerhist = true; end
@@ -25,12 +26,19 @@ if nargin < 6 || isempty(verbose); verbose = true; end
 if nargin < 7 || isempty(plot_each); plot_each = false; end
 if nargin < 8 || isempty(plot_both); plot_both = true; end
 if nargin < 9; stats_table = []; end
-if nargin < 10 || isempty(peak_assign_prob); peak_assign_prob = 0.95; end
 peak_tbl = stats_table;
 
 % peak_assign_prob is consumed here (peak->mode assignment), not by
 % param_basis_power/phase — strip it so their strict option parsers don't
 % reject it as an unknown field.
+power_peak_assign_prob = 0.95;
+phase_peak_assign_prob = 0.95;
+if isstruct(power_opts) && isfield(power_opts, 'peak_assign_prob') && ~isempty(power_opts.peak_assign_prob)
+    power_peak_assign_prob = power_opts.peak_assign_prob;
+end
+if isstruct(phase_opts) && isfield(phase_opts, 'peak_assign_prob') && ~isempty(phase_opts.peak_assign_prob)
+    phase_peak_assign_prob = phase_opts.peak_assign_prob;
+end
 if isstruct(power_opts) && isfield(power_opts, 'peak_assign_prob')
     power_opts = rmfield(power_opts, 'peak_assign_prob');
 end
@@ -64,7 +72,7 @@ if valid_phasehist
             % Per-mode TF-peak summary columns (Pk*).
             if ~isempty(SOPHs.SOphase_paramfit.params)
                 SOPHs.SOphase_paramfit.params = annotateModesWithPeakStats( ...
-                    SOPHs.SOphase_paramfit.params, 'phase', peak_tbl, peak_assign_prob);
+                    SOPHs.SOphase_paramfit.params, 'phase', peak_tbl, phase_peak_assign_prob);
             end
         end
     catch ME_phase
@@ -94,7 +102,7 @@ if valid_powerhist
                     SOPHs.freq_bins, SOPHs.SOphase_bins, model_SOPH_phase);
                 % Per-mode TF-peak summary columns (Pk*).
                 SOPHs.SOpower_paramfit.params = annotateModesWithPeakStats( ...
-                    SOPHs.SOpower_paramfit.params, 'power', peak_tbl, peak_assign_prob);
+                    SOPHs.SOpower_paramfit.params, 'power', peak_tbl, power_peak_assign_prob);
             end
         end
     catch ME_pow

@@ -560,9 +560,15 @@ classdef DYNAMO < handle
             % the SOPH-included peak population (PeakStage in SOPH_stages).
             % peak_assign_prob is consumed by annotateModesWithPeakStats,
             % not by param_basis_*, so strip it from the fit opts.
-            pk_prob = 0.95;
-            if isstruct(opts_pow) && isfield(opts_pow, 'peak_assign_prob')
-                pk_prob = opts_pow.peak_assign_prob;
+            pk_prob_pow = 0.95;
+            pk_prob_phase = 0.95;
+            if isstruct(opts_pow) && isfield(opts_pow, 'peak_assign_prob') ...
+                    && ~isempty(opts_pow.peak_assign_prob)
+                pk_prob_pow = opts_pow.peak_assign_prob;
+            end
+            if isstruct(opts_phase) && isfield(opts_phase, 'peak_assign_prob') ...
+                    && ~isempty(opts_phase.peak_assign_prob)
+                pk_prob_phase = opts_phase.peak_assign_prob;
             end
             if isstruct(opts_pow) && isfield(opts_pow, 'peak_assign_prob')
                 opts_pow = rmfield(opts_pow, 'peak_assign_prob');
@@ -600,7 +606,7 @@ classdef DYNAMO < handle
                     phase_ok = true;
                     if ~isempty(obj.SOPHs.SOphase_paramfit.params)
                         obj.SOPHs.SOphase_paramfit.params = annotateModesWithPeakStats( ...
-                            obj.SOPHs.SOphase_paramfit.params, 'phase', pk_tbl, pk_prob);
+                            obj.SOPHs.SOphase_paramfit.params, 'phase', pk_tbl, pk_prob_phase);
                     end
                 end
             catch ME_phase
@@ -629,7 +635,7 @@ classdef DYNAMO < handle
                             obj.SOPHs.SOpower_paramfit.params, obj.SOPHs.SOphase_mat, ...
                             obj.SOPHs.freq_bins, obj.SOPHs.SOphase_bins, model_SOPhH_phase);
                         obj.SOPHs.SOpower_paramfit.params = annotateModesWithPeakStats( ...
-                            obj.SOPHs.SOpower_paramfit.params, 'power', pk_tbl, pk_prob);
+                            obj.SOPHs.SOpower_paramfit.params, 'power', pk_tbl, pk_prob_pow);
                     end
                 end
             catch ME_pow
