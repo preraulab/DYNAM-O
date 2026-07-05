@@ -77,6 +77,7 @@ end
 
 %% Parse inputs
 p = inputParser;
+p.KeepUnmatched = true;
 
 % Required parameters
 addRequired(p, 'SOPH', @(x) isnumeric(x) && isreal(x) && ~isempty(x) && ismatrix(x) && ~all(isnan(x), 'all'));

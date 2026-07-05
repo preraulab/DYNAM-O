@@ -28,17 +28,10 @@ if nargin < 8 || isempty(plot_both); plot_both = true; end
 if nargin < 9; stats_table = []; end
 peak_tbl = stats_table;
 
-% peak_assign_prob is consumed here (peak->mode assignment), not by
-% param_basis_power/phase — strip it so their strict option parsers don't
-% reject it as an unknown field.
+% peak_assign_prob is consumed here for peak->mode assignment; the fitters
+% keep unmatched options so the original options can pass through unchanged.
 power_peak_assign_prob = power_opts.peak_assign_prob;
 phase_peak_assign_prob = phase_opts.peak_assign_prob;
-if isstruct(power_opts) && isfield(power_opts, 'peak_assign_prob')
-    power_opts = rmfield(power_opts, 'peak_assign_prob');
-end
-if isstruct(phase_opts) && isfield(phase_opts, 'peak_assign_prob')
-    phase_opts = rmfield(phase_opts, 'peak_assign_prob');
-end
 
 if verbose && (valid_powerhist || valid_phasehist)
     disp('  Fitting parametric basis...');

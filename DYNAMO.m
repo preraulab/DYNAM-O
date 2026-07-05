@@ -558,16 +558,10 @@ classdef DYNAMO < handle
 
             % Per-mode TF-peak summary (Pk*) inputs: assignment confidence +
             % the SOPH-included peak population (PeakStage in SOPH_stages).
-            % peak_assign_prob is consumed by annotateModesWithPeakStats,
-            % not by param_basis_*, so strip it from the fit opts.
+            % peak_assign_prob is consumed by annotateModesWithPeakStats;
+            % param_basis_* keeps unmatched options so opts pass unchanged.
             pk_prob_pow = opts_pow.peak_assign_prob;
             pk_prob_phase = opts_phase.peak_assign_prob;
-            if isstruct(opts_pow) && isfield(opts_pow, 'peak_assign_prob')
-                opts_pow = rmfield(opts_pow, 'peak_assign_prob');
-            end
-            if isstruct(opts_phase) && isfield(opts_phase, 'peak_assign_prob')
-                opts_phase = rmfield(opts_phase, 'peak_assign_prob');
-            end
             pk_tbl = obj.stats_table;
             if istable(pk_tbl) && ~isempty(pk_tbl) && isstruct(obj.SOPH_options) ...
                     && isfield(obj.SOPH_options, 'SOPH_stages') ...
