@@ -28,11 +28,6 @@ if nargin < 8 || isempty(plot_both); plot_both = true; end
 if nargin < 9; stats_table = []; end
 peak_tbl = stats_table;
 
-% peak_assign_prob is consumed here for peak->mode assignment; the fitters
-% keep unmatched options so the original options can pass through unchanged.
-power_peak_assign_prob = power_opts.peak_assign_prob;
-phase_peak_assign_prob = phase_opts.peak_assign_prob;
-
 if verbose && (valid_powerhist || valid_phasehist)
     disp('  Fitting parametric basis...');
 end
@@ -59,7 +54,7 @@ if valid_phasehist
             % Per-mode TF-peak summary columns (Pk*).
             if ~isempty(SOPHs.SOphase_paramfit.params)
                 SOPHs.SOphase_paramfit.params = annotateModesWithPeakStats( ...
-                    SOPHs.SOphase_paramfit.params, 'phase', peak_tbl, phase_peak_assign_prob);
+                    SOPHs.SOphase_paramfit.params, 'phase', peak_tbl, phase_opts.peak_assign_prob);
             end
         end
     catch ME_phase
@@ -89,7 +84,7 @@ if valid_powerhist
                     SOPHs.freq_bins, SOPHs.SOphase_bins, model_SOPH_phase);
                 % Per-mode TF-peak summary columns (Pk*).
                 SOPHs.SOpower_paramfit.params = annotateModesWithPeakStats( ...
-                    SOPHs.SOpower_paramfit.params, 'power', peak_tbl, power_peak_assign_prob);
+                    SOPHs.SOpower_paramfit.params, 'power', peak_tbl, power_opts.peak_assign_prob);
             end
         end
     catch ME_pow
