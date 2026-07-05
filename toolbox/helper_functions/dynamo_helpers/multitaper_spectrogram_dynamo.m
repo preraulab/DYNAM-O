@@ -70,7 +70,16 @@ function [spect, stimes, sfreqs] = multitaper_spectrogram_dynamo( ...
         end
         NW = taper_params(1);
         K  = taper_params(2);
-        [tapers, eigen] = dpss(winN, NW, K);
+        % Prefer the Rust DPSS solver when its MEX is on path — drops the
+        % Signal Processing Toolbox dependency for taper generation, and
+        % the underlying multitaper_rs::dpss matches MATLAB's dpss(N,NW,K)
+        % to <=1e-8 elementwise on every config in our test battery (see
+        % rust_bridge/validate_dpss_mex.m).
+        if exist('dpss_rust_mex', 'file') == 3
+            [tapers, eigen] = dpss_rust_mex(winN, NW, K);
+        else
+            [tapers, eigen] = dpss(winN, NW, K);
+        end
         eigen_arg = [];
         if strcmpi(weighting, 'eigen')
             eigen_arg = eigen;
