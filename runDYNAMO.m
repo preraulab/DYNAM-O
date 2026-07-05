@@ -350,7 +350,7 @@ if strcmp(backend, 'rust')
                 pool_autocreate_mode = 'direct';
             end
             pool_autocreate_cleanup = onCleanup( ...
-                @() restore_pool_autocreate(pool_autocreate_orig, pool_autocreate_mode));
+                @() restore_pool_autocreate(ps, pool_autocreate_orig, pool_autocreate_mode));
         catch ME
             if verbose
                 fprintf('  Note: could not disable Pool.AutoCreate (%s)\n', ME.message);
@@ -580,19 +580,19 @@ function rmappdata_safe(h, key)
     end
 end
 
-function restore_pool_autocreate(orig, mode)
+function restore_pool_autocreate(ps, orig, mode)
     % Restore the original parallel.Settings.Pool.AutoCreate value at
     % function exit. mode tracks which API shape we used on entry so we
     % know how to undo: 'temporary' clears the TemporaryValue (newer
     % releases with Setting objects); 'direct' assigns back the captured
     % primitive value.
-    if isempty(orig) || strcmp(mode, 'none'), return, end
+    if isempty(ps) || isempty(orig) || strcmp(mode, 'none'), return, end
     try
         switch mode
             case 'temporary'
-                clearTemporaryValue(parallel.Settings.Pool.AutoCreate);
+                clearTemporaryValue(ps.Pool.AutoCreate);
             case 'direct'
-                parallel.Settings.Pool.AutoCreate = orig;
+                ps.Pool.AutoCreate = orig;
         end
     catch
         % no-op — toolbox unloaded mid-run, etc.
