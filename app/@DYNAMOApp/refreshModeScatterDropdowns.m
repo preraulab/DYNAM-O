@@ -8,8 +8,8 @@ function refreshModeScatterDropdowns(app, axisKind)
     %   Each dropdown gets a leading '(none)' option. Current
     %   selections are preserved when still valid; on the very
     %   first populated refresh we apply axis-specific defaults
-    %     Power: X=SOpowerMean, Y=FreqMean, Size=Density, Color=PrefPhaseCirc
-    %     Phase: X=SOphaseMean, Y=FreqMean, Size=Density, Color=PrefPhaseCirc
+    %     Power: X=SOpowerMean, Y=FreqMean, Size=Density, Color=PrefPhase
+    %     Phase: X=SOphaseMean, Y=FreqMean, Size=Density, Color=PrefPhase
     %   The "first populated refresh" is tracked per-dropdown
     %   in UserData so user picks of '(none)' aren't clobbered
     %   on subsequent refreshes.
@@ -49,13 +49,13 @@ function refreshModeScatterDropdowns(app, axisKind)
     switch axisKind
         case 'power'
             xPref  = 'SOpowerMean';
-            cPrefs = {'PrefPhaseCirc'};
+            cPrefs = {'PrefPhase'};
         case 'phase'
             xPref  = 'SOphaseMean';
-            % PrefPhaseCirc isn't on phase paramfits (it's appended only
+            % PrefPhase isn't on phase paramfits (it's appended only
             % to power fits by annotatePowerWithPreferredPhase); fall
             % back to SOphaseMean when absent.
-            cPrefs = {'PrefPhaseCirc', 'SOphaseMean'};
+            cPrefs = {'PrefPhase', 'SOphaseMean'};
         otherwise
             xPref  = 'Density';
             cPrefs = {'ID'};

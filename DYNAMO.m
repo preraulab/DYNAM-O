@@ -1519,25 +1519,26 @@ classdef DYNAMO < handle
             %         returned params table.
             %   params: N×6 numeric matrix [amp, fmean, fstd, pmean, pstd, theta]
             %
-            %   .params is returned as a table.
-            %   power: Amplitude (peaks/min/bin), FreqMean (Hz), FreqStd (Hz),
-            %          SOpowerMean (dB), SOpowerStd (dB), Theta (rad), plus
-            %          (added by fitParamBasis annotation):
-            %          PrefPhaseArgmax (rad),  CouplingArgmax (proportion/phase-bin),
-            %          PrefPhaseCirc   (rad),  CouplingCirc   ([0,1] MRL),
-            %          PrefPhaseModel  (rad),  CouplingModel  (proportion/phase-bin).
-            %   phase: Amplitude (proportion/phase-bin), FreqMean (Hz), FreqStd (Hz),
-            %          SOphaseMean (rad), SOphaseStd (rad), Theta (rad).
+            %   .params is returned as a table. The first column is `Density`
+            %   (the rotGauss/vmGauss `amp` coefficient — peak density for
+            %   power, proportion for phase); `Volume` is the closed-form
+            %   integral of the fitted mode surface. Matches the toolbox
+            %   createSOPHparamfitStruct column set.
+            %   power: Density (peaks/min/bin), FreqMean (Hz), FreqStd (Hz),
+            %          SOpowerMean (dB), SOpowerStd (dB), Theta (rad),
+            %          Volume (peaks/min), plus (added by fitParamBasis
+            %          annotation): PrefPhase (rad), Coupling (proportion/phase-bin).
+            %   phase: Density (proportion/phase-bin), FreqMean (Hz), FreqStd (Hz),
+            %          SOphaseMean (rad), SOphaseStd (rad), Theta (rad),
+            %          Volume (proportion·rad·Hz).
             %
-            %   NOTE: power Amplitude is peaks/min/bin; phase Amplitude and the argmax/model coupling columns are proportion/phase-bin (phase histogram is row-normalized upstream); CouplingCirc is dimensionless MRL in [0,1].
+            %   NOTE: power Density is peaks/min/bin; phase Density and the model coupling column are proportion/phase-bin (phase histogram is row-normalized upstream). The SO phase-coupling metric is model-based only (the older raw-histogram argmax and circular-mean estimators have been retired).
             switch lower(type)
                 case 'power'
-                    vn      = {'Amplitude','FreqMean','FreqStd','SOpowerMean','SOpowerStd','Theta'};
-                    vn_full = [vn, {'PrefPhaseArgmax','CouplingArgmax', ...
-                                    'PrefPhaseCirc','CouplingCirc', ...
-                                    'PrefPhaseModel','CouplingModel'}];
+                    vn      = {'Density','FreqMean','FreqStd','SOpowerMean','SOpowerStd','Theta','Volume'};
+                    vn_full = [vn, {'PrefPhase','Coupling'}];
                 case 'phase'
-                    vn      = {'Amplitude','FreqMean','FreqStd','SOphaseMean','SOphaseStd','Theta'};
+                    vn      = {'Density','FreqMean','FreqStd','SOphaseMean','SOphaseStd','Theta','Volume'};
                     vn_full = vn;
                 otherwise
                     error('createSOPHparamfitStruct:badType','type must be ''power'' or ''phase''.');
@@ -1546,7 +1547,21 @@ classdef DYNAMO < handle
             if isempty(params)
                 SOPH_paramfit.params = array2table(zeros(0,numel(vn_full)),'VariableNames',vn_full);
             else
-                SOPH_paramfit.params = array2table(params,'VariableNames',vn);
+                % Volume = closed-form integral of the fitted mode surface
+                % (same as the toolbox createSOPHparamfitStruct):
+                %   power (rotGauss): V = Density·pi·SOpowerStd·FreqStd
+                %   phase (vmGauss):  V = Density·2pi·besseli(0,k,1)·sqrt(pi·FreqStd), k = 1/SOphaseStd^2
+                density = params(:,1);
+                fstd    = params(:,3);
+                xstd    = params(:,5);
+                switch lower(type)
+                    case 'power'
+                        vol = density .* pi .* xstd .* fstd;
+                    case 'phase'
+                        k   = 1 ./ (xstd .^ 2);
+                        vol = density .* (2*pi) .* besseli(0, k, 1) .* sqrt(pi .* fstd);
+                end
+                SOPH_paramfit.params = array2table([params, vol(:)],'VariableNames',vn);
             end
             SOPH_paramfit.fitobj = fitobj;
             SOPH_paramfit.gof = gof;

@@ -2,7 +2,8 @@ function writeParamfitCsv(filename, PF, axis_kind, freq_bins, so_bins, subject_i
 %writeParamfitCsv  Write a parametric-fit CSV with a fixed-format
 %   comment header carrying everything needed to reconstruct
 %   model_SOPH from the params table alone:
-%     - background plane coefs (xxx, yyy, zzz)
+%     - background coefs (power: PowSlope/FreqSlope/Offset;
+%       phase: SinAmp/SinPhase/Offset)
 %     - unit_row (phase only; NaN for power)
 %     - gof scalars (sse, rsquare, dfe, adjrsquare, rmse)
 %     - source bins (freq_bins, SOpower_bins or SOphase_bins)
@@ -66,9 +67,20 @@ if nargin >= 6 && ~isempty(subject_id)
 end
 fprintf(fid, '# fit_type: %s\n', axis_kind);
 fprintf(fid, '# n_modes: %d\n', n_modes);
-fprintf(fid, '# background.xxx: %.17g\n', xxx);
-fprintf(fid, '# background.yyy: %.17g\n', yyy);
-fprintf(fid, '# background.zzz: %.17g\n', zzz);
+% Background coefficients — emitted under axis-specific, meaningful keys
+% (the internal fitobj coeffs keep the historical xxx/yyy/zzz names so the
+% fit's alphabetical-ordering trick is untouched; only the emitted CSV key
+% is renamed). Power background is a tilted plane (two slopes + offset);
+% phase background is a sinusoid (amplitude + phase + offset). Matches the
+% Rust writer's keys.
+if strcmp(axis_kind,'phase')
+    bg_names = {'SinAmp','SinPhase','Offset'};
+else
+    bg_names = {'PowSlope','FreqSlope','Offset'};
+end
+fprintf(fid, '# background.%s: %.17g\n', bg_names{1}, xxx);
+fprintf(fid, '# background.%s: %.17g\n', bg_names{2}, yyy);
+fprintf(fid, '# background.%s: %.17g\n', bg_names{3}, zzz);
 fprintf(fid, '# unit_row: %.17g\n', unit_row);
 fprintf(fid, '# gof.sse: %.17g\n', sse);
 fprintf(fid, '# gof.rsquare: %.17g\n', rsquare);
