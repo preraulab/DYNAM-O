@@ -14,10 +14,10 @@ function [SOPHs] = fitParamBasis(SOPHs, power_opts, phase_opts, valid_powerhist,
 %   table gets per-mode TF-peak summary columns (Pk*) via
 %   annotateModesWithPeakStats: the TF-peaks inside each mode's
 %   peak_assign_prob confidence region from the corresponding options
-%   struct (default 0.95). STATS_TABLE should already be restricted to the
-%   SOPH peak population (the caller passes stats_table(hist_peakidx,:)).
-%   The Pk* columns are added regardless (0/NaN without stats) so the
-%   params-table schema is stable.
+%   struct. STATS_TABLE should already be restricted to the SOPH peak
+%   population (the caller passes stats_table(hist_peakidx,:)). The Pk*
+%   columns are added regardless (0/NaN without stats) so the params-table
+%   schema is stable.
 if nargin < 2 || isempty(power_opts); power_opts = param_basis_opts('power'); end
 if nargin < 3 || isempty(phase_opts); phase_opts = param_basis_opts('phase'); end
 if nargin < 4 || isempty(valid_powerhist); valid_powerhist = true; end
@@ -31,14 +31,8 @@ peak_tbl = stats_table;
 % peak_assign_prob is consumed here (peak->mode assignment), not by
 % param_basis_power/phase — strip it so their strict option parsers don't
 % reject it as an unknown field.
-power_peak_assign_prob = 0.95;
-phase_peak_assign_prob = 0.95;
-if isstruct(power_opts) && isfield(power_opts, 'peak_assign_prob') && ~isempty(power_opts.peak_assign_prob)
-    power_peak_assign_prob = power_opts.peak_assign_prob;
-end
-if isstruct(phase_opts) && isfield(phase_opts, 'peak_assign_prob') && ~isempty(phase_opts.peak_assign_prob)
-    phase_peak_assign_prob = phase_opts.peak_assign_prob;
-end
+power_peak_assign_prob = power_opts.peak_assign_prob;
+phase_peak_assign_prob = phase_opts.peak_assign_prob;
 if isstruct(power_opts) && isfield(power_opts, 'peak_assign_prob')
     power_opts = rmfield(power_opts, 'peak_assign_prob');
 end
