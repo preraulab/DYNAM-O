@@ -47,6 +47,7 @@ function default_params = param_basis_opts(type, varargin)
 %       'plot_on' - Flag to plot: 0 plot nothing, 1: plot the final result, 2: plot iterations, 3: plot iterations and final (default: 1)
 %       'SOPH_clim_prctiles' - percentiles used to scale the heatmap color on SO feature histograms (default: [5, 98])
 %       'verbose' - Flag to display detailed output (default: true)
+%       'peak_assign_prob' - Confidence level for assigning TF-peaks to fitted modes when computing per-mode Pk* summaries (default: 0.95)
 %
 %   Output:
 %       default_params: Structure containing the parameters with either default or user-specified values
@@ -106,6 +107,9 @@ default_params_power.LB_default =      [nan,  nan,    0.1,   nan,    2.5,   -0.0
 default_params_power.plot_on = 1;
 default_params_power.SOPH_clim_prctiles = [5, 98];
 default_params_power.verbose = true;
+% Confidence level for assigning TF-peaks to a mode (the Pk* per-mode
+% peak-property columns are means over peaks inside this region).
+default_params_power.peak_assign_prob = 0.95;
 
 % Default parameter values for 'phase'
 default_params_phase.phase_limits = [-pi, pi];
@@ -129,6 +133,9 @@ default_params_phase.LB_default =      [nan,  nan,    1,     -inf,   pi/5,  -pi/
 default_params_phase.plot_on = 1;
 default_params_phase.SOPH_clim_prctiles = [5, 98];
 default_params_phase.verbose = true;
+% Confidence level for assigning TF-peaks to a mode (the Pk* per-mode
+% peak-property columns are means over peaks inside this region).
+default_params_phase.peak_assign_prob = 0.95;
 
 % Select appropriate default parameters based on type
 switch type
@@ -171,6 +178,7 @@ addParameter(p, 'LB_default', default_params.LB_default, @(x) isnumeric(x) && nu
 addParameter(p, 'plot_on', default_params.plot_on, @(x) validateattributes(x, {'logical', 'numeric'}, {'scalar'}));
 addParameter(p, 'SOPH_clim_prctiles', default_params.SOPH_clim_prctiles, @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
 addParameter(p, 'verbose', default_params.verbose, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+addParameter(p, 'peak_assign_prob', default_params.peak_assign_prob, @(x) isnumeric(x) && isscalar(x) && x > 0 && x < 1);
 
 % Parse input arguments
 parse(p, varargin{:});

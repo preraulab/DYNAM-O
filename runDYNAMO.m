@@ -350,7 +350,7 @@ if strcmp(backend, 'rust')
                 pool_autocreate_mode = 'direct';
             end
             pool_autocreate_cleanup = onCleanup( ...
-                @() restore_pool_autocreate(pool_autocreate_orig, pool_autocreate_mode));
+                @() restore_pool_autocreate(ps, pool_autocreate_orig, pool_autocreate_mode));
         catch ME
             if verbose
                 fprintf('  Note: could not disable Pool.AutoCreate (%s)\n', ME.message);
@@ -539,7 +539,8 @@ if nargout > 7 && (fit_param_basis || fit_spline_basis)
 
     if fit_param_basis
         t_stage = tic;
-        SOPHs = fitParamBasis(SOPHs, param_basis_power_options, param_basis_phase_options, valid_powerhist, valid_phasehist, verbose, plot_each, plot_both);
+        % Pass the SOPH-included peaks (hist_peakidx population) so the params tables carry per-mode TF-peak summary (Pk*) columns.
+        SOPHs = fitParamBasis(SOPHs, param_basis_power_options, param_basis_phase_options, valid_powerhist, valid_phasehist, verbose, plot_each, plot_both, stats_table(hist_peakidx, :));
         timings.fit_param_basis = toc(t_stage);
     end
 
@@ -572,19 +573,19 @@ function rmappdata_safe(h, key)
     end
 end
 
-function restore_pool_autocreate(orig, mode)
+function restore_pool_autocreate(ps, orig, mode)
     % Restore the original parallel.Settings.Pool.AutoCreate value at
     % function exit. mode tracks which API shape we used on entry so we
     % know how to undo: 'temporary' clears the TemporaryValue (newer
     % releases with Setting objects); 'direct' assigns back the captured
     % primitive value.
-    if isempty(orig) || strcmp(mode, 'none'), return, end
+    if isempty(ps) || isempty(orig) || strcmp(mode, 'none'), return, end
     try
         switch mode
             case 'temporary'
-                clearTemporaryValue(parallel.Settings.Pool.AutoCreate);
+                clearTemporaryValue(ps.Pool.AutoCreate);
             case 'direct'
-                parallel.Settings.Pool.AutoCreate = orig;
+                ps.Pool.AutoCreate = orig;
         end
     catch
         % no-op — toolbox unloaded mid-run, etc.

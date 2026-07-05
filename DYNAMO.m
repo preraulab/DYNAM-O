@@ -556,6 +556,15 @@ classdef DYNAMO < handle
             opts_phase = obj.param_basis_phase_options;
             opts_phase.plot_on = false;
 
+            % Per-mode TF-peak summary (Pk*) inputs: assignment confidence +
+            % the SOPH-included peak population (PeakStage in SOPH_stages).
+            pk_tbl = obj.stats_table;
+            if istable(pk_tbl) && ~isempty(pk_tbl) && isstruct(obj.SOPH_options) ...
+                    && isfield(obj.SOPH_options, 'SOPH_stages') ...
+                    && ismember('PeakStage', pk_tbl.Properties.VariableNames)
+                pk_tbl = pk_tbl(ismember(pk_tbl.PeakStage, obj.SOPH_options.SOPH_stages), :);
+            end
+
             % Power and phase fits are isolated: a failure in one is logged
             % but does not block the other or anything downstream. Empty
             % *_paramfit signals "fit failed" to the rest of the pipeline.
@@ -577,6 +586,10 @@ classdef DYNAMO < handle
                 else
                     obj.SOPHs.SOphase_paramfit = obj.createSOPHparamfitStruct('phase', params_phase, fitobj_phase, gof_phase, model_SOPhH_phase, phase_wshed_img);
                     phase_ok = true;
+                    if ~isempty(obj.SOPHs.SOphase_paramfit.params)
+                        obj.SOPHs.SOphase_paramfit.params = annotateModesWithPeakStats( ...
+                            obj.SOPHs.SOphase_paramfit.params, 'phase', pk_tbl, opts_phase.peak_assign_prob);
+                    end
                 end
             catch ME_phase
                 obj.SOPHs.SOphase_paramfit = [];
@@ -603,6 +616,8 @@ classdef DYNAMO < handle
                         obj.SOPHs.SOpower_paramfit.params = annotatePowerWithPreferredPhase( ...
                             obj.SOPHs.SOpower_paramfit.params, obj.SOPHs.SOphase_mat, ...
                             obj.SOPHs.freq_bins, obj.SOPHs.SOphase_bins, model_SOPhH_phase);
+                        obj.SOPHs.SOpower_paramfit.params = annotateModesWithPeakStats( ...
+                            obj.SOPHs.SOpower_paramfit.params, 'power', pk_tbl, opts_pow.peak_assign_prob);
                     end
                 end
             catch ME_pow
@@ -1533,13 +1548,18 @@ classdef DYNAMO < handle
             %          Volume (proportion·rad·Hz).
             %
             %   NOTE: power Density is peaks/min/bin; phase Density and the model coupling column are proportion/phase-bin (phase histogram is row-normalized upstream). The SO phase-coupling metric is model-based only (the older raw-histogram argmax and circular-mean estimators have been retired).
+            % Per-mode TF-peak summary columns (Pk*) appended by
+            % annotateModesWithPeakStats; declared here for the empty
+            % fallback (matches the toolbox createSOPHparamfitStruct).
+            pkc = {'PkCount','PkFreq','PkDuration','PkBandwidth','PkHeight', ...
+                   'PkVolume','PkArea','PkPeakiness','PkSOpower','PkSOphase'};
             switch lower(type)
                 case 'power'
                     vn      = {'Density','FreqMean','FreqStd','SOpowerMean','SOpowerStd','Theta','Volume'};
-                    vn_full = [vn, {'PrefPhase','Coupling'}];
+                    vn_full = [vn, {'PrefPhase','Coupling'}, pkc];
                 case 'phase'
                     vn      = {'Density','FreqMean','FreqStd','SOphaseMean','SOphaseStd','Theta','Volume'};
-                    vn_full = vn;
+                    vn_full = [vn, pkc];
                 otherwise
                     error('createSOPHparamfitStruct:badType','type must be ''power'' or ''phase''.');
             end
