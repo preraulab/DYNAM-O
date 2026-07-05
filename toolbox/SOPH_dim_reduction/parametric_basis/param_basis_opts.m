@@ -47,6 +47,7 @@ function default_params = param_basis_opts(type, varargin)
 %       'plot_on' - Flag to plot: 0 plot nothing, 1: plot the final result, 2: plot iterations, 3: plot iterations and final (default: 1)
 %       'SOPH_clim_prctiles' - percentiles used to scale the heatmap color on SO feature histograms (default: [5, 98])
 %       'verbose' - Flag to display detailed output (default: true)
+%       'peak_assign_prob' - Confidence level for assigning TF-peaks to fitted modes when computing per-mode Pk* summaries (default: 0.95)
 %
 %   Output:
 %       default_params: Structure containing the parameters with either default or user-specified values

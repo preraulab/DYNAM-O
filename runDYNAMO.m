@@ -539,11 +539,8 @@ if nargout > 7 && (fit_param_basis || fit_spline_basis)
 
     if fit_param_basis
         t_stage = tic;
-        % Pass the SOPH-included peaks (hist_peakidx population) so the
-        % params tables carry per-mode TF-peak summary (Pk*) columns.
-        % fitParamBasis reads each axis' peak_assign_prob from its options.
-        soph_peaks = stats_table(hist_peakidx, :);
-        SOPHs = fitParamBasis(SOPHs, param_basis_power_options, param_basis_phase_options, valid_powerhist, valid_phasehist, verbose, plot_each, plot_both, soph_peaks);
+        % Pass the SOPH-included peaks (hist_peakidx population) so the params tables carry per-mode TF-peak summary (Pk*) columns.
+        SOPHs = fitParamBasis(SOPHs, param_basis_power_options, param_basis_phase_options, valid_powerhist, valid_phasehist, verbose, plot_each, plot_both, stats_table(hist_peakidx, :));
         timings.fit_param_basis = toc(t_stage);
     end
 
