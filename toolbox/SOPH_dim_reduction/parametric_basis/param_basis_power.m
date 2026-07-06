@@ -213,7 +213,7 @@ else
             f_kk = stats_table.PeakFrequency(kk);
             if all(abs(kept_freqs - f_kk) >= min_freq_diff)
                 keep(kk) = true;
-                kept_freqs(end+1) = f_kk; %#ok<AGROW>
+                kept_freqs(end+1) = f_kk;
             end
         end
         stats_table = stats_table(keep, :);
