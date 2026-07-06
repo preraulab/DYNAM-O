@@ -18,9 +18,9 @@ if isempty(which('runDYNAMO'))
 end
 end
 
-function test_power_recovers_planted_modes(testCase)
-power_bins = linspace(-5, 25, 61);
-freq_bins  = linspace(2, 18, 65);
+function test_power_recovers_planted_modes_with_column_bins(testCase)
+power_bins = linspace(-5, 25, 61).';
+freq_bins  = linspace(2, 18, 65).';
 % [amp, fmean, fstd, pmean, pstd, theta] -- same as the Rust test.
 planted = [8 11 1.0 5 10 0.01; ...
            5 15 0.8 12 8 -0.01];
@@ -50,9 +50,9 @@ for k = 1:size(pairs, 1)
 end
 end
 
-function test_phase_recovers_planted_modes(testCase)
-phase_bins = linspace(-pi, pi, 41);
-freq_bins  = linspace(2, 18, 65);
+function test_phase_recovers_planted_modes_with_column_bins(testCase)
+phase_bins = linspace(-pi, pi, 41).';
+freq_bins  = linspace(2, 18, 65).';
 % [amp, fmean, fstd(VARIANCE-form), phasepref, recikappa, theta].
 planted = [0.05 11 2.0 1.0 1.2 0.05; ...
            0.04 15 2.5 -1.5 1.5 -0.05];

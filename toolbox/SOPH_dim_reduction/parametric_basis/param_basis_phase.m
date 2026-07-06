@@ -81,8 +81,8 @@ p.KeepUnmatched = true;
 
 % Required parameters
 addRequired(p, 'SOPhH', @(x) isnumeric(x) && isreal(x) && ~isempty(x) && ismatrix(x) && ~all(isnan(x), 'all'));
-addRequired(p, 'phase_bins', @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
-addRequired(p, 'freq_bins', @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
+addRequired(p, 'phase_bins', @(x) validateattributes(x, {'numeric'}, {'real','finite','increasing','vector'}));
+addRequired(p, 'freq_bins', @(x) validateattributes(x, {'numeric'}, {'real','finite','increasing','vector'}));
 
 % Optional parameters with default values
 default_params = param_basis_opts('phase'); % get the default parameters
@@ -112,6 +112,9 @@ field_names = fieldnames(p.Results);
 
 %Automatically add parser results to the workspace
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
+
+phase_bins = phase_bins(:).';
+freq_bins = freq_bins(:);
 
 % Verify the dimensions of SOPhH inputs
 if size(SOPhH, 1) == length(phase_bins) && size(SOPhH, 2) == length(freq_bins)
@@ -149,7 +152,7 @@ valid_mat = isfinite(SOPhH);
 invalid_freq = all(~valid_mat, 2);
 valid_mat(invalid_freq, :) = true;
 valid_phase_bins = phase_bins >= phase_limits(1) & phase_bins <= phase_limits(2) & all(valid_mat, 1);
-valid_freq_bins = freq_bins >= freq_limits(1) & freq_bins <= freq_limits(2) & ~invalid_freq';
+valid_freq_bins = freq_bins >= freq_limits(1) & freq_bins <= freq_limits(2) & ~invalid_freq;
 
 % Define basis function for fitting
 fitfunc = @fit_vmGauss;
