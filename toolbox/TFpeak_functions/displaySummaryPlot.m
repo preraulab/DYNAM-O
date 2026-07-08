@@ -32,6 +32,10 @@ function [fh] = displaySummaryPlot(varargin)
 %    >> TIME-FREQUENCY PEAK SCATTERPLOT
 %       stats_table:        table - features of each TFpeak
 %       hist_peakidx        [1xP] logical - which TFpeaks are counted in the feature histograms
+%       SOPH_stages:        [1xS] numeric - sleep-stage values the SO-power/phase histograms include
+%                           (0:Undef 1:N3 2:N2 3:N1 4:REM 5:Wake 6:Art). Times whose stage is not in
+%                           this set, plus artifact spans, are shaded gray behind the TF-peak scatter
+%                           so the clear regions show the data the histograms actually use. Default = [1 2 3]
 %       peak_size_prctiles: [1x2] double - percentiles used to scale the dot size of TF-peaks in the scatter plot.
 %                           Default = [5, 95]
 %
@@ -105,6 +109,7 @@ addParameter(p, 'SOpower_norm_method', 'p2shift1234', @(x) validateattributes(x,
 addParameter(p, 'stats_table', [], @(x) validateattributes(x, {'double','table'}, {'real','2d'}));
 addParameter(p, 'hist_peakidx', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
 addParameter(p, 'peak_size_prctiles', [5, 95], @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
+addParameter(p, 'SOPH_stages', [1, 2, 3], @(x) validateattributes(x, {'numeric'}, {'real','finite','vector'}));
 
 % Both SOPH need these variables
 addParameter(p, 'freq_bins', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
@@ -273,6 +278,49 @@ end
 
 %% Plot time-frequency peak scatterplot
 if isgraphics(ax(1))
+    % Shade the times the SO-power/phase histograms do NOT use: epochs whose
+    % sleep stage is not in SOPH_stages (e.g. Wake/REM/Undef), plus artifact
+    % spans. The clear (unshaded) regions then show exactly which data feed
+    % the histograms. Drawn before the scatter so the shading sits behind the
+    % TF-peak dots.
+    hold(ax(1), 'on')
+    shade_color = [0.47, 0.47, 0.52];
+    shade_alpha = 0.38;
+    shade_yl = freq_limits;
+    if isempty(shade_yl) || numel(shade_yl) < 2
+        shade_yl = [2, 25];
+    end
+    % Excluded sleep-stage epochs (stage_times/stage_vals are per-epoch).
+    if ~isempty(stage_times) && ~isempty(stage_vals)
+        stage_dt = median(diff(stage_times(:)));
+        if isempty(stage_dt) || ~isfinite(stage_dt) || stage_dt <= 0
+            stage_dt = 30;
+        end
+        excl_stage = ~ismember(stage_vals(:), SOPH_stages);
+        stage_edges = diff([false; excl_stage; false]);
+        stage_runs = [find(stage_edges == 1), find(stage_edges == -1) - 1];
+        for k = 1:size(stage_runs, 1)
+            t0 = (stage_times(stage_runs(k, 1)) - stage_dt / 2) / 3600;
+            t1 = (stage_times(stage_runs(k, 2)) + stage_dt / 2) / 3600;
+            patch(ax(1), [t0 t1 t1 t0], [shade_yl(1) shade_yl(1) shade_yl(2) shade_yl(2)], ...
+                shade_color, 'FaceAlpha', shade_alpha, 'EdgeColor', 'none', 'HandleVisibility', 'off');
+        end
+    end
+    % Artifact spans (aligned with the EEG time vector t_time_range).
+    if ~isempty(artifacts) && ~isempty(t_time_range)
+        art_mask = logical(artifacts(:));
+        art_edges = diff([false; art_mask; false]);
+        art_runs = [find(art_edges == 1), find(art_edges == -1) - 1];
+        for k = 1:size(art_runs, 1)
+            i0 = art_runs(k, 1);
+            i1 = min(art_runs(k, 2), numel(t_time_range));
+            t0 = t_time_range(i0) / 3600;
+            t1 = t_time_range(i1) / 3600;
+            patch(ax(1), [t0 t1 t1 t0], [shade_yl(1) shade_yl(1) shade_yl(2) shade_yl(2)], ...
+                shade_color, 'FaceAlpha', shade_alpha, 'EdgeColor', 'none', 'HandleVisibility', 'off');
+        end
+    end
+
     % Plot only TF peaks that contribute to SO-power/phase histograms
     stats_table_SOPH = stats_table(hist_peakidx, :);
 
