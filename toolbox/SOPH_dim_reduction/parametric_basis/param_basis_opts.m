@@ -39,9 +39,9 @@ function default_params = param_basis_opts(type, varargin)
 %       'min_pctr2' - Minimum percentage change in R-squared for 'min%r2' criterion (default for 'power': 0.01,
 %                                                                                    default for 'phase': 0.025)
 %       'kneedle_tol' - Double, iteration tolerance for the kneedle algorithm (default: 0.01)
-%       'UB_default' - Upper bounds for the fitting parameters - [amp0, fmean0, fstd0, pmean0, pstd0, theta0]
-%                                          (default for 'power': [nan,  nan,    2.5,      nan,  30,    0.03],
-%                                           default for 'phase': [nan,  nan,    sqrt(15), inf,  2*pi,  pi/3])
+%       'UB_default' - Upper bounds for the fitting parameters - [amp0, fmean0, fstd0,    pmean0, pstd0, theta0]
+%                                          (default for 'power': [nan,  nan,    2.5,      nan,    30,    0.03],
+%                                           default for 'phase': [nan,  nan,    sqrt(15), inf,    2*pi,  pi/3])
 %       'LB_default' - Lower bounds for the fitting parameters - [amp0, fmean0, fstd0, pmean0, pstd0, theta0]
 %                                          (default for 'power': [nan,  nan,    0.1,   nan,    2.5,   -0.03],
 %                                           default for 'phase': [nan,  nan,    1,     -inf,   pi/5,  -pi/3])
@@ -132,9 +132,9 @@ default_params_phase.criterion = 'minpctr2';
 default_params_phase.min_dr2 = 0.01;
 default_params_phase.min_pctr2 = 0.025;
 default_params_phase.kneedle_tol = 0.01;
-% fitted parameters follow this order: [amp0, fmean0, fstd0, pmean0, pstd0, theta0];
-default_params_phase.UB_default =      [nan,  nan,    sqrt(15), inf, 2*pi,  pi/3];
-default_params_phase.LB_default =      [nan,  nan,    1,     -inf,   pi/5,  -pi/3];
+% fitted parameters follow this order: [amp0, fmean0, fstd0,    pmean0, pstd0, theta0];
+default_params_phase.UB_default =      [nan,  nan,    sqrt(15), inf,    2*pi,  pi/3];
+default_params_phase.LB_default =      [nan,  nan,    1,        -inf,   pi/5,  -pi/3];
 default_params_phase.plot_on = 1;
 default_params_phase.SOPH_clim_prctiles = [5, 98];
 default_params_phase.verbose = true;
