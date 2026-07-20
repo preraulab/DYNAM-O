@@ -20,10 +20,11 @@ function default_params = param_basis_opts(type, varargin)
 %       'gauss_filt_std' - Standard deviation ([row, col]) for Gaussian filter to smooth spectrogram before watershed (default: [10, 5]; only used for phase histogram)
 %       'wshed_exp' - Flag for watershed expansion (default: false)
 %       'max_peaks' - Maximum number of peaks to fit (-1 for unlimited) (default for 'power': 6, 'phase': 3)
-%       'prefix_modes' - Prefix modes in the form of fitting parameters (default for 'power': [],
+%       'prefix_modes' - Prefix modes in the form [amp0, fmean0, fstd0, pmean0, pstd0, theta0],
+%                        where fstd0 is a frequency standard deviation in Hz (default for 'power': [],
 %                                                                        default for 'phase': [],
-%                                                                        consider use for 'phase': [1e-3, 14, 4,  0,  pi/3, 0;
-%                                                                                                   1e-3, 5,  10, pi, pi/3, 0])
+%                                                                        consider use for 'phase': [1e-3, 14, 2,        0,  pi/3, 0;
+%                                                                                                   1e-3, 5,  sqrt(10), pi, pi/3, 0])
 %       'prefix_modes_order' - Controls whether prefix modes are added before, after, or in place of watershed modes
 %                              -1 = append prefix modes after watershed modes
 %                              0  = use prefix modes only and ignore watershed modes
@@ -39,8 +40,8 @@ function default_params = param_basis_opts(type, varargin)
 %                                                                                    default for 'phase': 0.025)
 %       'kneedle_tol' - Double, iteration tolerance for the kneedle algorithm (default: 0.01)
 %       'UB_default' - Upper bounds for the fitting parameters - [amp0, fmean0, fstd0, pmean0, pstd0, theta0]
-%                                          (default for 'power': [nan,  nan,    2.5,   nan,    30,    0.03],
-%                                           default for 'phase': [nan,  nan,    15,    inf,    2*pi,  pi/3])
+%                                          (default for 'power': [nan,  nan,    2.5,      nan,  30,    0.03],
+%                                           default for 'phase': [nan,  nan,    sqrt(15), inf,  2*pi,  pi/3])
 %       'LB_default' - Lower bounds for the fitting parameters - [amp0, fmean0, fstd0, pmean0, pstd0, theta0]
 %                                          (default for 'power': [nan,  nan,    0.1,   nan,    2.5,   -0.03],
 %                                           default for 'phase': [nan,  nan,    1,     -inf,   pi/5,  -pi/3])
@@ -48,6 +49,10 @@ function default_params = param_basis_opts(type, varargin)
 %       'SOPH_clim_prctiles' - percentiles used to scale the heatmap color on SO feature histograms (default: [5, 98])
 %       'verbose' - Flag to display detailed output (default: true)
 %       'peak_assign_prob' - Confidence level for assigning TF-peaks to fitted modes when computing per-mode Pk* summaries (default: 0.95)
+%
+%       Legacy phase prefix modes and custom LB_default/UB_default values made
+%       for the variance-form vmGauss equation must have fstd0 square-rooted
+%       before reuse with the standard-deviation parameterization.
 %
 %   Output:
 %       default_params: Structure containing the parameters with either default or user-specified values
@@ -128,7 +133,7 @@ default_params_phase.min_dr2 = 0.01;
 default_params_phase.min_pctr2 = 0.025;
 default_params_phase.kneedle_tol = 0.01;
 % fitted parameters follow this order: [amp0, fmean0, fstd0, pmean0, pstd0, theta0];
-default_params_phase.UB_default =      [nan,  nan,    15,    inf,    2*pi,  pi/3];
+default_params_phase.UB_default =      [nan,  nan,    sqrt(15), inf, 2*pi,  pi/3];
 default_params_phase.LB_default =      [nan,  nan,    1,     -inf,   pi/5,  -pi/3];
 default_params_phase.plot_on = 1;
 default_params_phase.SOPH_clim_prctiles = [5, 98];
