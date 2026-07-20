@@ -31,14 +31,14 @@ function [SOPH_paramfit] = createSOPHparamfitStruct(type, params, fitobj, gof, m
 %         theta drops out (rotation is volume-preserving).
 %
 %     phase (vmGauss, von Mises × Gaussian; the freq Gaussian uses
-%            exp(-dy^2/FreqStd) so FreqStd has variance-units):
+%            exp(-(dy/FreqStd)^2)):
 %         k = 1 / SOphaseStd^2
-%         V = Density · 2*pi · besseli(0,k,1) · sqrt(pi · FreqStd)
+%         V = Density · 2*pi · besseli(0,k,1) · sqrt(pi) · FreqStd
 %         (besseli(0,k,1) is the scaled form exp(-k)·I0(k), used to
 %         keep the product finite for sharp phase modes where exp(-k)
 %         and I0(k) would each over/underflow separately.)
 %         For k >> 1 (sharp phase modes), this asymptotes to
-%             V ≈ Density · SOphaseStd · pi · sqrt(2 · FreqStd).
+%             V ≈ Density · SOphaseStd · pi · sqrt(2) · FreqStd.
 %
 %     For phase, Density carries the empirical no-sin amplitude (set
 %     by param_basis_phase after fit), so Volume here is the integral
@@ -90,12 +90,12 @@ switch type
         % rotGauss: V = density * pi * xstd * fstd
         vol = density .* pi .* xstd .* fstd;
     case 'phase'
-        % vmGauss: V = density * 2*pi * exp(-k) * I0(k) * sqrt(pi * fstd)
+        % vmGauss: V = density * 2*pi * exp(-k) * I0(k) * sqrt(pi) * fstd
         % Use the SCALED Bessel besseli(0,k,1) = exp(-k)*I0(k) so the
         % product stays finite for sharp phase modes (small xstd ->
         % large k -> exp(-k) underflows and I0(k) overflows separately).
         k   = 1 ./ (xstd .^ 2);
-        vol = density .* (2*pi) .* besseli(0, k, 1) .* sqrt(pi .* fstd);
+        vol = density .* (2*pi) .* besseli(0, k, 1) .* sqrt(pi) .* fstd;
     otherwise
         vol = nan(size(density));
 end

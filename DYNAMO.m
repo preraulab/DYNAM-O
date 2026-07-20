@@ -1570,7 +1570,7 @@ classdef DYNAMO < handle
                 % Volume = closed-form integral of the fitted mode surface
                 % (same as the toolbox createSOPHparamfitStruct):
                 %   power (rotGauss): V = Density·pi·SOpowerStd·FreqStd
-                %   phase (vmGauss):  V = Density·2pi·besseli(0,k,1)·sqrt(pi·FreqStd), k = 1/SOphaseStd^2
+                %   phase (vmGauss):  V = Density·2pi·besseli(0,k,1)·sqrt(pi)·FreqStd, k = 1/SOphaseStd^2
                 density = params(:,1);
                 fstd    = params(:,3);
                 xstd    = params(:,5);
@@ -1579,7 +1579,7 @@ classdef DYNAMO < handle
                         vol = density .* pi .* xstd .* fstd;
                     case 'phase'
                         k   = 1 ./ (xstd .^ 2);
-                        vol = density .* (2*pi) .* besseli(0, k, 1) .* sqrt(pi .* fstd);
+                        vol = density .* (2*pi) .* besseli(0, k, 1) .* sqrt(pi) .* fstd;
                 end
                 SOPH_paramfit.params = array2table([params, vol(:)],'VariableNames',vn);
             end

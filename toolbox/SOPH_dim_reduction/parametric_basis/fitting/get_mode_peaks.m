@@ -10,10 +10,8 @@ function [idx, Q] = get_mode_peaks(mode_params, axis_kind, stats_table, prob)
 %
 %   Inputs:
 %       mode_params : 1x6 vector [amp, fmean, fstd, so_mean, so_std, theta]
-%                     in the raw param_basis convention. For 'phase' the
-%                     `fstd` is variance-form and is sqrt'd internally to a
-%                     sigma (matching the power axis and the Rust
-%                     `dynamo_pipeline::mode_peaks` implementation).
+%                     in the param_basis convention. `fstd` is the frequency
+%                     standard deviation for both power and phase modes.
 %       axis_kind   : 'power' or 'phase'.
 %       stats_table : TF-peak stats table with columns PeakFrequency and
 %                     SOpower (power) / SOphase (phase).
@@ -39,9 +37,6 @@ fstd   = mode_params(3);
 so_mean = mode_params(4);
 so_std  = mode_params(5);
 theta   = mode_params(6);
-if is_phase
-    fstd = sqrt(fstd);   % variance -> sigma (matches the emitted FreqStd)
-end
 
 thr = -log(1 - prob);
 

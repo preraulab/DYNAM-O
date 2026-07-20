@@ -4,9 +4,9 @@ function tests = test_paramfit_model_recovery
 %   Self-contained (no golden snapshot). Synthesize a SOPH surface from
 %   KNOWN rotGauss / vmGauss parameters, fit with param_basis_power /
 %   param_basis_phase, and verify the planted parameters are recovered.
-%   Mirrors the Rust paramfit_model_recovery test with the SAME planted
-%   values, so both languages must recover the same ground truth -> a
-%   cross-language fidelity check that needs no committed snapshot.
+%   The power values mirror the Rust paramfit_model_recovery test. Phase
+%   frequency widths use the standard-deviation contract; the companion Rust
+%   implementation must use the same contract for cross-language fidelity.
 tests = functiontests(localfunctions);
 end
 
@@ -16,6 +16,49 @@ repo_root = fileparts(this_dir);
 if isempty(which('runDYNAMO'))
     addpath(repo_root); init_DYNAMO();
 end
+end
+
+function test_vmgauss_uses_frequency_standard_deviation(testCase)
+amp = 2;
+ymean = 10;
+ystd = 2.5;
+z_center = vmGauss(0, ymean, amp, ymean, ystd, 0, 1, 0);
+z_one_std = vmGauss(0, ymean + ystd, amp, ymean, ystd, 0, 1, 0);
+
+testCase.verifyEqual(z_one_std / z_center, exp(-1), 'AbsTol', 1e-12);
+end
+
+function test_phase_width_defaults_preserve_historical_range(testCase)
+opts = param_basis_opts('phase');
+testCase.verifyEqual(opts.LB_default(3), 1);
+testCase.verifyEqual(opts.UB_default(3), sqrt(15), 'AbsTol', eps);
+end
+
+function test_phase_volume_uses_frequency_standard_deviation(testCase)
+params = [0.05, 11, 2, 0, 1.2, 0];
+out = createSOPHparamfitStruct('phase', params, [], [], [], []);
+out_class = DYNAMO.createSOPHparamfitStruct('phase', params, [], [], [], []);
+k = 1 / params(5)^2;
+expected = params(1) * (2*pi) * besseli(0, k, 1) * sqrt(pi) * params(3);
+
+testCase.verifyEqual(out.params.FreqStd, params(3));
+testCase.verifyEqual(out.params.Volume, expected, 'RelTol', 1e-12);
+testCase.verifyEqual(out_class.params.FreqStd, params(3));
+testCase.verifyEqual(out_class.params.Volume, expected, 'RelTol', 1e-12);
+end
+
+function test_phase_peak_assignment_uses_frequency_standard_deviation(testCase)
+prob = 0.95;
+fmean = 10;
+fstd = 2;
+freq_radius = fstd * sqrt(-log(1 - prob));
+stats_table = table( ...
+    [fmean + 0.99*freq_radius; fmean + 1.01*freq_radius], ...
+    [0; 0], 'VariableNames', {'PeakFrequency', 'SOphase'});
+
+idx = get_mode_peaks([1, fmean, fstd, 0, 0.5, 0], ...
+    'phase', stats_table, prob);
+testCase.verifyEqual(idx, [true; false]);
 end
 
 function test_power_recovers_planted_modes_with_column_bins(testCase)
@@ -53,9 +96,10 @@ end
 function test_phase_recovers_planted_modes_with_column_bins(testCase)
 phase_bins = linspace(-pi, pi, 41).';
 freq_bins  = linspace(2, 18, 65).';
-% [amp, fmean, fstd(VARIANCE-form), phasepref, recikappa, theta].
-planted = [0.05 11 2.0 1.0 1.2 0.05; ...
-           0.04 15 2.5 -1.5 1.5 -0.05];
+% [amp, fmean, fstd, phasepref, recikappa, theta], with fstd in Hz.
+% Square roots preserve the modeled widths of the historical test modes.
+planted = [0.05 11 sqrt(2.0) 1.0 1.2 0.05; ...
+           0.04 15 sqrt(2.5) -1.5 1.5 -0.05];
 [Fg, PHg] = meshgrid(freq_bins, phase_bins);         % [nPhase x nFreq]
 SOPhH = zeros(size(Fg));
 for m = 1:size(planted, 1)
@@ -78,6 +122,7 @@ for k = 1:size(pairs, 1)
     p = planted(pairs(k, 1), :);
     r = params(pairs(k, 2), :);
     testCase.verifyLessThan(abs(r(2) - p(2)), 0.3, 'FreqMean');
+    testCase.verifyLessThan(abs(r(3) - p(3)) / p(3), 0.12, 'FreqStd');
     testCase.verifyLessThan(abs(sin(r(4) - p(4))), 0.15, 'phasepref');  % circular
 end
 end
