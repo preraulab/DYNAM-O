@@ -104,11 +104,7 @@ planted = [0.05 11 sqrt(2.0) 1.0 1.2 0.05; ...
 SOPhH = zeros(size(Fg));
 for m = 1:size(planted, 1)
     p = planted(m, :);
-    dy = Fg - p(2);
-    kappa = 1 / p(5)^2;
-    mode = p(1) .* exp(-(dy ./ p(3)).^2) .* ...
-        exp(kappa*cos(PHg - p(4) + dy.*sin(p(6))) - kappa);
-    SOPhH = SOPhH + mode;
+    SOPhH = SOPhH + vmGauss(PHg, Fg, p(1), p(2), p(3), p(4), p(5), p(6));
 end
 SOPhH = SOPhH + 0.001;                               % constant background (matches Rust zzz)
 SOPhH = SOPhH ./ sum(SOPhH, 1);                      % phase-normalize, as in production
