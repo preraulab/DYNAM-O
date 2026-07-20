@@ -107,7 +107,7 @@ addParameter(p, 'SOPH_clim_prctiles', default_params.SOPH_clim_prctiles, @(x) va
 addParameter(p, 'verbose', default_params.verbose, @(x) validateattributes(x, {'logical', 'numeric'}, {'scalar'}));
 
 parse(p, SOPH, power_bins, freq_bins, varargin{:});
-parser_results = struct2cell(p.Results); %#ok<NASGU>
+parser_results = struct2cell(p.Results);
 field_names = fieldnames(p.Results);
 
 %Automatically add parser results to the workspace
@@ -138,7 +138,7 @@ last_UBi = [];
 last_LBi = [];
 
 % Set up empty outputs in case the function fails
-params=[];
+params=[]; %#ok<*NASGU>
 fitobj=[];
 gof=[];
 model_SOPH=[];

@@ -107,7 +107,7 @@ addParameter(p, 'SOPH_clim_prctiles', default_params.SOPH_clim_prctiles, @(x) va
 addParameter(p, 'verbose', default_params.verbose, @(x) validateattributes(x, {'logical', 'numeric'}, {'scalar'}));
 
 parse(p, SOPhH, phase_bins, freq_bins, varargin{:});
-parser_results = struct2cell(p.Results); %#ok<NASGU>
+parser_results = struct2cell(p.Results);
 field_names = fieldnames(p.Results);
 
 %Automatically add parser results to the workspace
@@ -140,7 +140,7 @@ last_LBi = [];
 % Set up empty outputs in case the function fails (soft-fail returns
 % leave all outputs at these empties so callers can detect failure with
 % a simple isempty(params) check).
-params = [];
+params = []; %#ok<*NASGU>
 fitobj = [];
 gof = [];
 model_SOPhH = [];
