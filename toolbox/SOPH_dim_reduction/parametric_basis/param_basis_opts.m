@@ -41,10 +41,10 @@ function default_params = param_basis_opts(type, varargin)
 %       'kneedle_tol' - Double, iteration tolerance for the kneedle algorithm (default: 0.01)
 %       'UB_default' - Upper bounds for the fitting parameters - [amp0, fmean0, fstd0,    pmean0, pstd0, theta0]
 %                                          (default for 'power': [nan,  nan,    2.5,      nan,    30,    0.03],
-%                                           default for 'phase': [nan,  nan,    sqrt(15), inf,    2*pi,  pi/3])
+%                                           default for 'phase': [nan,  nan,    sqrt(15), 2*pi,   2*pi,  pi/3])
 %       'LB_default' - Lower bounds for the fitting parameters - [amp0, fmean0, fstd0, pmean0, pstd0, theta0]
 %                                          (default for 'power': [nan,  nan,    0.1,   nan,    2.5,   -0.03],
-%                                           default for 'phase': [nan,  nan,    1,     -inf,   pi/5,  -pi/3])
+%                                           default for 'phase': [nan,  nan,    1,     -2*pi,  pi/5,  -pi/3])
 %       'constrain_freq_center' - Keep the frequency center within its configured bounds; false uses [-inf, inf] (default: true)
 %       'constrain_power_center' - Keep the SO-power center within its configured bounds; false uses [-inf, inf] (default: true; power only)
 %       'constrain_phase_center' - Keep the SO-phase center within its configured bounds; false uses [-inf, inf] (default: true; phase only)
@@ -138,8 +138,10 @@ default_params_phase.min_dr2 = 0.01;
 default_params_phase.min_pctr2 = 0.025;
 default_params_phase.kneedle_tol = 0.01;
 % fitted parameters follow this order: [amp0, fmean0, fstd0,    pmean0, pstd0, theta0];
-default_params_phase.UB_default =      [nan,  nan,    sqrt(15), inf,    2*pi,  pi/3];
-default_params_phase.LB_default =      [nan,  nan,    1,        -inf,   pi/5,  -pi/3];
+% Two periods retain every circular phase class while allowing fits to cross
+% the +/-pi seam without leaving the phase center completely unbounded.
+default_params_phase.UB_default =      [nan,  nan,    sqrt(15), 2*pi,   2*pi,  pi/3];
+default_params_phase.LB_default =      [nan,  nan,    1,        -2*pi,  pi/5,  -pi/3];
 default_params_phase.constrain_freq_center = true;
 default_params_phase.constrain_phase_center = true;
 default_params_phase.plot_on = 1;

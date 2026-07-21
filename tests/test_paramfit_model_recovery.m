@@ -34,6 +34,12 @@ testCase.verifyEqual(opts.LB_default(3), 1);
 testCase.verifyEqual(opts.UB_default(3), sqrt(15), 'AbsTol', eps);
 end
 
+function test_phase_center_defaults_span_two_periods(testCase)
+opts = param_basis_opts('phase');
+testCase.verifyEqual(opts.LB_default(4), -2*pi, 'AbsTol', eps);
+testCase.verifyEqual(opts.UB_default(4), 2*pi, 'AbsTol', eps);
+end
+
 function test_center_constraint_options_parse(testCase)
 power_defaults = param_basis_opts('power');
 phase_defaults = param_basis_opts('phase');
@@ -113,6 +119,29 @@ testCase.assertSize(phase_freq_params, [1, 6]);
 testCase.assertSize(phase_axis_params, [1, 6]);
 testCase.verifyLessThan(abs(phase_freq_params(1, 2) - phase_mode(2)), 0.1);
 testCase.verifyLessThan(abs(wrapToPi(phase_axis_params(1, 4) - phase_mode(4))), 0.1);
+end
+
+function test_default_phase_bounds_allow_crossing_pi_seam(testCase)
+phase_bins = linspace(-pi, pi, 81);
+freq_bins = linspace(2, 18, 65).';
+[PHg, Fg] = meshgrid(phase_bins, freq_bins);
+planted = [0.07, 10.5, 1.4, -pi + 0.12, 0.9, 0.42];
+SOPhH = normalized_vmGauss(PHg, Fg, true, 0.012, 0.35, 0.003, ...
+    planted(1), planted(2), planted(3), ...
+    planted(4), planted(5), planted(6));
+seed = [0.06, 10.2, 1.2, pi - 0.04, 1, 0.30];
+
+[params, fitobj, gof] = param_basis_phase(SOPhH, phase_bins, freq_bins, ...
+    'prefix_modes', seed, 'prefix_modes_order', 0, ...
+    'max_peaks', 1, 'criterion', 'max', 'min_amp', 0, ...
+    'verbose', false, 'plot_on', false);
+
+raw_params = get_mode_params(fitobj);
+testCase.assertSize(params, [1, 6]);
+testCase.verifyGreaterThan(raw_params(1, 4), pi, ...
+    'The optimizer must be able to cross the +pi seam from this seed.');
+testCase.verifyLessThan(abs(wrapToPi(raw_params(1, 4) - planted(4))), 1e-4);
+testCase.verifyGreaterThan(gof.adjrsquare, 0.9999);
 end
 
 function test_phase_volume_uses_frequency_standard_deviation(testCase)
