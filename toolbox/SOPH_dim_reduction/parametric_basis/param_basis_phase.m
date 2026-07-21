@@ -545,7 +545,7 @@ for ii = 1:max_peaks
     e_amp = B0i(:, 1);
     for jj = 1:size(B0i, 1)
         [~, freq_idx] = min(abs(freq_bins - B0i(jj, 2)));
-        [~, phase_idx] = min(abs(phase_bins - B0i(jj, 4)));
+        [~, phase_idx] = min(abs(wrapToPi(phase_bins - B0i(jj, 4))));
         e_amp(jj) = model_SOPhH_nosin(freq_idx, phase_idx);
     end
     % ----------------------------------
@@ -721,7 +721,7 @@ model_SOPhH_nosin = feval(fitobj_nosin, phase_grid, freq_grid);
 
 for ii = 1:size(params, 1)
     [~, freq_idx] = min(abs(freq_bins - params(ii, 2)));
-    [~, phase_idx] = min(abs(phase_bins - params(ii, 4)));
+    [~, phase_idx] = min(abs(wrapToPi(phase_bins - params(ii, 4))));
     params(ii, 1) = model_SOPhH_nosin(freq_idx, phase_idx);
 end
 

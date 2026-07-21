@@ -61,6 +61,43 @@ idx = get_mode_peaks([1, fmean, fstd, 0, 0.5, 0], ...
 testCase.verifyEqual(idx, [true; false]);
 end
 
+function test_phase_empirical_amplitude_uses_circular_distance(testCase)
+phase_bins = linspace(-pi, pi, 41);
+freq_bins = linspace(2, 18, 65).';
+[PHg, Fg] = meshgrid(phase_bins, freq_bins);
+
+% Fit the phase-zero mode through its equivalent 2*pi representation. Both
+% the iteration-time min_amp check and final Density lookup must use the
+% shortest angular distance to the phase bins. Rust implementations should
+% apply the same circular-distance contract before selecting a phase bin.
+planted = [0.05, 10, 1.5, 0, 1, 0];
+SOPhH = normalized_vmGauss(PHg, Fg, true, 0, 0, 0.001, ...
+    planted(1), planted(2), planted(3), planted(4), planted(5), planted(6));
+prefix_mode = planted;
+prefix_mode(4) = 2*pi;
+LB = [0.001, 9, 0.5, 2*pi - 0.2, 0.2, -0.2];
+UB = [1, 11, 3, 2*pi + 0.2, 2, 0.2];
+
+[params, fitobj] = param_basis_phase(SOPhH, phase_bins, freq_bins, ...
+    'prefix_modes', prefix_mode, 'prefix_modes_order', 0, ...
+    'max_peaks', 1, 'criterion', 'max', 'min_amp', 0.02, ...
+    'LB_default', LB, 'UB_default', UB, ...
+    'verbose', false, 'plot_on', false);
+
+testCase.assertSize(params, [1, 6], ...
+    'A 2*pi phase alias must not fail the min_amp check.');
+raw_params = get_mode_params(fitobj);
+fitobj_nosin = fitobj;
+fitobj_nosin.xxx = 0;
+model_nosin = feval(fitobj_nosin, PHg, Fg);
+[~, freq_idx] = min(abs(freq_bins - raw_params(1, 2)));
+[~, phase_idx] = min(abs(wrapToPi(phase_bins - raw_params(1, 4))));
+expected_amp = model_nosin(freq_idx, phase_idx);
+
+testCase.verifyEqual(params(1, 1), expected_amp, 'AbsTol', 1e-12, ...
+    'Density must be sampled at the circularly nearest phase bin.');
+end
+
 function test_power_recovers_planted_modes_with_column_bins(testCase)
 power_bins = linspace(-5, 25, 61).';
 freq_bins  = linspace(2, 18, 65).';
