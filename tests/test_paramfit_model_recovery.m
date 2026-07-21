@@ -34,6 +34,116 @@ testCase.verifyEqual(opts.LB_default(3), 1);
 testCase.verifyEqual(opts.UB_default(3), sqrt(15), 'AbsTol', eps);
 end
 
+function test_phase_center_defaults_span_two_periods(testCase)
+opts = param_basis_opts('phase');
+testCase.verifyEqual(opts.LB_default(4), -2*pi, 'AbsTol', eps);
+testCase.verifyEqual(opts.UB_default(4), 2*pi, 'AbsTol', eps);
+end
+
+function test_center_constraint_options_parse(testCase)
+power_defaults = param_basis_opts('power');
+phase_defaults = param_basis_opts('phase');
+power_opts = param_basis_opts('power', ...
+    'constrain_freq_center', false, 'constrain_power_center', false);
+phase_opts = param_basis_opts('phase', ...
+    'constrain_freq_center', false, 'constrain_phase_center', false);
+
+testCase.verifyTrue(power_defaults.constrain_freq_center);
+testCase.verifyTrue(power_defaults.constrain_power_center);
+testCase.verifyTrue(phase_defaults.constrain_freq_center);
+testCase.verifyTrue(phase_defaults.constrain_phase_center);
+testCase.verifyFalse(isfield(power_defaults, 'constrain_phase_center'));
+testCase.verifyFalse(isfield(phase_defaults, 'constrain_power_center'));
+testCase.verifyFalse(power_opts.constrain_freq_center);
+testCase.verifyFalse(power_opts.constrain_power_center);
+testCase.verifyFalse(phase_opts.constrain_freq_center);
+testCase.verifyFalse(phase_opts.constrain_phase_center);
+testCase.verifyError(@() param_basis_opts('power', ...
+    'constrain_freq_center', 2), 'MATLAB:expectedBinary');
+testCase.verifyError(@() param_basis_opts('phase', ...
+    'constrain_phase_center', [true, false]), 'MATLAB:expectedScalar');
+end
+
+function test_center_constraint_flags_apply_independently(testCase)
+freq_bins = linspace(2, 18, 65).';
+
+power_bins = linspace(-5, 25, 61);
+[Pg, Fg] = meshgrid(power_bins, freq_bins);
+power_mode = [8, 10, 1, 5, 4, 0];
+SOPH = rotGauss(Pg, Fg, power_mode(1), power_mode(2), ...
+    power_mode(3), power_mode(4), power_mode(5), power_mode(6)) + 0.2;
+power_common = { ...
+    'prefix_modes', power_mode, 'prefix_modes_order', 0, ...
+    'max_peaks', 1, 'criterion', 'max', 'min_amp', 0, ...
+    'min_freq_diff', 0, 'verbose', false, 'plot_on', false};
+
+power_freq_params = param_basis_power(SOPH, power_bins, freq_bins, ...
+    power_common{:}, ...
+    'LB_default', [0.001, 11, 0.1, -5, 2.5, -0.03], ...
+    'UB_default', [20, 12, 2.5, 25, 30, 0.03], ...
+    'constrain_freq_center', false, 'constrain_power_center', true);
+power_axis_params = param_basis_power(SOPH, power_bins, freq_bins, ...
+    power_common{:}, ...
+    'LB_default', [0.001, 2, 0.1, 6, 2.5, -0.03], ...
+    'UB_default', [20, 18, 2.5, 7, 30, 0.03], ...
+    'constrain_freq_center', true, 'constrain_power_center', false);
+
+testCase.assertSize(power_freq_params, [1, 6]);
+testCase.assertSize(power_axis_params, [1, 6]);
+testCase.verifyLessThan(abs(power_freq_params(1, 2) - power_mode(2)), 0.1);
+testCase.verifyLessThan(abs(power_axis_params(1, 4) - power_mode(4)), 0.1);
+
+phase_bins = linspace(-pi, pi, 41);
+[PHg, Fg] = meshgrid(phase_bins, freq_bins);
+phase_mode = [0.05, 10, 1.5, 0, 1, 0];
+SOPhH = normalized_vmGauss(PHg, Fg, true, 0, 0, 0.001, ...
+    phase_mode(1), phase_mode(2), phase_mode(3), ...
+    phase_mode(4), phase_mode(5), phase_mode(6));
+phase_common = { ...
+    'prefix_modes', phase_mode, 'prefix_modes_order', 0, ...
+    'max_peaks', 1, 'criterion', 'max', 'min_amp', 0, ...
+    'verbose', false, 'plot_on', false};
+
+phase_freq_params = param_basis_phase(SOPhH, phase_bins, freq_bins, ...
+    phase_common{:}, ...
+    'LB_default', [0.001, 11, 1, -pi, 0.2, -0.2], ...
+    'UB_default', [1, 12, 3, pi, 2, 0.2], ...
+    'constrain_freq_center', false, 'constrain_phase_center', true);
+phase_axis_params = param_basis_phase(SOPhH, phase_bins, freq_bins, ...
+    phase_common{:}, ...
+    'LB_default', [0.001, 2, 1, 1, 0.2, -0.2], ...
+    'UB_default', [1, 18, 3, 2, 2, 0.2], ...
+    'constrain_freq_center', true, 'constrain_phase_center', false);
+
+testCase.assertSize(phase_freq_params, [1, 6]);
+testCase.assertSize(phase_axis_params, [1, 6]);
+testCase.verifyLessThan(abs(phase_freq_params(1, 2) - phase_mode(2)), 0.1);
+testCase.verifyLessThan(abs(wrapToPi(phase_axis_params(1, 4) - phase_mode(4))), 0.1);
+end
+
+function test_default_phase_bounds_allow_crossing_pi_seam(testCase)
+phase_bins = linspace(-pi, pi, 81);
+freq_bins = linspace(2, 18, 65).';
+[PHg, Fg] = meshgrid(phase_bins, freq_bins);
+planted = [0.07, 10.5, 1.4, -pi + 0.12, 0.9, 0.42];
+SOPhH = normalized_vmGauss(PHg, Fg, true, 0.012, 0.35, 0.003, ...
+    planted(1), planted(2), planted(3), ...
+    planted(4), planted(5), planted(6));
+seed = [0.06, 10.2, 1.2, pi - 0.04, 1, 0.30];
+
+[params, fitobj, gof] = param_basis_phase(SOPhH, phase_bins, freq_bins, ...
+    'prefix_modes', seed, 'prefix_modes_order', 0, ...
+    'max_peaks', 1, 'criterion', 'max', 'min_amp', 0, ...
+    'verbose', false, 'plot_on', false);
+
+raw_params = get_mode_params(fitobj);
+testCase.assertSize(params, [1, 6]);
+testCase.verifyGreaterThan(raw_params(1, 4), pi, ...
+    'The optimizer must be able to cross the +pi seam from this seed.');
+testCase.verifyLessThan(abs(wrapToPi(raw_params(1, 4) - planted(4))), 1e-4);
+testCase.verifyGreaterThan(gof.adjrsquare, 0.9999);
+end
+
 function test_phase_volume_uses_frequency_standard_deviation(testCase)
 params = [0.05, 11, 2, 0, 1.2, 0];
 out = createSOPHparamfitStruct('phase', params, [], [], [], []);

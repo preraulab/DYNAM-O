@@ -102,6 +102,8 @@ addParameter(p, 'min_pctr2', default_params.min_pctr2, @isnumeric);
 addParameter(p, 'kneedle_tol', default_params.kneedle_tol, @isscalar);
 addParameter(p, 'UB_default', default_params.UB_default, @(x) isnumeric(x) && numel(x) == 6);
 addParameter(p, 'LB_default', default_params.LB_default, @(x) isnumeric(x) && numel(x) == 6);
+addParameter(p, 'constrain_freq_center', default_params.constrain_freq_center, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary', 'scalar'}));
+addParameter(p, 'constrain_phase_center', default_params.constrain_phase_center, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary', 'scalar'}));
 addParameter(p, 'plot_on', default_params.plot_on, @(x) (islogical(x) || isnumeric(x)) && isscalar(x));
 addParameter(p, 'SOPH_clim_prctiles', default_params.SOPH_clim_prctiles, @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
 addParameter(p, 'verbose', default_params.verbose, @(x) validateattributes(x, {'logical', 'numeric'}, {'scalar'}));
@@ -311,6 +313,16 @@ if isnan(UB_default(4))
 end
 if isnan(LB_default(4))
     LB_default(4) = min(phase_bins(valid_phase_bins));
+end
+
+% Remove configured or data-filled center bounds only when requested.
+if ~constrain_freq_center
+    UB_default(2) = inf;
+    LB_default(2) = -inf;
+end
+if ~constrain_phase_center
+    UB_default(4) = inf;
+    LB_default(4) = -inf;
 end
 
 % Add prefix modes to the list of watershed regions
