@@ -45,6 +45,9 @@ function default_params = param_basis_opts(type, varargin)
 %       'LB_default' - Lower bounds for the fitting parameters - [amp0, fmean0, fstd0, pmean0, pstd0, theta0]
 %                                          (default for 'power': [nan,  nan,    0.1,   nan,    2.5,   -0.03],
 %                                           default for 'phase': [nan,  nan,    1,     -inf,   pi/5,  -pi/3])
+%       'constrain_freq_center' - Keep the frequency center within its configured bounds; false uses [-inf, inf] (default: true)
+%       'constrain_power_center' - Keep the SO-power center within its configured bounds; false uses [-inf, inf] (default: true; power only)
+%       'constrain_phase_center' - Keep the SO-phase center within its configured bounds; false uses [-inf, inf] (default: true; phase only)
 %       'plot_on' - Flag to plot: 0 plot nothing, 1: plot the final result, 2: plot iterations, 3: plot iterations and final (default: 1)
 %       'SOPH_clim_prctiles' - percentiles used to scale the heatmap color on SO feature histograms (default: [5, 98])
 %       'verbose' - Flag to display detailed output (default: true)
@@ -109,6 +112,8 @@ default_params_power.kneedle_tol = 0.01;
 % fitted parameters follow this order: [amp0, fmean0, fstd0, pmean0, pstd0, theta0];
 default_params_power.UB_default =      [nan,  nan,    2.5,   nan,    30,    0.03];
 default_params_power.LB_default =      [nan,  nan,    0.1,   nan,    2.5,   -0.03];
+default_params_power.constrain_freq_center = true;
+default_params_power.constrain_power_center = true;
 default_params_power.plot_on = 1;
 default_params_power.SOPH_clim_prctiles = [5, 98];
 default_params_power.verbose = true;
@@ -135,6 +140,8 @@ default_params_phase.kneedle_tol = 0.01;
 % fitted parameters follow this order: [amp0, fmean0, fstd0,    pmean0, pstd0, theta0];
 default_params_phase.UB_default =      [nan,  nan,    sqrt(15), inf,    2*pi,  pi/3];
 default_params_phase.LB_default =      [nan,  nan,    1,        -inf,   pi/5,  -pi/3];
+default_params_phase.constrain_freq_center = true;
+default_params_phase.constrain_phase_center = true;
 default_params_phase.plot_on = 1;
 default_params_phase.SOPH_clim_prctiles = [5, 98];
 default_params_phase.verbose = true;
@@ -180,6 +187,13 @@ addParameter(p, 'min_pctr2', default_params.min_pctr2, @isnumeric);
 addParameter(p, 'kneedle_tol', default_params.kneedle_tol, @isscalar);
 addParameter(p, 'UB_default', default_params.UB_default, @(x) isnumeric(x) && numel(x) == 6);
 addParameter(p, 'LB_default', default_params.LB_default, @(x) isnumeric(x) && numel(x) == 6);
+addParameter(p, 'constrain_freq_center', default_params.constrain_freq_center, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary', 'scalar'}));
+switch type
+    case 'power'
+        addParameter(p, 'constrain_power_center', default_params.constrain_power_center, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary', 'scalar'}));
+    case 'phase'
+        addParameter(p, 'constrain_phase_center', default_params.constrain_phase_center, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary', 'scalar'}));
+end
 addParameter(p, 'plot_on', default_params.plot_on, @(x) validateattributes(x, {'logical', 'numeric'}, {'scalar'}));
 addParameter(p, 'SOPH_clim_prctiles', default_params.SOPH_clim_prctiles, @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
 addParameter(p, 'verbose', default_params.verbose, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));

@@ -34,6 +34,30 @@ testCase.verifyEqual(opts.LB_default(3), 1);
 testCase.verifyEqual(opts.UB_default(3), sqrt(15), 'AbsTol', eps);
 end
 
+function test_center_constraint_options_parse(testCase)
+power_defaults = param_basis_opts('power');
+phase_defaults = param_basis_opts('phase');
+power_opts = param_basis_opts('power', ...
+    'constrain_freq_center', false, 'constrain_power_center', false);
+phase_opts = param_basis_opts('phase', ...
+    'constrain_freq_center', false, 'constrain_phase_center', false);
+
+testCase.verifyTrue(power_defaults.constrain_freq_center);
+testCase.verifyTrue(power_defaults.constrain_power_center);
+testCase.verifyTrue(phase_defaults.constrain_freq_center);
+testCase.verifyTrue(phase_defaults.constrain_phase_center);
+testCase.verifyFalse(isfield(power_defaults, 'constrain_phase_center'));
+testCase.verifyFalse(isfield(phase_defaults, 'constrain_power_center'));
+testCase.verifyFalse(power_opts.constrain_freq_center);
+testCase.verifyFalse(power_opts.constrain_power_center);
+testCase.verifyFalse(phase_opts.constrain_freq_center);
+testCase.verifyFalse(phase_opts.constrain_phase_center);
+testCase.verifyError(@() param_basis_opts('power', ...
+    'constrain_freq_center', 2), 'MATLAB:expectedBinary');
+testCase.verifyError(@() param_basis_opts('phase', ...
+    'constrain_phase_center', [true, false]), 'MATLAB:expectedScalar');
+end
+
 function test_phase_volume_uses_frequency_standard_deviation(testCase)
 params = [0.05, 11, 2, 0, 1.2, 0];
 out = createSOPHparamfitStruct('phase', params, [], [], [], []);
