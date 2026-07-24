@@ -28,7 +28,7 @@ classdef DYNAMO < handle
     %   and fitSplineBasis separately on the resulting object.
     %
     %   Public Properties:
-    %       stats_table, SOPHs, spect, stimes, sfreqs,
+    %       stats_table, hist_peakidx, SOPHs, spect, stimes, sfreqs,
     %       data_time_range, t_time_range, artifacts,
     %       data, Fs, stage_times, stage_vals, time_range,
     %       baseline_options, detection_options, SOPH_options,
@@ -127,6 +127,7 @@ classdef DYNAMO < handle
 
         % Analysis outputs
         stats_table         % Time-frequency peaks table
+        hist_peakidx = logical([]) % TF peaks included in SOPH histograms
         SOPHs               % SO-power/phase histograms structure
         spect               % Spectrogram matrix
         stimes              % Spectrogram time vector
@@ -302,8 +303,8 @@ classdef DYNAMO < handle
             %   Description:
             %       Runs the full DYNAM-O pipeline (wrapped runDYNAMO function)
             %       using the current object settings and stores the outputs in
-            %       the object's properties: stats_table, SOPHs, spect, stimes,
-            %       sfreqs, artifacts.
+            %       the object's properties: stats_table, hist_peakidx, SOPHs,
+            %       spect, stimes, sfreqs, artifacts.
             %
             %   Inputs:
             %       obj: DYNAMO object (must be initialized)
@@ -355,6 +356,7 @@ classdef DYNAMO < handle
                 obj.baseline_options, obj.detection_options, obj.SOPH_options, ...
                 'fit_param_basis', false, 'fit_spline_basis', false, 'plot_on', false, ...
                 extra_args{:});
+            obj.hist_peakidx = obj.reconstructHistPeakidx();
         end
 
         function obj = updateOptions(obj, varargin)
@@ -462,6 +464,10 @@ classdef DYNAMO < handle
             assert(obj.isInitialized(), 'Object not initialized properly.');
             assert(~isempty(obj.stats_table) && ~isempty(obj.SOPHs), 'Run the pipeline first.');
 
+            if isempty(obj.hist_peakidx) || numel(obj.hist_peakidx) ~= height(obj.stats_table)
+                obj.hist_peakidx = obj.reconstructHistPeakidx();
+            end
+
             fh = displaySummaryPlot('stage_times', obj.stage_times, ...
                 'stage_vals', obj.stage_vals, ...
                 'artifacts', obj.artifacts, ...
@@ -470,6 +476,8 @@ classdef DYNAMO < handle
                 'Fs', obj.Fs, ...
                 'time_range', obj.time_range, ...
                 'stats_table', obj.stats_table, ...
+                'hist_peakidx', logical(obj.hist_peakidx), ...
+                'SOPH_stages', obj.SOPH_options.SOPH_stages, ...
                 'SOpower_norm', obj.SOPHs.SOpower_norm, ...
                 'SOpower_times', obj.SOPHs.SOpower_times, ...
                 'SOpower_norm_method', obj.SOPH_options.SOpower_norm_method, ...
@@ -1502,6 +1510,22 @@ classdef DYNAMO < handle
             %   Returns true if the object contains valid data and configuration.
             tf = ~isempty(obj.data) && ~isempty(obj.Fs) && ...
                 ~isempty(obj.stage_times) && ~isempty(obj.stage_vals);
+        end
+
+        function hist_peakidx = reconstructHistPeakidx(obj)
+            % Recreate SOpowerHistogram's per-peak inclusion mask from
+            % properties retained in the stats table and DYNAMO object.
+            hist_peakidx = logical([]);
+            if ~istable(obj.stats_table) || ...
+                    ~all(ismember({'PeakTime', 'SOpower'}, obj.stats_table.Properties.VariableNames))
+                return
+            end
+
+            peak_stages = interp1(obj.stage_times, obj.stage_vals, ...
+                obj.stats_table.PeakTime, 'previous');
+            peak_stages(isnan(peak_stages)) = 0;
+            hist_peakidx = logical(ismember(peak_stages, obj.SOPH_options.SOPH_stages) & ...
+                ~isnan(obj.stats_table.SOpower));
         end
     end
 

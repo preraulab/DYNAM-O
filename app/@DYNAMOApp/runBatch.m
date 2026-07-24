@@ -647,6 +647,7 @@ function runBatch(app, dataList, stagingList)
             % Clear cached compute state from any prior channel.
             app.SOPHs            = [];
             app.stats_table      = [];
+            app.hist_peakidx     = logical([]);
             app.auxiliary_data   = [];
             app.artifacts        = [];
             app.Fs               = [];
