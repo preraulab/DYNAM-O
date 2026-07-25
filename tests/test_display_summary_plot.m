@@ -74,7 +74,10 @@ observed_size = observed_size(order);
 
 pmin = prctile(stats_table.Volume(hist_peakidx), 50);
 pmax = prctile(stats_table.Volume(hist_peakidx), 100);
-expected_size = min(stats_table.Volume, pmax) / pmin * 0.5;
+max_peak_size = 10;
+relative_peak_size = min(stats_table.Volume, pmax) / pmin;
+relative_max_size = pmax / pmin;
+expected_size = relative_peak_size / relative_max_size * max_peak_size;
 display_peakidx = ~isnan(stats_table.SOphase);
 expected_size = expected_size(display_peakidx);
 [expected_x, order] = sort(stats_table.PeakTime(display_peakidx)/3600);
@@ -82,6 +85,7 @@ testCase.verifyEqual(observed_x, expected_x, 'AbsTol', eps);
 expected_frequency = stats_table.PeakFrequency(display_peakidx);
 testCase.verifyEqual(observed_y, expected_frequency(order));
 testCase.verifyEqual(observed_size, expected_size(order), 'AbsTol', eps);
+testCase.verifyEqual(max(observed_size), max_peak_size, 'AbsTol', eps);
 testCase.verifyTrue(all(isfinite(observed_size) & observed_size > 0));
 
 testCase.verifyEqual(scatters.CData(:), stats_table.SOphase(display_peakidx));

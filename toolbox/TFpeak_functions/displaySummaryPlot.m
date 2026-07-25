@@ -332,9 +332,12 @@ if isgraphics(ax(1))
     if isempty(stats_table_SOPH)
         peak_size = 0.5 * ones(height(stats_table), 1);
     else
+        max_peak_size = 10; % scatter SizeData in points^2
         pmin = prctile(stats_table_SOPH.Volume, peak_size_prctiles(1));
         pmax = prctile(stats_table_SOPH.Volume, peak_size_prctiles(2));
-        peak_size = min(stats_table.Volume, pmax) / pmin * 0.5;
+        relative_peak_size = min(stats_table.Volume, pmax) / pmin;
+        relative_max_size = pmax / pmin;
+        peak_size = relative_peak_size / relative_max_size * max_peak_size;
     end
 
     % Artifact-excluded peaks have NaN SO phase. Plot every remaining peak
