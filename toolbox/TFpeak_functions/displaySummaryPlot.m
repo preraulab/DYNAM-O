@@ -313,7 +313,7 @@ if isgraphics(ax(1))
         excluded_runs = [find(excluded_edges == 1), find(excluded_edges == -1) - 1];
 
         shade_color = [0.8, 0.8, 0.8];
-        shade_alpha = 0.35;
+        shade_alpha = 0.5;
         for k = 1:size(excluded_runs, 1)
             t0 = interval_edges(excluded_runs(k, 1)) / 3600;
             t1 = interval_edges(excluded_runs(k, 2) + 1) / 3600;

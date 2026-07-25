@@ -94,7 +94,7 @@ for k = 1:numel(patches)
     observed_spans(k, :) = [min(patches(k).XData), max(patches(k).XData)];
     testCase.verifyEqual(patches(k).YData(:), [2; 2; 25; 25]);
     testCase.verifyEqual(patches(k).FaceColor, [0.8 0.8 0.8]);
-    testCase.verifyEqual(patches(k).FaceAlpha, 0.35);
+    testCase.verifyEqual(patches(k).FaceAlpha, 0.5);
 end
 observed_spans = sortrows(observed_spans);
 expected_spans = [-1.5 -1; 0 2; 3 6; 7 9; 10 10.5] / 3600;
