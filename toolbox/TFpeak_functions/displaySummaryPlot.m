@@ -332,7 +332,9 @@ if isgraphics(ax(1))
     if isempty(stats_table_SOPH)
         peak_size = 0.5 * ones(height(stats_table), 1);
     else
-        max_peak_size = 10; % scatter SizeData in points^2
+        % scatter SizeData is marker area in points^2, unlike plot
+        % MarkerSize, which is a linear size in points.
+        max_peak_size = 10;
         pmin = prctile(stats_table_SOPH.Volume, peak_size_prctiles(1));
         pmax = prctile(stats_table_SOPH.Volume, peak_size_prctiles(2));
         relative_peak_size = min(stats_table.Volume, pmax) / pmin;
