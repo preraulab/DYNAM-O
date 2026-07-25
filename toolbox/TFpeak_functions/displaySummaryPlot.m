@@ -319,10 +319,10 @@ if isgraphics(ax(1))
             t0 = interval_edges(excluded_runs(k, 1)) / 3600;
             t1 = interval_edges(excluded_runs(k, 2) + 1) / 3600;
             if t1 > t0
-                shade_patches(end+1) = patch(ax(1), [t0 t1 t1 t0], ... %#ok<AGROW>
+                shade_patches(end+1) = patch(ax(1), [t0 t1 t1 t0], ...
                     [freq_limits(1) freq_limits(1) freq_limits(2) freq_limits(2)], ...
                     shade_color, 'FaceAlpha', shade_alpha, 'EdgeColor', 'none', ...
-                    'HandleVisibility', 'off');
+                    'HandleVisibility', 'off'); %#ok<*AGROW>
             end
         end
     end
