@@ -15,7 +15,7 @@ function [params, fitobj, gof, model_SOPH, power_wshed_img, f] = param_basis_pow
 %   Output:
 %       params: Matrix of fitted parameters. Columns are: [amp0, fmean0, fstd0, pmean0, pstd0, theta0]
 %       fitobj: Fitted object containing detailed fit information
-%       gof: Goodness of fit structure
+%       gof: Goodness of fit structure for the selected fitobj
 %       model_SOPH: Fitted model SOPH
 %       power_wshed_img: Image of watershed power distribution
 %       f: figure handle to the final result figure
@@ -128,6 +128,7 @@ end
 
 %% Save models and values for each iteration
 good_iter_models = {};
+good_iter_gofs = {};
 good_iter_rsquared = [];
 good_iter_numbers = [];
 
@@ -510,7 +511,7 @@ for ii = 1:max_peaks
     if revert
         if ii == 1
             disp('Max mode was insufficient to produce fit. Fitting plane and terminating.');
-            fitobj = fitfunc(SOPH(valid_freq_bins, valid_power_bins), power_bins(valid_power_bins), freq_bins(valid_freq_bins), [], LBi, UBi, false);
+            [fitobj, gof] = fitfunc(SOPH(valid_freq_bins, valid_power_bins), power_bins(valid_power_bins), freq_bins(valid_freq_bins), [], LBi, UBi, false);
             model_SOPH = feval(fitobj, power_grid, freq_grid);
             params = [];
             warning('param_basis_power:noModesFound', ...
@@ -541,6 +542,7 @@ for ii = 1:max_peaks
 
     else
         good_iter_models{end+1} = fitobj;
+        good_iter_gofs{end+1} = gof;
         good_iter_rsquared(end+1) = adjr2_i;
         good_iter_numbers(end+1) = ii;
 
@@ -632,7 +634,9 @@ switch criterion
         end
 end
 
-fitobj = good_iter_models{good_iter_numbers==fit_iteration};
+fit_ind = good_iter_numbers == fit_iteration;
+fitobj = good_iter_models{fit_ind};
+gof = good_iter_gofs{fit_ind};
 model_SOPH = feval(fitobj, power_grid, freq_grid);
 params = get_mode_params(fitobj);
 
