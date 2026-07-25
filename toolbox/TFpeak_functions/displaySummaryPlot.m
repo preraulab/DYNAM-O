@@ -313,8 +313,8 @@ if isgraphics(ax(1))
         excluded_edges = diff([false; interval_excluded; false]);
         excluded_runs = [find(excluded_edges == 1), find(excluded_edges == -1) - 1];
 
-        shade_color = [0.9, 0.9, 0.9];
-        shade_alpha = 0.75;
+        shade_color = [0.85, 0.85, 0.85];
+        shade_alpha = 0.6;
         for k = 1:size(excluded_runs, 1)
             t0 = interval_edges(excluded_runs(k, 1)) / 3600;
             t1 = interval_edges(excluded_runs(k, 2) + 1) / 3600;
