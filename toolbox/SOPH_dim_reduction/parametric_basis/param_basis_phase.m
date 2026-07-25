@@ -550,7 +550,12 @@ for ii = 1:max_peaks
     fitobj_nosin = fitobj;
     coeff_names = coeffnames(fitobj_nosin);
     if any(strcmpi(coeff_names, 'xxx'))
+        % Changing a coefficient invalidates confidence bounds on this copy.
+        % Suppress only that expected warning and restore the caller's state.
+        warning_state = warning('off', 'curvefit:sfit:subsasgn:coeffsClearingConfBounds');
+        warning_cleanup = onCleanup(@() warning(warning_state));
         fitobj_nosin.xxx = 0;
+        clear warning_cleanup
     end
 
     model_SOPhH_nosin = feval(fitobj_nosin, phase_grid, freq_grid);
@@ -726,7 +731,12 @@ params = get_mode_params(fitobj);
 fitobj_nosin = fitobj;
 coeff_names = coeffnames(fitobj_nosin);
 if any(strcmpi(coeff_names, 'xxx'))
+    % Changing a coefficient invalidates confidence bounds on this copy.
+    % Suppress only that expected warning and restore the caller's state.
+    warning_state = warning('off', 'curvefit:sfit:subsasgn:coeffsClearingConfBounds');
+    warning_cleanup = onCleanup(@() warning(warning_state));
     fitobj_nosin.xxx = 0;
+    clear warning_cleanup
 end
 
 model_SOPhH_nosin = feval(fitobj_nosin, phase_grid, freq_grid);

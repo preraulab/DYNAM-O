@@ -188,17 +188,26 @@ prefix_mode(4) = 2*pi;
 LB = [0.001, 9, 0.5, 2*pi - 0.2, 0.2, -0.2];
 UB = [1, 11, 3, 2*pi + 0.2, 2, 0.2];
 
+warning_id = 'curvefit:sfit:subsasgn:coeffsClearingConfBounds';
+warning_state = warning('error', warning_id);
+warning_cleanup = onCleanup(@() warning(warning_state));
+
 [params, fitobj] = param_basis_phase(SOPhH, phase_bins, freq_bins, ...
     'prefix_modes', prefix_mode, 'prefix_modes_order', 0, ...
     'max_peaks', 1, 'criterion', 'max', 'min_amp', 0.02, ...
     'LB_default', LB, 'UB_default', UB, ...
     'verbose', false, 'plot_on', false);
 
+warning_state_after_fit = warning('query', warning_id);
+testCase.verifyEqual(warning_state_after_fit.state, 'error', ...
+    'param_basis_phase must restore the caller warning state.');
 testCase.assertSize(params, [1, 6], ...
     'A 2*pi phase alias must not fail the min_amp check.');
 raw_params = get_mode_params(fitobj);
-fitobj_nosin = fitobj;
-fitobj_nosin.xxx = 0;
+coeff_values = coeffvalues(fitobj);
+coeff_values(strcmpi(coeffnames(fitobj), 'xxx')) = 0;
+fit_values = [num2cell(coeff_values), num2cell(probvalues(fitobj))];
+fitobj_nosin = sfit(fittype(fitobj), fit_values{:});
 model_nosin = feval(fitobj_nosin, PHg, Fg);
 [~, freq_idx] = min(abs(freq_bins - raw_params(1, 2)));
 [~, phase_idx] = min(abs(wrapToPi(phase_bins - raw_params(1, 4))));
