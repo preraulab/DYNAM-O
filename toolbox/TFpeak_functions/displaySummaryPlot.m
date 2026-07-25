@@ -32,7 +32,8 @@ function [fh] = displaySummaryPlot(varargin)
 %    >> TIME-FREQUENCY PEAK SCATTERPLOT
 %       stats_table:        table - features of each TFpeak
 %       hist_peakidx        [Px1] logical - which TFpeaks are counted in the feature histograms.
-%                           This population sets the scatter-plot dot-size scale; all TFpeaks are displayed.
+%                           This population sets the scatter-plot dot-size scale; all non-artifact
+%                           TFpeaks with valid SO phase are displayed.
 %       SOPH_stages:        [1xS] numeric - sleep-stage values the SO-power/phase histograms include
 %                           (0:Undef 1:N3 2:N2 3:N1 4:REM 5:Wake 6:Art). Periods whose stage is not
 %                           in this set or whose interpolated SOpower_norm is NaN are shaded gray behind
@@ -335,16 +336,11 @@ if isgraphics(ax(1))
         peak_size = min(stats_table.Volume, pmax) / pmin * 0.5;
     end
 
-    % Plot every TF peak. Peaks without an SO phase cannot use the circular
-    % colormap, so draw them in a neutral color rather than dropping them.
-    valid_phase = ~isnan(stats_table.SOphase);
-    scatter(ax(1), stats_table.PeakTime(valid_phase)/3600, stats_table.PeakFrequency(valid_phase), ...
-        peak_size(valid_phase), stats_table.SOphase(valid_phase), 'filled', 'MarkerEdgeColor', 'none');
-    if any(~valid_phase)
-        scatter(ax(1), stats_table.PeakTime(~valid_phase)/3600, stats_table.PeakFrequency(~valid_phase), ...
-            peak_size(~valid_phase), 'filled', 'MarkerFaceColor', [0.35, 0.35, 0.35], ...
-            'MarkerEdgeColor', 'none');
-    end
+    % Artifact-excluded peaks have NaN SO phase. Plot every remaining peak
+    % using the circular phase colormap.
+    display_peakidx = ~isnan(stats_table.SOphase);
+    scatter(ax(1), stats_table.PeakTime(display_peakidx)/3600, stats_table.PeakFrequency(display_peakidx), ...
+        peak_size(display_peakidx), stats_table.SOphase(display_peakidx), 'filled', 'MarkerEdgeColor', 'none');
 
     %Make circular colormap
     colormap(ax(1),circshift(hsv(2^12),-650))

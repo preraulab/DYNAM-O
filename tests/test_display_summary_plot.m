@@ -1,5 +1,5 @@
 function tests = test_display_summary_plot
-%TEST_DISPLAY_SUMMARY_PLOT  TF-peak scatter inclusion and SOPH masking.
+%TEST_DISPLAY_SUMMARY_PLOT  Non-artifact TF-peak display and SOPH masking.
 tests = functiontests(localfunctions);
 end
 
@@ -11,7 +11,7 @@ if isempty(which('runDYNAMO'))
 end
 end
 
-function test_scatter_shows_all_peaks_and_shades_excluded_times(testCase)
+function test_scatter_shows_nonartifact_peaks_and_shades_excluded_times(testCase)
 old_visibility = get(groot, 'DefaultFigureVisible');
 set(groot, 'DefaultFigureVisible', 'off');
 visibility_cleanup = onCleanup(@() set(groot, 'DefaultFigureVisible', old_visibility));
@@ -63,16 +63,11 @@ end
 testCase.assertNotEmpty(scatter_ax);
 
 scatters = findall(scatter_ax, 'Type', 'Scatter');
-testCase.verifyNumElements(scatters, 2);
+testCase.verifyNumElements(scatters, 1);
 
-observed_x = [];
-observed_y = [];
-observed_size = [];
-for k = 1:numel(scatters)
-    observed_x = [observed_x; scatters(k).XData(:)]; %#ok<AGROW>
-    observed_y = [observed_y; scatters(k).YData(:)]; %#ok<AGROW>
-    observed_size = [observed_size; scatters(k).SizeData(:)]; %#ok<AGROW>
-end
+observed_x = scatters.XData(:);
+observed_y = scatters.YData(:);
+observed_size = scatters.SizeData(:);
 [observed_x, order] = sort(observed_x);
 observed_y = observed_y(order);
 observed_size = observed_size(order);
@@ -80,16 +75,17 @@ observed_size = observed_size(order);
 pmin = prctile(stats_table.Volume(hist_peakidx), 50);
 pmax = prctile(stats_table.Volume(hist_peakidx), 100);
 expected_size = min(stats_table.Volume, pmax) / pmin * 0.5;
-[expected_x, order] = sort(stats_table.PeakTime/3600);
+display_peakidx = ~isnan(stats_table.SOphase);
+expected_size = expected_size(display_peakidx);
+[expected_x, order] = sort(stats_table.PeakTime(display_peakidx)/3600);
 testCase.verifyEqual(observed_x, expected_x, 'AbsTol', eps);
-testCase.verifyEqual(observed_y, stats_table.PeakFrequency(order));
+expected_frequency = stats_table.PeakFrequency(display_peakidx);
+testCase.verifyEqual(observed_y, expected_frequency(order));
 testCase.verifyEqual(observed_size, expected_size(order), 'AbsTol', eps);
 testCase.verifyTrue(all(isfinite(observed_size) & observed_size > 0));
 
-phase_scatter = scatters(arrayfun(@(h) numel(h.XData) == sum(~isnan(stats_table.SOphase)), scatters));
-neutral_scatter = scatters(arrayfun(@(h) numel(h.XData) == sum(isnan(stats_table.SOphase)), scatters));
-testCase.verifyEqual(phase_scatter.CData(:), stats_table.SOphase(~isnan(stats_table.SOphase)));
-testCase.verifyEqual(neutral_scatter.MarkerFaceColor, [0.35 0.35 0.35]);
+testCase.verifyEqual(scatters.CData(:), stats_table.SOphase(display_peakidx));
+testCase.verifyFalse(any(isnan(scatters.CData(:))));
 
 patches = findall(scatter_ax, 'Type', 'Patch');
 testCase.verifyNumElements(patches, 5);
