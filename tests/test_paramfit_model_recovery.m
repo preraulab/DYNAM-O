@@ -249,6 +249,32 @@ for k = 1:size(pairs, 1)
 end
 end
 
+function test_power_revert_returns_selected_gof(testCase)
+power_bins = linspace(-2, 20, 41);
+freq_bins = linspace(2, 18, 33).';
+[Pg, Fg] = meshgrid(power_bins, freq_bins);
+modes = [6, 8, 1, 3, 6, 0; ...
+         4, 12, 1, 10, 6, 0];
+SOPH = 0.2 + 0.001*Pg + 0.001*Fg;
+for m = 1:size(modes, 1)
+    p = modes(m, :);
+    SOPH = SOPH + rotGauss(Pg, Fg, p(1), p(2), p(3), p(4), p(5), p(6));
+end
+
+[params, fitobj, gof, model_SOPH] = param_basis_power( ...
+    SOPH, power_bins, freq_bins, ...
+    'prefix_modes', modes, 'prefix_modes_order', 0, ...
+    'max_peaks', 2, 'criterion', 'max', 'max_overlap', 0, ...
+    'min_amp', 0, 'min_freq_diff', 0, ...
+    'verbose', false, 'plot_on', false);
+
+testCase.verifyEqual(size(params, 1), 1);
+testCase.verifyEqual(num_modes(fitobj), 1);
+selected_sse = sum((SOPH - model_SOPH).^2, 'all');
+testCase.verifyEqual(gof.sse, selected_sse, 'RelTol', 1e-12, ...
+    'gof must describe the selected model after iteration 2 is rejected.');
+end
+
 function test_phase_recovers_planted_modes_with_column_bins(testCase)
 phase_bins = linspace(-pi, pi, 41).';
 freq_bins  = linspace(2, 18, 65).';
@@ -265,11 +291,20 @@ end
 SOPhH = SOPhH + 0.001;                               % constant background (matches Rust zzz)
 SOPhH = SOPhH ./ sum(SOPhH, 1);                      % phase-normalize, as in production
 
-[params, ~, gof] = param_basis_phase(SOPhH, phase_bins, freq_bins, ...
+[params, ~, gof, model_SOPhH] = param_basis_phase(SOPhH, phase_bins, freq_bins, ...
     'verbose', false, 'plot_on', false);
 
 testCase.verifyEqual(size(params, 1), size(planted, 1), 'phase mode count');
 testCase.verifyGreaterThan(gof.adjrsquare, 0.95);
+
+opts = param_basis_opts('phase');
+valid_phase = phase_bins >= opts.phase_limits(1) & phase_bins <= opts.phase_limits(2);
+valid_freq = freq_bins >= opts.freq_limits(1) & freq_bins <= opts.freq_limits(2);
+fit_data = SOPhH.';
+selected_sse = sum((fit_data(valid_freq, valid_phase) - ...
+    model_SOPhH(valid_freq, valid_phase)).^2, 'all');
+testCase.verifyEqual(gof.sse, selected_sse, 'AbsTol', 1e-10, ...
+    'gof must describe the selected model after a rejected iteration.');
 
 % Phase amp (Density) is overwritten by the empirical no-sin amplitude, so
 % it is not asserted; centers + freq width are the recoverable params.
@@ -281,6 +316,64 @@ for k = 1:size(pairs, 1)
     testCase.verifyLessThan(abs(r(3) - p(3)) / p(3), 0.12, 'FreqStd');
     testCase.verifyLessThan(abs(sin(r(4) - p(4))), 0.15, 'phasepref');  % circular
 end
+end
+
+function test_power_baseline_fallback_returns_matching_gof(testCase)
+power_bins = linspace(-5, 25, 41);
+freq_bins = linspace(2, 18, 33).';
+[Pg, Fg] = meshgrid(power_bins, freq_bins);
+mode = [2, 10, 1, 5, 4, 0];
+SOPH = rotGauss(Pg, Fg, mode(1), mode(2), mode(3), ...
+    mode(4), mode(5), mode(6)) + 0.2;
+
+warning_id = 'param_basis_power:noModesFound';
+warning_state = warning('off', warning_id);
+warning_cleanup = onCleanup(@() warning(warning_state));
+[params, fitobj, gof, model_SOPH] = param_basis_power( ...
+    SOPH, power_bins, freq_bins, ...
+    'prefix_modes', mode, 'prefix_modes_order', 0, ...
+    'max_peaks', 1, 'criterion', 'max', 'min_amp', Inf, ...
+    'min_freq_diff', 0, 'verbose', false, 'plot_on', false);
+clear warning_cleanup
+
+testCase.verifyEmpty(params);
+testCase.verifyEqual(num_modes(fitobj), 0);
+opts = param_basis_opts('power');
+valid_power = power_bins >= opts.power_limits(1) & power_bins <= opts.power_limits(2);
+valid_freq = freq_bins >= opts.freq_limits(1) & freq_bins <= opts.freq_limits(2);
+selected_sse = sum((SOPH(valid_freq, valid_power) - ...
+    model_SOPH(valid_freq, valid_power)).^2, 'all');
+testCase.verifyEqual(gof.sse, selected_sse, 'AbsTol', 1e-10, ...
+    'gof must describe the background fit returned after iteration 1 is rejected.');
+end
+
+function test_phase_baseline_fallback_returns_matching_gof(testCase)
+phase_bins = linspace(-pi, pi, 31);
+freq_bins = linspace(2, 18, 33).';
+[PHg, Fg] = meshgrid(phase_bins, freq_bins);
+mode = [0.05, 10, 1.5, 0, 1, 0];
+SOPhH = normalized_vmGauss(PHg, Fg, true, 0, 0, 0.001, ...
+    mode(1), mode(2), mode(3), mode(4), mode(5), mode(6));
+
+warning_id = 'param_basis_phase:noModesFound';
+warning_state = warning('off', warning_id);
+warning_cleanup = onCleanup(@() warning(warning_state));
+[params, fitobj, gof, model_SOPhH] = param_basis_phase( ...
+    SOPhH, phase_bins, freq_bins, ...
+    'prefix_modes', mode, 'prefix_modes_order', 0, ...
+    'max_peaks', 1, 'criterion', 'max', 'min_amp', Inf, ...
+    'verbose', false, 'plot_on', false);
+clear warning_cleanup
+
+testCase.verifyEmpty(params);
+testCase.verifyEqual(num_modes(fitobj), 0);
+opts = param_basis_opts('phase');
+valid_phase = phase_bins >= opts.phase_limits(1) & phase_bins <= opts.phase_limits(2);
+valid_freq = freq_bins >= opts.freq_limits(1) & freq_bins <= opts.freq_limits(2);
+selected_sse = sum((SOPhH(valid_freq, valid_phase) - ...
+    model_SOPhH(valid_freq, valid_phase)).^2, 'all');
+testCase.verifyEqual(gof.sse, selected_sse, 'AbsTol', 1e-10, ...
+    'gof must describe the background fit returned after iteration 1 is rejected.');
 end
 
 function pairs = match_by_freq(planted, recovered)
