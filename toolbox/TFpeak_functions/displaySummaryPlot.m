@@ -319,10 +319,10 @@ if isgraphics(ax(1))
             t0 = interval_edges(excluded_runs(k, 1)) / 3600;
             t1 = interval_edges(excluded_runs(k, 2) + 1) / 3600;
             if t1 > t0
-                shade_patches(end+1) = patch(ax(1), [t0 t1 t1 t0], ... %#ok<AGROW>
+                shade_patches(end+1) = patch(ax(1), [t0 t1 t1 t0], ...
                     [freq_limits(1) freq_limits(1) freq_limits(2) freq_limits(2)], ...
                     shade_color, 'FaceAlpha', shade_alpha, 'EdgeColor', 'none', ...
-                    'HandleVisibility', 'off');
+                    'HandleVisibility', 'off'); %#ok<*AGROW>
             end
         end
     end
@@ -332,9 +332,14 @@ if isgraphics(ax(1))
     if isempty(stats_table_SOPH)
         peak_size = 0.5 * ones(height(stats_table), 1);
     else
+        % scatter SizeData is marker area in points^2, unlike plot
+        % MarkerSize, which is a linear size in points.
+        max_peak_size = 10;
         pmin = prctile(stats_table_SOPH.Volume, peak_size_prctiles(1));
         pmax = prctile(stats_table_SOPH.Volume, peak_size_prctiles(2));
-        peak_size = min(stats_table.Volume, pmax) / pmin * 0.5;
+        relative_peak_size = min(stats_table.Volume, pmax) / pmin;
+        relative_max_size = pmax / pmin;
+        peak_size = relative_peak_size / relative_max_size * max_peak_size;
     end
 
     % Artifact-excluded peaks have NaN SO phase. Plot every remaining peak
