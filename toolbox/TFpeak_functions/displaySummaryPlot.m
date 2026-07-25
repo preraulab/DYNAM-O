@@ -281,6 +281,7 @@ end
 %% Plot time-frequency peak scatterplot
 if isgraphics(ax(1))
     hold(ax(1), 'on')
+    shade_patches = gobjects(0);
 
     % Reconstruct the time intervals used by the SOPH histograms. Evaluate
     % the same linearly interpolated SOpower and previous-stage predicates
@@ -318,7 +319,7 @@ if isgraphics(ax(1))
             t0 = interval_edges(excluded_runs(k, 1)) / 3600;
             t1 = interval_edges(excluded_runs(k, 2) + 1) / 3600;
             if t1 > t0
-                patch(ax(1), [t0 t1 t1 t0], ...
+                shade_patches(end+1) = patch(ax(1), [t0 t1 t1 t0], ... %#ok<AGROW>
                     [freq_limits(1) freq_limits(1) freq_limits(2) freq_limits(2)], ...
                     shade_color, 'FaceAlpha', shade_alpha, 'EdgeColor', 'none', ...
                     'HandleVisibility', 'off');
@@ -341,6 +342,9 @@ if isgraphics(ax(1))
     display_peakidx = ~isnan(stats_table.SOphase);
     scatter(ax(1), stats_table.PeakTime(display_peakidx)/3600, stats_table.PeakFrequency(display_peakidx), ...
         peak_size(display_peakidx), stats_table.SOphase(display_peakidx), 'filled', 'MarkerEdgeColor', 'none');
+    if ~isempty(shade_patches)
+        uistack(shade_patches, 'top');
+    end
 
     %Make circular colormap
     colormap(ax(1),circshift(hsv(2^12),-650))

@@ -109,6 +109,6 @@ end
 for k = 1:numel(patches)
     patch_positions(k) = find(children == patches(k), 1);
 end
-testCase.verifyLessThan(max(scatter_positions), min(patch_positions));
+testCase.verifyLessThan(max(patch_positions), min(scatter_positions));
 testCase.verifyEqual(stats_table, stats_table_before);
 end
