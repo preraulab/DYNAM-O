@@ -31,11 +31,13 @@ function [fh] = displaySummaryPlot(varargin)
 %
 %    >> TIME-FREQUENCY PEAK SCATTERPLOT
 %       stats_table:        table - features of each TFpeak
-%       hist_peakidx        [1xP] logical - which TFpeaks are counted in the feature histograms
+%       hist_peakidx        [Px1] logical - which TFpeaks are counted in the feature histograms.
+%                           This population sets the scatter-plot dot-size scale; all non-artifact
+%                           TFpeaks with valid SO phase are displayed.
 %       SOPH_stages:        [1xS] numeric - sleep-stage values the SO-power/phase histograms include
-%                           (0:Undef 1:N3 2:N2 3:N1 4:REM 5:Wake 6:Art). Times whose stage is not in
-%                           this set, plus artifact spans, are shaded gray behind the TF-peak scatter
-%                           so the clear regions show the data the histograms actually use. Default = [1 2 3]
+%                           (0:Undef 1:N3 2:N2 3:N1 4:REM 5:Wake 6:Art). Periods whose stage is not
+%                           in this set or whose interpolated SOpower_norm is NaN are shaded gray behind
+%                           the TF-peak scatter. Default = [1 2 3]
 %       peak_size_prctiles: [1x2] double - percentiles used to scale the dot size of TF-peaks in the scatter plot.
 %                           Default = [5, 95]
 %
@@ -278,62 +280,67 @@ end
 
 %% Plot time-frequency peak scatterplot
 if isgraphics(ax(1))
-    % Shade the times the SO-power/phase histograms do NOT use: epochs whose
-    % sleep stage is not in SOPH_stages (e.g. Wake/REM/Undef), plus artifact
-    % spans. The clear (unshaded) regions then show exactly which data feed
-    % the histograms. Drawn before the scatter so the shading sits behind the
-    % TF-peak dots.
     hold(ax(1), 'on')
-    shade_color = [0.47, 0.47, 0.52];
-    shade_alpha = 0.38;
-    shade_yl = freq_limits;
-    if isempty(shade_yl) || numel(shade_yl) < 2
-        shade_yl = [2, 25];
-    end
-    % Excluded sleep-stage epochs (stage_times/stage_vals are per-epoch).
-    if ~isempty(stage_times) && ~isempty(stage_vals)
-        stage_dt = median(diff(stage_times(:)));
-        if isempty(stage_dt) || ~isfinite(stage_dt) || stage_dt <= 0
-            stage_dt = 30;
+
+    % Reconstruct the time intervals used by the SOPH histograms. Evaluate
+    % the same linearly interpolated SOpower and previous-stage predicates
+    % used for peak_selection_inds in SOpowerHistogram. SOpower_norm already
+    % carries artifact exclusions as NaNs.
+    if ~isempty(SOpower_norm) && ~isempty(SOpower_times) && numel(SOpower_times) > 1
+        SOpower_times_plot = SOpower_times(:);
+        SOpower_norm_plot = SOpower_norm(:);
+        SOpower_times_step = SOpower_times_plot(2) - SOpower_times_plot(1);
+        SOpower_interp_start = SOpower_times_plot(1) - SOpower_times_step;
+        SOpower_interp_end = SOpower_times_plot(end) + SOpower_times_step;
+
+        interval_edges = unique([time_range(:); SOpower_interp_start; ...
+            SOpower_times_plot; SOpower_interp_end; stage_times(:)]);
+        interval_edges = interval_edges(interval_edges >= time_range(1) & interval_edges <= time_range(2));
+        interval_midpoints = (interval_edges(1:end-1) + interval_edges(2:end)) / 2;
+
+        SOpower_at_interval = interp1( ...
+            [SOpower_interp_start; SOpower_times_plot; SOpower_interp_end], ...
+            [SOpower_norm_plot(1); SOpower_norm_plot; SOpower_norm_plot(end)], ...
+            interval_midpoints);
+        interval_excluded = isnan(SOpower_at_interval);
+        if ~isempty(stage_times) && ~isempty(stage_vals)
+            stages_at_interval = interp1(stage_times, stage_vals, interval_midpoints, 'previous');
+            stages_at_interval(isnan(stages_at_interval)) = 0;
+            interval_excluded = interval_excluded | ~ismember(stages_at_interval, SOPH_stages);
         end
-        excl_stage = ~ismember(stage_vals(:), SOPH_stages);
-        stage_edges = diff([false; excl_stage; false]);
-        stage_runs = [find(stage_edges == 1), find(stage_edges == -1) - 1];
-        for k = 1:size(stage_runs, 1)
-            t0 = (stage_times(stage_runs(k, 1)) - stage_dt / 2) / 3600;
-            t1 = (stage_times(stage_runs(k, 2)) + stage_dt / 2) / 3600;
-            patch(ax(1), [t0 t1 t1 t0], [shade_yl(1) shade_yl(1) shade_yl(2) shade_yl(2)], ...
-                shade_color, 'FaceAlpha', shade_alpha, 'EdgeColor', 'none', 'HandleVisibility', 'off');
-        end
-    end
-    % Artifact spans (aligned with the EEG time vector t_time_range).
-    if ~isempty(artifacts) && ~isempty(t_time_range)
-        art_mask = logical(artifacts(:));
-        art_edges = diff([false; art_mask; false]);
-        art_runs = [find(art_edges == 1), find(art_edges == -1) - 1];
-        for k = 1:size(art_runs, 1)
-            i0 = art_runs(k, 1);
-            i1 = min(art_runs(k, 2), numel(t_time_range));
-            t0 = t_time_range(i0) / 3600;
-            t1 = t_time_range(i1) / 3600;
-            patch(ax(1), [t0 t1 t1 t0], [shade_yl(1) shade_yl(1) shade_yl(2) shade_yl(2)], ...
-                shade_color, 'FaceAlpha', shade_alpha, 'EdgeColor', 'none', 'HandleVisibility', 'off');
+
+        excluded_edges = diff([false; interval_excluded; false]);
+        excluded_runs = [find(excluded_edges == 1), find(excluded_edges == -1) - 1];
+
+        shade_color = [0.8, 0.8, 0.8];
+        shade_alpha = 0.5;
+        for k = 1:size(excluded_runs, 1)
+            t0 = interval_edges(excluded_runs(k, 1)) / 3600;
+            t1 = interval_edges(excluded_runs(k, 2) + 1) / 3600;
+            if t1 > t0
+                patch(ax(1), [t0 t1 t1 t0], ...
+                    [freq_limits(1) freq_limits(1) freq_limits(2) freq_limits(2)], ...
+                    shade_color, 'FaceAlpha', shade_alpha, 'EdgeColor', 'none', ...
+                    'HandleVisibility', 'off');
+            end
         end
     end
 
-    % Plot only TF peaks that contribute to SO-power/phase histograms
+    % Use histogram-included peaks only to define the marker-size scale.
     stats_table_SOPH = stats_table(hist_peakidx, :);
+    if isempty(stats_table_SOPH)
+        peak_size = 0.5 * ones(height(stats_table), 1);
+    else
+        pmin = prctile(stats_table_SOPH.Volume, peak_size_prctiles(1));
+        pmax = prctile(stats_table_SOPH.Volume, peak_size_prctiles(2));
+        peak_size = min(stats_table.Volume, pmax) / pmin * 0.5;
+    end
 
-    %Compute peak dot size
-    pmin = prctile(stats_table_SOPH.Volume, peak_size_prctiles(1)); % get 5th ptile of volumes
-    peak_size = stats_table_SOPH.Volume / pmin * 0.5;  % 5th ptile fixed at size 0.5
-
-    %Do not plot larger than 95th ptile or else dots could obscure other things on the plot
-    pmax = prctile(stats_table_SOPH.Volume, peak_size_prctiles(2)); % get 95th ptile of volumes
-    pmax_inds = stats_table_SOPH.Volume> pmax;
-    peak_size(pmax_inds) = nan;
-
-    scatter(ax(1), stats_table_SOPH.PeakTime/3600, stats_table_SOPH.PeakFrequency, peak_size, stats_table_SOPH.SOphase, 'filled', 'MarkerEdgeColor', 'none');
+    % Artifact-excluded peaks have NaN SO phase. Plot every remaining peak
+    % using the circular phase colormap.
+    display_peakidx = ~isnan(stats_table.SOphase);
+    scatter(ax(1), stats_table.PeakTime(display_peakidx)/3600, stats_table.PeakFrequency(display_peakidx), ...
+        peak_size(display_peakidx), stats_table.SOphase(display_peakidx), 'filled', 'MarkerEdgeColor', 'none');
 
     %Make circular colormap
     colormap(ax(1),circshift(hsv(2^12),-650))
