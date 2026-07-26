@@ -5,8 +5,10 @@ function validate_baseline_mex()
 % computes the per-frequency 2nd-percentile baseline both ways and
 % asserts the F-vector matches within 1e-9 absolute.
 
-    addpath(genpath('<private-path>'));
-    addpath('<private-path>');
+    rust_bridge_dir = fileparts(mfilename('fullpath'));
+    dynamo_root = fileparts(rust_bridge_dir);
+    addpath(genpath(fullfile(dynamo_root, 'toolbox')));
+    addpath(rust_bridge_dir);
 
     % Synthetic spectrogram: F=128 freqs x T=600 windows of strictly
     % positive doubles drawn from log-normal (so zeros are zero zeros

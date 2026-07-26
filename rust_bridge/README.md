@@ -15,12 +15,13 @@ four overnight recordings (see [Backend parity](#backend-parity) below).
 
 | File | Purpose |
 |---|---|
-| `build_rust_mex.m` | Compile the four MEX wrappers for the current platform |
+| `build_rust_mex.m` | Build `dynamo_rs` and compile the ten MEX wrappers for the current platform |
 | `extract_tfpeaks_mex.c` | Entry point for pass-1 / pass-2 TF-peak extraction |
 | `mask_spectrogram_mex.c` | Mask pass-2 spectrogram with pass-1 labels |
 | `refine_peaks_mex.c` | Hann-FFT refinement of peak frequencies |
 | `tfpeak_histogram_mex.c` | SO-power / SO-phase histogram accumulation |
 | `extract_tfpeaks_mex.mex*` etc. | Platform-specific compiled binaries (checked in) |
+| `data_matlab_filters/` | Runtime filter cache copied from `DYNAM-O_rs` by the builder |
 
 ---
 
@@ -52,30 +53,7 @@ four overnight recordings (see [Backend parity](#backend-parity) below).
 
 ---
 
-## Build (two commands)
-
-### Step 1. Build the Rust dynamic library
-
-From the shell:
-
-```bash
-cd <workspace>/DYNAM-O_rs/rust
-cargo build --release
-```
-
-This produces (**one file, platform-dependent**):
-
-| Platform | Output path |
-|---|---|
-| Apple Silicon macOS | `target/release/libdynamo_rs.dylib` |
-| Intel macOS | `target/release/libdynamo_rs.dylib` |
-| Linux | `target/release/libdynamo_rs.so` |
-| Windows (MSVC) | `target/release/dynamo_rs.dll` + `dynamo_rs.dll.lib` |
-
-It also generates the C header at `rust/include/dynamo_rs.h`
-(via `build.rs` using `cbindgen`).
-
-### Step 2. Build the MEX wrappers
+## Build
 
 From MATLAB:
 
@@ -84,7 +62,25 @@ cd <workspace>/DYNAM-O/rust_bridge
 build_rust_mex
 ```
 
-This compiles four `.c` files against `dynamo_rs.h` + `libdynamo_rs`,
+The builder first runs the locked Cargo release build from the current
+sibling `DYNAM-O_rs` checkout. It remaps the workspace, user home,
+Cargo/Rustup home, and temporary-directory paths to stable virtual paths
+so the distributed libraries do not expose the build machine's paths.
+
+The Rust build produces (**one file, platform-dependent**):
+
+| Platform | Output path |
+|---|---|
+| Apple Silicon macOS | `target/release/libdynamo_rs.dylib` |
+| Intel macOS | `target/release/libdynamo_rs.dylib` |
+| Linux | `target/release/libdynamo_rs.so` |
+| Windows (MSVC) | `target/release/dynamo_rs.dll` + `dynamo_rs.dll.lib` |
+
+It also generates the C header at `rust/include/dynamo_rs.h` via
+`build.rs` using `cbindgen`.
+
+The builder then compiles ten `.c` files against `dynamo_rs.h` +
+`libdynamo_rs`,
 producing one MEX binary per source file with the extension for the
 current platform:
 
@@ -95,9 +91,10 @@ current platform:
 | Linux | `.mexa64` | `extract_tfpeaks_mex.mexa64`, … |
 | Windows | `.mexw64` | `extract_tfpeaks_mex.mexw64`, … |
 
-On macOS the build embeds an rpath pointing at
-`DYNAM-O_rs/rust/target/release`, so the MEX file resolves the
-sibling `libdynamo_rs.dylib` without any `DYLD_LIBRARY_PATH` tweaks.
+The shared library is copied beside the MEX files, together with the
+runtime `data_matlab_filters` directory. macOS and Linux use loader-relative
+references (`@loader_path`/`@rpath` and `$ORIGIN`, respectively), while
+Windows loads the adjacent DLL.
 
 ### Sanity check
 
@@ -151,9 +148,7 @@ a specific `dynamo_rs` commit. Record the commit SHA in
 
 For automatic multi-platform builds, a CI matrix job with
 [`matlab-actions/setup-matlab`](https://github.com/matlab-actions/setup-matlab)
-can run `cargo build --release` then `build_rust_mex` on each
-runner OS and upload artifacts. Not set up yet — see
-`<private-path>/` for the target topology.
+can run `build_rust_mex` on each runner OS and upload artifacts.
 
 ---
 
@@ -237,8 +232,8 @@ Each subject ran end-to-end through `computeTFPeaks` once per backend.
 
 | Symptom | Fix |
 |---|---|
-| `dynamo_rs.h not found` | Run `cargo build --release` first. |
-| `libdynamo_rs.dylib not found` (macOS) | Same — `cargo build --release` didn't produce it; check `cargo`'s output. |
+| `Cargo.lock not found` | Update the sibling `DYNAM-O_rs` checkout; locked release builds require its tracked lockfile. |
+| `dynamo_rs.h` or the shared library was not produced | Check the Cargo output printed by `build_rust_mex`. |
 | `mex: Compiler not configured` | Run `mex -setup C`, pick a supported compiler. |
 | `Undefined symbol: _mexCreateMexFunction` | The MEX glue was built from `.cpp`; must use `.c` files here. `build_rust_mex.m` enforces this. |
 | `dyld: Library not loaded: libdynamo_rs.dylib` at MEX call | rpath didn't get embedded (usually non-macOS) — rerun build, or fall back to `DYLD_LIBRARY_PATH=<path to dylib>`. |
