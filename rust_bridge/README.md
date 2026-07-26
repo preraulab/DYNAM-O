@@ -29,7 +29,8 @@ four overnight recordings (see [Backend parity](#backend-parity) below).
 
 ### One-time (per platform)
 
-1. **Rust toolchain** (≥ 1.70) — <https://rustup.rs>
+1. **Rust toolchain** — <https://rustup.rs>. The sibling DYNAM-O_rs
+   `rust-toolchain.toml` pins the supported release compiler.
    ```bash
    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
    ```
@@ -55,26 +56,47 @@ four overnight recordings (see [Backend parity](#backend-parity) below).
 
 ## Build
 
-From MATLAB:
+For binaries that will be committed or distributed, build from the parent
+meta-repository so the common privacy gate validates every native artifact:
+
+```bash
+cd <workspace>/DYNAM-O_toolbox
+./bootstrap.sh --yes                    # macOS / Linux / WSL
+# Windows PowerShell:
+.\bootstrap.ps1 -Yes
+```
+
+For local development only, the MATLAB helper performs the Rust cdylib and MEX
+builds together:
 
 ```matlab
 cd <workspace>/DYNAM-O/rust_bridge
 build_rust_mex
 ```
 
-The builder first runs the locked Cargo release build from the current
-sibling `DYNAM-O_rs` checkout. It remaps the workspace, user home,
-Cargo/Rustup home, and temporary-directory paths to stable virtual paths
-so the distributed libraries do not expose the build machine's paths.
+Do not commit artifacts produced by the direct helper: although it remaps Rust
+and C compiler source paths, it does not run the meta-repository's final
+artifact privacy checks or write the release provenance manifest.
 
-The Rust build produces (**one file, platform-dependent**):
+The helper runs a locked, cdylib-only Cargo release build from the sibling
+`DYNAM-O_rs` checkout. It fixes Cargo's target directory, removes the exact
+expected host shared library before compiling, and remaps workspace, user-home,
+Cargo/Rustup-home, and temporary paths across all Rust path scopes. The MEX C
+compilation applies equivalent compiler path mapping.
+
+The Rust build produces one runtime shared library:
 
 | Platform | Output path |
 |---|---|
 | Apple Silicon macOS | `target/release/libdynamo_rs.dylib` |
 | Intel macOS | `target/release/libdynamo_rs.dylib` |
 | Linux | `target/release/libdynamo_rs.so` |
-| Windows (MSVC) | `target/release/dynamo_rs.dll` + `dynamo_rs.dll.lib` |
+| Windows | `target/release/dynamo_rs.dll` |
+
+Windows also produces a link-time import library beside the DLL. It is not a
+runtime artifact and is not copied into `rust_bridge/`. The helper does not
+produce a top-level `libdynamo_rs.a` static-library artifact; Cargo may still
+create internal dependency archives under `target/`.
 
 It also generates the C header at `rust/include/dynamo_rs.h` via
 `build.rs` using `cbindgen`.
@@ -122,14 +144,15 @@ Then a full end-to-end test:
 MEX binaries are platform-and-extension specific. The repo carries
 one compiled binary per platform × per MEX file. Current strategy:
 
-- **Build locally** on each of {Apple Silicon, Intel, Linux, Windows}.
+- Run the **controlled meta-repository bootstrap build** on each of
+  {Apple Silicon, Intel, Linux, Windows}.
 - **Commit all built binaries** (~34 KB each, ~1.2 MB/platform total).
 - Rebuild and recommit whenever `DYNAM-O_rs/rust/src/` changes in a
   way that affects the C ABI or pipeline behaviour.
 
-Roughly: treat the MEX binaries like pre-compiled artifacts pinned to
-a specific `dynamo_rs` commit. Record the commit SHA in
-`BUILT_FROM.md` after each rebuild.
+Treat the MEX binaries like pre-compiled artifacts pinned to a specific
+`dynamo_rs` commit. Archive the meta-repository's generated
+`release-build-manifest.json` with the release record.
 
 ### When to rebuild
 
@@ -141,14 +164,15 @@ a specific `dynamo_rs` commit. Record the commit SHA in
 
 ### When NOT to rebuild
 
-- Only comments or docs in Rust changed — `cargo build` will skip.
+- Only comments or docs in Rust changed.
 - Unrelated MATLAB-side changes.
 
 ### GitHub Actions (future)
 
 For automatic multi-platform builds, a CI matrix job with
 [`matlab-actions/setup-matlab`](https://github.com/matlab-actions/setup-matlab)
-can run `build_rust_mex` on each runner OS and upload artifacts.
+should run the complete meta-repository controlled builder on each runner OS
+before uploading artifacts.
 
 ---
 
@@ -237,21 +261,13 @@ Each subject ran end-to-end through `computeTFPeaks` once per backend.
 | `mex: Compiler not configured` | Run `mex -setup C`, pick a supported compiler. |
 | `Undefined symbol: _mexCreateMexFunction` | The MEX glue was built from `.cpp`; must use `.c` files here. `build_rust_mex.m` enforces this. |
 | `dyld: Library not loaded: libdynamo_rs.dylib` at MEX call | rpath didn't get embedded (usually non-macOS) — rerun build, or fall back to `DYLD_LIBRARY_PATH=<path to dylib>`. |
-| MEX returns correct first call but different results on second call | Usually means MATLAB is holding a stale dylib — restart MATLAB after a fresh `cargo build`. |
+| MEX returns correct first call but different results on second call | Usually means MATLAB is holding a stale dylib — restart MATLAB after a controlled rebuild or local `build_rust_mex`. |
 
 ---
 
 ## Regenerating the C header
 
-The C header `DYNAM-O_rs/rust/include/dynamo_rs.h` is produced by
-`cbindgen` from Rust source. The `build.rs` script invokes cbindgen
-automatically on every `cargo build`. If you need to regenerate
-manually:
-
-```bash
-cd <workspace>/DYNAM-O_rs/rust
-cargo run --bin cbindgen -- --output include/dynamo_rs.h
-```
-
-(The exact command may vary by crate config; consult
-`DYNAM-O_rs/rust/build.rs` for the authoritative recipe.)
+The tracked C header `DYNAM-O_rs/rust/include/dynamo_rs.h` is produced by
+`cbindgen` from Rust source. The crate's `build.rs` refreshes it when relevant
+Rust inputs change. Use the controlled meta-repository build when the resulting
+native artifacts will be distributed.
