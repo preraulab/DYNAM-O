@@ -459,14 +459,12 @@ timings.peak_stage = toc(t_stage);
 % Compute slow oscillation power (SO-Power) at each TF peak
 t_stage = tic;
 [stats_table, SOpower_norm, SOpower_times] = computePeakSOpower(stats_table, data_time_range, Fs,...
-    'stage_times', stage_times, 'stage_vals', stage_vals,...
-    'EEG_times', t_time_range, 'isexcluded', artifacts, SOPH_options);
+    'stage_times', stage_times, 'stage_vals', stage_vals, 'EEG_times', t_time_range, 'isexcluded', artifacts, SOPH_options);
 timings.peak_sopower = toc(t_stage);
 % Compute slow oscillation phase (SO-Phase) at each TF peak
 t_stage = tic;
 [stats_table, SOphase, SOphase_times, SOfiltered] = computePeakSOphase(stats_table, data_time_range, Fs,...
-    'stage_times', stage_times, 'stage_vals', stage_vals,...
-    'EEG_times', t_time_range, 'isexcluded', artifacts, SOPH_options);
+    'stage_times', stage_times, 'stage_vals', stage_vals, 'EEG_times', t_time_range, 'isexcluded', artifacts, SOPH_options);
 timings.peak_sophase = toc(t_stage);
 
 %% COMPUTE SO-POWER/PHASE HISTOGRAMS

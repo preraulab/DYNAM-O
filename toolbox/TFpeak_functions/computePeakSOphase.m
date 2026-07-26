@@ -115,8 +115,7 @@ eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 assert(ismember('PeakTime', stats_table.Properties.VariableNames), 'PeakTime must be available in the stats_table to compute SOphase at each TF peak.') %#ok<NODEF>
 
 %% Compute SO-phase
-[SOphase, SOphase_times, ~, SOdata] = computeSOphase(data, Fs,...
-    'stage_times', stage_times, 'stage_vals', stage_vals,...
+[SOphase, SOphase_times, ~, SOdata] = computeSOphase(data, Fs, 'stage_times', stage_times, 'stage_vals', stage_vals,...
     'EEG_times', EEG_times, 'isexcluded', isexcluded, 'SO_freqrange', SO_freqrange, 'SOphase_filter', SOphase_filter);
 
 %% Compute SO-phase at TF peak times
