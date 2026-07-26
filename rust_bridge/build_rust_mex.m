@@ -10,7 +10,8 @@ function build_rust_mex()
 %          <workspace>/DYNAM-O_rs/
 %     2. Cargo is available on PATH. This function builds the Rust crate
 %        with its lockfile and remaps build-host paths, producing:
-%          target/release/libdynamo_rs.{dylib,a}
+%          target/release/libdynamo_rs.{dylib,so}
+%          target/release/dynamo_rs.dll  (Windows)
 %          include/dynamo_rs.h
 %     3. A supported C compiler is configured via `mex -setup C`.
 %
@@ -38,7 +39,15 @@ assert(isfolder(rs_root), ...
     'DYNAM-O_rs Rust crate not found at %s. Check out DYNAM-O_rs beside DYNAM-O.', rs_root);
 rs_root = canonical_path(rs_root);
 
-build_rust_library(rs_root, workspace_root);
+if ispc
+    dylib_name = 'dynamo_rs.dll';
+elseif ismac
+    dylib_name = 'libdynamo_rs.dylib';
+else
+    dylib_name = 'libdynamo_rs.so';
+end
+mex_remap_args = compiler_path_remap_args(workspace_root);
+build_rust_library(rs_root, workspace_root, dylib_name);
 
 inc_dir   = fullfile(rs_root, 'include');
 lib_dir   = fullfile(rs_root, 'target', 'release');
@@ -47,13 +56,6 @@ hdr = fullfile(inc_dir, 'dynamo_rs.h');
 assert(exist(hdr, 'file') == 2, ...
     'dynamo_rs.h was not generated at %s.', hdr);
 
-if ispc
-    dylib_name = 'dynamo_rs.dll';
-elseif ismac
-    dylib_name = 'libdynamo_rs.dylib';
-else
-    dylib_name = 'libdynamo_rs.so';
-end
 dylib = fullfile(lib_dir, dylib_name);
 assert(exist(dylib, 'file') == 2, ...
     '%s was not built at %s.', dylib_name, dylib);
@@ -81,6 +83,7 @@ common_args = { ['-I', inc_dir], ...
     ['-L', lib_dir], ...
     '-ldynamo_rs', ...
     '-outdir', here };
+common_args = [common_args, mex_remap_args];
 
 % Rpath/runtime-lookup strategy: redistributable builds need the MEX
 % binary to find libdynamo_rs.* WITHOUT depending on absolute paths
@@ -107,12 +110,21 @@ end
 
 for i = 1:numel(sources)
     src = fullfile(here, sources{i});
+    [~, base, ~] = fileparts(sources{i});
+    mex_path = fullfile(here, [base '.' mexext]);
+    if isfile(mex_path)
+        delete(mex_path);
+    end
     fprintf('Building %s ...\n', sources{i});
     try
         mex(common_args{:}, src);
     catch err
         fprintf(2, '\nBuild FAILED for %s:\n  %s\n', sources{i}, err.message);
         rethrow(err);
+    end
+    if ~isfile(mex_path)
+        error('build_rust_mex:MissingMexOutput', ...
+            'MEX build did not produce %s.', mex_path);
     end
 end
 
@@ -160,21 +172,17 @@ if ismac
     % The MEX's recorded load reference depends on the dylib's install
     % name at link time, which varies across Rust toolchain versions
     % (bare 'libdynamo_rs.dylib', 'target/release/libdynamo_rs.dylib',
-    % 'target/release/deps/libdynamo_rs.dylib', or — if maturin's
-    % --features python build was run first — '@rpath/dynamo_rs.abi3.so').
+    % 'target/release/deps/libdynamo_rs.dylib', or — if a Python-feature
+    % build was run first — '@rpath/dynamo_rs.abi3.so').
     % Discover the actual reference per MEX via `otool -L` and rewrite
     % that exact string. Without this, a hard-coded source path silently
     % fails to match and the MEX is left pointing at target/release/, so
-    % a later `maturin develop --features python` (step 5 of bootstrap.sh)
-    % overwrites that file with a PyO3 extension and the MEX dies at
+    % a later controlled Python-extension build overwrites that file with
+    % a PyO3 extension and the MEX dies at
     % runtime with 'symbol not found in flat namespace _PyBaseObject_Type'.
     for i = 1:numel(sources)
         [~, base, ~] = fileparts(sources{i});
         mex_path = fullfile(here, [base '.' mexext]);
-        if ~isfile(mex_path)
-            error('build_rust_mex:MissingMexOutput', ...
-                'MEX build did not produce %s.', mex_path);
-        end
         otool_out = run_checked(sprintf('%s -L %s', ...
             shell_quote(otool), shell_quote(mex_path)), ...
             sprintf('Reading load references for %s', mex_path));
@@ -210,31 +218,87 @@ fprintf('\nTo sanity-check:\n');
 fprintf('  extract_tfpeaks_mex(zeros(2), [0 1], [0 1], [], struct(''seg_time'',30,''downsample_f'',1,''downsample_t'',1,''merge_thresh'',11,''trim_vol'',0.8,''dur_min'',1,''dur_max'',5,''bw_min'',1,''bw_max'',15,''freq_min'',-inf,''freq_max'',inf,''ht_db_min'',-inf))\n');
 end
 
-function build_rust_library(rs_root, workspace_root)
+function build_rust_library(rs_root, workspace_root, dylib_name)
 % Build from the current sibling checkout while replacing host paths in
 % compiler-generated source locations with stable virtual prefixes.
 lockfile = fullfile(rs_root, 'Cargo.lock');
 assert(exist(lockfile, 'file') == 2, ...
     'Cargo.lock not found at %s. Release builds require the tracked lockfile.', lockfile);
 
+old_build_target = getenv('CARGO_BUILD_TARGET');
+if ~isempty(old_build_target)
+    error('build_rust_mex:CargoBuildTargetSet', ...
+        ['CARGO_BUILD_TARGET is set to %s. Unset it before building so ' ...
+         'the host shared library is written to target/release.'], ...
+        old_build_target);
+end
+
 old_dir = pwd;
 old_encoded_flags = getenv('CARGO_ENCODED_RUSTFLAGS');
-cleanup = onCleanup(@() restore_build_environment(old_dir, old_encoded_flags));
+old_target_dir = getenv('CARGO_TARGET_DIR');
+cleanup = onCleanup(@() restore_build_environment( ...
+    old_dir, old_encoded_flags, old_target_dir));
 
 setenv('CARGO_ENCODED_RUSTFLAGS', release_rustflags(rs_root, workspace_root));
+target_dir = fullfile(rs_root, 'target');
+validate_cargo_target_dir(target_dir, rs_root);
+setenv('CARGO_TARGET_DIR', target_dir);
+expected_dylib = fullfile(target_dir, 'release', dylib_name);
+if isfile(expected_dylib)
+    delete(expected_dylib);
+end
 cd(rs_root);
 fprintf('Building dynamo_rs with locked dependencies and remapped paths ...\n');
-[rc, cargo_out] = system('cargo build --release --lib --locked 2>&1');
+[rc, cargo_out] = system( ...
+    'cargo rustc --release --locked --lib --crate-type cdylib 2>&1');
 fprintf('%s', cargo_out);
 if rc ~= 0
     error('build_rust_mex:CargoBuildFailed', ...
-        'cargo build --release --lib --locked failed with exit code %d.', rc);
+        ['cargo rustc --release --locked --lib --crate-type cdylib ' ...
+         'failed with exit code %d.'], rc);
+end
+if ~isfile(expected_dylib)
+    error('build_rust_mex:MissingRustLibrary', ...
+        ['Cargo completed without producing the expected host library at %s. ' ...
+         'Check Cargo target configuration and the selected Rust toolchain.'], ...
+        expected_dylib);
 end
 end
 
-function restore_build_environment(old_dir, old_encoded_flags)
+function restore_build_environment(old_dir, old_encoded_flags, old_target_dir)
 setenv('CARGO_ENCODED_RUSTFLAGS', old_encoded_flags);
+setenv('CARGO_TARGET_DIR', old_target_dir);
 cd(old_dir);
+end
+
+function validate_cargo_target_dir(target_dir, rs_root)
+% Refuse target/release symlinks before deleting any stale output.
+candidates = {target_dir, fullfile(target_dir, 'release'), ...
+    fullfile(target_dir, 'release', 'deps')};
+for i = 1:numel(candidates)
+    candidate = candidates{i};
+    if exist(candidate, 'file') ~= 0 && ~isfolder(candidate)
+        error('build_rust_mex:InvalidCargoTarget', ...
+            'Cargo target path is not a directory: %s', candidate);
+    end
+    if ~isfolder(candidate)
+        continue;
+    end
+    resolved = canonical_path(candidate);
+    expected = strip_trailing_separator(candidate);
+    if ispc
+        matches = strcmpi(resolved, expected);
+        inside_crate = startsWith(lower(resolved), [lower(rs_root) filesep]);
+    else
+        matches = strcmp(resolved, expected);
+        inside_crate = startsWith(resolved, [rs_root filesep]);
+    end
+    if ~matches || ~inside_crate
+        error('build_rust_mex:EscapingCargoTarget', ...
+            ['Refusing Cargo target directory that resolves outside the ' ...
+             'DYNAM-O_rs crate: %s -> %s'], candidate, resolved);
+    end
+end
 end
 
 function copy_filter_cache(rs_root, here)
@@ -303,7 +367,7 @@ if ~isempty(rustup_home)
 end
 
 sources{end + 1} = tempdir;
-targets{end + 1} = '/build/tmp';
+targets{end + 1} = '/build/temporary';
 sources{end + 1} = workspace_root;
 targets{end + 1} = '/workspace';
 sources{end + 1} = rs_root;
@@ -319,8 +383,80 @@ for i = 1:numel(sources)
         end
     end
 end
-flags{end + 1} = '--remap-path-scope=object';
+flags{end + 1} = '--remap-path-scope=all';
 encoded = strjoin(flags, char(31));
+end
+
+function args = compiler_path_remap_args(workspace_root)
+% Add source-path remapping to the compiler selected by `mex -setup C`.
+% The meta-repository privacy gate remains the final authority for
+% distributable artifacts; these flags prevent paths from being emitted.
+try
+    configurations = mex.getCompilerConfigurations('C', 'Selected');
+catch err
+    error('build_rust_mex:CompilerDetectionFailed', ...
+        'Could not inspect the selected C compiler: %s', err.message);
+end
+if isempty(configurations)
+    error('build_rust_mex:NoCompiler', ...
+        'No C compiler is selected. Run `mex -setup C` before building.');
+end
+
+configuration = configurations(1);
+identity = lower([configuration.Name ' ' configuration.Manufacturer]);
+is_msvc = contains(identity, 'microsoft') || contains(identity, 'msvc');
+is_gnu_like = contains(identity, 'clang') || contains(identity, 'gcc') || ...
+    contains(identity, 'gnu') || contains(identity, 'mingw');
+if is_msvc
+    variable = 'COMPFLAGS';
+elseif is_gnu_like
+    variable = 'CFLAGS';
+else
+    error('build_rust_mex:UnsupportedCompiler', ...
+        ['Unsupported C compiler %s (%s). Select Clang, GCC, MinGW, or ' ...
+         'Microsoft Visual C++ with `mex -setup C`.'], ...
+        configuration.Name, configuration.Manufacturer);
+end
+
+sources = {};
+targets = {};
+user_home = getenv('HOME');
+if isempty(user_home)
+    user_home = getenv('USERPROFILE');
+end
+if ~isempty(user_home)
+    sources{end + 1} = user_home;
+    targets{end + 1} = '/build/user';
+end
+sources{end + 1} = tempdir;
+targets{end + 1} = '/build/temporary';
+sources{end + 1} = workspace_root;
+targets{end + 1} = '/workspace';
+
+flags = {};
+for i = 1:numel(sources)
+    variants = path_variants(sources{i});
+    for j = 1:numel(variants)
+        mapping = [variants{j} '=' targets{i}];
+        if contains(mapping, '"')
+            error('build_rust_mex:UnsupportedPath', ...
+                'MEX path remapping does not support double quotes: %s', ...
+                variants{j});
+        end
+        if is_msvc
+            candidates = {['"/pathmap:' mapping '"']};
+        else
+            candidates = {['"-ffile-prefix-map=' mapping '"'], ...
+                ['"-fdebug-prefix-map=' mapping '"']};
+        end
+        for k = 1:numel(candidates)
+            if ~any(strcmp(flags, candidates{k}))
+                flags{end + 1} = candidates{k}; %#ok<AGROW>
+            end
+        end
+    end
+end
+args = {[variable '=$' variable ' ' strjoin(flags, ' ')]};
 end
 
 function variants = path_variants(path)

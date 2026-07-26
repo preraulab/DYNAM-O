@@ -93,18 +93,13 @@ histograms.
 
 You can either clone this repo directly, or clone the parent meta-repo
 ([DYNAM-O_toolbox](https://github.com/preraulab/DYNAM-O_toolbox)) to get
-MATLAB, Python, and Rust together as pinned sub-repos.
+MATLAB, Python, and Rust together as coordinated sibling repositories.
 
 **Standalone (MATLAB-only):**
 
 ```bash
 git clone --recursive https://github.com/preraulab/DYNAM-O.git
 cd DYNAM-O
-# Re-attach submodules to their tracking branches. The plain
-# `--recursive` clone always lands them in detached HEAD; this one-liner
-# walks the .gitmodules `branch` field and checks each one out.
-git submodule foreach 'b="$(git config -f "$toplevel/.gitmodules" --get "submodule.$name.branch")"; \
-                       [ -n "$b" ] && git checkout -q "$b" 2>/dev/null || true'
 ```
 
 **Meta-repo (recommended — sets up MATLAB + Rust + Python in one go):**
@@ -117,17 +112,15 @@ cd DYNAM-O_toolbox
 .\bootstrap.ps1                       # Windows
 ```
 
-`bootstrap.sh` clones the three sub-repos, installs Rust if missing,
-builds the Rust core, and (if MATLAB is detected) offers to compile the
-MEX wrappers. It also re-attaches every submodule to its tracking
-branch automatically. Re-run any time — each step checks whether its
-target already exists.
+Bootstrap synchronizes the three repositories to their current
+`origin/master` tips and checks out every submodule at the exact gitlink
+recorded by its parent. It then asks whether to run the controlled native
+build; the default is to keep the checked-in binaries. Bootstrap does not
+install Rust, MATLAB, or a C compiler.
 
-**To pull updates later:** `./refresh.sh` from the meta-repo root pulls
-the latest commits on every sub-repo, rebuilds Rust, and re-attaches
-submodules. Don't use bare `git submodule update --init --recursive` —
-it leaves submodules in detached HEAD and you can't pull or commit
-from there cleanly.
+**To pull updates later:** rerun the same bootstrap command. A detached
+submodule HEAD is expected because it preserves the parent repository's
+recorded dependency revision.
 
 ### 2. Pick a backend
 
@@ -183,29 +176,29 @@ The `'rust'` backend uses MEX wrappers around a pure-Rust kernel
 `'matlab'` backend works immediately. If you call `'rust'` without the MEX files built, 
 you get a clear error with the build recipe.
 
-<details>
-<summary><b>Two build steps</b>, both one-time — Rust kernel, then MEX wrappers</summary>
-
-**a. Build `libdynamo_rs`** (needs the [Rust toolchain](https://rustup.rs)):
+For native files that will be committed or distributed, use the controlled
+meta-repository build. It applies path remapping, records provenance, and
+rejects artifacts containing build-machine paths:
 
 ```bash
-cd <workspace>/DYNAM-O_rs/rust
-cargo build --release
+cd <workspace>/DYNAM-O_toolbox
+./bootstrap.sh --yes                    # macOS / Linux / WSL
+# Windows PowerShell:
+.\bootstrap.ps1 -Yes
 ```
 
-**b. Build the MEX wrappers** (needs a C compiler via `mex -setup C`):
+For local development only, `build_rust_mex` performs both the locked Rust
+cdylib build and the MEX compilation. Its outputs have not passed the
+meta-repository's final privacy gate and must not be committed:
 
 ```matlab
 cd <workspace>/DYNAM-O/rust_bridge
 build_rust_mex
 ```
 
-Produces five `.mex*` files in `rust_bridge/` with the extension for your
-platform (`.mexmaca64`, `.mexmaci64`, `.mexa64`, or `.mexw64`):
-`extract_tfpeaks_mex`, `mask_spectrogram_mex`, `refine_peaks_mex`,
-`tfpeak_histogram_mex`, and `multitaper_spectrogram_rust_mex`.
-
-</details>
+The controlled build produces ten `.mex*` files in `rust_bridge/`, plus the
+adjacent `libdynamo_rs` shared library and runtime filter cache. MEX extensions
+are `.mexmaca64`, `.mexmaci64`, `.mexa64`, or `.mexw64`, depending on platform.
 
 See [`rust_bridge/README.md`](rust_bridge/README.md) for per-platform
 details and troubleshooting.
@@ -1188,12 +1181,12 @@ Fs     = 100;
 ### Troubleshooting
 
 - **`backend='rust' requires compiled MEX files (missing: …)`** — you haven't built the Rust MEX yet. Follow [Installation step 3](#3-build-the-rust-backend-optional-for-speed), or pass `'backend', 'matlab'`.
-- **`dynamo_rs.h not found` during `build_rust_mex`** — run `cargo build --release` in `DYNAM-O_rs/rust` first.
+- **`dynamo_rs.h not found` during `build_rust_mex`** — update the sibling `DYNAM-O_rs` checkout; the generated header is tracked there and refreshed by its Cargo build script when relevant Rust inputs change.
 - **`mex: Compiler not configured`** — run `mex -setup C` in MATLAB and select a supported compiler (Xcode on macOS, gcc on Linux, MSVC/MinGW-w64 on Windows).
-- **MEX run gives subtly different peak counts after a fresh `cargo build`** — restart MATLAB. `libdynamo_rs` stays cached until the session exits; `clear mex` does not unload the dynamic library.
+- **MEX run gives subtly different peak counts after a rebuild** — restart MATLAB. `libdynamo_rs` stays cached until the session exits; `clear mex` does not unload the dynamic library.
 - **Figures accumulate across repeated runs** — pass `'plot_on', false` or call `close all` between iterations.
-- **`Undefined function 'multitaper_spectrogram'`** — submodules weren't initialized. From the meta-repo: `./refresh.sh`. Standalone clone: `git submodule update --init --recursive` followed by the re-attach one-liner from the [Clone section](#1-clone).
-- **Submodules in detached HEAD after cloning or branch-switching** — bare `git submodule update` always detaches. Run `./refresh.sh` from the meta-repo, or apply the re-attach one-liner from the [Clone section](#1-clone).
+- **`Undefined function 'multitaper_spectrogram'`** — submodules weren't initialized. Rerun bootstrap from the meta-repo, or run `git submodule update --init --recursive` in a standalone clone.
+- **Submodules are in detached HEAD after cloning or bootstrap** — this is expected: the parent repository records an exact dependency commit. Check out a submodule branch only when intentionally developing that submodule.
 - **NaN values in EEG** — the pipeline does not tolerate NaNs in `data`. Interpolate across NaN runs or mark them via the artifact detector.
 - **`stage_times` / `stage_vals` length mismatch** — both must be the same length; `stage_times` must be non-decreasing.
 - **Recording shorter than one `seg_time` window** (default 30 s) — reduce `detection_opts.seg_time` for very short recordings.
