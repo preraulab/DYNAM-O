@@ -11,6 +11,8 @@ function [stats_table, SOphase, SOphase_times, SOdata] = computePeakSOphase(stat
 %       Fs: numerical - sampling frequency of data (Hz) --required
 %
 %    OPTIONAL:
+%       stage_times: 1xS double or single - stage onset times (s). Default = []
+%       stage_vals: 1xS double or single - sleep stage values 5=W,4=R,3=N1,2=N2,1=N3. Default = []
 %       EEG_times: 1xN double - times for each EEG data sample. Default = (0:length(data)-1)/Fs
 %       isexcluded: 1xN logical - marks each time point of data to be excluded or not, e.g., due to artifacts. Default = all false.
 %
@@ -90,6 +92,10 @@ addRequired(p, 'stats_table', @(x) validateattributes(x, {'table'}, {'real','2d'
 addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','vector'}));
 addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','scalar'}));
 
+%Stage info
+addOptional(p, 'stage_times', [], @(x) validateattributes(x, {'double','single'}, {'real','finite','nondecreasing','2d'}));
+addOptional(p, 'stage_vals', [], @(x) validateattributes(x, {'double','single'}, {'real','finite','nonnegative','2d'}));
+
 %EEG time settings
 addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
 addOptional(p, 'isexcluded', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
@@ -110,6 +116,7 @@ assert(ismember('PeakTime', stats_table.Properties.VariableNames), 'PeakTime mus
 
 %% Compute SO-phase
 [SOphase, SOphase_times, ~, SOdata] = computeSOphase(data, Fs,...
+    'stage_times', stage_times, 'stage_vals', stage_vals,...
     'EEG_times', EEG_times, 'isexcluded', isexcluded, 'SO_freqrange', SO_freqrange, 'SOphase_filter', SOphase_filter);
 
 %% Compute SO-phase at TF peak times
