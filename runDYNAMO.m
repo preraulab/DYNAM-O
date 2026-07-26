@@ -19,6 +19,9 @@
 %       stage_vals:         [1 x S] double - sleep stage labels (1-5)
 %
 %   Optional Inputs (Name-Value Pairs):
+%       backend:                      char - pipeline backend: 'rust' (default, MEX wrappers
+%                                     around dynamo_rs; ~4x faster, -0.8% peak count vs MATLAB)
+%                                     or 'matlab' (pure MATLAB reference path).
 %       time_range:                   [1 x 2] double - start and end time in seconds (default: entire scored range)
 %       baseline_options:             struct - parameters for baseline estimation (default: baseline_opts())
 %       detection_options:            struct - parameters for TF-peak detection (default: detection_opts())
@@ -45,8 +48,8 @@
 %       artifacts:          [1 x T] logical - artifact mask for data within time range
 %       SOPHs:              struct - SO-power and SO-phase histograms (and fits if fit_param_basis or fit_spline_basis is true)
 %       timings:            struct (optional) - per-stage wallclock seconds
-%                           Fields: pool_setup, mex_build, spect_pass1,
-%                                   artifact, baseline_pass1, extract_pass1,
+%                           Fields: pool_setup, spect_pass1, artifact,
+%                                   baseline_pass1, extract_pass1,
 %                                   spect_pass2, baseline_pass2, extract_pass2,
 %                                   refine, peak_stage, peak_sopower,
 %                                   peak_sophase, soph_sopower_compute,
@@ -54,6 +57,7 @@
 %                                   soph_sophase_hist, plot_summary,
 %                                   fit_param_basis, fit_spline_basis, total.
 %                           Stages that didn't run are absent or zero.
+%                           (backend='rust' skips pool_setup entirely.)
 %                           A sorted summary table with these timings also
 %                           prints at the end of verbose runs.
 %
@@ -62,17 +66,13 @@
 %       - A single input of 'segment' or 'night' toggles the example data time range (default: 'segment')
 %       - The SOPHs output includes histogram matrices, bin edges, time-in-bin info, and optionally
 %         parametric and spline fit results for both SO-power and SO-phase histograms.
-%       - Parallel pool type is controlled by detection_options.parallel_mode:
-%           * 'Processes'  (default) — ProcessPool + trim_region_mex. Fastest on
-%             every platform except 8-core Apple Silicon at full-night scale.
-%           * 'Threads'               — ThreadPool; trim_region_mex auto-disables
-%             (MATLAB blocks MEX in thread workers) and falls back to the MATLAB
-%             path, which is bit-identical. Useful on 8-core Apple Silicon
-%             (M2 / M3) for a ~8% wallclock improvement over ProcessPool.
-%           * ''                      — same as 'Processes'.
-%         trim_region_mex auto-compiles on first call if the binary is missing
-%         and a C++ compiler is configured. If it can't compile, the MATLAB
-%         fallback runs automatically with identical output (slower).
+%       - Two pipeline backends via the 'backend' option:
+%           * 'rust' (default) — dynamo_rs MEX wrappers. ~3.7x faster on night.
+%             Requires pre-built MEX files (see rust_bridge/README.md).
+%             Rayon parallelises internally; MATLAB parpool is not started.
+%           * 'matlab' — pure MATLAB reference path. Uses parpool over
+%             segments; pool type is controlled by detection_options.parallel_mode
+%             ('Processes' (default) / 'Threads' / '').
 %
 %   Example:
 %       load('example_data/example_data.mat');  % should include data, Fs, stage_times, stage_vals
@@ -85,7 +85,8 @@
 %       % Fast iteration with precomputed stats_table (skips TF-peak extraction):
 %       [~, ~, ~, ~, ~, ~, ~, SOPHs] = runDYNAMO(data, Fs, stage_times, stage_vals, 'stats_table', stats_table);
 %
-%   See Also: DYNAMO, runSegmentedData, computeTFPeaks, SOpowerphaseHistogram, computePeakStage
+%   See Also: DYNAMO, runSegmentedData, computeTFPeaks, SOpowerphaseHistogram, computePeakStage,
+%             fitParamBasis, fitSplineBasis, printTimingSummary
 %
 % =========================================================================
 %    ██████╗ ██╗   ██╗███╗   ██╗ █████╗ ███╗   ███╗        ██████╗
@@ -128,12 +129,27 @@ function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, art
 
 %% SYSTEM SETTINGS
 % Add necessary functions to path (only if not already on path).
-% genpath recurses into every subfolder under toolbox/, which picks up
-% toolbox/TFpeak_functions/mex/ automatically — that's where
-% trim_region_mex and build_trim_mex live.
 if isempty(which('computeTFPeaks'))
     repo_root = fileparts(which('runDYNAMO'));
     addpath(genpath(fullfile(repo_root, 'toolbox')))
+end
+
+% ---- Required MATLAB toolboxes ----
+% DYNAM-O uses watershed(), regionprops(), imresize(), label2rgb(),
+% bwconncomp(), imreconstruct() from the Image Processing Toolbox in BOTH
+% backends — the rust backend replaces the compute-heavy watershed/merge/
+% trim calls with MEX, but display helpers (runWatershed plot path,
+% label2rgb in extract diagnostics, imresize for pass-1/pass-2 alignment
+% in the pure-MATLAB path) still touch IPT. Fail fast with a clear message
+% so users don't hit cryptic "Undefined function 'watershed'" errors deep
+% in the pipeline.
+if ~license('test', 'Image_Toolbox') || exist('watershed', 'file') == 0
+    error('runDYNAMO:missingToolbox', [ ...
+        'DYNAM-O requires the MATLAB Image Processing Toolbox, which ' ...
+        'is not available on this machine.\n\n' ...
+        'To install:  Home tab > Add-Ons > Get Add-Ons > search ' ...
+        '"Image Processing Toolbox" > Install.\n' ...
+        'Or via license portal: https://www.mathworks.com/products/image.html']);
 end
 
 % default verbose setting for all processing steps
@@ -175,12 +191,25 @@ addOptional(p, 'spline_basis_power_options', spline_basis_opts('power'), @(x) is
 addOptional(p, 'spline_basis_phase_options', spline_basis_opts('phase'), @(x) isstruct(x));
 % additional inputs to control the outputs from runDYNAMO()
 addOptional(p, 'stats_table', [], @(x) validateattributes(x, {'double','table'}, {'real','2d'}));
+% Precomputed artifact mask (row/col logical or numeric over the data
+% within time_range). When supplied alongside a stats_table, the
+% stats-table branch reuses it instead of recomputing detect_artifacts
+% (the dominant cost of a SOPH-only re-run). The mask is deterministic
+% in (data, Fs), so a previously-saved mask is exactly what detection
+% would produce again. Ignored (recomputed) on length mismatch.
+addOptional(p, 'artifacts', [], @(x) isempty(x) || ((islogical(x) || isnumeric(x)) && isvector(x)));
 addOptional(p, 'verbose', default_verbose, @(x) validateattributes(x, {'logical', 'numeric'}, {'scalar'}));
 addOptional(p, 'plot_on', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'save_output_image', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'output_fname', 'DYNAM-O_output', @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
 addOptional(p, 'fit_param_basis', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'fit_spline_basis', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+% Pipeline backend override. Empty (default) means "inherit from
+% detection_options.backend" (which defaults to 'rust'); pass 'rust' or
+% 'matlab' here to override what the GUI/detection_opts set. 'rust' uses
+% compiled MEX wrappers around dynamo_rs (~3.7x faster on night, peaks
+% within ~0.8% of MATLAB); 'matlab' is the pure-MATLAB reference path.
+addOptional(p, 'backend', '', @(x) isempty(x) || any(validatestring(lower(char(x)), {'matlab','rust'})));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -200,73 +229,26 @@ timings = struct();
 % summary table.
 ttotal = datetime('now');
 
-%Set up parallel pool. detection_options.parallel_mode controls the
-%pool type: 'Processes' (default, fastest on every host except 8-core
-%Apple Silicon), 'Threads' (override; disables the trim MEX but keeps
-%output bit-identical via the MATLAB fallback), or '' (same as
-%'Processes'). See toolbox/TFpeak_functions/option_sets/detection_opts.m
-%for the full option surface.
-t_stage = tic;
-setup_parallel_pool(detection_options.parallel_mode);
-timings.pool_setup = toc(t_stage);
-
-%Pre-build trim MEX on the client, ONCE, before any parfor. This avoids
-%every worker racing to compile the same file simultaneously (N workers
-%= N concurrent build_trim_mex calls writing to the same output). The
-%build is attempted on every platform that has a .mex* file missing;
-%trim_region_mex runs on every pool context except ThreadPool workers
-%(see trimWshedRegions.m for the runtime gate), so the build is
-%worthwhile on every host including Apple Silicon.
-t_stage = tic;
-mex_name_ = ['trim_region_mex.' mexext];
-if exist(mex_name_, 'file') ~= 3 && exist('build_trim_mex', 'file') == 2
-    try
-        fprintf('  Compiling trim_region_mex for this platform (first-time only)...\n');
-        build_trim_mex();
-        mex_dir_ = fileparts(which('build_trim_mex'));
-        if ~isempty(mex_dir_) && exist(fullfile(mex_dir_, mex_name_), 'file') == 3
-            addpath(mex_dir_);
-        end
-        fprintf('  MEX compilation complete.\n');
-    catch
-        fprintf('  MEX compilation failed; using stock MATLAB path.\n');
-    end
-end
-clear mex_name_ mex_dir_
-timings.mex_build = toc(t_stage);
-
-%Report configuration
 if verbose
-    pool = gcp('nocreate');
-    if isempty(pool)
-        fprintf('  Parallel mode: serial (no pool)\n');
-    else
-        if isprop(pool, 'NumWorkers')
-            nw = pool.NumWorkers;
-        elseif isprop(pool, 'NumThreads')
-            nw = pool.NumThreads;
-        else
-            nw = feature('numcores');
-        end
-        if isa(pool, 'parallel.ThreadPool')
-            fprintf('  Parallel mode: ThreadPool (%d threads)\n', nw);
-        else
-            fprintf('  Parallel mode: ProcessPool (%d workers)\n', nw);
-        end
-    end
-    fprintf('  Segment size:  %g s\n', detection_options.seg_time);
-    mex_avail = exist(['trim_region_mex.' mexext], 'file') == 3;
-    mex_usable = mex_avail && (isempty(pool) || ~isa(pool, 'parallel.ThreadPool'));
-    if mex_usable
-        fprintf('  Trim MEX:      enabled (trim_region_mex)\n');
-    elseif mex_avail
-        fprintf('  Trim MEX:      disabled (ThreadPool cannot run MEX)\n');
-    elseif ~isempty(pool) && isa(pool, 'parallel.ThreadPool')
-        fprintf('  Trim MEX:      n/a (ThreadPool cannot run MEX)\n');
-    else
-        fprintf('  Trim MEX:      not built (will auto-compile on first run)\n');
-    end
+    fprintf('================================================================\n');
+    fprintf('  D Y N A M - O - The Dynamic Oscillation Toolbox\n');
+    fprintf('  Version: %s\n', dynamo_version());
+    fprintf('================================================================\n');
+    fprintf('  Developed by the Prerau Laboratory\n');
+    fprintf('  Web:       https://sleepeeg.org\n');
+    fprintf('  Tutorials: https://prerau.bwh.harvard.edu/dynam-o/\n');
+    fprintf('  GitHub:    https://github.com/preraulab/DYNAM-O\n');
+    fprintf('================================================================\n\n');
 end
+
+% Harden against partial option structs: a user may pass an
+% old/incomplete struct from a prior session (e.g., before a new field
+% like reuse_baseline or seg_time was added). Without backfilling we'd
+% crash deep in the pipeline with "Unrecognized field name". Merge any
+% missing fields from the canonical defaults so partial inputs are
+% always well-formed.
+detection_options = mergeOptsDefaults(detection_options, detection_opts());
+baseline_options  = mergeOptsDefaults(baseline_options,  baseline_opts());
 
 %Force data to be a column vector
 if isrow(data) %#ok<*NODEF>
@@ -286,6 +268,134 @@ end
 %Cast stage_vals to single for interpolations
 stage_vals = single(stage_vals);
 
+%% SETUP BACKEND
+% Resolve backend: explicit top-level override wins; otherwise inherit
+% from detection_options.backend (the GUI/options-struct source of truth).
+if isempty(backend)
+    if isfield(detection_options, 'backend') && ~isempty(detection_options.backend)
+        backend = detection_options.backend;
+    else
+        backend = 'rust';
+    end
+end
+backend = lower(char(backend));
+% Sync the resolved value back into the struct so downstream struct-expand
+% callers see a single, consistent backend (prevents inputParser's
+% "Cannot include struct and duplicate parameters" error when the struct
+% is passed alongside an explicit 'backend' name/value pair).
+detection_options.backend = backend;
+
+% Publish backend to multitaper_spectrogram_dynamo via app-level state,
+% so detect_artifacts / displaySummaryPlot / computeSOpower / computeTFPeaks
+% all dispatch their multitaper calls to the matching MTS implementation
+% without each one needing a 'backend' kwarg threaded down. Cleared in the
+% onCleanup at function exit so a script that aborts mid-run doesn't
+% poison the next call.
+setappdata(0, 'dynamo_backend', backend);
+mts_state_cleanup = onCleanup(@() rmappdata_safe(0, 'dynamo_backend'));
+
+if strcmp(backend, 'rust')
+    % Rust MEX backend: add rust_bridge/ to path, assert the four MEX
+    % wrappers exist, and skip parpool setup entirely (Rust internally
+    % parallelises via rayon).
+    repo_root_ = fileparts(which('runDYNAMO'));
+    rb_dir_ = fullfile(repo_root_, 'rust_bridge');
+    if isfolder(rb_dir_)
+        addpath(rb_dir_);
+    end
+    clear repo_root_ rb_dir_
+
+    needed = {'extract_tfpeaks_mex', 'mask_spectrogram_mex', ...
+        'refine_peaks_mex', 'tfpeak_histogram_mex'};
+    missing = needed(cellfun(@(n) exist(n, 'file') ~= 3, needed));
+    if ~isempty(missing)
+        error('runDYNAMO:missingMEX', ['backend=''rust'' requires compiled MEX files ' ...
+            '(missing: %s).\n\nBuild them with:\n  cd <DYNAM-O_rs>/rust && cargo build --release\n' ...
+            '  cd <DYNAM-O_dev>/rust_bridge && build_rust_mex\n\n' ...
+            'Or call runDYNAMO(..., ''backend'', ''matlab'') to use the pure MATLAB path.'], ...
+            strjoin(missing, ', '));
+    end
+
+    % Defensively disable parpool auto-creation under the rust backend.
+    % All rust-path stages that were known to use parfor (runSegmentedData,
+    % refinePeakFrequency, MTS) short-circuit into MEX before reaching the
+    % parfor. A pool spinning up under rust therefore signals an unintended
+    % code path — usually a stale committed dylib (undefined symbol →
+    % MEX runtime error → catch in some upstream wrapper falls through to
+    % a pure-MATLAB function with parfor) or a future-added parfor that
+    % wasn't paired with a rust MEX dispatch. Forcing AutoCreate=false
+    % keeps the contract ("rust backend uses rayon, never MATLAB parpool")
+    % even if a regression sneaks in. Under AutoCreate=false, any stray
+    % parfor runs serially in the current MATLAB thread.
+    % parallel.Settings.Pool.AutoCreate has TWO different shapes depending
+    % on MATLAB release:
+    %   - newer (e.g. R2025b mac):   matlab.settings.Setting object with
+    %                                .ActiveValue / .TemporaryValue / .PersonalValue
+    %   - older (e.g. R2024b linux): plain logical
+    % We handle both and remember which mode we used so the onCleanup can
+    % restore correctly. Track guard_mode in a local that the cleanup can
+    % capture.
+    if exist('parallel.Settings', 'class') == 8 || ...
+            (exist('ver','builtin')~=0 && any(strcmp({ver().Name}, 'Parallel Computing Toolbox')))
+        try
+            ps = parallel.Settings;
+            raw = ps.Pool.AutoCreate;
+            if isa(raw, 'matlab.settings.Setting')
+                pool_autocreate_orig = raw.ActiveValue;
+                ps.Pool.AutoCreate.TemporaryValue = false;
+                pool_autocreate_mode = 'temporary';
+            else
+                pool_autocreate_orig = logical(raw);
+                ps.Pool.AutoCreate = false;
+                pool_autocreate_mode = 'direct';
+            end
+            pool_autocreate_cleanup = onCleanup( ...
+                @() restore_pool_autocreate(ps, pool_autocreate_orig, pool_autocreate_mode));
+        catch ME
+            if verbose
+                fprintf('  Note: could not disable Pool.AutoCreate (%s)\n', ME.message);
+            end
+        end
+    end
+
+    timings.pool_setup = 0;
+    timings.mex_build = 0;
+
+    if verbose
+        fprintf('  Backend:       rust (MEX)\n');
+        fprintf('  Parallel mode: rayon (in-MEX, no MATLAB parpool)\n');
+        fprintf('  Segment size:  %g s\n\n', detection_options.seg_time);
+    end
+else
+    % MATLAB backend: parpool benefits segment parfor in runSegmentedData.
+    t_stage = tic;
+    setup_parallel_pool(detection_options.parallel_mode);
+    timings.pool_setup = toc(t_stage);
+    timings.mex_build = 0;
+
+    if verbose
+        pool = gcp('nocreate');
+        fprintf('  Backend:       matlab\n');
+        if isempty(pool)
+            fprintf('  Parallel mode: serial (no pool)\n');
+        else
+            if isprop(pool, 'NumWorkers')
+                nw = pool.NumWorkers;
+            elseif isprop(pool, 'NumThreads')
+                nw = pool.NumThreads;
+            else
+                nw = feature('numcores');
+            end
+            if isa(pool, 'parallel.ThreadPool')
+                fprintf('  Parallel mode: ThreadPool (%d threads)\n', nw);
+            else
+                fprintf('  Parallel mode: ProcessPool (%d workers)\n', nw);
+            end
+        end
+        fprintf('  Segment size:  %g s\n\n', detection_options.seg_time);
+    end
+end
+
 %% COMPUTE TIME-FREQUENCY PEAKS
 % See computeTFPeaks() for a full list of optional arguments for finer
 % control of watershed extraction of Time-Frequency Peaks
@@ -293,7 +403,7 @@ stage_vals = single(stage_vals);
 if isempty(stats_table)
     % If no stats table provided
     [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, tfp_timings] = computeTFPeaks(data, Fs, stage_times, stage_vals,...
-        'time_range', time_range, 'verbose', verbose, detection_options, baseline_options);
+        'time_range', time_range, 'verbose', verbose, baseline_options, detection_options);
     % Fold computeTFPeaks' per-stage timings into our master struct
     % (spect_pass1, artifact, baseline_pass1, extract_pass1, spect_pass2,
     % baseline_pass2, extract_pass2, refine).
@@ -319,11 +429,25 @@ else
     t_time_range = t_full(time_range_inds);
     [spect, stimes, sfreqs] = deal([]);
     t_stage = tic;
-    artifacts = detect_artifacts(data_time_range, Fs);
+    if ~isempty(artifacts) && numel(artifacts) == numel(data_time_range)
+        % Reuse the supplied mask (saved from the run that built this
+        % stats_table). detect_artifacts returns a row vector, so match
+        % that orientation for downstream isexcluded consumers.
+        artifacts = logical(reshape(artifacts, 1, []));
+        if verbose
+            disp('Reusing provided artifact mask (skipping detection).');
+        end
+    else
+        if ~isempty(artifacts) && verbose
+            fprintf(['Provided artifact mask length (%d) does not match data ' ...
+                'in time range (%d) — recomputing.\n'], numel(artifacts), numel(data_time_range));
+        end
+        artifacts = detect_artifacts(data_time_range, Fs);
+    end
     timings.artifact = toc(t_stage);
 end
 
-%% COMPUTE ADDITIONAL PEAK FEATURES
+%% COMPUTE ADDITIONAL PEAK FEATURE PROPERTIES
 % Additional useful features that describe each detected TF peak in the
 % stats_table are computed here. Customized functions can be added in this
 % section to populate the table with other feature columns.
@@ -334,11 +458,13 @@ stats_table = computePeakStage(stats_table, stage_times, stage_vals, t_time_rang
 timings.peak_stage = toc(t_stage);
 % Compute slow oscillation power (SO-Power) at each TF peak
 t_stage = tic;
-[stats_table, SOpower_norm, SOpower_times] = computePeakSOpower(stats_table, data_time_range, Fs, 'EEG_times', t_time_range, 'isexcluded', artifacts, SOPH_options);
+[stats_table, SOpower_norm, SOpower_times] = computePeakSOpower(stats_table, data_time_range, Fs,...
+    'stage_times', stage_times, 'stage_vals', stage_vals, 'EEG_times', t_time_range, 'isexcluded', artifacts, SOPH_options);
 timings.peak_sopower = toc(t_stage);
 % Compute slow oscillation phase (SO-Phase) at each TF peak
 t_stage = tic;
-[stats_table, SOphase, SOphase_times] = computePeakSOphase(stats_table, data_time_range, Fs, 'EEG_times', t_time_range, 'isexcluded', artifacts, SOPH_options);
+[stats_table, SOphase, SOphase_times, SOfiltered] = computePeakSOphase(stats_table, data_time_range, Fs,...
+    'stage_times', stage_times, 'stage_vals', stage_vals, 'EEG_times', t_time_range, 'isexcluded', artifacts, SOPH_options);
 timings.peak_sophase = toc(t_stage);
 
 %% COMPUTE SO-POWER/PHASE HISTOGRAMS
@@ -350,7 +476,8 @@ if nargout > 7
     [SOpower_mat, SOphase_mat, SOpower_bins, SOphase_bins, freq_bins, num_peaks_at_freq,...
         SOpower_TIB, SOphase_TIB, ~, ~, hist_peakidx, ~, ~, ~, ~, ~, soph_timings] = SOpowerphaseHistogram(data_time_range, Fs, stats_table.PeakFrequency, stats_table.PeakTime,...
         'stage_times', stage_times, 'stage_vals', stage_vals, 'verbose', verbose, SOPH_options,...
-        'SOpower', SOpower_norm, 'SOpower_times', SOpower_times, 'SOphase', SOphase, 'SOphase_times', SOphase_times);
+        'SOpower', SOpower_norm, 'SOpower_times', SOpower_times, 'SOphase', SOphase, 'SOphase_times', SOphase_times,...
+        'backend', backend);
     timings.soph_histograms = toc(t_stage);
     % Merge the sub-breakdown (sopower_compute, sophase_compute,
     % sopower_hist, sophase_hist) into the master struct. The outer
@@ -361,7 +488,7 @@ if nargout > 7
     clear soph_timings fns
 
     %Create a SOPHs structure for output
-    SOPHs = createSOPHsStruct(SOpower_mat, SOphase_mat, SOpower_bins, SOpower_norm, SOpower_times, SOphase_bins, freq_bins, num_peaks_at_freq, SOpower_TIB, SOphase_TIB);
+    SOPHs = createSOPHsStruct(SOpower_mat, SOphase_mat, SOpower_bins, SOpower_norm, SOpower_times, SOphase_bins, SOphase, SOphase_times, SOfiltered, freq_bins, num_peaks_at_freq, SOpower_TIB, SOphase_TIB);
 
     %Check for valid histogramas
     valid_powerhist = any(isfinite(SOPHs.SOpower_mat), 'all');
@@ -387,13 +514,13 @@ if plot_on
         fh = displaySummaryPlot('stage_times',stage_times, 'stage_vals',stage_vals, 'artifacts',artifacts, 't_time_range',t_time_range,...
             'data',data, 'Fs',Fs, 'time_range',time_range,...
             'SOpower_norm',SOpower_norm, 'SOpower_times',SOpower_times, 'SOpower_norm_method',SOPH_options.SOpower_norm_method,...
-            'stats_table',stats_table, 'hist_peakidx',hist_peakidx,...
+            'stats_table',stats_table, 'hist_peakidx',hist_peakidx, 'SOPH_stages',SOPH_options.SOPH_stages,...
             'freq_bins',freq_bins, 'SOpower_mat',SOpower_mat, 'SOpower_bins',SOpower_bins,...
             'SOphase_mat',SOphase_mat, 'SOphase_bins',SOphase_bins);
     else
         fh = displaySummaryPlot('stage_times',stage_times, 'stage_vals',stage_vals, 'artifacts',artifacts, 't_time_range',t_time_range,...
             'data',data, 'Fs',Fs, 'time_range',time_range,...
-            'stats_table',stats_table);
+            'stats_table',stats_table, 'SOPH_stages',SOPH_options.SOPH_stages);
     end
 
     % Save output summary figure
@@ -414,7 +541,8 @@ if nargout > 7 && (fit_param_basis || fit_spline_basis)
 
     if fit_param_basis
         t_stage = tic;
-        SOPHs = fitParamBasis(SOPHs, param_basis_power_options, param_basis_phase_options, valid_powerhist, valid_phasehist, verbose, plot_each, plot_both);
+        % Pass the SOPH-included peaks (hist_peakidx population) so the params tables carry per-mode TF-peak summary (Pk*) columns.
+        SOPHs = fitParamBasis(SOPHs, param_basis_power_options, param_basis_phase_options, valid_powerhist, valid_phasehist, verbose, plot_each, plot_both, stats_table(hist_peakidx, :));
         timings.fit_param_basis = toc(t_stage);
     end
 
@@ -438,189 +566,30 @@ end
 
 end
 
-
-% ------------------------------------------------------------------------
-% printTimingSummary
-%   Pretty-prints the timings struct as a right-aligned, dot-leadered table
-%   with per-stage percentages of total wallclock. Any fields missing from
-%   the struct (stage didn't run — e.g., plot_on=false) are simply skipped.
-% ------------------------------------------------------------------------
-function printTimingSummary(timings)
-% Display: pipeline stages sorted by time (largest first) with
-% millisecond precision so small stages don't show as 0.0 s. Any
-% fields missing from the struct (stage didn't run — e.g.,
-% plot_on=false, single-watershed) are silently omitted.
-% timings.soph_histograms is the outer wall for the full SOpowerphaseHistogram
-% call; we list its sub-parts (soph_sopower_hist, soph_sophase_hist, and
-% the two optional compute stages) separately so the breakdown is visible.
-% We skip the outer total to avoid double-counting in the summary.
-order = { ...
-    'pool_setup',           'Parallel pool setup'; ...
-    'mex_build',            'MEX build / check'; ...
-    'spect_pass1',          'Spectrogram (pass 1)'; ...
-    'artifact',             'Artifact rejection'; ...
-    'baseline_pass1',       'Baseline (pass 1)'; ...
-    'extract_pass1',        'TF peak extraction (pass 1)'; ...
-    'spect_pass2',          'Spectrogram (pass 2)'; ...
-    'baseline_pass2',       'Baseline + mask (pass 2)'; ...
-    'extract_pass2',        'TF peak extraction (pass 2)'; ...
-    'refine',               'Peak refinement'; ...
-    'peak_stage',           'Peak stage assignment'; ...
-    'peak_sopower',         'Peak SO-power compute'; ...
-    'peak_sophase',         'Peak SO-phase compute'; ...
-    'soph_sopower_compute', 'SOPH: SO-power compute (if needed)'; ...
-    'soph_sophase_compute', 'SOPH: SO-phase compute (if needed)'; ...
-    'soph_sopower_hist',    'SOPH: SO-power histogram'; ...
-    'soph_sophase_hist',    'SOPH: SO-phase histogram'; ...
-    'plot_summary',         'Summary plot'; ...
-    'fit_param_basis',      'Parametric basis fit'; ...
-    'fit_spline_basis',     'Spline basis fit'};
-
-total = timings.total;
-if total <= 0, total = eps; end  % avoid /0 on degenerate runs
-
-% Collect present stages, sort descending by time. Skip rows with
-% exactly 0 value — treats "stage exists but didn't run" (e.g., the
-% soph_sopower_compute field when SOpower is precomputed upstream)
-% the same as "field never populated at all".
-keys   = order(:, 1);
-labels = order(:, 2);
-pres   = cellfun(@(k) isfield(timings, k) && timings.(k) > 0, keys);
-labels = labels(pres);
-times  = cellfun(@(k) timings.(k), keys(pres));
-[times_sorted, si] = sort(times, 'descend');
-labels_sorted = labels(si);
-
-width   = 70;
-bar_top = repmat(char(9552), 1, width);   % ═
-bar_sep = repmat(char(9472), 1, width);   % ─
-fprintf('\n%s\n', bar_top);
-fprintf(' %-*s\n', width-1, 'TIMING SUMMARY  (stages sorted by time, ms precision)');
-fprintf('%s\n', bar_top);
-
-sum_reported = 0;
-for k = 1:numel(labels_sorted)
-    t = times_sorted(k);
-    sum_reported = sum_reported + t;
-    pct = 100 * t / total;
-    left = sprintf(' %s ', labels_sorted{k});
-    right = sprintf(' %8.3f s   (%5.1f%%)', t, pct);
-    fill_len = width - numel(left) - numel(right);
-    if fill_len < 1, fill_len = 1; end
-    fprintf('%s%s%s\n', left, repmat('.', 1, fill_len), right);
+function rmappdata_safe(h, key)
+    % rmappdata throws if the key isn't set; suppress for the onCleanup
+    % path where we don't care if some other path already removed it.
+    try
+        if isappdata(h, key), rmappdata(h, key); end
+    catch
+    end
 end
 
-% "Other" catches any time between stages (tic/toc boundaries, arg
-% parsing, unmeasured helpers). Printed only when it's non-trivial
-% (>100 ms) so clean runs stay clean.
-other = total - sum_reported;
-if other > 0.1
-    left = ' Other / overhead ';
-    right = sprintf(' %8.3f s   (%5.1f%%)', other, 100 * other / total);
-    fill_len = width - numel(left) - numel(right);
-    if fill_len < 1, fill_len = 1; end
-    fprintf('%s%s%s\n', left, repmat('.', 1, fill_len), right);
-end
-
-fprintf('%s\n', bar_sep);
-left = ' Total ';
-right = sprintf(' %8.3f s   (100.0%%)', total);
-fill_len = width - numel(left) - numel(right);
-if fill_len < 1, fill_len = 1; end
-fprintf('%s%s%s\n', left, repmat('.', 1, fill_len), right);
-fprintf('%s\n\n', bar_top);
-end
-
-
-%% Helper functions
-function [SOPHs] = createSOPHsStruct(SOpower_mat, SOphase_mat, SOpower_bins, SOpower_norm, SOpower_times, SOphase_bins, freq_bins, num_peaks_at_freq, SOpower_TIB, SOphase_TIB)
-SOPHs = struct;
-SOPHs.SOpower_mat = SOpower_mat;
-SOPHs.SOphase_mat = SOphase_mat;
-SOPHs.SOpower_bins = SOpower_bins;
-SOPHs.SOphase_bins = SOphase_bins;
-SOPHs.freq_bins = freq_bins;
-SOPHs.num_peaks_at_freq = num_peaks_at_freq;
-SOPHs.SOpower_TIB = SOpower_TIB;
-SOPHs.SOphase_TIB = SOphase_TIB;
-SOPHs.SOpower_norm = SOpower_norm;
-SOPHs.SOpower_times = SOpower_times;
-end
-
-
-function [SOPH_paramfit] = createSOPHparamfitStruct(params, fitobj, gof, model_SOPH, wshed_img)
-SOPH_paramfit = struct;
-SOPH_paramfit.params = params; % Columns are: [amp0, fmean0, fstd0, pmean0, pstd0, theta0]
-SOPH_paramfit.fitobj = fitobj;
-SOPH_paramfit.gof = gof;
-SOPH_paramfit.model_SOPH = model_SOPH;
-SOPH_paramfit.wshed_img = wshed_img;
-end
-
-
-function [SOPH_splinefit] = createSOPHsplinefitStruct(splinefit, coefs, spline_obj, knots_x, knots_y)
-SOPH_splinefit = struct;
-SOPH_splinefit.splinefit = splinefit;
-SOPH_splinefit.coefs = coefs;
-SOPH_splinefit.spline_obj = spline_obj;
-SOPH_splinefit.knots_x = knots_x;
-SOPH_splinefit.knots_y = knots_y;
-end
-
-
-function [SOPHs] = fitParamBasis(SOPHs, power_opts, phase_opts, valid_powerhist, valid_phasehist, verbose, plot_each, plot_both)
-if verbose && (valid_powerhist || valid_phasehist)
-    disp('  Fitting parametric basis...');
-end
-
-% Parametric fit of SO-Power Histogram
-if valid_powerhist
-    power_opts.plot_on = plot_each;
-    power_opts.verbose = verbose-1;
-    [params_power, fitobj_power, gof_power, model_SOPH_power, wshed_img_power] = param_basis_power(SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins, power_opts);
-    SOPHs.SOpower_paramfit = createSOPHparamfitStruct(params_power, fitobj_power, gof_power, model_SOPH_power, wshed_img_power);
-end
-
-% Parametric fit of SO-Phase Histogram
-if valid_phasehist
-    phase_opts.plot_on = plot_each;
-    phase_opts.verbose = verbose-1;
-    [params_phase, fitobj_phase, gof_phase, model_SOPH_phase, wshed_img_phase] = param_basis_phase(SOPHs.SOphase_mat, SOPHs.SOphase_bins, SOPHs.freq_bins, phase_opts);
-    SOPHs.SOphase_paramfit = createSOPHparamfitStruct(params_phase, fitobj_phase, gof_phase, model_SOPH_phase, wshed_img_phase);
-end
-
-if plot_both
-    plot_SOPH_paramfits( ...
-        SOPHs.SOpower_bins, SOPHs.SOpower_paramfit.wshed_img, SOPHs.SOpower_mat, model_SOPH_power, params_power, power_opts.SOPH_clim_prctiles, power_opts.power_limits, power_opts.freq_limits, ...
-        SOPHs.SOphase_bins, SOPHs.SOphase_paramfit.wshed_img, SOPHs.SOphase_mat, model_SOPH_phase, params_phase, phase_opts.SOPH_clim_prctiles, phase_opts.phase_limits, phase_opts.freq_limits, ...
-        SOPHs.freq_bins, SOPHs.SOpower_paramfit.fitobj, SOPHs.SOphase_paramfit.fitobj);
-end
-end
-
-
-function [SOPHs] = fitSplineBasis(SOPHs, power_opts, phase_opts, valid_powerhist, valid_phasehist, verbose, plot_each, plot_both)
-if verbose && (valid_powerhist || valid_phasehist)
-    disp('  Fitting spline basis...');
-end
-
-% Spline fit of SO-Power Histogram
-if valid_powerhist
-    power_opts.plot_on = plot_each;
-    [splinefit_power, coefs_power, spline_obj_power, knots_x_power, knots_y_power] = spline_basis('power', SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins, power_opts);
-    SOPHs.SOpower_splinefit = createSOPHsplinefitStruct(splinefit_power, coefs_power, spline_obj_power, knots_x_power, knots_y_power);
-end
-
-% Spline fit of SO-Phase Histogram
-if valid_phasehist
-    phase_opts.plot_on = plot_each;
-    [splinefit_phase, coefs_phase, spline_obj_phase, knots_x_phase, knots_y_phase] = spline_basis('phase', SOPHs.SOphase_mat, SOPHs.SOphase_bins, SOPHs.freq_bins, phase_opts);
-    SOPHs.SOphase_splinefit = createSOPHsplinefitStruct(splinefit_phase, coefs_phase, spline_obj_phase, knots_x_phase, knots_y_phase);
-end
-
-if plot_both
-    plot_SOPH_splinefits( ...
-        SOPHs.SOpower_mat, SOPHs.SOpower_bins, splinefit_power, coefs_power, knots_x_power, knots_y_power, power_opts, ...
-        SOPHs.SOphase_mat, SOPHs.SOphase_bins, splinefit_phase, coefs_phase, knots_x_phase, knots_y_phase, phase_opts, ...
-        SOPHs.freq_bins);
-end
+function restore_pool_autocreate(ps, orig, mode)
+    % Restore the original parallel.Settings.Pool.AutoCreate value at
+    % function exit. mode tracks which API shape we used on entry so we
+    % know how to undo: 'temporary' clears the TemporaryValue (newer
+    % releases with Setting objects); 'direct' assigns back the captured
+    % primitive value.
+    if isempty(ps) || isempty(orig) || strcmp(mode, 'none'), return, end
+    try
+        switch mode
+            case 'temporary'
+                clearTemporaryValue(ps.Pool.AutoCreate);
+            case 'direct'
+                ps.Pool.AutoCreate = orig;
+        end
+    catch
+        % no-op — toolbox unloaded mid-run, etc.
+    end
 end

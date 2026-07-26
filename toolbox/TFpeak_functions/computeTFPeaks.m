@@ -20,7 +20,7 @@ function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, art
 %       features (opt):            [1xf] char or cell array of char -
 %                                  features to be extracted from each peak region. Can be any subset of
 %                                  {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData',
-%                                   'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'} or 'all'. Default = 'all'
+%                                   'PeakFrequency', 'Peakiness', 'PeakTime', 'PeakStage', 'SegmentNum', 'Volume'} or 'all'. Default = 'all'
 %       display_peaks (opt):       logical - whether to display all detected TF-peaks overlaid on spectrogram in a new figure
 %       artifacts (opt):           [nx1] logical - boolean indicating artifact time points. Default = logical([]), run detect_artifacts()
 %       artifact_filters (opt):    struct with 2 digitalFilter fields "hpFilt_high","hpFilt_broad" -
@@ -57,7 +57,10 @@ function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, art
 %                                  Default = [], to be set by quality_setting
 %       merge_thresh (opt):        scalar - threshold weight value for when to stop merge rule.
 %                                  Default = [], to be set by quality_setting
-%       quality_setting (opt):     character - Quality settings for the algorithm. Default = 'default'
+%       quality_setting (opt):     character - Quality settings preset for the algorithm. Default = ''
+%                                  When non-empty, overrides downsample_spect, seg_time, and merge_thresh.
+%                                  When empty (default), individual params are used; their defaults
+%                                  match the 'default' preset values.
 %                                       'stokes_2023': matches Stokes et al. 2023 SLEEP paper settings exactly
 %                                           downsample_spect = [];
 %                                           seg_time = 60; (seconds)
@@ -78,6 +81,10 @@ function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, art
 %       refinement (opt):          logical - perform 1Hz refinement on the PeakFrequency feature in stats_table. Default = true
 %       show_pbar (opt):           logical - whether to display progress bar during runSegmentedData(). Default = true
 %       debug_mode (opt):          logical - whether to run runSegmentedData() in serial for-loop instead of parfor. Default = false
+%       backend (opt):             char - pipeline backend: 'rust' (default, dynamo_rs MEX
+%                                  wrappers) or 'matlab' (pure MATLAB reference path).
+%                                  Propagates to runSegmentedData (pass-1 + pass-2) and
+%                                  refinePeakFrequency. See runDYNAMO for details.
 %
 %   Outputs:
 %       stats_table:        table - features of each TFpeak
@@ -168,12 +175,21 @@ addOptional(p, 'verbose', true, @(x) validateattributes(x, {'logical', 'numeric'
 %Baseline struct parameters
 baseline_options = baseline_opts(); % get the default parameters
 addOptional(p, 'baseline_stages', baseline_options.baseline_stages, @(x) validateattributes(x,{'numeric'},{'real','vector'}));
-addOptional(p, 'baseline_exclude', baseline_options.baseline_exclude, @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
+addOptional(p, 'baseline_exclude', baseline_options.baseline_exclude, ...
+    @(x) isempty(x) || (islogical(x) || (isnumeric(x) && all(ismember(x(:), [0, 1])))));
 addOptional(p, 'baseline_ptile', baseline_options.baseline_ptile, @(x) validateattributes(x,{'numeric'},{'real','scalar'}));
 addOptional(p, 'baseline_trim', baseline_options.baseline_trim, @(x) isa(x,'numeric') && length(x) <= 2);
 
 %TF peak detection struct parameters
 detection_options = detection_opts(); % get the default parameters
+% Performance optimization: reuse the pass-1 baseline as the pass-2
+% baseline, skipping the second computeBaseline call. Saves ~5% of
+% pipeline time. Safe because pass-1 and pass-2 spectrograms share NFFT
+% (so freq grids match exactly) and bw_minmax(1)=2 filters out peaks
+% below 2 Hz where the SO-band baseline mismatch (~7 dB) lives. Above
+% 2 Hz the per-band ratio is uniformly within +-0.5 dB. Default sourced
+% from detection_opts() (currently true).
+addOptional(p, 'reuse_baseline', detection_options.reuse_baseline, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'double_watershed', detection_options.double_watershed, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'mtm_dsfreqs', detection_options.mtm_dsfreqs, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 addOptional(p, 'mtm_freq_range', detection_options.mtm_freq_range, @(x) validateattributes(x,{'numeric'},{'real','finite','vector','numel',2}));
@@ -193,7 +209,7 @@ addOptional(p, 'refinement', detection_options.refinement, @(x) validateattribut
 addOptional(p, 'show_pbar', detection_options.show_pbar, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'debug_mode', detection_options.debug_mode, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'parallel_mode', detection_options.parallel_mode, @(x) (ischar(x) || isstring(x)) && any(strcmp(x, {'', 'Processes', 'Threads'})));
-addOptional(p, 'use_trim_mex', detection_options.use_trim_mex, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+addOptional(p, 'backend', detection_options.backend, @(x) any(validatestring(lower(char(x)), {'matlab','rust'})));
 
 parse(p, data, Fs, stage_times, stage_vals, varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -222,7 +238,7 @@ assert(min(t_data)<max(time_range) & max(t_data)>min(time_range),'Staging times 
 %Set default features
 if any(strcmpi(features, 'all'))
     features = {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height',...
-        'HeightData', 'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'};
+        'HeightData', 'PeakFrequency', 'Peakiness', 'PeakTime', 'SegmentNum', 'Volume'};
 end
 
 %Check if filters are passed in
@@ -247,9 +263,14 @@ else
     end
 end
 
-% Set default baseline_exclude
+% Set default baseline_exclude. Coerce to logical here too — the
+% input parser accepts both logical and binary numeric so a
+% JSON-round-tripped settings struct (where logicals become
+% doubles) doesn't trip the downstream logical-only ops.
 if isempty(baseline_exclude)
     baseline_exclude = false(1, length(data));
+elseif ~islogical(baseline_exclude)
+    baseline_exclude = logical(baseline_exclude);
 end
 
 %% Timing struct — captures per-stage durations so runDYNAMO can print a
@@ -282,7 +303,7 @@ tfp_timings.spect_pass1 = toc(t_stage);
 t_stage = tic;
 if isempty(artifacts)
     if verbose
-        disp('Performing artifact rejection...');
+        fprintf('Performing artifact rejection (%s)...\n', backend);
     end
     artifacts = detect_artifacts(data_time_range, Fs, 'hpFilt_high', artifact_filters.hpFilt_high, 'hpFilt_broad', artifact_filters.hpFilt_broad);
 else
@@ -294,7 +315,7 @@ tfp_timings.artifact = toc(t_stage);
 % Exclude artifacts, baseline_exclude, and times corresponding to stages not in baseline_stages from baseline computation
 t_stage = tic;
 exclude_stages = ~ismember(stage_vals, baseline_stages); %stages to use passed in
-exclude_stages_resamp = interp1(stage_times, single(exclude_stages), t_time_range, 'previous')~=0; % ~=0 excludes both 1 and NaN (when t_time_range exceeds the interp1 range)
+exclude_stages_resamp = interp1(stage_times, single(exclude_stages), t_time_range, 'previous')~=0;
 baseline_exclude = artifacts(:) | exclude_stages_resamp(:) | baseline_exclude(:);
 
 baseline = computeBaseline(spect, stimes, t_time_range, baseline_exclude, baseline_range, baseline_ptile);
@@ -302,7 +323,7 @@ tfp_timings.baseline_pass1 = toc(t_stage);
 
 %% Compute time-frequency peaks
 if verbose
-    disp('Extracting TF peaks from the spectrogram...');
+    fprintf('Extracting TF peaks from the spectrogram (%s)...\n', backend);
 end
 tfp = tic;
 
@@ -313,11 +334,14 @@ if display_peaks
 end
 
 if double_watershed
-    [stats_table, regions, borders] = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
-        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), show_pbar, debug_mode, use_trim_mex);
+    % Pass-1: when backend='rust', request labels_img (4th output) so pass-2
+    % can use mask_spectrogram_mex. When backend='matlab', regions/borders
+    % from the MATLAB path feed the pure-MATLAB maskSpectrogram.
+    [stats_table, regions, borders, labels_img] = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
+        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), show_pbar, debug_mode, 'backend', backend);
 else
     stats_table = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
-        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), show_pbar, debug_mode, use_trim_mex);
+        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), show_pbar, debug_mode, 'backend', backend);
 end
 
 tfp_timings.extract_pass1 = toc(tfp);
@@ -345,22 +369,41 @@ if double_watershed
     stimes = stimes + t_time_range(1); % adjust the time axis to t_data
     tfp_timings.spect_pass2 = toc(t_stage);
 
-    % Recompute baseline using the same baseline_exclude computed above
+    % Recompute baseline using the same baseline_exclude computed above,
+    % unless reuse_baseline is set — in which case we just reuse the
+    % pass-1 baseline (computed at line ~311 above on the pass-1
+    % spectrogram). The two passes share NFFT/df/time-step so freq +
+    % time grids are identical; pass-2's higher temporal smoothing
+    % shifts the SO-band (<2 Hz) baseline by ~+7 dB, but bw_minmax(1)=2
+    % filters out peaks below 2 Hz so the SO mismatch doesn't affect
+    % final peak detection. Above 2 Hz the per-band ratio is uniformly
+    % within +-0.5 dB. See rust_bridge/test_baseline_reuse.m for the
+    % empirical breakdown.
     t_stage = tic;
-    baseline = computeBaseline(spect, stimes, t_time_range, baseline_exclude, baseline_range, baseline_ptile);
+    if ~reuse_baseline
+        baseline = computeBaseline(spect, stimes, t_time_range, baseline_exclude, baseline_range, baseline_ptile);
+    end
+    % (else: keep `baseline` from pass-1 — same variable, not overwritten.)
 
-    % Mask the spectrogram using extracted TFpeaks from the first round of watershed
-    spect_masked = maskSpectrogram(spect, stimes_first, stimes, regions, borders);
+    % Mask the pass-2 spectrogram using extracted TFpeaks from pass-1.
+    % Rust backend uses mask_spectrogram_mex (dynamo_rs perimeter-aware);
+    % MATLAB backend uses the regions/borders cell form via maskSpectrogram.
+    if strcmp(backend, 'rust')
+        % MEX ABI wants real double; multitaper_spectrogram returns single.
+        spect_masked = mask_spectrogram_mex(double(spect), double(stimes(:)'), labels_img, double(stimes_first(:)'));
+    else
+        spect_masked = maskSpectrogram(spect, stimes_first, stimes, regions, borders);
+    end
     tfp_timings.baseline_pass2 = toc(t_stage);
 
     % Compute time-frequency peaks
     if verbose
-        disp('[2nd] Extracting TF peaks from the spectrogram...');
+        fprintf('[2nd] Extracting TF peaks from the spectrogram (%s)...\n', backend);
     end
     tfp = tic;
 
     stats_table = runSegmentedData(spect_masked, stimes, sfreqs, baseline, seg_time, downsample_spect, compute_features, ...
-        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), show_pbar, debug_mode, use_trim_mex);
+        dur_min, bw_min, merge_thresh, max_merges, trim_vol, verbose-1 + double(debug_mode), show_pbar, debug_mode, 'backend', backend);
 
     tfp_timings.extract_pass2 = toc(tfp);
     if verbose
@@ -379,11 +422,11 @@ end
 %% Refine TFpeak frequency estimation using Hann windows
 if refinement
     if verbose
-        disp('Refining peaks...');
+        fprintf('Refining peaks (%s)...\n', backend);
     end
     rft = tic;
 
-    stats_table = refinePeakFrequency(data_time_range, Fs, stats_table, 'freq_range', mtm_freq_range, 't', t_time_range);
+    stats_table = refinePeakFrequency(data_time_range, Fs, stats_table, 'freq_range', mtm_freq_range, 't', t_time_range, 'backend', backend);
     stats_table(isnan(stats_table.PeakFrequency),:) = [];
 
     tfp_timings.refine = toc(rft);
@@ -397,7 +440,7 @@ stats_table = removevars(stats_table, setdiff(stats_table.Properties.VariableNam
 
 %% Display detected TFpeaks on the most recent spectrogram used for TFpeak computation
 if display_peaks
-    displayTFPeaks(stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, stage_times, stage_vals);
+    displayTFPeaks(stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, Fs, artifacts, stage_times, stage_vals);
 end
 
 end
@@ -431,16 +474,37 @@ if verbose
     disp('Computing TF peak spectrogram...');
 end
 
-if exist(['multitaper_spectrogram_coder_mex.' mexext],'file')
-    [spect,stimes,sfreqs] = multitaper_spectrogram_mex(data_time_range, Fs, freq_range, taper_params, time_window_params, nfft, detrend_opt, weight, ploton, mts_verbose);
-else
-    [spect,stimes,sfreqs] = multitaper_spectrogram(data_time_range, Fs, freq_range, taper_params, time_window_params, nfft, detrend_opt, weight, ploton, mts_verbose);
-    warning(sprintf('Unable to use mex version of multitaper_spectrogram. Using compiled multitaper spectrogram function will greatly increase the speed of this computaton. \n\nFind mex code at:\n    https://github.com/preraulab/multitaper_toolbox')); %#ok<SPWRN>
-end
+% Dispatch via multitaper_spectrogram_dynamo: backend='rust' routes to
+% the f64 Rust path (multitaper_spectrogram_rust_mex), 'matlab' to the
+% existing Coder MEX (or pure-MATLAB fallback). Per-run backend is
+% read from getappdata(0,'dynamo_backend') set by runDYNAMO.
+[spect,stimes,sfreqs] = multitaper_spectrogram_dynamo(data_time_range, Fs, freq_range, taper_params, time_window_params, nfft, detrend_opt, weight, ploton, mts_verbose);
 end
 
 
 function baseline = computeBaseline(spect, stimes, t_time_range, baseline_exclude, baseline_range, baseline_ptile)
+% Rust fast path: dispatches to dynamo_rs::compute_baseline (validated to
+% <=1e-9 vs MATLAB on the synthetic-spectrogram battery — see
+% rust_bridge/validate_baseline_mex.m). The Rust implementation handles
+% the same nearest-neighbor exclusion interp, baseline_range trimming,
+% NaN-zero treatment, and Hyndman-Fan #5 percentile.
+if exist('baseline_mex', 'file') == 3
+    if isinf(baseline_range(1)) && baseline_range(1) < 0
+        bl_lo = -realmax;
+    else
+        bl_lo = baseline_range(1);
+    end
+    if isinf(baseline_range(2)) && baseline_range(2) > 0
+        bl_hi = realmax;
+    else
+        bl_hi = baseline_range(2);
+    end
+    baseline = baseline_mex(double(spect), double(stimes(:)), ...
+        double(t_time_range(:)), logical(baseline_exclude(:)), ...
+        [bl_lo, bl_hi], double(baseline_ptile));
+    return
+end
+
 % Get excluded baseline times occurring at spectrogram times
 baseline_exclude_stimes = logical(interp1(t_time_range, single(baseline_exclude), stimes, 'nearest')); % no need to use ~=0 since t_time_range matches stimes
 

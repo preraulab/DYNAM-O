@@ -30,8 +30,14 @@ p = inputParser;
 %****************************************
 %Sleep stages to include for baseline computation
 addOptional(p, 'baseline_stages',[1,2,3,4,5], @(x) validateattributes(x,{'numeric'},{'real','vector'}));
-%Logical indices for time points to exclude for baseline computation
-addOptional(p, 'baseline_exclude',logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
+%Logical indices for time points to exclude for baseline computation.
+%Accepts logical or numeric (0/1) — JSON round-trip turns logical([])
+%into double([]) and an explicit logical vector into a numeric one,
+%so we can't strictly require the logical class without breaking
+%every settings-file reload. Caller (computeTFPeaks) coerces with
+%logical() before use.
+addOptional(p, 'baseline_exclude',logical([]), @(x) isempty(x) || ...
+    (islogical(x) || (isnumeric(x) && all(ismember(x(:), [0, 1])))));
 %Percentile to use for fixed baseline computation
 addOptional(p, 'baseline_ptile',2, @(x) validateattributes(x,{'numeric'},{'real','scalar'}));
 %Start and stop times for baseline trimming OR integer representing buffer time (min) around the first and last sleep period.

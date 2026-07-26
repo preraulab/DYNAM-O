@@ -122,6 +122,9 @@ addOptional(p, 'SOphase_filter', SOPH_options.SOphase_filter);
 %Display settings
 addOptional(p, 'plot_on', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+% Pipeline backend — forwarded to TFPeakHistogram so 'matlab' backend
+% keeps pure-MATLAB binning (no Rust MEX behind the scenes).
+addOptional(p, 'backend', 'rust', @(x) any(validatestring(lower(char(x)), {'matlab','rust'})));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -195,8 +198,18 @@ else % Compute the SOphase
         'EEG_times', EEG_times, 'isexcluded', isexcluded, 'SO_freqrange', SO_freqrange, 'SOphase_filter', SOphase_filter);
 end
 
-% Get SOphase_times step size
+% Get SOphase_times step size. The synthetic-padding interp1 below assumes
+% uniform sampling — verify rather than trust the first two samples.
 SOphase_times_step = SOphase_times(2) - SOphase_times(1);
+SOphase_times_diffs = diff(SOphase_times);
+if numel(SOphase_times_diffs) > 1 && ...
+        max(abs(SOphase_times_diffs - SOphase_times_step)) > 1e-6 * abs(SOphase_times_step)
+    error('SOphaseHistogram:nonUniformTimes', ...
+        ['SOphase_times must be uniformly sampled (max step deviation %.3g s ' ...
+         'vs nominal %.3g s). Non-uniform sampling would silently corrupt the ' ...
+         'synthetic boundary padding used for interp1.'], ...
+        max(abs(SOphase_times_diffs - SOphase_times_step)), SOphase_times_step);
+end
 
 % Interpolate SOphase to peak time points
 peak_SOphase = interp1([SOphase_times(1)-SOphase_times_step, SOphase_times, SOphase_times(end)+SOphase_times_step],...
@@ -252,6 +265,6 @@ clear SOphase_stages_valid SOphase_excluded_valid SOphase_times_valid
     'freq_range', freq_range, 'freq_binsizestep', freq_binsizestep,...
     'norm_dim', norm_dim, 'compute_rate', compute_rate,...
     'min_peak_at_freq', min_peak_at_freq,... # specific to SOphase histogram
-    'plot_on', plot_on, 'verbose', verbose);
+    'plot_on', plot_on, 'verbose', verbose, 'backend', backend);
 
 end

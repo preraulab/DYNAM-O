@@ -20,7 +20,7 @@ function z = vmGauss(X,Y, amp, ymean, ystd, xmean, xstd, theta)
 %
 %   Equation:
 %       The von Mises Gaussian shape is computed using the following equation:
-%           z = amp .* exp(-(Y-ymean).^2/ystd).* exp(k*cos(X-xmean+(Y-ymean)*sin(theta))-k);
+%           z = amp .* exp(-(Y-ymean).^2/ystd^2).* exp(k*cos(X-xmean+(Y-ymean)*sin(theta))-k);
 %
 %       where:
 %       - amp: Amplitude of the von Mises Gaussian
@@ -69,4 +69,4 @@ function z = vmGauss(X,Y, amp, ymean, ystd, xmean, xstd, theta)
 % =========================================================================
 k = 1/xstd^2; % kappa = concentration parameter that measures dispersion
 
-z = amp .* exp(-(Y-ymean).^2/ystd).* exp(k*cos(X-xmean+(Y-ymean)*sin(theta))-k);
+z = amp .* exp(-(Y-ymean).^2/ystd^2).* exp(k*cos(X-xmean+(Y-ymean)*sin(theta))-k);

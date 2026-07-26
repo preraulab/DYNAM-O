@@ -17,6 +17,9 @@ function [stats_table] = refinePeakFrequency(varargin)
 %       refine_method: char - method to assign max frequency value using interpolation;
 %                      {'spline_interp', 'spline_opt', 'spect_max'}. Default = 'spline_interp'
 %       remove_edge_peaks: logical - true to remove peaks at edge of event bounding box. Default = true
+%       backend: 'rust' (default) or 'matlab'. 'rust' uses refine_peaks_mex
+%                (dynamo_rs Hann-window + spline argmax, ~10x vs MATLAB);
+%                'matlab' uses the pure-MATLAB path below.
 %
 %   Output:
 %       stats_table: input stats table with the Peak Frequency column updated following the 1Hz refinement
@@ -55,6 +58,9 @@ addOptional(p, 't', [], @(x) validateattributes(x, {'numeric'}, {'real','finite'
 addOptional(p, 'baseline_opt', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'refine_method', 'spline_interp', @(x) any(validatestring(x, {'spline_interp', 'spline_opt', 'spect_max'})));
 addOptional(p, 'remove_edge_peaks', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+% Pipeline backend: 'rust' uses refine_peaks_mex (dynamo_rs Hann + spline),
+% 'matlab' uses the MATLAB fallback below.
+addOptional(p, 'backend', 'rust', @(x) any(validatestring(lower(char(x)), {'matlab','rust'})));
 
 parse(p,varargin{:});
 
@@ -67,6 +73,7 @@ t = p.Results.t;
 baseline_opt = p.Results.baseline_opt;
 refine_method = p.Results.refine_method;
 remove_edge_peaks = p.Results.remove_edge_peaks;
+backend = lower(char(p.Results.backend));
 
 if isempty(t)
     t = (0:length(data)-1)/Fs;
@@ -86,6 +93,45 @@ step_size = 0.05;
 detrend_opt = 'constant'; % do not detrend
 ploton = false; % do not plot out
 mts_verbose = false; % suppress verbose messages
+
+%% === Rust MEX fast path (Hann-window + spline argmax, ~10x vs MATLAB) ===
+if strcmp(backend, 'rust') && ~isempty(stats_table)
+    if exist('refine_peaks_mex', 'file') ~= 3
+        error('refinePeakFrequency:missingMEX', ...
+            ['backend=''rust'' selected but refine_peaks_mex.%s is not on the MATLAB path.\n' ...
+             'Build it with:  cd <DYNAM-O_dev>/rust_bridge && build_rust_mex'], mexext);
+    end
+    bb = double(stats_table.BoundingBox);
+    % MEX ABI wants [f_lo, f_hi, t_lo, t_hi]; MATLAB BoundingBox is
+    % [t_tl, f_tl, width_s, height_Hz] -> same mapping used in
+    % DYNAM-O_rs scripts/validate_c_api_extract.py.
+    bb_refine = [bb(:, 2), bb(:, 2) + bb(:, 4), bb(:, 1), bb(:, 1) + bb(:, 3)];
+    % Shift peak_time / bbox t-cols to be relative to data[0] (MEX
+    % expects peak_time as offset from the data's start sample).
+    t_shift = 0;
+    if exist('t', 'var') && ~isempty(t)
+        t_shift = double(t(1));
+    end
+    pt_rel = double(stats_table.PeakTime) - t_shift;
+    bb_refine(:, 3) = bb_refine(:, 3) - t_shift;
+    bb_refine(:, 4) = bb_refine(:, 4) - t_shift;
+    [refined_freq, keep_flag] = refine_peaks_mex( ...
+        pt_rel, ...
+        double(stats_table.PeakFrequency), ...
+        bb_refine, ...
+        double(data(:)), ...
+        double(Fs), ...
+        double(freq_range(:)'), ...
+        double(window_size), ...
+        double(dsfreqs));
+    keep = logical(keep_flag) & isfinite(refined_freq);
+    if any(keep)
+        stats_table.PeakFrequency(keep) = refined_freq(keep);
+    end
+    stats_table.PeakFrequency(~keep) = NaN;
+    return;
+end
+%% ========================================================================
 
 %% Extract necessary stats from the stats_table
 event_times = stats_table.PeakTime;
@@ -127,9 +173,18 @@ parfor ii = 1:N_events
     % Take the spectrogram slice at that single timepoint
     curr = spect(:,ii);
 
-    % Calculate the location (frequency) of the max value within the slice and bounding box freqs
-    max_val = max(curr(range_inds)); % Find the index of the max within those bounds
-    max_freq = sfreqs(range_inds & (curr' == max_val)); % Get final frequency location
+    % Calculate the location (frequency) of the max value within the slice
+    % and bounding box freqs. Index-based lookup so ties pick a single bin
+    % (the lowest index) and an all-NaN slice doesn't trip the equality
+    % comparison or feed empty/NaN to fminsearch in the spline_opt branch.
+    sub_curr   = curr(range_inds);
+    sub_sfreqs = sfreqs(range_inds);
+    [max_val, k_max] = max(sub_curr, [], 'omitnan');
+    if isempty(k_max) || ~isfinite(max_val)
+        peak_freqs(ii) = NaN;
+        continue
+    end
+    max_freq = sub_sfreqs(k_max);
 
     switch refine_method
         case 'spline_interp' %Spline interpolation over a grid

@@ -68,9 +68,14 @@ addOptional(p, 'bw_max', 15, @(x) validateattributes(x,{'numeric'},{'real','fini
 %% Frequency refinement using 1Hz df hann spectrum for final PeakFrequency feature computation
 addOptional(p, 'refinement', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 
+%% Reuse pass-1 baseline as pass-2 baseline (skip the second computeBaseline call).
+% Saves ~5% pipeline time. Safe when bw_minmax(1) >= 2 filters out the one
+% band where the two baselines diverge (see computeTFPeaks.m for analysis).
+addOptional(p, 'reuse_baseline', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+
 %% Features to compute
 all_features = {'all', 'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height',  'HeightData',...
-    'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume', 'PeakStage'};
+    'PeakFrequency', 'Peakiness', 'PeakTime', 'SegmentNum', 'Volume', 'PeakStage'};
 addOptional(p, 'features', 'all', @(x) all(ismember(x, all_features)))
 
 %% Display progress bar during runSegmentedData()
@@ -80,19 +85,16 @@ addOptional(p, 'show_pbar', true, @(x) validateattributes(x, {'logical', 'numeri
 addOptional(p, 'debug_mode', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 
 %% Parallel pool type: 'Processes' (default), 'Threads', or '' (same as 'Processes').
-% ProcessPool is used on every host. ThreadPool is supported as an explicit
-% override but disables trim_region_mex (MEX cannot run inside a ThreadPool
-% worker; the MATLAB fallback is bit-identical but slower).
+% Both pool types work with the MATLAB backend (no MEX inside parfor).
+% The Rust backend doesn't use parpool at all (rayon in-MEX).
 addOptional(p, 'parallel_mode', 'Processes', @(x) (ischar(x) || isstring(x)) && any(strcmp(x, {'', 'Processes', 'Threads'})));
 
-%% Trim-region MEX toggle: set false to force the pure-MATLAB trim path
-% even on ProcessPool / serial runs where the MEX is available. Useful for
-% reproducing a master-branch run without deleting the binary, bisecting
-% a suspected MEX-vs-MATLAB disagreement, or benchmarking MEX impact on a
-% given host. When false, output is bit-identical to the MEX path but
-% runs slower. Always effectively false inside a ThreadPool worker
-% regardless of this setting (MATLAB hard-blocks MEX there).
-addOptional(p, 'use_trim_mex', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+%% Pipeline backend: 'rust' (default) or 'matlab'.
+% 'rust'   - compiled MEX wrappers around dynamo_rs (~3.7x speedup on night,
+%            peaks within ~0.8% of MATLAB reference). Requires built MEX files
+%            in rust_bridge/; if missing runDYNAMO errors with a build recipe.
+% 'matlab' - pure-MATLAB reference path (ground truth, slower, uses a parpool).
+addOptional(p, 'backend', 'rust', @(x) (ischar(x) || isstring(x)) && any(strcmpi(char(x), {'rust', 'matlab'})));
 
 %%
 parse(p,varargin{:});

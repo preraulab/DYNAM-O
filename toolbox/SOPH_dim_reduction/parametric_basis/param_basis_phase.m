@@ -15,7 +15,7 @@ function [params, fitobj, gof, model_SOPhH, phase_wshed_img, f] = param_basis_ph
 %   Output:
 %       params: Matrix of fitted parameters. Columns are: [amp0, fmean0, fstd0, pmean0, pstd0, theta0]
 %       fitobj: Fitted object containing detailed fit information
-%       gof: Goodness of fit structure
+%       gof: Goodness of fit structure for the selected fitobj
 %       model_SOPhH: Fitted model SOPhH
 %       phase_wshed_img: Image of watershed phase distribution
 %       f: figure handle to the final result figure
@@ -77,11 +77,12 @@ end
 
 %% Parse inputs
 p = inputParser;
+p.KeepUnmatched = true;
 
 % Required parameters
 addRequired(p, 'SOPhH', @(x) isnumeric(x) && isreal(x) && ~isempty(x) && ismatrix(x) && ~all(isnan(x), 'all'));
-addRequired(p, 'phase_bins', @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
-addRequired(p, 'freq_bins', @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
+addRequired(p, 'phase_bins', @(x) validateattributes(x, {'numeric'}, {'real','finite','increasing','vector'}));
+addRequired(p, 'freq_bins', @(x) validateattributes(x, {'numeric'}, {'real','finite','increasing','vector'}));
 
 % Optional parameters with default values
 default_params = param_basis_opts('phase'); % get the default parameters
@@ -101,16 +102,21 @@ addParameter(p, 'min_pctr2', default_params.min_pctr2, @isnumeric);
 addParameter(p, 'kneedle_tol', default_params.kneedle_tol, @isscalar);
 addParameter(p, 'UB_default', default_params.UB_default, @(x) isnumeric(x) && numel(x) == 6);
 addParameter(p, 'LB_default', default_params.LB_default, @(x) isnumeric(x) && numel(x) == 6);
+addParameter(p, 'constrain_freq_center', default_params.constrain_freq_center, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary', 'scalar'}));
+addParameter(p, 'constrain_phase_center', default_params.constrain_phase_center, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary', 'scalar'}));
 addParameter(p, 'plot_on', default_params.plot_on, @(x) (islogical(x) || isnumeric(x)) && isscalar(x));
 addParameter(p, 'SOPH_clim_prctiles', default_params.SOPH_clim_prctiles, @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
 addParameter(p, 'verbose', default_params.verbose, @(x) validateattributes(x, {'logical', 'numeric'}, {'scalar'}));
 
 parse(p, SOPhH, phase_bins, freq_bins, varargin{:});
-parser_results = struct2cell(p.Results); %#ok<NASGU>
+parser_results = struct2cell(p.Results);
 field_names = fieldnames(p.Results);
 
 %Automatically add parser results to the workspace
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
+
+phase_bins = phase_bins(:).';
+freq_bins = freq_bins(:);
 
 % Verify the dimensions of SOPhH inputs
 if size(SOPhH, 1) == length(phase_bins) && size(SOPhH, 2) == length(freq_bins)
@@ -122,6 +128,7 @@ end
 
 %% Save models and values for each iteration
 good_iter_models = {};
+good_iter_gofs = {};
 good_iter_rsquared = [];
 good_iter_numbers = [];
 
@@ -133,11 +140,14 @@ last_B0i = [];
 last_UBi = [];
 last_LBi = [];
 
-% Set up empty outputs in case the function fails
-params = [];
+% Set up empty outputs in case the function fails (soft-fail returns
+% leave all outputs at these empties so callers can detect failure with
+% a simple isempty(params) check).
+params = []; %#ok<*NASGU>
 fitobj = [];
 gof = [];
 model_SOPhH = [];
+phase_wshed_img = [];
 f = [];
 
 % Locate the valid submatrix of SOPhH (non-Nan and non-infinite bins within limits)
@@ -145,7 +155,7 @@ valid_mat = isfinite(SOPhH);
 invalid_freq = all(~valid_mat, 2);
 valid_mat(invalid_freq, :) = true;
 valid_phase_bins = phase_bins >= phase_limits(1) & phase_bins <= phase_limits(2) & all(valid_mat, 1);
-valid_freq_bins = freq_bins >= freq_limits(1) & freq_bins <= freq_limits(2) & ~invalid_freq';
+valid_freq_bins = freq_bins >= freq_limits(1) & freq_bins <= freq_limits(2) & ~invalid_freq;
 
 % Define basis function for fitting
 fitfunc = @fit_vmGauss;
@@ -158,16 +168,21 @@ bw_min = watershed_params(3);
 height_min = watershed_params(4);
 trim_vol = watershed_params(5);
 
+dynamo_pool_trace('param_basis_phase: ENTRY');
+
 % -------- SOPhase Specific --------
 %Duplicate the SOPhH so that periodic regions can be detected
 SOPhH_wshed = [SOPhH SOPhH(:,2:end-1) SOPhH];
+dynamo_pool_trace('param_basis_phase: before imgaussfilt');
 if gauss_filt_std>0
     SOPhH_wshed = imgaussfilt(SOPhH_wshed, gauss_filt_std);
 end
+dynamo_pool_trace('param_basis_phase: after imgaussfilt');
 phase_wshed = [(phase_bins-2*pi) phase_bins(2:end-1) (phase_bins+2*pi)];
 % ----------------------------------
 
 %% Compute watershed segmentation
+dynamo_pool_trace('param_basis_phase: before extracthistpeaks');
 if wshed_exp
     [stats_table, phase_wshed_img] = extracthistpeaks(exp(SOPhH_wshed), phase_wshed, freq_bins, ...
         merge_thresh, dur_min, bw_min, height_min, trim_vol, false, false);
@@ -175,12 +190,15 @@ else
     [stats_table, phase_wshed_img] = extracthistpeaks(SOPhH_wshed, phase_wshed, freq_bins, ...
         merge_thresh, dur_min, bw_min, height_min, trim_vol, false, false);
 end
+dynamo_pool_trace('param_basis_phase: after extracthistpeaks');
 
+% Watershed-derived initial conditions are best-effort: if any step in
+% the wraparound dedup logic fails to yield a usable region set, fall
+% through to the synthetic-seed block below and let the fitter run
+% without watershed priors.
+watershed_failed = false;
 if isempty(stats_table)
-    warning('No watershed results')
-    mode_params = [];
-    tmp_mat = SOPhH(valid_freq_bins, valid_phase_bins);
-    amp0 = tmp_mat(:);
+    watershed_failed = true;
 else
     % -------- SOPhase Specific --------
     % Merge modes that become close when you wrap back to pi
@@ -196,7 +214,9 @@ else
             valid_idx = current_idx(is_in_range);
 
             if isempty(valid_idx)
-                error('Duplicate regions found but none within the -pi to pi range.');
+                % Duplicate cluster with no member inside [-pi, pi].
+                watershed_failed = true;
+                break
             elseif isscalar(valid_idx)
                 % exactly one valid peak
                 unique_regions_idx(end+1) = valid_idx;
@@ -208,50 +228,66 @@ else
                     cluster = current_idx(subIdxList{sj});
                     sub_angles = stats_table.SOFeature(cluster);
                     sub_valid = cluster(sub_angles >= -pi & sub_angles <= pi);
-                    assert(~isempty(sub_valid), 'After finer clustering, no valid region in subgroup %d.', sj)
-                    assert(isscalar(sub_valid), 'More than one valid regions found. Not possible with deterministic watershed.')
+                    if isempty(sub_valid) || ~isscalar(sub_valid)
+                        watershed_failed = true;
+                        break
+                    end
                     unique_regions_idx(end+1) = sub_valid;
                 end
+                if watershed_failed, break; end
             end
         end
     end
-    assert(numel(unique_regions_idx) == numel(unique(unique_regions_idx)), 'Duplicate entries found in unique_regions_idx.');
 
-    % Reduce to unique regions within -pi to pi
-    stats_table = stats_table(unique_regions_idx, :);
-    assert(all(stats_table.SOFeature >= -pi & stats_table.SOFeature <= pi), 'SO-Phase for watershed regions out of [-pi, pi] bound. An error occured when selecting unique regions.')
+    if ~watershed_failed && numel(unique_regions_idx) ~= numel(unique(unique_regions_idx))
+        watershed_failed = true;
+    end
+
+    if ~watershed_failed
+        % Reduce to unique regions within -pi to pi
+        stats_table = stats_table(unique_regions_idx, :);
+        if ~all(stats_table.SOFeature >= -pi & stats_table.SOFeature <= pi)
+            watershed_failed = true;
+        end
+    end
     % ----------------------------------
 
-    % Exclude peaks with center outside peak frequency limits
-    valid_fmean_idx = stats_table.PeakFrequency >= freq_limits(1) & stats_table.PeakFrequency <= freq_limits(2);
-    stats_table = stats_table(valid_fmean_idx, :);
+    if ~watershed_failed
+        % Exclude peaks with center outside peak frequency limits
+        valid_fmean_idx = stats_table.PeakFrequency >= freq_limits(1) & stats_table.PeakFrequency <= freq_limits(2);
+        stats_table = stats_table(valid_fmean_idx, :);
+        if isempty(stats_table)
+            watershed_failed = true;
+        end
+    end
+end
 
-    if isempty(stats_table)
-        warning('Watershed found some peaks but none is valid')
-        mode_params = [];
-        tmp_mat = SOPhH(valid_freq_bins, valid_phase_bins);
-        amp0 = tmp_mat(:);
+if watershed_failed
+    warning('param_basis_phase:watershedFailure', ...
+        'Watershed Failure: Fitting without watershed initial conditions.');
+    mode_params = [];
+    tmp_mat = SOPhH(valid_freq_bins, valid_phase_bins);
+    amp0 = tmp_mat(:);
+else
+    % Sort peaks by height
+    stats_table = sortrows(stats_table, 'Height', 'descend');
+
+    % Extract the parameters from the watershed for initial conditions
+    if wshed_exp
+        amp0 = log(stats_table.Height);
     else
-        % Sort peaks by height
-        stats_table = sortrows(stats_table, 'Height', 'descend');
+        amp0 = stats_table.Height;
+    end
+    fmean0 = stats_table.PeakFrequency;
+    fstd0 = stats_table.Bandwidth / 1.96;
+    pmean0 = stats_table.SOFeature;
+    pstd0 = stats_table.Duration / 1.96;
+    theta0 = zeros(size(amp0));
 
-        % Extract the parameters from the watershed for initial conditions
-        if wshed_exp
-            amp0 = log(stats_table.Height);
-        else
-            amp0 = stats_table.Height;
-        end
-        fmean0 = stats_table.PeakFrequency;
-        fstd0 = stats_table.Bandwidth / 1.96;
-        pmean0 = stats_table.SOFeature;
-        pstd0 = stats_table.Duration / 1.96;
-        theta0 = zeros(size(amp0));
+    mode_params = [amp0, fmean0, fstd0, pmean0, pstd0, theta0];
 
-        mode_params = [amp0, fmean0, fstd0, pmean0, pstd0, theta0];
-
-        if verbose > 0
-            disp([num2str(size(mode_params, 1)) ' watershed modes found.'])
-        end
+    if verbose > 0
+        disp([num2str(size(mode_params, 1)) ' watershed modes found.'])
     end
 end
 
@@ -280,6 +316,16 @@ if isnan(LB_default(4))
     LB_default(4) = min(phase_bins(valid_phase_bins));
 end
 
+% Remove configured or data-filled center bounds only when requested.
+if ~constrain_freq_center
+    UB_default(2) = inf;
+    LB_default(2) = -inf;
+end
+if ~constrain_phase_center
+    UB_default(4) = inf;
+    LB_default(4) = -inf;
+end
+
 % Add prefix modes to the list of watershed regions
 switch prefix_modes_order
     case 1
@@ -303,14 +349,31 @@ end
 % Update the number of modes with available parameters
 N_wshed_modes = size(mode_params, 1);
 
-% Adjust max_peaks if set to -1
-if max_peaks == -1 %#ok<*NODEF>
-    max_peaks = N_wshed_modes;
+% No watershed-derived initial conditions: seed a single synthetic mode
+% at the SOPH center so the fitting loop can still run. The existing
+% iteration-1 revert path will fall back to a baseline-only (unit_row)
+% fit if this synthetic mode doesn't produce a useful improvement.
+if N_wshed_modes < 1
+    valid_freq_axis  = freq_bins(valid_freq_bins);
+    valid_phase_axis = phase_bins(valid_phase_bins);
+    fmean_seed = (max(valid_freq_axis)  + min(valid_freq_axis))  / 2;
+    fstd_seed  = (max(valid_freq_axis)  - min(valid_freq_axis))  / 4;
+    pmean_seed = (max(valid_phase_axis) + min(valid_phase_axis)) / 2;
+    pstd_seed  = (max(valid_phase_axis) - min(valid_phase_axis)) / 4;
+    phase_hist = SOPhH(valid_freq_bins, valid_phase_bins);
+    if wshed_exp
+        amp_seed = log(max(phase_hist, [], 'all'));
+    else
+        amp_seed = max(phase_hist, [], 'all');
+    end
+    mode_params = [amp_seed, fmean_seed, fstd_seed, pmean_seed, pstd_seed, 0];
+    N_wshed_modes = 1;
 end
 
-if N_wshed_modes < 1
-    warning('No mode available to fit. Returning empty outputs')
-    return
+% Adjust max_peaks if set to -1 (after potentially synthesizing a seed
+% mode so max_peaks reflects the actual available count)
+if max_peaks == -1 %#ok<*NODEF>
+    max_peaks = N_wshed_modes;
 end
 
 %% Plot initial data and watershed regions
@@ -371,8 +434,24 @@ for ii = 1:max_peaks
         B0i = mode_params(select_idx,:);
         % ----------------------------------
     else
-        % Add a mode with mean parameters if beyond number of watershed peaks
-        B0i = [B0i; mean(B0i, 1)]; %#ok<*AGROW>
+        % Beyond watershed seeds: residual-max seed (matching pursuit),
+        % same as the power axis. Phase has no min_freq_diff option
+        % (the parser deliberately omits it), so the freq-exclusion
+        % mask is inert here and the helper just picks the absolute
+        % argmax. Falls back to mean(B0i) when the residual is
+        % everywhere non-positive. In practice phase rarely hits this
+        % branch — the wraparound watershed typically yields >= 6
+        % candidate regions on real SOPhH — so behaviour is unchanged
+        % in the common case.
+        [seed_row, found] = residual_max_seed( ...
+            SOPhH(valid_freq_bins, valid_phase_bins), ...
+            model_SOPhH(valid_freq_bins, valid_phase_bins), ...
+            phase_bins(valid_phase_bins), freq_bins(valid_freq_bins), B0i, 0);
+        if found
+            B0i = [B0i; seed_row]; %#ok<*AGROW>
+        else
+            B0i = [B0i; mean(B0i, 1)];
+        end
     end
 
     % Define upper and lower bounds for fitting
@@ -380,7 +459,9 @@ for ii = 1:max_peaks
     LBi = [LBi; LB_default];
 
     % Fit the model and obtain goodness-of-fit
+    dynamo_pool_trace(sprintf('param_basis_phase: before fitfunc iter (B0i rows=%d)', size(B0i,1)));
     [fitobj, gof] = fitfunc(SOPhH(valid_freq_bins, valid_phase_bins), phase_bins(valid_phase_bins), freq_bins(valid_freq_bins), B0i, LBi, UBi, false);
+    dynamo_pool_trace('param_basis_phase: after  fitfunc iter');
 
     % Save the fitted model SOPhH
     model_SOPhH = feval(fitobj, phase_grid, freq_grid);
@@ -470,14 +551,19 @@ for ii = 1:max_peaks
     fitobj_nosin = fitobj;
     coeff_names = coeffnames(fitobj_nosin);
     if any(strcmpi(coeff_names, 'xxx'))
+        % Changing a coefficient invalidates confidence bounds on this copy.
+        % Suppress only that expected warning and restore the caller's state.
+        warning_state = warning('off', 'curvefit:sfit:subsasgn:coeffsClearingConfBounds');
+        warning_cleanup = onCleanup(@() warning(warning_state));
         fitobj_nosin.xxx = 0;
+        clear warning_cleanup
     end
 
     model_SOPhH_nosin = feval(fitobj_nosin, phase_grid, freq_grid);
     e_amp = B0i(:, 1);
     for jj = 1:size(B0i, 1)
         [~, freq_idx] = min(abs(freq_bins - B0i(jj, 2)));
-        [~, phase_idx] = min(abs(phase_bins - B0i(jj, 4)));
+        [~, phase_idx] = min(abs(wrapToPi(phase_bins - B0i(jj, 4))));
         e_amp(jj) = model_SOPhH_nosin(freq_idx, phase_idx);
     end
     % ----------------------------------
@@ -511,9 +597,11 @@ for ii = 1:max_peaks
     if revert
         if ii == 1
             disp('Max mode was insufficient to produce fit. Fitting plane and terminating.');
-            fitobj = fitfunc(SOPhH(valid_freq_bins, valid_phase_bins), phase_bins(valid_phase_bins), freq_bins(valid_freq_bins), [], LBi, UBi, false);
+            [fitobj, gof] = fitfunc(SOPhH(valid_freq_bins, valid_phase_bins), phase_bins(valid_phase_bins), freq_bins(valid_freq_bins), [], LBi, UBi, false);
             model_SOPhH = feval(fitobj, phase_grid, freq_grid);
             params = [];
+            warning('param_basis_phase:noModesFound', ...
+                'No modes found. Returning background fit only.');
             return;
         end
 
@@ -543,6 +631,7 @@ for ii = 1:max_peaks
 
     else
         good_iter_models{end+1} = fitobj;
+        good_iter_gofs{end+1} = gof;
         good_iter_rsquared(end+1) = adjr2_i;
         good_iter_numbers(end+1) = ii;
 
@@ -634,7 +723,9 @@ switch criterion
         end
 end
 
-fitobj = good_iter_models{good_iter_numbers==fit_iteration};
+fit_ind = good_iter_numbers == fit_iteration;
+fitobj = good_iter_models{fit_ind};
+gof = good_iter_gofs{fit_ind};
 model_SOPhH = feval(fitobj, phase_grid, freq_grid);
 params = get_mode_params(fitobj);
 
@@ -644,14 +735,19 @@ params = get_mode_params(fitobj);
 fitobj_nosin = fitobj;
 coeff_names = coeffnames(fitobj_nosin);
 if any(strcmpi(coeff_names, 'xxx'))
+    % Changing a coefficient invalidates confidence bounds on this copy.
+    % Suppress only that expected warning and restore the caller's state.
+    warning_state = warning('off', 'curvefit:sfit:subsasgn:coeffsClearingConfBounds');
+    warning_cleanup = onCleanup(@() warning(warning_state));
     fitobj_nosin.xxx = 0;
+    clear warning_cleanup
 end
 
 model_SOPhH_nosin = feval(fitobj_nosin, phase_grid, freq_grid);
 
 for ii = 1:size(params, 1)
     [~, freq_idx] = min(abs(freq_bins - params(ii, 2)));
-    [~, phase_idx] = min(abs(phase_bins - params(ii, 4)));
+    [~, phase_idx] = min(abs(wrapToPi(phase_bins - params(ii, 4))));
     params(ii, 1) = model_SOPhH_nosin(freq_idx, phase_idx);
 end
 

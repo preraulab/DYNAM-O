@@ -1,8 +1,8 @@
-function [data, Fs, stage_times, stage_vals] = load_data(varargin)
+function [data, Fs, stage_times, stage_vals, signal_labels] = load_data(varargin)
 %LOAD_DATA  Load EEG data and sleep staging from EDF and delimited text files
 %
 %   Usage:
-%       [data, Fs, stage_times, stage_vals] = load_data(edf_fpath, scoring_fpath, stage_col, time_col, channels, ...)
+%       [data, Fs, stage_times, stage_vals, signal_labels] = load_data(edf_fpath, scoring_fpath, stage_col, time_col, channels, ...)
 %
 %   Required Inputs:
 %       edf_fpath:      char or cell - path(s) to EDF file(s) -- required
@@ -21,10 +21,24 @@ function [data, Fs, stage_times, stage_vals] = load_data(varargin)
 %       resample_freq:  double - target resampling frequency in Hz (default: [])
 %
 %   Outputs:
-%       data:           [N x C] double - EEG data matrix (samples x channels)
-%       Fs:             double - sampling frequency in Hz
+%       data:           [N x K] double - EEG data matrix (samples x loaded
+%                       channels). K may be < numel(channels) when read_EDF
+%                       silently drops requested specs (UnknownChannel,
+%                       ParseError, RefCollision); see signal_labels for the
+%                       canonical mapping back to outname.
+%       Fs:             [1 x K] double - sampling frequencies (Hz), aligned to
+%                       columns of data.
 %       stage_times:    [1 x T] double - sleep stage onset times in seconds
-%       stage_vals:     [1 x T] double - sleep stage values (0=Unk, 1=N3, 2=N2, 3=N1, 4=REM, 5=Wake)
+%       stage_vals:     [1 x T] double - sleep stage values (0=Unk, 1=N3, 2=N2,
+%                       3=N1, 4=REM, 5=Wake)
+%       signal_labels:  {1 x K} cellstr - output labels emitted by read_EDF for
+%                       each column of data. For aliased channel specs
+%                       ('OUT = expr') this is the alias; for unaliased
+%                       plain-label specs it is the spec text. Callers should
+%                       align by this list, not by position in the input
+%                       'channels' cell, since the variant-fallback pattern
+%                       ({'A', 'A=B', 'A=C'}) intentionally yields exactly
+%                       one column per outname per file.
 %
 % =========================================================================
 %                  DYNAM-O Toolbox  |  Prerau Laboratory
@@ -66,6 +80,11 @@ addOptional(p, 'epoch_dur', 30, @(x) isnumeric(x) && isscalar(x) && x>0);
 addOptional(p, 'plot_on', false, @(x) islogical(x) && isscalar(x));
 % Optional inputs for the batch function
 addOptional(p, 'resample_freq', [], @(x) validateattributes(x,{'double'},{'real','positive'}));
+% read_EDF derived-channels passthrough — when set, references are
+% defined-name-bindings (e.g. 'LM = mean(A1,A2)') available to any
+% expression in `channels`. read_EDF does the validation; we just
+% forward the cell.
+addParameter(p, 'References', {}, @iscell);
 
 parse(p,varargin{:});
 input_arguments = struct2cell(p.Results); %#ok<NASGU>
@@ -81,37 +100,87 @@ end
 all_labels       = {signalHeader.signal_labels};
 all_labels_lower = lower(cellfun(@strtrim, all_labels, 'UniformOutput', false));
 
-% Validate channels — accept plain labels and valid A-B rereferences.
-% Uses the same leftmost-dash split logic as read_EDF's parse_channel_plan.
-valid = false(size(channels));
-for k = 1:numel(channels)
-    ch = strtrim(channels{k});
-    if ismember(lower(ch), all_labels_lower)
-        valid(k) = true;
-    else
-        dashes = strfind(ch, '-');
-        for di = dashes
-            chA = strtrim(ch(1:di-1));
-            chB = strtrim(ch(di+1:end));
-            if ~isempty(chA) && ~isempty(chB) && ...
-                    ismember(lower(chA), all_labels_lower) && ...
-                    ismember(lower(chB), all_labels_lower)
-                valid(k) = true;
-                break
-            end
+% When References are defined OR any channel uses derived-syntax
+% markers, defer validation to read_EDF's own parser (which understands
+% mean(...), aliasing, $LABEL$ escapes, etc.). The local A-B validator
+% only handles plain labels and 'A-B' strings, so applying it here
+% would reject perfectly valid expressions like 'C3 - mean(A1,A2)'.
+has_derived = ~isempty(References);
+if ~has_derived
+    for k = 1:numel(channels)
+        s = channels{k};
+        if contains(s, 'mean(', 'IgnoreCase', true) || contains(s, '=') ...
+                || contains(s, '+') || contains(s, '$')
+            has_derived = true;
+            break
         end
     end
 end
-if ~all(valid)
-    error(char(strcat('Invalid channels:',{' '},channels(~valid),' | Valid channels: ',{' '},sprintf('%s ',signalHeader.signal_labels))))
+
+if ~has_derived
+    % Validate channels — accept plain labels and valid A-B rereferences.
+    % Uses the same leftmost-dash split logic as read_EDF's parse_channel_plan.
+    valid = false(size(channels));
+    for k = 1:numel(channels)
+        ch = strtrim(channels{k});
+        if ismember(lower(ch), all_labels_lower)
+            valid(k) = true;
+        else
+            dashes = strfind(ch, '-');
+            for di = dashes
+                chA = strtrim(ch(1:di-1));
+                chB = strtrim(ch(di+1:end));
+                if ~isempty(chA) && ~isempty(chB) && ...
+                        ismember(lower(chA), all_labels_lower) && ...
+                        ismember(lower(chB), all_labels_lower)
+                    valid(k) = true;
+                    break
+                end
+            end
+        end
+    end
+    if ~all(valid)
+        % strcat with a cell on the RHS replicates per-row, then char()
+        % stacks rows into a padded N×M matrix; error() serializes that
+        % column-major and produces "IIIIInnnnn..." soup. Build a single
+        % string via strjoin instead.
+        error('Invalid channels: %s | Valid channels: %s', ...
+              strjoin(channels(~valid), ', '), ...
+              strjoin(signalHeader.signal_labels, ' '));
+    end
 end
 
-[header, signalHeader, data] = read_EDF(edf_fpath, 'channels', channels, 'forceMATLAB', true);
+% When resampling is requested, push it down into read_EDF via
+% TargetFs so References / derived-channel math runs on uniformly-
+% resampled raw signals. Otherwise apply_channel_derivations rejects
+% references that combine constituents at different native rates
+% (e.g. EEG@128 + EOG@32). The post-loop smartresample below becomes
+% a no-op in this path; we keep it for the Channels-only,
+% no-References case where read_EDF returned native-rate data.
+if ~isempty(resample_freq)
+    [header, signalHeader, data] = read_EDF(edf_fpath, ...
+        'Channels', channels, 'References', References, ...
+        'TargetFs', resample_freq);
+else
+    [header, signalHeader, data] = read_EDF(edf_fpath, ...
+        'Channels', channels, 'References', References);
+end
+% read_EDF returns signal_cells as a row cell of row vectors. Naive
+% cell2mat would horizontally concatenate them into 1 x (N*C) garbage
+% — single-channel callers got a harmless 1 x N row, but multi-channel
+% bulk reads were silently producing nonsense. Coerce each cell to a
+% column first so cell2mat yields a clean [N x C] matrix.
+data = cellfun(@(x) x(:), data, 'UniformOutput', false);
 data = cell2mat(data);
 
-% signalHeader is now ordered to match channels (including any rereferenced
-% virtual channels), so sampling frequencies are already in the right order.
-Fs = [signalHeader.sampling_frequency];
+% signalHeader is ordered to match the SUCCESSFULLY-LOADED channels (which
+% may be a strict subset of `channels` — the variant-fallback pattern
+% {'A', 'A=B', 'A=C'} intentionally drops same-outname duplicates after
+% the first one resolves, and unresolvable specs are demoted to warnings
+% in apply_channel_derivations). Expose the labels alongside Fs/data so
+% callers can align by outname instead of by position in the input list.
+Fs            = [signalHeader.sampling_frequency];
+signal_labels = reshape({signalHeader.signal_labels}, 1, []);
 
 % Test to see whether start time is valid
 time_str = header.recording_starttime;
@@ -148,8 +217,12 @@ else
 end
 
 %% RESAMPLING (if requested)
-if ~isempty(resample_freq) 
+% Most paths already had read_EDF do this via TargetFs (so References
+% see uniform rates). This block remains for safety: if any column of
+% data isn't yet at resample_freq, bring it there.
+if ~isempty(resample_freq) && any(abs(Fs - resample_freq) > 1e-9)
     data = smartresample(data,Fs,resample_freq);
+    Fs = repmat(resample_freq, size(Fs));
 end
 
 end

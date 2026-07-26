@@ -11,8 +11,12 @@ function [fh] = displayTFPeaks(varargin)
 %       sfreqs:             1D double - frequency bin center values for dimension 1 of spect
 %
 %   Optional inputs:
-%       data_time_range:    [1xn] double - timeseries data in time_range
-%       t_time_range:       [1xn] double - timestamps for data in time_range
+%       data:               1xN double - timeseries data
+%       t:                  1xN double - timestamps for data (seconds). If
+%                                        omitted and Fs is supplied, t is
+%                                        generated as (0:N-1)/Fs starting at 0.
+%       Fs:                 scalar - sampling rate (Hz) for `data`. Used to
+%                                    construct t when t is not provided.
 %       artifacts:          1xT logical of times flagged as artifacts (logical OR of hf and bb artifacts)
 %       stage_times:        [1x<number of stages>] vector - times of sleep stages in seconds
 %       stage_vals:         [1x<number of stages>] - values of sleep stages
@@ -52,57 +56,90 @@ addRequired(p, 'spect', @(x) validateattributes(x, {'numeric'}, {'real','2d'}));
 addRequired(p, 'stimes', @(x) validateattributes(x, {'numeric'}, {'real','finite','nondecreasing','vector'}));
 addRequired(p, 'sfreqs', @(x) validateattributes(x, {'numeric'}, {'real','finite','nonnegative','vector'}));
 
-addOptional(p, 'data_time_range', [], @(x) validateattributes(x, {'numeric'}, {'real','2d'}));
-addOptional(p, 't_time_range', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
+addOptional(p, 'data', [], @(x) validateattributes(x, {'numeric'}, {'real','2d'}));
+addOptional(p, 't', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
+addOptional(p, 'Fs', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','scalar'}));
 addOptional(p, 'artifacts', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
 
 addOptional(p, 'stage_times', [], @(x) validateattributes(x, {'double','single'}, {'real','finite','nondecreasing','2d'}));
 addOptional(p, 'stage_vals', [], @(x) validateattributes(x, {'double','single'}, {'real','finite','nonnegative','2d'}));
 
 parse(p,varargin{:});
-parser_results = struct2cell(p.Results); %#ok<NASGU>
-field_names = fieldnames(p.Results);
+stats_table = p.Results.stats_table;
+spect       = p.Results.spect;
+stimes      = p.Results.stimes;
+sfreqs      = p.Results.sfreqs;
+data        = p.Results.data;
+t           = p.Results.t;
+Fs          = p.Results.Fs;
+artifacts   = p.Results.artifacts;
+stage_times = p.Results.stage_times;
+stage_vals  = p.Results.stage_vals;
 
-%Automatically add parser results to the workspace
-eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
+%% Build t from Fs if needed
+if ~isempty(data) && isempty(t) && ~isempty(Fs)
+    t = (0:numel(data)-1) / Fs;
+end
 
-%% Create figure
+need_hyp = ~isempty(stage_times) && ~isempty(stage_vals);
+need_eeg = ~isempty(data) && ~isempty(t);
+
+%% Create figure with full-size base axis, then split as needed
 fh = figure;
+base_ax = figdesign(1, 1, 'PaperType', 'usletter', 'orient', 'landscape', ...
+    'margins', [0.067917 0.1 0.083427 0.1 0.08 0.05], ...
+    'Position', [0.14041 0.19722 0.70262 0.61597]);
 
-if ~isempty(data_time_range) && ~isempty(t_time_range)
-    hypn_spect_ax = figdesign(6, 1, 'PaperType', 'usletter', 'orient', 'landscape' , 'margins', [0.067917 0.05 0.083427 0.0456 0.08 0.0021714], 'merge', {[2 3 4 5]}, 'Position', [0.14041 0.19722 0.70262 0.61597]);
+hyp_ax   = gobjects(0);
+spect_ax = gobjects(0);
+eeg_ax   = gobjects(0);
+
+if need_hyp && need_eeg
+    sub = split_axis(base_ax, [0.1 0.7 0.2], 1);
+    hyp_ax   = sub(1);
+    spect_ax = sub(2);
+    eeg_ax   = sub(3);
+elseif need_hyp
+    sub = split_axis(base_ax, [0.2 0.8], 1);
+    hyp_ax   = sub(1);
+    spect_ax = sub(2);
+elseif need_eeg
+    sub = split_axis(base_ax, [0.8 0.2], 1);
+    spect_ax = sub(1);
+    eeg_ax   = sub(2);
 else
-    hypn_spect_ax = figdesign(6, 1, 'PaperType', 'usletter', 'orient', 'landscape' , 'margins', [0.067917 0.05 0.083427 0.0456 0.08 0.0021714], 'merge', {[2 3 4 5 6]}, 'Position', [0.14041 0.19722 0.70262 0.61597]);
+    spect_ax = base_ax;
 end
 
 %% Plot hypnogram
-if isgraphics(hypn_spect_ax(1))
-    axes(hypn_spect_ax(1));
-    hypnoplot(stage_times/3600, stage_vals, 'Artifacts', artifacts, 'ArtifactTimes', t_time_range/3600, 'TimesUnit', 'hours');
-    th(1) = title('EEG Spectrogram and Detected TF-peaks');
-    set(hypn_spect_ax(1), 'XTick', []);
+if need_hyp
+    axes(hyp_ax);
+    hypnoplot(stage_times/3600, stage_vals, 'Artifacts', artifacts, ...
+        'ArtifactTimes', t/3600, 'TimesUnit', 'hours');
+    th = title('EEG Spectrogram and Detected TF-peaks');
+    set(hyp_ax, 'XTick', []);
 end
 
 %% Plot spectrogram
-axes(hypn_spect_ax(2))
+axes(spect_ax)
 imagesc(stimes/3600, sfreqs, pow2db(spect));
 axis xy
-colormap(hypn_spect_ax(2), rainbow4);
+colormap(spect_ax, rainbow4);
 climscale;
 
-c = colorbar_noresize; % set colobar
-c.Label.String = 'PSD (dB)'; % colobar label
-c.Label.Rotation = -90; % rotate colorbar label
+c = colorbar_noresize;
+c.Label.String = 'PSD (dB)';
+c.Label.Rotation = -90;
 c.Label.VerticalAlignment = "bottom";
 
 ylabel('Frequency (Hz)');
 
-if ~isgraphics(hypn_spect_ax(1))
-    th(1) = title('EEG Spectrogram and Detected TF-peaks');
+if ~need_hyp
+    th = title('EEG Spectrogram and Detected TF-peaks');
 end
 
-if length(hypn_spect_ax) > 2 && isgraphics(hypn_spect_ax(3))
-    set(hypn_spect_ax(2), 'XtickLabel', []);
+if need_eeg
+    set(spect_ax, 'XTickLabel', []);
 end
 
 % overlay TF-peak boundaries on the spectrogram
@@ -113,25 +150,30 @@ for ii = 1:length(bd)
 end
 
 %% Plot EEG trace
-if length(hypn_spect_ax) > 2 && isgraphics(hypn_spect_ax(3))
-    axes(hypn_spect_ax(3))
-    plot(t_time_range/3600, data_time_range, 'linewidth', 1)
-    min_trace = prctile(data_time_range, 1);
-    max_trace = prctile(data_time_range, 99);
+if need_eeg
+    % Remove the lowest tick on the spectrogram axis to avoid overlapping tick labels
+    yt = get(spect_ax, 'YTick');
+    set(spect_ax, 'YTick', yt(yt > yt(1)));
+
+    axes(eeg_ax)
+    plot(t/3600, data, 'linewidth', 1)
+    min_trace = prctile(data, 1);
+    max_trace = prctile(data, 99);
     ylim([min_trace-(0.1*abs(min_trace)), max_trace+(0.1*abs(max_trace))])
-    set(hypn_spect_ax(3), 'YTick', [round(min_trace, 2, 'significant') 0 round(max_trace, 2, 'significant')]);
-    set(hypn_spect_ax(3), 'YTickLabel', num2str(get(hypn_spect_ax(3),'ytick')','%.1f'));
+    set(eeg_ax, 'YTick', [round(min_trace, 2, 'significant') 0 round(max_trace, 2, 'significant')]);
+    set(eeg_ax, 'YTickLabel', num2str(get(eeg_ax,'ytick')','%.1f'));
     ylabel('Voltage (\muV)');
 end
 xlabel('Time (hr)')
 
-%% Additional axes adjustments
-hypn_spect_ax = hypn_spect_ax(isgraphics(hypn_spect_ax));
-linkaxes(hypn_spect_ax, 'x');
-xlim([min(stimes)/3600, max(stimes)/3600])
-set(hypn_spect_ax, 'FontSize', 10)
+%% Link x-axes for scrolling and final adjustments
+all_ax = [hyp_ax spect_ax eeg_ax];
+all_ax = all_ax(isgraphics(all_ax));
+linkaxes(all_ax, 'x');
+xlim(spect_ax, [min(stimes)/3600, max(stimes)/3600])
+set(all_ax, 'FontSize', 16)
 if exist('th', 'var')
-    set(th, 'FontSize', 15)
+    set(th, 'FontSize', 20)
 end
 
 scrollzoompan;

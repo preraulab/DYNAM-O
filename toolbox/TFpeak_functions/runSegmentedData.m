@@ -1,39 +1,58 @@
-function [stats_table, regions, borders] = runSegmentedData(spect, stimes, sfreqs, varargin)
+function [stats_table, regions, borders, labels_img] = runSegmentedData(spect, stimes, sfreqs, varargin)
 %RUNSEGMENTEDDATA  Segment, extract, and compile time-frequency peaks from a spectrogram
 %
 %   Usage:
 %       [stats_table, regions, borders] = runSegmentedData(spect, stimes, sfreqs, baseline, seg_time, downsample_spect, features, ...
-%           dur_min, bw_min, merge_thresh, max_merges, trim_vol, f_verb, show_pbar, debug_mode)
+%           dur_min, bw_min, merge_thresh, max_merges, trim_vol, f_verb, show_pbar, debug_mode, ...
+%           'backend', 'rust' | 'matlab')
+%       [stats_table, regions, borders, labels_img] = runSegmentedData(...)   % 4th output only populated by Rust backend
 %
 %   Required Inputs:
-%       spect: 2D double array - Spectrogram data [freqs x time] -- required
-%       stimes: vector - Time stamps for each column of spect (in seconds) -- required
-%       sfreqs: vector - Frequencies for each row of spect (in Hz) -- required
+%       spect: 2D double array - Spectrogram data [freqs x time]
+%       stimes: vector - Time stamps for each column of spect (seconds)
+%       sfreqs: vector - Frequencies for each row of spect (Hz)
 %
-%   Optional Inputs (in order — must be passed positionally):
+%   Optional Inputs (positional, in order):
 %       baseline: vector - 1D baseline spectrum for normalization (default: [])
 %       seg_time: scalar - Segment length in seconds (default: 30)
-%       downsample_spect: 2x1 vector - [time_bins, freq_bins] to downsample spectrogram (default: [])
-%       features: cell array or 'all' - Features to extract (default: 'all')
+%       downsample_spect: [2x1] - [time_bins, freq_bins] pre-watershed decimation (default: [])
+%       features: cell/char - Features to extract (default: 'all')
 %       dur_min: scalar - Minimum peak duration allowed (default: 0)
 %       bw_min: scalar - Minimum peak bandwidth allowed (default: 0)
-%       merge_thresh: scalar - Merge threshold for peak merging (default: 8)
+%       merge_thresh: scalar - Merge threshold (default: 8)
 %       max_merges: scalar - Maximum number of merges (default: inf)
 %       trim_vol: scalar - Fraction of max volume to keep during trimming (default: 0.8)
-%       f_verb: scalar - Verbosity level, from 0 (silent) to 5 (debug) (default: 1)
-%       show_pbar: logical - Whether to display the progress bar (default: true)
-%       debug_mode: logical - Set to true for single-threaded debug mode (default: false)
+%       f_verb: scalar - Verbosity 0..5 (default: 1)
+%       show_pbar: logical - Controls the Rust-backend MEX inline
+%                  progress ticks (default: true). IGNORED on the MATLAB
+%                  backend path — that path never shows a waitbar (to
+%                  dodge MATLAB R2025b's CEF fontations SIGSEGV on
+%                  macOS 26+) and always prints 10% console ticks
+%                  regardless of this setting.
+%       debug_mode: logical - Serial for-loop instead of parfor (default: false)
+%
+%   Optional Inputs (name-value):
+%       backend: 'rust' (default) or 'matlab'. 'rust' delegates the full
+%                segment/watershed/merge/trim/regionprops pipeline to the
+%                extract_tfpeaks_mex MEX (dynamo_rs); internally parallelised
+%                via rayon, no MATLAB parpool used. 'matlab' runs the parfor
+%                + extractTFPeaks path below.
 %
 %   Outputs:
 %       stats_table: table - Peak statistics for all segments, sorted by peak time
-%       regions: cell array - Linear indices of TFpeak regions across full spectrogram
-%       borders: cell array - Linear indices of TFpeak borders across full spectrogram
+%       regions: cell array - Linear indices of TFpeak regions (MATLAB path only)
+%       borders: cell array - Linear indices of TFpeak borders (MATLAB path only)
+%       labels_img: [F x T] int64 label image — only populated by the Rust
+%                   backend (regions/borders return empty in that case).
+%                   Used by the pass-2 mask step in computeTFPeaks.
 %
 %   Example:
-%       stats = runSegmentedData(spect, stimes, sfreqs);
+%       stats = runSegmentedData(spect, stimes, sfreqs);                     % default (Rust)
+%       stats = runSegmentedData(..., 'backend', 'matlab');                  % force MATLAB
 %
 %   Notes:
-%       All optional inputs must be passed in exact order when using this version with addOptional.
+%       All POSITIONAL optional inputs must be passed in order. `backend`
+%       is a name-value pair and can appear anywhere in varargin.
 %
 %   See Also: extractTFPeaks, segmentData, computeTFPeaks
 %
@@ -88,10 +107,9 @@ addOptional(p, 'trim_vol', 0.8, @(x) isnumeric(x) && isscalar(x) && x >= 0 && x 
 addOptional(p, 'f_verb', 1, @(x) isnumeric(x) && isscalar(x));
 addOptional(p, 'show_pbar', true, @islogical);
 addOptional(p, 'debug_mode', false, @islogical);
-% Route the trim MEX on/off through from detection_options; default true
-% matches current behaviour. When false, the parfor body still passes the
-% flag down so each worker consistently skips the MEX on this call.
-addOptional(p, 'use_trim_mex', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+% Pipeline backend: 'rust' routes to extract_tfpeaks_mex (dynamo_rs),
+% 'matlab' routes to the parfor + extractTFPeaks path below.
+addOptional(p, 'backend', 'rust', @(x) any(validatestring(lower(char(x)), {'matlab','rust'})));
 
 parse(p, spect, stimes, sfreqs, varargin{:});
 S = p.Results;
@@ -109,13 +127,126 @@ trim_vol         = S.trim_vol;
 f_verb           = S.f_verb;
 show_pbar        = S.show_pbar;
 debug_mode       = S.debug_mode;
-use_trim_mex     = S.use_trim_mex;
+backend          = lower(char(S.backend));
 
 if debug_mode
     verb_pref = 'DEBUG: ';
 else
     verb_pref = '';
 end
+
+%% === Rust MEX fast path ================================================
+%   When backend='rust', delegate the entire
+%   segment/watershed/merge/trim/regionprops pipeline to dynamo_rs via
+%   extract_tfpeaks_mex. The Rust kernel parallelises internally (rayon),
+%   so no MATLAB parpool is used in this path.
+%
+%   Peak count parity vs MATLAB on night: ~-0.8% (34514 vs 34788). Source
+%   of the remaining gap is a label-assignment-order subtlety in Rust
+%   merge — border-handling / paint / watershed / trim / stats all pass
+%   bisection equivalence tests.
+if strcmp(backend, 'rust') && nargout <= 4 && exist('extract_tfpeaks_mex', 'file') == 3 %#ok<STCI>
+    % Resolve defaults
+    seg_time_x         = seg_time;         if isempty(seg_time_x),         seg_time_x = 30; end
+    downsample_spect_x = downsample_spect; if isempty(downsample_spect_x), downsample_spect_x = [1, 1]; end
+    baseline_arg       = baseline;         if isempty(baseline_arg),       baseline_arg = zeros(size(spect, 1), 0); end
+
+    % Global min across baseline-divided spectrogram — matches the MATLAB
+    % path's `trim_shift = min(spect,[],'all')` (line below). Passed to
+    % Rust so both backends apply the same uniform shift per segment.
+    % Helper `compute_global_trim_shift` is a local fn at the bottom of
+    % this file; it safely masks non-positive / non-finite baseline rows.
+    trim_shift = compute_global_trim_shift(spect, baseline);
+
+    mex_params = struct( ...
+        'seg_time',     double(seg_time_x), ...
+        'downsample_f', uint32(downsample_spect_x(2)), ... % MATLAB [t_stride, f_stride] (extractTFPeaks:207)
+        'downsample_t', uint32(downsample_spect_x(1)), ...
+        'merge_thresh', double(merge_thresh), ...
+        'trim_vol',     double(trim_vol), ...
+        'trim_shift',   double(trim_shift), ...   % MATCHES MATLAB global min
+        'dur_min',      double(dur_min), ...
+        'dur_max',      inf, ...            % outer filterStatsTable will cap
+        'bw_min',       double(bw_min), ...
+        'bw_max',       inf, ...            % outer filterStatsTable will cap
+        'freq_min',     -inf, ...
+        'freq_max',      inf, ...
+        'ht_db_min',    -inf, ...            % outer filterStatsTable will cap
+        'show_pbar',    logical(show_pbar) & f_verb > -1); % MEX runs extract on a background
+    % pthread; main MATLAB thread polls
+    % atomic counters and prints "10%
+    % 20%..." ticks safely. See
+    % extract_tfpeaks_mex.c for details.
+
+    if f_verb > 0 && ~show_pbar
+        fprintf('%s  Extracting TF peaks (Rust MEX, rayon-parallel)...\n', verb_pref);
+    end
+    tmex = tic;
+    if nargout >= 2
+        [mex_out, labels_img] = extract_tfpeaks_mex( ...
+            double(spect), double(stimes(:)'), double(sfreqs(:)), ...
+            double(baseline_arg(:)), mex_params);
+    else
+        mex_out = extract_tfpeaks_mex( ...
+            double(spect), double(stimes(:)'), double(sfreqs(:)), ...
+            double(baseline_arg(:)), mex_params);
+        labels_img = [];
+    end
+
+    % Build a MATLAB table with the columns extractTFPeaks would produce,
+    % filtered to the `features` requested.
+    n = numel(mex_out.PeakTime);
+    all_cols = struct( ...
+        'PeakTime',      mex_out.PeakTime, ...
+        'PeakFrequency', mex_out.PeakFrequency, ...
+        'Duration',      mex_out.Duration, ...
+        'Bandwidth',     mex_out.Bandwidth, ...
+        'Height',        mex_out.Height, ...
+        'Volume',        mex_out.Volume, ...
+        'SegmentNum',    mex_out.SegmentNum, ...
+        'BoundingBox',   mex_out.BoundingBox, ...
+        'Area',          mex_out.Area, ...
+        'Peakiness',     mex_out.Peakiness);
+    % Cell-typed columns assigned post-construction so MATLAB's struct()
+    % constructor doesn't unwrap them into a struct array.
+    all_cols.Boundaries = mex_out.Boundaries;
+    all_cols.HeightData = mex_out.HeightData;
+    % features is a cell or 'all'; select subset
+    if ischar(features) && strcmpi(features, 'all')
+        keep_names = fieldnames(all_cols);
+    else
+        keep_names = intersect(fieldnames(all_cols), features, 'stable');
+    end
+    if n == 0
+        stats_table = table();
+    else
+        cell_data = cellfun(@(nm) all_cols.(nm), keep_names, 'UniformOutput', false);
+        stats_table = table(cell_data{:}, 'VariableNames', keep_names);
+        % Match MATLAB path: sort by PeakTime so downstream consumers
+        % (refinePeakFrequency -> hann_event_spectra) get monotonic times.
+        if any(strcmp(keep_names, 'PeakTime'))
+            stats_table = sortrows(stats_table, 'PeakTime', 'ascend');
+        end
+    end
+    if f_verb > 0
+        fprintf('%s  MEX extract took %.3f s, %d peaks\n', verb_pref, toc(tmex), n);
+    end
+
+    % MEX callers use the 4th output (`labels_img`, F x T int64) with
+    % mask_spectrogram_mex directly — no regions/borders dance. We keep
+    % regions/borders outputs for back-compat with MATLAB callers but
+    % leave them empty; any caller requesting nargout >= 2 with MEX
+    % should also accept the labels_img output and use mask_spectrogram_mex.
+    regions = cell(0, 1);
+    borders = cell(0, 1);
+    % labels_img is already set from extract_tfpeaks_mex above (or [] if
+    % only 1 output was requested from MEX).
+    if nargout < 4
+        labels_img = [];
+    end
+    return;
+end
+%% ======================================================================
 
 %******************
 % Remove baseline *
@@ -146,26 +277,41 @@ borders = cell(n_segs,1);
 % In parallel, find TFpeaks for each seg
 computetime = tic;
 
-% Check for parallel processing toolbox and set up loading bar
-if show_pbar
-    v = ver;
-    haspar = any(strcmp({v.Name}, 'Parallel Computing Toolbox'));
-    if haspar
-        D = parallel.pool.DataQueue;
-        h = waitbar(0, 'Processing Segments...');
-        afterEach(D, @nUpdateWaitbar);
-    else
-        h = waitbar(0, 'Processing Segments...');
-    end
+% Progress reporting for the MATLAB path:
+%   (1) waitbar is DISABLED here regardless of show_pbar. MATLAB R2025b's
+%       Chromium Embedded Framework has a recurrent font-rendering SIGSEGV
+%       on macOS 26+ (QT GuiThread -> fontations_ffi -> OnTimerTimeout).
+%       The waitbar widget is one of the triggers and the extract's long
+%       parfor runtime makes the CEF timer tick thousands of times — so
+%       skipping the waitbar noticeably reduces crash rate even if it
+%       doesn't eliminate it. See benchmarks/README.md for the headless
+%       -batch workaround when you need 100% reliability.
+%   (2) 10% console ticks ARE printed regardless of show_pbar, via a
+%       parallel.pool.DataQueue whose afterEach callback runs on the
+%       main MATLAB thread — so fprintf is safe there (unlike in parfor
+%       worker bodies where stdout is not coherent).
+v = ver;
+haspar = any(strcmp({v.Name}, 'Parallel Computing Toolbox'));
+pbar_state.done = 0;
+pbar_state.total = n_segs;
+pbar_state.last_tick = 0;   % last printed 10% bucket (0, 10, 20, ..., 100)
+if haspar
+    D = parallel.pool.DataQueue;
+    afterEach(D, @nPrintConsoleTick);
 else
-    haspar = [];
     D = [];
-    h = [];
 end
-segments_processed = 1;
 
-%Need to save the nargout outside the parfor
-num_out = nargout;
+% Print the progress-line label
+if f_verb > -1
+    fprintf('%s  Extracting TF peaks:', verb_pref);
+end
+
+%Need to save the nargout outside the parfor.
+%extractTFPeaks returns at most 3 outputs (stats, regions, borders). The
+%4th optional output of runSegmentedData (labels_img) is only produced by
+%the MEX fast path above; for the MATLAB path it is left as [] below.
+num_out = min(nargout, 3);
 
 poolobj = gcp("nocreate");
 % Defensive: gcp("nocreate") returns [] when no pool exists, and on newer
@@ -202,30 +348,21 @@ if ~debug_mode
         %This construction with multiple function calls for num_out is most
         %efficient for parallel processing
         if num_out == 1
-            stats_tables{ii} = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],[],use_trim_mex);
+            stats_tables{ii} = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],[]);
         elseif num_out == 2
-            [stats_tables{ii}, regions{ii}] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],[],use_trim_mex);
+            [stats_tables{ii}, regions{ii}] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],[]);
             regions{ii} = cellfun(@(x)x+pixel_shift(ii),regions{ii},'UniformOutput',false);
         elseif num_out == 3
-            [stats_tables{ii}, regions{ii}, borders{ii}] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],[],use_trim_mex);
+            [stats_tables{ii}, regions{ii}, borders{ii}] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],[]);
             regions{ii} = cellfun(@(x)x+pixel_shift(ii),regions{ii},'UniformOutput',false);
             borders{ii} = cellfun(@(x)x+pixel_shift(ii),borders{ii},'UniformOutput',false);
         end
 
-        % Update loading bar
-        if show_pbar
-            % NOTE: reference `h` only in the serial (debug_mode) branch below,
-            % never inside parfor. Parfor static analysis broadcasts every
-            % referenced variable to workers, and MATLAB cannot serialize
-            % matlab.ui.control.internal.ProgressIndicator (the class `waitbar`
-            % now returns), which produces a spurious warning on every run.
-            if haspar
-                send(D, ii);
-            end
+        % Signal completion to main-thread afterEach listener so it can
+        % print a 10% console tick if this segment crossed a bucket.
+        if haspar && (f_verb > -1)
+            send(D, ii);
         end
-    end
-    if show_pbar
-        delete(h); % delete loading bar
     end
 else
     for ii = 1:n_segs
@@ -236,7 +373,7 @@ else
         end
 
         %Compute the stats table with optional regions and borders
-        [stats_tables{ii}, reg, bord] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],[],use_trim_mex);
+        [stats_tables{ii}, reg, bord] = extractTFPeaks(data_segs{ii},x_segs{ii},sfreqs,features,ii,conn_wshed,merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,bl_threshold,merge_rule,f_verb-1,['  ' verb_pref],[]);
 
         if num_out>1
             regions{ii} = cellfun(@(x)x+pixel_shift(ii),reg,'UniformOutput',false);
@@ -246,20 +383,31 @@ else
             borders{ii} = cellfun(@(x)x+pixel_shift(ii),bord,'UniformOutput',false);
         end
 
-        % Update loading bar
-        if show_pbar
-            waitbar(ii/n_segs, h, [num2str(ii) ' out of ' num2str(n_segs) ' (' num2str((ii/n_segs*100),'%.2f') '%) segments processed...']);
+        % Inline 10%-tick printing (serial / debug path).
+        if f_verb > -1
+            nPrintConsoleTick(ii);
         end
-    end
-    if show_pbar
-        delete(h); % delete loading bar
     end
 end
 
-%Add a parallel friendly waitbar
-    function nUpdateWaitbar(~)
-        waitbar(segments_processed/n_segs, h, [num2str(segments_processed) ' out of ' num2str(n_segs) ' (' num2str((segments_processed/n_segs*100),'%.2f') '%) segments processed...']);
-        segments_processed = segments_processed + 1;
+% Close the line the console-tick listener/inline-printer was building
+% up across the parfor / serial loop.
+if f_verb > -1
+    fprintf('\n');
+end
+
+% Console-tick listener: runs on the main MATLAB thread (afterEach
+% marshals from parfor workers) so fprintf is safe here. Accepts the
+% segment index from `send(D, ii)` but ignores it — we count
+% completions internally and print a bucket only when crossed.
+    function nPrintConsoleTick(~)
+        pbar_state.done = pbar_state.done + 1;
+        pct = floor(100 * pbar_state.done / pbar_state.total);
+        bucket = floor(pct / 10) * 10;
+        while pbar_state.last_tick < bucket && pbar_state.last_tick < 100
+            pbar_state.last_tick = pbar_state.last_tick + 10;
+            fprintf(' %d%%', pbar_state.last_tick);
+        end
     end
 
 if f_verb > 0
@@ -281,4 +429,28 @@ if nargout>2
     borders = borders(sort_inds);
 end
 
+% MATLAB path cannot produce labels_img (MEX-only); return empty.
+if nargout > 3
+    labels_img = [];
+end
+
+end
+
+
+function shift = compute_global_trim_shift(spect, baseline)
+% Replicate MATLAB's `trim_shift = min(spect, [], 'all')` on the
+% baseline-DIVIDED spectrogram, so the MEX fast path and the MATLAB
+% path see the same shift value applied uniformly to every segment.
+if ~isempty(baseline)
+    bv = double(baseline(:));
+    good = bv > 0 & isfinite(bv);
+    if any(good)
+        s_div = double(spect(good, :)) ./ bv(good);
+        shift = min(s_div, [], 'all');
+    else
+        shift = min(double(spect), [], 'all');
+    end
+else
+    shift = min(double(spect), [], 'all');
+end
 end

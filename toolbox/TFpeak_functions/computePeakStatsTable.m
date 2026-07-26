@@ -15,7 +15,7 @@ function stats_table = computePeakStatsTable(regions,boundaries,data,xvalues,yva
 %       segment_num: integer - segment index when data is a sub-segment (default: 1)
 %       features:    cell or char - any subset of {'Area', 'Bandwidth', 'Boundaries',
 %                    'BoundingBox', 'Duration', 'Height', 'HeightData', 'PeakFrequency',
-%                    'PeakTime', 'SegmentNum', 'Volume'} or 'all' (default: 'all')
+%                    'Peakiness', 'PeakTime', 'SegmentNum', 'Volume'} or 'all' (default: 'all')
 %
 %   Outputs:
 %       stats_table: table - one row per peak, columns determined by features
@@ -67,7 +67,7 @@ if nargin<6 || isempty(segment_num)
 end
 
 if nargin<7 || isempty(features) || any(strcmpi(features,'all'))
-    features = {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData', 'PeakFrequency', 'PeakTime', 'SegmentNum', 'Volume'};
+    features = {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox', 'Duration', 'Height', 'HeightData', 'PeakFrequency', 'Peakiness', 'PeakTime', 'SegmentNum', 'Volume'};
 end
 
 assert(iscell(regions) && ~isempty(regions),'Regions must be a cell array');
@@ -87,11 +87,11 @@ if any(strcmpi(features,'BoundingBox')) || any(strcmpi(features,'Bandwidth')) ||
     r_props = cat(2,r_props,'BoundingBox');
 end
 
-if any(strcmpi(features,'PeakTime')) || any(strcmpi(features,'PeakFrequency')) 
+if any(strcmpi(features,'PeakTime')) || any(strcmpi(features,'PeakFrequency'))
     r_props = cat(2,r_props,'WeightedCentroid');
 end
 
-if any(strcmpi(features,'Height')) || any(strcmpi(features,'HeightData')) || any(strcmpi(features,'Volume')) 
+if any(strcmpi(features,'Height')) || any(strcmpi(features,'HeightData')) || any(strcmpi(features,'Volume')) || any(strcmpi(features,'Peakiness'))
     r_props = cat(2,r_props,'PixelValues');
 end
 
@@ -146,16 +146,23 @@ if any(strcmpi(features,'Boundaries'))
     stats_table.Properties.VariableUnits{'Boundaries'} = '(seconds, Hz)';
 end
 
+% regionprops returns WeightedCentroid in 1-based pixel-center coords:
+% the center of the upper-left pixel is at (1.0, 1.0). The (-1) shifts to
+% 0-based so a peak at column 1 maps to xvalues(1), not xvalues(2). The
+% legacy toolbox/watershed_functions/ version had this; the (-1) was
+% dropped in the 2022-09-28 camelCase rename (b59fa85), silently biasing
+% PeakTime/PeakFrequency by +1 spectrogram bin until restored here.
+%
 %Peak Time
 if any(strcmpi(features,'PeakTime'))
-    stats_table.PeakTime = stats_table.WeightedCentroid(:,1)*dx+seg_startx; % WeightedCentroid in spatial coordinates
+    stats_table.PeakTime = (stats_table.WeightedCentroid(:,1)-1)*dx+seg_startx;
     stats_table.Properties.VariableDescriptions{'PeakTime'} = 'Peak time based on weighted centroid';
     stats_table.Properties.VariableUnits{'PeakTime'} = 'sec';
 end
 
 %Peak Frequency
 if any(strcmpi(features,'PeakFrequency'))
-    stats_table.PeakFrequency = stats_table.WeightedCentroid(:,2)*dy+seg_starty; % WeightedCentroid in spatial coordinates
+    stats_table.PeakFrequency = (stats_table.WeightedCentroid(:,2)-1)*dy+seg_starty;
     stats_table.Properties.VariableDescriptions{'PeakFrequency'} = 'Peak frequency based on weighted centroid';
     stats_table.Properties.VariableUnits{'PeakFrequency'} = 'Hz';
 end
@@ -186,6 +193,19 @@ if any(strcmpi(features,'SegmentNum'))
     stats_table.SegmentNum(:,1) = segment_num;
     stats_table.Properties.VariableDescriptions{'SegmentNum'} = 'Data segment number';
     stats_table.Properties.VariableUnits{'SegmentNum'} = '#';
+end
+
+%Peakiness = 10*log10(Area * Height / Volume), expressed in dB. 
+% Recomputed from PixelValues so this block is order-independent: stats_table.Area 
+% gets either rescaled (line 127) or emptied (line 131) above depending on whether
+% 'Area' is requested, and likewise stats_table.PixelValues is renamed/dropped below.
+if any(strcmpi(features,'Peakiness'))
+    pk_area   = cellfun(@numel, stats_table.PixelValues) * dx * dy;       % sec*Hz
+    pk_height = cellfun(@max, stats_table.PixelValues) - cellfun(@min, stats_table.PixelValues);
+    pk_volume = cellfun(@(x) sum(x) * dx * dy, stats_table.PixelValues);  % sec*μV^2
+    stats_table.Peakiness = 10 * log10(pk_area .* pk_height ./ pk_volume);
+    stats_table.Properties.VariableDescriptions{'Peakiness'} = 'Peakiness: 10*log10(Area * Height / Volume)';
+    stats_table.Properties.VariableUnits{'Peakiness'} = 'dB';
 end
 
 %Region data

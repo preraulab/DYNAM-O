@@ -1,12 +1,12 @@
 function [stats_table, regions, borders] = extractTFPeaks(img,x,y,features,num_segment,conn_wshed,...
     merge_thresh,max_merges,downsample_spect,dur_min,bw_min,trim_vol,trim_shift,conn_trim,...
-    bl_thresh,merge_rule,f_verb,verb_pref,f_disp,use_trim_mex)
+    bl_thresh,merge_rule,f_verb,verb_pref,f_disp)
 %EXTRACTTFPEAKS  Determine peak regions within a spectrogram and extract features for each
 %
 %   Usage:
 %       [stats_table, regions, borders] = extractTFPeaks(img, x, y, features, num_segment, conn_wshed, ...
 %           merge_thresh, max_merges, downsample_spect, dur_min, bw_min, trim_vol, trim_shift, conn_trim, ...
-%           bl_thresh, merge_rule, f_verb, verb_pref, f_disp, use_trim_mex)
+%           bl_thresh, merge_rule, f_verb, verb_pref, f_disp)
 %
 %   Required Inputs:
 %       img:          [M x N] double - 2D image data
@@ -15,8 +15,8 @@ function [stats_table, regions, borders] = extractTFPeaks(img,x,y,features,num_s
 %       x:                [1 x N] double - x axis of image data (default: 1:size(img,2))
 %       y:                [1 x M] double - y axis of image data (default: 1:size(img,1))
 %       features:         cell or char - any subset of {'Area', 'Bandwidth', 'Boundaries', 'BoundingBox',
-%                         'Duration', 'Height', 'HeightData', 'PeakFrequency', 'PeakTime', 'SegmentNum',
-%                         'Volume'} or 'all' (default: 'all')
+%                         'Duration', 'Height', 'HeightData', 'PeakFrequency', 'Peakiness', 'PeakTime',
+%                         'SegmentNum', 'Volume'} or 'all' (default: 'all')
 %       num_segment:      integer - segment index if img is a sub-segment of a larger image (default: 1)
 %       conn_wshed:       integer - pixel connectivity used in watershed labeling (default: 8)
 %       merge_thresh:     double - threshold weight at which merging stops (default: 8)
@@ -32,8 +32,6 @@ function [stats_table, regions, borders] = extractTFPeaks(img,x,y,features,num_s
 %       f_verb:           integer - verbosity depth: 0 silent, up to 3 for full internal progress (default: 0)
 %       verb_pref:        char - prefix string for verbose output (default: '')
 %       f_disp:           logical/integer - plot progress if nonzero (default: 0)
-%       use_trim_mex:     logical - allow trim_region_mex on ProcessPool / serial calls;
-%                         false forces the MATLAB trim path (default: true)
 %
 %   Outputs:
 %       stats_table: table - peak statistics, one row per peak
@@ -127,9 +125,6 @@ if nargin < 18
 end
 if nargin < 19
     f_disp = [];
-end
-if nargin < 20 || isempty(use_trim_mex)
-    use_trim_mex = true;
 end
 
 %************************
@@ -301,7 +296,10 @@ if dur_min>0 || bw_min>0
     df = y(2)-y(1);
     dt = x(2)-x(1);
     [f_inds,t_inds] = cellfun(@(x)ind2sub(size(img),x),regions,'UniformOutput',false);
-    good_inds = cellfun(@(x)(max(x)-min(x))*dt>dur_min,t_inds) & cellfun(@(x)(max(x)-min(x))*df>bw_min,f_inds);
+    % Span = (#pixels)*dt = (max-min+1)*dt, matching how Duration/Bandwidth
+    % are reported via regionprops in computePeakStatsTable. Without the +1
+    % the filter drops peaks of true span dur_min by exactly one bin.
+    good_inds = cellfun(@(x)(max(x)-min(x)+1)*dt>dur_min,t_inds) & cellfun(@(x)(max(x)-min(x)+1)*df>bw_min,f_inds);
     regions = regions(good_inds);
     borders = borders(good_inds);
 end
@@ -325,7 +323,7 @@ if trim_vol < 1
         disp([verb_pref '  Starting trim to ' num2str(100*trim_vol) ' percent volume...']);
         ttic = tic;
     end
-    [trim_regions, trim_borders] = trimWshedRegions(img,regions,trim_vol,trim_shift,conn_trim,f_verb-1,['    ' verb_pref],f_disp,use_trim_mex);
+    [trim_regions, trim_borders] = trimWshedRegions(img,regions,trim_vol,trim_shift,conn_trim,f_verb-1,['    ' verb_pref],f_disp);
     if f_verb > 0
         disp([verb_pref '    trim took: ' num2str(toc(ttic)) ' seconds.']);
     end
@@ -333,7 +331,7 @@ if trim_vol < 1
     %Remove regions that now fall below the removal criteria after trimming
     if dur_min>0 || bw_min>0
         [f_inds, t_inds] = cellfun(@(x)ind2sub(size(img),x),trim_regions,'UniformOutput',false);
-        good_inds = cellfun(@(x)~isempty(max(x))&&((max(x)-min(x))*dt>dur_min),t_inds) & cellfun(@(x)~isempty(max(x))&&((max(x)-min(x))*df>bw_min),f_inds);
+        good_inds = cellfun(@(x)~isempty(max(x))&&((max(x)-min(x)+1)*dt>dur_min),t_inds) & cellfun(@(x)~isempty(max(x))&&((max(x)-min(x)+1)*df>bw_min),f_inds);
         trim_regions = trim_regions(good_inds);
         trim_borders = trim_borders(good_inds);
     end
@@ -346,15 +344,6 @@ if trim_vol < 1
 
     regions = trim_regions;
     borders = trim_borders;
-
-    if dur_min>0 || bw_min>0
-        df = y(2)-y(1);
-        dt = x(2)-x(1);
-
-        [f_inds, t_inds] = cellfun(@(x)ind2sub(size(img),x),regions,'UniformOutput',false);
-        good_inds = cellfun(@(x)(max(x)-min(x))*dt>dur_min,t_inds) & cellfun(@(x)(max(x)-min(x))*df>bw_min,f_inds);
-        regions = regions(good_inds);
-    end
 
 end
 

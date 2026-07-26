@@ -35,14 +35,42 @@ function plot_SOPH_paramfits(power_bins, power_wshed_img, SOPH_pow, model_SOPH_p
 % Hover distance threshold (fraction of axis diagonal). Tweak this value as desired.
 hover_dist_threshold = 0.05;  % 0.05 = 5% of axis diagonal
 
+% Power and phase rows are independent: an empty params_* signals "this
+% fit failed / wasn't computed", and the corresponding row is omitted.
+have_pow   = ~isempty(params_pow);
+have_phase = ~isempty(params_phase);
+nrows = double(have_pow) + double(have_phase);
+
+if nrows == 0
+    % Nothing to plot — produce an empty figure so callers grabbing gcf
+    % don't crash, and bail.
+    f = figure('Visible','off');
+    if strcmp(get(groot, 'DefaultFigureVisible'), 'on')
+        set(f, 'Visible', 'on');
+    end
+    return
+end
+
 % Create invisible; visibility restored at end for interactive callers.
 f = figure('Visible','off');
-ax = figdesign(f, 2, 3, ...
+ax = figdesign(f, nrows, 3, ...
     'type', 'usletter', ...
     'orient', 'landscape', ...
     'margins', [0.05 0.08 0.1 0.1 0.11 0.12]);
 set(f, 'units', 'inches')
-set(f, 'position', [0 0 10 6])
+set(f, 'position', [0 0 10 3*nrows])
+
+% Index into ax for whichever rows exist
+pow_ax_idx   = [];
+phase_ax_idx = [];
+if have_pow && have_phase
+    pow_ax_idx   = 1:3;
+    phase_ax_idx = 4:6;
+elseif have_pow
+    pow_ax_idx   = 1:3;
+elseif have_phase
+    phase_ax_idx = 1:3;
+end
 
 % Store all necessary data in the figure's application data
 setappdata(f, 'power_fitobj', power_fitobj);
@@ -50,8 +78,8 @@ setappdata(f, 'phase_fitobj', phase_fitobj);
 setappdata(f, 'power_bins', power_bins);
 setappdata(f, 'phase_bins', phase_bins);
 setappdata(f, 'freq_bins', freq_bins);
-setappdata(f, 'power_ax', ax(3));
-setappdata(f, 'phase_ax', ax(6));
+if have_pow,   setappdata(f, 'power_ax', ax(pow_ax_idx(3)));   end
+if have_phase, setappdata(f, 'phase_ax', ax(phase_ax_idx(3))); end
 
 % Helper function for one row
     function plot_paramfit(ax_handles, x_bins, freq_bins, wshed_img, hist_mat, model_mat, params, cmap, type_str, xlabel_str, fitLabel, clim_prctiles, x_limits, freq_limits, plot_type)
@@ -60,13 +88,13 @@ setappdata(f, 'phase_ax', ax(6));
         set(hImg1, 'HitTest', 'off', 'PickableParts', 'none'); % images shouldn't capture datatips
         axis(ax_handles(1),'xy')
         ylabel(ax_handles(1), 'Frequency (Hz)');
-        title(ax_handles(1), 'Watershed Segmentation')
+        title(ax_handles(1), 'Mode Initialization')
 
         % --- Original histogram
         hImg2 = imagesc(ax_handles(2), x_bins, freq_bins, hist_mat');
         set(hImg2, 'HitTest', 'off', 'PickableParts', 'none');
         axis(ax_handles(2),'xy')
-        colorbar_noresize(ax_handles(2));
+        c2 = colorbar_noresize(ax_handles(2));
         colormap(ax_handles(2), cmap);
         xlabel(ax_handles(2), xlabel_str);
         title(ax_handles(2), ['Original ' type_str ' Histogram'])
@@ -132,10 +160,10 @@ setappdata(f, 'phase_ax', ax(6));
                 end
                 try
                     % Capture the graphics object handle returned by contour
-                    [~, contours(k)] = contour(ax_handles(3), x_fine, freq_fine, cdata, 'w-', 'LineWidth', 2);
+                    [~, contours(k)] = contour(ax_handles(3), x_fine, freq_fine, cdata, 'w-', 'LineWidth', 0.5);
                     if isgraphics(contours(k))
                         % make contours non-pickable so they don't steal picks from markers
-                        set(contours(k), 'Visible','off', 'Tag','mode_contour', 'HitTest','off', 'PickableParts','none');
+                        set(contours(k), 'Visible','on', 'Tag','mode_contour', 'HitTest','off', 'PickableParts','none');
                     end
                 catch
                     contours(k) = gobjects(1);
@@ -151,12 +179,12 @@ setappdata(f, 'phase_ax', ax(6));
             end
 
             % Colorbar, colormap and titles
-            c = colorbar_noresize(ax_handles(3));
-            c.Label.String = fitLabel;
-            c.Label.Rotation = -90;
-            c.Label.VerticalAlignment = "bottom";
+            c3 = colorbar_noresize(ax_handles(3));
+            c3.Label.String = fitLabel;
+            c3.Label.Rotation = -90;
+            c3.Label.VerticalAlignment = "bottom";
             colormap(ax_handles(3), cmap);
-            title(ax_handles(3), ['Model ' type_str ' Histogram and Modes'])
+            title(ax_handles(3), ['Mode ' type_str ' Histogram'])
 
             % Additional layout / scaling adjustments
             linkcaxes(ax_handles(2:3));
@@ -170,17 +198,39 @@ setappdata(f, 'phase_ax', ax(6));
             axis(ax_handles(2),'tight')
             xlim(ax_handles(2), x_limits)
             ylim(ax_handles(2), freq_limits)
-            set(ax_handles, 'fontsize', 10)
+            set(ax_handles, 'fontsize', 12)
+
+            % Pin each colorbar to a fixed normalized gap from its axis's right
+            % edge. colorbar_noresize restores axes Position but does not move
+            % the colorbar, so MATLAB's initial placement (based on TightInset,
+            % tick labels, etc.) leaks through and causes inconsistent spacing
+            % between rows. Pinning equalises the spacing across all panels.
+            drawnow;
+            colorbar_gap = 0.005;  % figure-normalized units
+            cbars   = [c2, c3];
+            cb_axes = [ax_handles(2), ax_handles(3)];
+            for k = 1:numel(cbars)
+                if isgraphics(cbars(k))
+                    axp = cb_axes(k).Position;
+                    cp  = cbars(k).Position;
+                    cp(1) = axp(1) + axp(3) + colorbar_gap;
+                    cbars(k).Position = cp;
+                end
+            end
         end
     end
 
 % --- SO-Power row ---
-plot_paramfit(ax(1:3), power_bins, freq_bins, power_wshed_img, SOPH_pow, model_SOPH_pow, params_pow, ...
-    gouldian, 'Power', 'SO-Power (dB)', {'Density','(peaks/min in bin)'}, SOPH_clim_prctiles_pow, power_limits, freq_limits_pow, 'power');
+if have_pow
+    plot_paramfit(ax(pow_ax_idx), power_bins, freq_bins, power_wshed_img, SOPH_pow, model_SOPH_pow, params_pow, ...
+        gouldian, 'Power', 'SO-Power (dB)', {'Density','(peaks/min in bin)'}, SOPH_clim_prctiles_pow, power_limits, freq_limits_pow, 'power');
+end
 
 % --- SO-Phase row ---
-plot_paramfit(ax(4:6), phase_bins, freq_bins, phase_wshed_img(:,length(phase_bins)+1:end-length(phase_bins),:), SOPhH_phase, model_SOPhH_phase, params_phase, ...
-    magma, 'Phase', 'SO-Phase (rad)', {'Proportion'}, SOPH_clim_prctiles_phase, phase_limits, freq_limits_phase, 'phase');
+if have_phase
+    plot_paramfit(ax(phase_ax_idx), phase_bins, freq_bins, phase_wshed_img(:,length(phase_bins)+1:end-length(phase_bins),:), SOPhH_phase, model_SOPhH_phase, params_phase, ...
+        magma, 'Phase', 'SO-Phase (rad)', {'Proportion'}, SOPH_clim_prctiles_phase, phase_limits, freq_limits_phase, 'phase');
+end
 
 % --- Enable datacursor mode (so clicking markers produces the enhanced datatip) ---
 dcm = datacursormode(f);

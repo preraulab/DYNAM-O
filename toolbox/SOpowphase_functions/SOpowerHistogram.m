@@ -124,6 +124,9 @@ addOptional(p, 'retain_Fs', SOPH_options.SOpower_retain_Fs, @(x) validateattribu
 %Display settings
 addOptional(p, 'plot_on', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+% Pipeline backend — forwarded to TFPeakHistogram so 'matlab' backend
+% keeps pure-MATLAB binning (no Rust MEX behind the scenes).
+addOptional(p, 'backend', 'rust', @(x) any(validatestring(lower(char(x)), {'matlab','rust'})));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -197,13 +200,22 @@ else % Compute the normalized SOpower
         norm_method = SOPH_options.SOpower_norm_method;
     end
     [SOpower, SOpower_times, SOpower_stages, norm_method] = computeSOpower(EEG, Fs, 'stage_times', stage_times, 'stage_vals', stage_vals,...
-        'EEG_times', EEG_times, 'time_range', time_range, 'isexcluded', isexcluded,...
-        'SO_freqrange', SO_freqrange,...
+        'EEG_times', EEG_times, 'time_range', time_range, 'isexcluded', isexcluded, 'SO_freqrange', SO_freqrange,...
         'SOpower_outlier_threshold', SOpower_outlier_threshold, 'norm_method', norm_method, 'retain_Fs', retain_Fs);
 end
 
-% Get SOpower_times step size
+% Get SOpower_times step size. The synthetic-padding interp1 below assumes
+% uniform sampling — verify rather than trust the first two samples.
 SOpower_times_step = SOpower_times(2) - SOpower_times(1);
+SOpower_times_diffs = diff(SOpower_times);
+if numel(SOpower_times_diffs) > 1 && ...
+        max(abs(SOpower_times_diffs - SOpower_times_step)) > 1e-6 * abs(SOpower_times_step)
+    error('SOpowerHistogram:nonUniformTimes', ...
+        ['SOpower_times must be uniformly sampled (max step deviation %.3g s ' ...
+         'vs nominal %.3g s). Non-uniform sampling would silently corrupt the ' ...
+         'synthetic boundary padding used for interp1.'], ...
+        max(abs(SOpower_times_diffs - SOpower_times_step)), SOpower_times_step);
+end
 
 % Interpolate SOpower to peak time points
 peak_SOpower = interp1([SOpower_times(1)-SOpower_times_step, SOpower_times, SOpower_times(end)+SOpower_times_step],...
@@ -267,6 +279,6 @@ end
     'freq_range', freq_range, 'freq_binsizestep', freq_binsizestep,...
     'norm_dim', norm_dim, 'compute_rate', compute_rate,...
     'min_time_in_bin', min_time_in_bin,... # specific to SOpower histogram
-    'plot_on', plot_on, 'verbose', verbose);
+    'plot_on', plot_on, 'verbose', verbose, 'backend', backend);
 
 end

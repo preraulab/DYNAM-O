@@ -21,14 +21,14 @@ classdef DYNAMO < handle
     %       spline_basis_power_options: struct - spline basis options (power)
     %       spline_basis_phase_options: struct - spline basis options (phase)
     %       stats_table: table - precomputed TF peak table (bypass detection)
-    %       verbose: logical - flag for printing progress (default: true)
-    %       plot_on: logical - whether to show summary figure (default: true)
-    %       save_output_image: logical - save summary image to disk (default: false)
-    %       output_fname: char - output filename for saved figure
-    %       fit_SOPH: logical - compute SOPH model fits (default: true)
+    %       app: logical - launch the options GUI from the constructor (default: false)
+    %
+    %   The OOP runDYNAMO method always runs with plot_on/fit_param_basis/
+    %   fit_spline_basis disabled — call displaySummaryPlot, fitParamBasis,
+    %   and fitSplineBasis separately on the resulting object.
     %
     %   Public Properties:
-    %       stats_table, SOPHs, spect, stimes, sfreqs,
+    %       stats_table, hist_peakidx, SOPHs, spect, stimes, sfreqs,
     %       data_time_range, t_time_range, artifacts,
     %       data, Fs, stage_times, stage_vals, time_range,
     %       baseline_options, detection_options, SOPH_options,
@@ -64,28 +64,23 @@ classdef DYNAMO < handle
     %       d.runDYNAMO();
     %
     %       % Update detection parameters programmatically, then re-run
-    %       opts = detection_opts();
-    %       opts.peak_power_thresh = 3;
+    %       opts = detection_opts('quality_setting', 'precision');
     %       d.updateOptions('detection_options', opts);
     %       d.runDYNAMO();
     %
-    %       % Force ThreadPool (disables trim MEX; useful on 8-core Apple Silicon)
+    %       % Force the MATLAB backend with a ThreadPool (useful on 8-core Apple Silicon)
     %       opts = detection_opts('parallel_mode', 'Threads');
     %       d.updateOptions('detection_options', opts);
-    %       d.runDYNAMO();
+    %       d.runDYNAMO('backend', 'matlab');
     %
-    %   Notes on pool type:
+    %   Notes on pool type (backend='matlab' only — backend='rust' uses no parpool):
     %       detection_options.parallel_mode controls the parallel pool:
-    %           'Processes'  (default) — ProcessPool + trim_region_mex; fastest on
-    %                                    every platform except 8-core Apple Silicon.
-    %           'Threads'              — ThreadPool; trim_region_mex auto-disables
-    %                                    and falls back to the bit-identical MATLAB
-    %                                    path. ~8% wallclock improvement over
-    %                                    ProcessPool on 8-core M2/M3.
+    %           'Processes'  (default) — ProcessPool; fastest on most hosts.
+    %           'Threads'              — ThreadPool; ~8% faster on 8-core M2/M3.
     %           ''                     — same as 'Processes'.
-    %       trim_region_mex auto-compiles on first runDYNAMO call if missing and a
-    %       C++ compiler is configured (`mex -setup cpp`). Missing compiler is not
-    %       fatal — the pipeline falls back to the MATLAB path automatically.
+    %       The Rust backend (default) calls dynamo_rs via MEX wrappers that
+    %       parallelise internally with rayon; MATLAB parpool is skipped in
+    %       that mode. See rust_bridge/README.md for build instructions.
     %
     %       % Visualize and fit SOPH models
     %       fh = d.displaySummaryPlot();
@@ -132,6 +127,7 @@ classdef DYNAMO < handle
 
         % Analysis outputs
         stats_table         % Time-frequency peaks table
+        hist_peakidx = logical([]) % TF peaks included in SOPH histograms
         SOPHs               % SO-power/phase histograms structure
         spect               % Spectrogram matrix
         stimes              % Spectrogram time vector
@@ -307,8 +303,8 @@ classdef DYNAMO < handle
             %   Description:
             %       Runs the full DYNAM-O pipeline (wrapped runDYNAMO function)
             %       using the current object settings and stores the outputs in
-            %       the object's properties: stats_table, SOPHs, spect, stimes,
-            %       sfreqs, artifacts.
+            %       the object's properties: stats_table, hist_peakidx, SOPHs,
+            %       spect, stimes, sfreqs, artifacts.
             %
             %   Inputs:
             %       obj: DYNAMO object (must be initialized)
@@ -325,11 +321,42 @@ classdef DYNAMO < handle
             obj.validateStaging();
             assert(obj.isInitialized(), 'DYNAMO object is not fully initialized.');
 
+            % Forward an existing stats_table when one is already loaded
+            % (e.g. from .csv reuse). runDYNAMO's 'stats_table' kwarg
+            % short-circuits computeTFPeaks; only the spectrogram +
+            % SOpower/SOphase peak features + histogram binning run.
+            extra_args = {};
+            if ~isempty(obj.stats_table)
+                ST = obj.stats_table;
+                % SubjectID is a writer-side annotation for self-
+                % identification on disk; the inner pipeline is keyed
+                % off PeakTime / PeakFrequency only and rejects non-
+                % numeric columns via 'real' validation.
+                if istable(ST)
+                    sid_hit = strcmpi(ST.Properties.VariableNames, 'SubjectID');
+                    if any(sid_hit)
+                        ST = removevars(ST, ST.Properties.VariableNames(sid_hit));
+                    end
+                end
+                extra_args = [extra_args, {'stats_table', ST}];
+
+                % Reuse an already-computed artifact mask so the
+                % SOPH-only path doesn't recompute detect_artifacts
+                % (its dominant cost). runDYNAMO validates the length
+                % against the data in time_range and falls back to
+                % detection on mismatch, so a stale/short mask is safe.
+                if ~isempty(obj.artifacts)
+                    extra_args = [extra_args, {'artifacts', obj.artifacts}];
+                end
+            end
+
             [obj.stats_table, obj.spect, obj.stimes, obj.sfreqs,...
                 obj.data_time_range, obj.t_time_range, obj.artifacts, obj.SOPHs] = runDYNAMO(...
                 obj.data, obj.Fs, obj.stage_times, obj.stage_vals, obj.time_range, ...
                 obj.baseline_options, obj.detection_options, obj.SOPH_options, ...
-                'fit_param_basis', false, 'fit_spline_basis', false, 'plot_on', false);
+                'fit_param_basis', false, 'fit_spline_basis', false, 'plot_on', false, ...
+                extra_args{:});
+            obj.hist_peakidx = obj.reconstructHistPeakidx();
         end
 
         function obj = updateOptions(obj, varargin)
@@ -437,6 +464,10 @@ classdef DYNAMO < handle
             assert(obj.isInitialized(), 'Object not initialized properly.');
             assert(~isempty(obj.stats_table) && ~isempty(obj.SOPHs), 'Run the pipeline first.');
 
+            if isempty(obj.hist_peakidx) || numel(obj.hist_peakidx) ~= height(obj.stats_table)
+                obj.hist_peakidx = obj.reconstructHistPeakidx();
+            end
+
             fh = displaySummaryPlot('stage_times', obj.stage_times, ...
                 'stage_vals', obj.stage_vals, ...
                 'artifacts', obj.artifacts, ...
@@ -445,6 +476,8 @@ classdef DYNAMO < handle
                 'Fs', obj.Fs, ...
                 'time_range', obj.time_range, ...
                 'stats_table', obj.stats_table, ...
+                'hist_peakidx', logical(obj.hist_peakidx), ...
+                'SOPH_stages', obj.SOPH_options.SOPH_stages, ...
                 'SOpower_norm', obj.SOPHs.SOpower_norm, ...
                 'SOpower_times', obj.SOPHs.SOpower_times, ...
                 'SOpower_norm_method', obj.SOPH_options.SOpower_norm_method, ...
@@ -531,29 +564,85 @@ classdef DYNAMO < handle
             opts_phase = obj.param_basis_phase_options;
             opts_phase.plot_on = false;
 
+            % Per-mode TF-peak summary (Pk*) inputs: assignment confidence +
+            % the SOPH-included peak population (PeakStage in SOPH_stages).
+            pk_tbl = obj.stats_table;
+            if istable(pk_tbl) && ~isempty(pk_tbl) && isstruct(obj.SOPH_options) ...
+                    && isfield(obj.SOPH_options, 'SOPH_stages') ...
+                    && ismember('PeakStage', pk_tbl.Properties.VariableNames)
+                pk_tbl = pk_tbl(ismember(pk_tbl.PeakStage, obj.SOPH_options.SOPH_stages), :);
+            end
 
-            % temp_fbins = obj.SOPHs.freq_bins>=2 & obj.SOPHs.freq_bins<=15.8;
-            % obj.SOPHs.SOpower_mat = obj.SOPHs.SOpower_mat(:,temp_fbins);
-            % obj.SOPHs.freq_bins = obj.SOPHs.freq_bins(temp_fbins);
-            % obj.SOPHs.SOphase_mat = obj.SOPHs.SOphase_mat(:,temp_fbins);
+            % Power and phase fits are isolated: a failure in one is logged
+            % but does not block the other or anything downstream. Empty
+            % *_paramfit signals "fit failed" to the rest of the pipeline.
+            % Side variables are pre-set to [] so the plot call below can
+            % run when only one of the two fits succeeded.
+            pow_ok = false; phase_ok = false;
+            params_pow = []; model_SOPH_pow = []; power_wshed_img = [];
+            params_phase = []; model_SOPhH_phase = []; phase_wshed_img = [];
+            % Phase fit runs first so its model surface
+            % (model_SOPhH_phase) is available when the power table is
+            % annotated with model-based preferred-phase columns.
+            try
+                [params_phase, fitobj_phase, gof_phase, model_SOPhH_phase, phase_wshed_img] = ...
+                    param_basis_phase(obj.SOPHs.SOphase_mat, obj.SOPHs.SOphase_bins, obj.SOPHs.freq_bins, ...
+                    opts_phase);
+                if isempty(fitobj_phase)
+                    obj.SOPHs.SOphase_paramfit = [];
+                    fprintf(2, '   [WARN] param_basis_phase returned no fit (see warning above).\n');
+                else
+                    obj.SOPHs.SOphase_paramfit = obj.createSOPHparamfitStruct('phase', params_phase, fitobj_phase, gof_phase, model_SOPhH_phase, phase_wshed_img);
+                    phase_ok = true;
+                    if ~isempty(obj.SOPHs.SOphase_paramfit.params)
+                        obj.SOPHs.SOphase_paramfit.params = annotateModesWithPeakStats( ...
+                            obj.SOPHs.SOphase_paramfit.params, 'phase', pk_tbl, opts_phase.peak_assign_prob);
+                    end
+                end
+            catch ME_phase
+                obj.SOPHs.SOphase_paramfit = [];
+                fprintf(2, '   [ERROR] param_basis_phase failed: %s\n', ME_phase.message);
+                warning('DYNAMO:fitParamBasis:phase', 'param_basis_phase failed: %s', ME_phase.message);
+            end
 
-            [params_pow, fitobj_pow, gof_pow, model_SOPH_pow, power_wshed_img] = ...
-                param_basis_power(obj.SOPHs.SOpower_mat, obj.SOPHs.SOpower_bins, obj.SOPHs.freq_bins, ...
-                opts_pow); % plot_off for merged plot
+            try
+                [params_pow, fitobj_pow, gof_pow, model_SOPH_pow, power_wshed_img] = ...
+                    param_basis_power(obj.SOPHs.SOpower_mat, obj.SOPHs.SOpower_bins, obj.SOPHs.freq_bins, ...
+                    opts_pow);
+                if isempty(fitobj_pow)
+                    % Soft-fail: no fit object at all. param_basis_power
+                    % normally produces at least a background-only fit
+                    % (params=[], fitobj=plane); reaching here means
+                    % something else went wrong upstream.
+                    obj.SOPHs.SOpower_paramfit = [];
+                    fprintf(2, '   [WARN] param_basis_power returned no fit (see warning above).\n');
+                else
+                    obj.SOPHs.SOpower_paramfit = obj.createSOPHparamfitStruct('power', params_pow, fitobj_pow, gof_pow, model_SOPH_pow, power_wshed_img);
+                    pow_ok = true;
 
-            obj.SOPHs.SOpower_paramfit = obj.createSOPHparamfitStruct(params_pow, fitobj_pow, gof_pow, model_SOPH_pow, power_wshed_img);
+                    if ~isempty(obj.SOPHs.SOpower_paramfit.params)
+                        obj.SOPHs.SOpower_paramfit.params = annotatePowerWithPreferredPhase( ...
+                            obj.SOPHs.SOpower_paramfit.params, obj.SOPHs.SOphase_mat, ...
+                            obj.SOPHs.freq_bins, obj.SOPHs.SOphase_bins, model_SOPhH_phase);
+                        obj.SOPHs.SOpower_paramfit.params = annotateModesWithPeakStats( ...
+                            obj.SOPHs.SOpower_paramfit.params, 'power', pk_tbl, opts_pow.peak_assign_prob);
+                    end
+                end
+            catch ME_pow
+                obj.SOPHs.SOpower_paramfit = [];
+                fprintf(2, '   [ERROR] param_basis_power failed: %s\n', ME_pow.message);
+                warning('DYNAMO:fitParamBasis:power', 'param_basis_power failed: %s', ME_pow.message);
+            end
 
-            [params_phase, fitobj_phase, gof_phase, model_SOPhH_phase, phase_wshed_img] = ...
-                param_basis_phase(obj.SOPHs.SOphase_mat, obj.SOPHs.SOphase_bins, obj.SOPHs.freq_bins, ...
-                opts_phase);
-
-            obj.SOPHs.SOphase_paramfit = obj.createSOPHparamfitStruct(params_phase, fitobj_phase, gof_phase, model_SOPhH_phase, phase_wshed_img);
-
-            if plot_on
+            if plot_on && (pow_ok || phase_ok)
+                if pow_ok,   pow_fitobj   = obj.SOPHs.SOpower_paramfit.fitobj; else, pow_fitobj   = []; end
+                if phase_ok, phase_fitobj = obj.SOPHs.SOphase_paramfit.fitobj; else, phase_fitobj = []; end
                 plot_SOPH_paramfits( ...
                     obj.SOPHs.SOpower_bins, power_wshed_img, obj.SOPHs.SOpower_mat, model_SOPH_pow, params_pow, opts_pow.SOPH_clim_prctiles, opts_pow.power_limits, opts_pow.freq_limits, ...
                     obj.SOPHs.SOphase_bins, phase_wshed_img, obj.SOPHs.SOphase_mat, model_SOPhH_phase, params_phase, opts_phase.SOPH_clim_prctiles, opts_phase.phase_limits, opts_phase.freq_limits, ...
-                    obj.SOPHs.freq_bins, obj.SOPHs.SOpower_paramfit.fitobj, obj.SOPHs.SOphase_paramfit.fitobj);
+                    obj.SOPHs.freq_bins, pow_fitobj, phase_fitobj);
+            elseif plot_on
+                figure;  % both fits failed — empty figure so gcf-grabbers don't die
             end
         end
 
@@ -591,21 +680,40 @@ classdef DYNAMO < handle
             opts_phase = obj.spline_basis_phase_options;
             opts_phase.plot_on = false;
 
-            [fit_pow, coefs_pow, s_pow, knots_x_pow, knots_y_pow] = ...
-                spline_basis('power', obj.SOPHs.SOpower_mat, obj.SOPHs.SOpower_bins, obj.SOPHs.freq_bins, opts_pow);
+            % Same isolation pattern as fitParamBasis: each fit can fail
+            % independently and the survivor (if any) still gets saved.
+            pow_ok = false; phase_ok = false;
+            fit_pow = []; coefs_pow = []; knots_x_pow = []; knots_y_pow = [];
+            fit_phase = []; coefs_phase = []; knots_x_phase = []; knots_y_phase = [];
+            try
+                [fit_pow, coefs_pow, s_pow, knots_x_pow, knots_y_pow, fit_so_pow, fit_freq_pow] = ...
+                    spline_basis('power', obj.SOPHs.SOpower_mat, obj.SOPHs.SOpower_bins, obj.SOPHs.freq_bins, opts_pow);
+                obj.SOPHs.SOpower_splinefit = obj.createSOPHsplinefitStruct(fit_pow, coefs_pow, s_pow, knots_x_pow, knots_y_pow, fit_so_pow, fit_freq_pow);
+                pow_ok = true;
+            catch ME_pow
+                obj.SOPHs.SOpower_splinefit = [];
+                fprintf(2, '   [ERROR] spline_basis (power) failed: %s\n', ME_pow.message);
+                warning('DYNAMO:fitSplineBasis:power', 'spline_basis (power) failed: %s', ME_pow.message);
+            end
 
-            obj.SOPHs.SOpower_splinefit = obj.createSOPHsplinefitStruct(fit_pow, coefs_pow, s_pow, knots_x_pow, knots_y_pow);
+            try
+                [fit_phase, coefs_phase, s_phase, knots_x_phase, knots_y_phase, fit_so_phase, fit_freq_phase] = ...
+                    spline_basis('phase', obj.SOPHs.SOphase_mat, obj.SOPHs.SOphase_bins, obj.SOPHs.freq_bins, opts_phase);
+                obj.SOPHs.SOphase_splinefit = obj.createSOPHsplinefitStruct(fit_phase, coefs_phase, s_phase, knots_x_phase, knots_y_phase, fit_so_phase, fit_freq_phase);
+                phase_ok = true;
+            catch ME_phase
+                obj.SOPHs.SOphase_splinefit = [];
+                fprintf(2, '   [ERROR] spline_basis (phase) failed: %s\n', ME_phase.message);
+                warning('DYNAMO:fitSplineBasis:phase', 'spline_basis (phase) failed: %s', ME_phase.message);
+            end
 
-            [fit_phase, coefs_phase, s_phase, knots_x_phase, knots_y_phase] = ...
-                spline_basis('phase', obj.SOPHs.SOphase_mat, obj.SOPHs.SOphase_bins, obj.SOPHs.freq_bins, opts_phase);
-
-            obj.SOPHs.SOphase_splinefit = obj.createSOPHsplinefitStruct(fit_phase, coefs_phase, s_phase, knots_x_phase, knots_y_phase);
-
-            if plot_on
+            if plot_on && (pow_ok || phase_ok)
                 plot_SOPH_splinefits( ...
                     obj.SOPHs.SOpower_mat, obj.SOPHs.SOpower_bins, fit_pow, coefs_pow, knots_x_pow, knots_y_pow, opts_pow, ...
                     obj.SOPHs.SOphase_mat, obj.SOPHs.SOphase_bins, fit_phase, coefs_phase, knots_x_phase, knots_y_phase, opts_phase, ...
                     obj.SOPHs.freq_bins);
+            elseif plot_on
+                figure;
             end
         end
 
@@ -659,6 +767,9 @@ classdef DYNAMO < handle
                 verbose = false;
             end
 
+            % Single shared CSSPreset for every CSSui* widget in this dialog.
+            appStyle = dynamoStyle();
+
             % Create main figure
             if nargin<3 || isempty(fig)
                 fig = uifigure('Name', 'DYNAMO Options', 'Position', [100 100 900 650]);
@@ -669,7 +780,7 @@ classdef DYNAMO < handle
             end
 
             if nargin<5
-                showButtons = true;
+                showButtons = false;
             end
 
             % Create main menu
@@ -684,37 +795,31 @@ classdef DYNAMO < handle
 
             % --- Callback functions ---
             function loadSettingsCallback(~, ~)
-                [filename, filepath] = uigetfile({'*.txt'},'Select DYNAM-O settings file.');
+                % Load settings from a JSON file written by saveSettingsCallback
+                % / the DYNAMOApp run-log. The legacy `.txt` format stored
+                % MATLAB code and was loaded via `run()` — a code-injection
+                % vector. JSON is inert (jsondecode = data deserialization only).
+                [filename, filepath] = uigetfile({'*.json'}, 'Select DYNAM-O settings file (JSON).');
+                if isequal(filename, 0); return; end
 
-                if filename ~= 0
-                    new_filename = filename;
-                    new_filename(end-2:end) = 'm  ';
-
-                    movefile(strcat(filepath,filename),strcat(filepath,new_filename));
-
-                    SOPH_options = []; %#ok<*PROPLC>
-                    baseline_options = [];
-                    detection_options = [];
-                    param_basis_power_options = [];
-                    param_basis_phase_options = [];
-                    spline_basis_power_options = [];
-                    spline_basis_phase_options = [];
-
-                    run(strcat(filepath,new_filename));
-
-                    obj.updateOptions('SOPH_options',SOPH_options);
-                    obj.updateOptions('baseline_options',baseline_options);
-                    obj.updateOptions('detection_options',detection_options);
-                    obj.updateOptions('param_basis_power_options',param_basis_power_options);
-                    obj.updateOptions('param_basis_phase_options',param_basis_phase_options);
-                    obj.updateOptions('spline_basis_power_options',spline_basis_power_options);
-                    obj.updateOptions('spline_basis_phase_options',spline_basis_phase_options);
-                    clear SOPH_options baseline_options detection_options param_basis_power_options param_basis_phase_options spline_basis_power_options spline_basis_phase_options
-
-                    movefile(strcat(filepath,new_filename),strcat(filepath,filename));
-
-                    updateAll();
+                try
+                    settings = load_run_log(fullfile(filepath, filename));
+                catch err
+                    uialert(fig, sprintf('Could not parse settings file:\n%s', err.message), ...
+                        'Load Settings', 'Icon', 'error');
+                    return
                 end
+
+                % Update each option struct present in the file. Any
+                % unknown keys in settings.options are ignored.
+                opt_names = fieldnames(settings.options);
+                for k = 1:numel(opt_names)
+                    name = opt_names{k};
+                    if isprop(obj, name)
+                        obj.updateOptions(name, settings.options.(name));
+                    end
+                end
+                updateAll();
             end
 
             function saveSettingsCallback(~, ~)
@@ -807,7 +912,7 @@ classdef DYNAMO < handle
 
                 for jj = 1:nButtons
                     xpos = startX + (jj-1)*(buttonWidth+spacing);
-                    CSSuiButton(fig, 'Style', 'shadow', ...
+                    CSSuiButton(fig, 'Style', appStyle, ...
                         'Text', buttonLabels{jj}, ...
                         'Position', [xpos 10 buttonWidth buttonHeight], ...
                         'ButtonPushedFcn', buttonCallbacks{jj});
@@ -895,7 +1000,7 @@ classdef DYNAMO < handle
                     'ColumnName',  {'Parameter', 'Description', 'Value'}, ...
                     'ColumnWidth', [180, 470, 150], ...
                     'Data',        tableData2cell(createTableData(opts, config)), ...
-                    'Style',       'shadow_light', ...
+                    'Style', appStyle, ...
                     'SelectionType', 'row');
                 tbl.Layout.Row    = 1;
                 tbl.Layout.Column = 1;
@@ -909,15 +1014,15 @@ classdef DYNAMO < handle
                 editGrid.Layout.Row    = 2;
                 editGrid.Layout.Column = 1;
 
-                selLabel = CSSuiLabel(editGrid, 'Style', 'shadow', ...
+                selLabel = CSSuiLabel(editGrid, 'Style', appStyle, ...
                     'Text', 'Select a row to edit', 'HorizontalAlignment', 'left');
                 selLabel.Layout.Row = 1; selLabel.Layout.Column = 1;
 
-                valField = CSSuiEditField(editGrid, 'Style', 'shadow_light', ...
+                valField = CSSuiEditField(editGrid, 'Style', appStyle, ...
                     'Placeholder', 'Select a row above');
                 valField.Layout.Row = 1; valField.Layout.Column = 2;
 
-                applyBtn = CSSuiButton(editGrid, 'Style', 'shadow', 'Text', 'Apply');
+                applyBtn = CSSuiButton(editGrid, 'Style', appStyle, 'Text', 'Apply');
                 applyBtn.Layout.Row = 1; applyBtn.Layout.Column = 3;
 
                 curRow   = [];
@@ -993,7 +1098,7 @@ classdef DYNAMO < handle
                         'Indeterminate', 'on');
 
                     % Rerun DYNAMO with current options (uses runDYNAMO wrapper)
-                    obj.run();
+                    obj.runDYNAMO();
 
                     % Close progress dialog if open
                     if isvalid(progressDlg)
@@ -1071,6 +1176,10 @@ classdef DYNAMO < handle
                     end
                     return;
                 end
+                if strcmp(param, 'backend')
+                    value = lower(str);
+                    return;
+                end
                 if isempty(str)
                     value = [];
                 elseif ismember(str, {'true'})
@@ -1142,6 +1251,11 @@ classdef DYNAMO < handle
                     else
                         str = char(value);
                     end
+                    return;
+                end
+
+                if isequal(constructor, @detection_opts) && strcmp(param, 'backend')
+                    str = lower(char(value));
                     return;
                 end
 
@@ -1238,10 +1352,11 @@ classdef DYNAMO < handle
                         'dur_max', 'Max duration (s)', ...
                         'bw_max', 'Max bandwidth (Hz)', ...
                         'refinement', 'Refine peak frequency', ...
+                        'reuse_baseline', 'Reuse pass-1 baseline in pass-2 (~5% faster)', ...
                         'features', 'Features to compute', ...
                         'debug_mode', 'Debug mode', ...
                         'parallel_mode', 'Pool type: Processes, Threads, or auto', ...
-                        'use_trim_mex', 'Use trim_region_mex when available');
+                        'backend', 'Pipeline backend: rust (MEX, fast) or matlab (reference)');
                 elseif isequal(constructor, @baseline_opts)
                     map = struct(...
                         'baseline_stages', 'Sleep stages for baseline 5=Wake, 4=REM, 3=N1, 2=N2, 1=N1, 0=Unknown, 6=Artifact', ...
@@ -1286,6 +1401,8 @@ classdef DYNAMO < handle
                         'kneedle_tol', 'Kneedle algorithm iteration tolerance', ...
                         'UB_default', 'Upper bounds [amp0, fmean0, fstd0, pmean0, pstd0, theta0]', ...
                         'LB_default', 'Lower bounds [amp0, fmean0, fstd0, pmean0, pstd0, theta0]', ...
+                        'constrain_freq_center', 'Constrain frequency center (false: +/-Inf)', ...
+                        'constrain_power_center', 'Constrain SO-power center (false: +/-Inf)', ...
                         'plot_on', 'Plot flag (0: none, 1: final, 2: iterations, 3: both)', ...
                         'SOPH_clim_prctiles', 'Heatmap color scaling percentiles [low, high]', ...
                         'verbose', 'Display detailed output');
@@ -1307,6 +1424,8 @@ classdef DYNAMO < handle
                         'kneedle_tol', 'Kneedle algorithm iteration tolerance', ...
                         'UB_default', 'Upper bounds [amp0, fmean0, fstd0, pmean0, pstd0, theta0]', ...
                         'LB_default', 'Lower bounds [amp0, fmean0, fstd0, pmean0, pstd0, theta0]', ...
+                        'constrain_freq_center', 'Constrain frequency center (false: +/-Inf)', ...
+                        'constrain_phase_center', 'Constrain SO-phase center (false: +/-Inf)', ...
                         'plot_on', 'Plot flag (0: none, 1: final, 2: iterations, 3: both)', ...
                         'SOPH_clim_prctiles', 'Heatmap color scaling percentiles [low, high]', ...
                         'verbose', 'Display detailed output');
@@ -1355,13 +1474,13 @@ classdef DYNAMO < handle
                 % Build dialog
                 dlg = uifigure('Name', 'Select Features', 'Position', [300 300 300 400], 'WindowStyle', 'modal');
                 listbox = CSSuiListBox(dlg, 'Items', features, 'Value', selected, 'Multiselect', true, ...
-                    'Style', 'shadow_light', ...
+                    'Style', appStyle, ...
                     'Position', [20 80 260 280]);
 
                 result = [];
-                CSSuiButton(dlg, 'Style', 'shadow', 'Text', 'OK', 'Position', [150 20 50 30], ...
+                CSSuiButton(dlg, 'Style', appStyle, 'Text', 'OK', 'Position', [150 20 50 30], ...
                     'ButtonPushedFcn', @(~,~) setResult());
-                CSSuiButton(dlg, 'Style', 'shadow', 'Text', 'Cancel', 'Position', [210 20 60 30], ...
+                CSSuiButton(dlg, 'Style', appStyle, 'Text', 'Cancel', 'Position', [210 20 60 30], ...
                     'ButtonPushedFcn', @(~,~) delete(dlg));
 
                 uiwait(dlg);
@@ -1392,9 +1511,25 @@ classdef DYNAMO < handle
             tf = ~isempty(obj.data) && ~isempty(obj.Fs) && ...
                 ~isempty(obj.stage_times) && ~isempty(obj.stage_vals);
         end
+
+        function hist_peakidx = reconstructHistPeakidx(obj)
+            % Recreate SOpowerHistogram's per-peak inclusion mask from
+            % properties retained in the stats table and DYNAMO object.
+            hist_peakidx = logical([]);
+            if ~istable(obj.stats_table) || ...
+                    ~all(ismember({'PeakTime', 'SOpower'}, obj.stats_table.Properties.VariableNames))
+                return
+            end
+
+            peak_stages = interp1(obj.stage_times, obj.stage_vals, ...
+                obj.stats_table.PeakTime, 'previous');
+            peak_stages(isnan(peak_stages)) = 0;
+            hist_peakidx = logical(ismember(peak_stages, obj.SOPH_options.SOPH_stages) & ...
+                ~isnan(obj.stats_table.SOpower));
+        end
     end
 
-    methods (Static, Access = protected)
+    methods (Static)
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % createSOPHsStruct
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1420,10 +1555,62 @@ classdef DYNAMO < handle
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % createSOPHparamfitStruct
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function [SOPH_paramfit] = createSOPHparamfitStruct(params, fitobj, gof, model_SOPH, wshed_img)
+        function [SOPH_paramfit] = createSOPHparamfitStruct(type, params, fitobj, gof, model_SOPH, wshed_img)
             %CREATESOPHPARAMFITSTRUCT  Pack parametric fit outputs into struct
+            %
+            %   type: 'power' or 'phase' — selects column names of the
+            %         returned params table.
+            %   params: N×6 numeric matrix [amp, fmean, fstd, pmean, pstd, theta]
+            %
+            %   .params is returned as a table. The first column is `Density`
+            %   (the rotGauss/vmGauss `amp` coefficient — peak density for
+            %   power, proportion for phase); `Volume` is the closed-form
+            %   integral of the fitted mode surface. Matches the toolbox
+            %   createSOPHparamfitStruct column set.
+            %   power: Density (peaks/min/bin), FreqMean (Hz), FreqStd (Hz),
+            %          SOpowerMean (dB), SOpowerStd (dB), Theta (rad),
+            %          Volume (peaks/min), plus (added by fitParamBasis
+            %          annotation): PrefPhase (rad), Coupling (proportion/phase-bin).
+            %   phase: Density (proportion/phase-bin), FreqMean (Hz), FreqStd (Hz),
+            %          SOphaseMean (rad), SOphaseStd (rad), Theta (rad),
+            %          Volume (proportion·rad·Hz).
+            %
+            %   NOTE: power Density is peaks/min/bin; phase Density and the model coupling column are proportion/phase-bin (phase histogram is row-normalized upstream). The SO phase-coupling metric is model-based only (the older raw-histogram argmax and circular-mean estimators have been retired).
+            % Per-mode TF-peak summary columns (Pk*) appended by
+            % annotateModesWithPeakStats; declared here for the empty
+            % fallback (matches the toolbox createSOPHparamfitStruct).
+            pkc = {'PkCount','PkFreq','PkDuration','PkBandwidth','PkHeight', ...
+                   'PkVolume','PkArea','PkPeakiness','PkSOpower','PkSOphase'};
+            switch lower(type)
+                case 'power'
+                    vn      = {'Density','FreqMean','FreqStd','SOpowerMean','SOpowerStd','Theta','Volume'};
+                    vn_full = [vn, {'PrefPhase','Coupling'}, pkc];
+                case 'phase'
+                    vn      = {'Density','FreqMean','FreqStd','SOphaseMean','SOphaseStd','Theta','Volume'};
+                    vn_full = [vn, pkc];
+                otherwise
+                    error('createSOPHparamfitStruct:badType','type must be ''power'' or ''phase''.');
+            end
             SOPH_paramfit = struct;
-            SOPH_paramfit.params = params;
+            if isempty(params)
+                SOPH_paramfit.params = array2table(zeros(0,numel(vn_full)),'VariableNames',vn_full);
+            else
+                % Volume = closed-form integral of the fitted mode surface
+                % (same as the toolbox createSOPHparamfitStruct):
+                %   power (rotGauss): V = Density·pi·SOpowerStd·FreqStd
+                %   phase (vmGauss):  V = Density·2pi·besseli(0,k,1)·sqrt(pi)·FreqStd, k = 1/SOphaseStd^2
+                density = params(:,1);
+                fstd    = params(:,3);
+                xstd    = params(:,5);
+                switch lower(type)
+                    case 'power'
+                        vol = density .* pi .* xstd .* fstd;
+                    case 'phase'
+                        k   = 1 ./ (xstd .^ 2);
+                        vol = density .* (2*pi) .* besseli(0, k, 1) .* sqrt(pi) .* fstd;
+                end
+                SOPH_paramfit.params = array2table([params, vol(:)],'VariableNames',vn);
+            end
             SOPH_paramfit.fitobj = fitobj;
             SOPH_paramfit.gof = gof;
             SOPH_paramfit.model_SOPH = model_SOPH;
@@ -1433,14 +1620,22 @@ classdef DYNAMO < handle
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % createSOPHsplinefitStruct
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function [SOPH_splinefit] = createSOPHsplinefitStruct(splinefit, coefs, spline_obj, knots_x, knots_y)
-            %CREATESOPHSPLINEFITSTRUCT  Pack spline fit outputs into struct
+        function [SOPH_splinefit] = createSOPHsplinefitStruct(splinefit, coefs, spline_obj, knots_x, knots_y, fit_SOfeature_bins, fit_freq_bins)
+            %CREATESOPHSPLINEFITSTRUCT  Pack spline fit outputs into struct.
+            %   fit_SOfeature_bins / fit_freq_bins (optional) are the
+            %   filtered fit-domain bins from spline_basis — required by
+            %   the GUI save path so the spline tiff metadata can carry
+            %   the bins page 2 was actually rendered on.
+            if nargin < 6, fit_SOfeature_bins = []; end
+            if nargin < 7, fit_freq_bins      = []; end
             SOPH_splinefit = struct;
             SOPH_splinefit.splinefit = splinefit;
             SOPH_splinefit.coefs = coefs;
             SOPH_splinefit.spline_obj = spline_obj;
             SOPH_splinefit.knots_x = knots_x;
             SOPH_splinefit.knots_y = knots_y;
+            SOPH_splinefit.fit_SOfeature_bins = fit_SOfeature_bins;
+            SOPH_splinefit.fit_freq_bins      = fit_freq_bins;
         end
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1476,23 +1671,52 @@ classdef DYNAMO < handle
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % writeTiff
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function writeTiff(filename,data)
+        function writeTiff(filename,data,description)
+            % Optional `description` (char/string/struct) is embedded in
+            % the ImageDescription tag of page 1 — used by SOPH writes
+            % to carry freq_bins / SO bins so downstream readers can
+            % label axes. `data` may be a single 2-D matrix or a cell
+            % array of matrices (one per page); pages may differ in
+            % size. Used by the spline writer to ship coefs on page 1
+            % and the rendered fit on page 2.
+
+            if nargin < 3, description = []; end
+            if isstruct(description), description = jsonencode(description); end
+
+            if iscell(data)
+                pages = data;
+            else
+                pages = {data};
+            end
 
             t = Tiff(filename, 'w');
+            cleaner = onCleanup(@() close(t)); %#ok<NASGU>
 
-            % Setup the tag structure
-            tagstruct.ImageLength = size(data, 1);
-            tagstruct.ImageWidth = size(data, 2);
-            tagstruct.Photometric = Tiff.Photometric.MinIsBlack;
-            tagstruct.BitsPerSample = 64;              % Use 64 for double precision
-            tagstruct.SamplesPerPixel = 1;
-            tagstruct.SampleFormat = Tiff.SampleFormat.IEEEFP; % Key for negative/floats
-            tagstruct.PlanarConfiguration = Tiff.PlanarConfiguration.Chunky;
+            for kk = 1:numel(pages)
+                % Write 32-bit float pages to match the DYNAM-O desktop app
+                % (Gray32Float), which validates dtype on read. All MATLAB
+                % readers do double(imread(...)), so the f64->f32 narrowing
+                % is transparent on this side; SOPH rates and spline coefs
+                % are well within single precision.
+                page = single(pages{kk});
+                tagstruct = struct();
+                tagstruct.ImageLength = size(page, 1);
+                tagstruct.ImageWidth = size(page, 2);
+                tagstruct.Photometric = Tiff.Photometric.MinIsBlack;
+                tagstruct.BitsPerSample = 32;              % single precision (f32), app parity
+                tagstruct.SamplesPerPixel = 1;
+                tagstruct.SampleFormat = Tiff.SampleFormat.IEEEFP; % Key for negative/floats
+                tagstruct.PlanarConfiguration = Tiff.PlanarConfiguration.Chunky;
+                if kk == 1 && ~isempty(description)
+                    tagstruct.ImageDescription = char(description);
+                end
 
-            % Write data
-            t.setTag(tagstruct);
-            t.write(data);
-            t.close();
+                t.setTag(tagstruct);
+                t.write(page);
+                if kk < numel(pages)
+                    t.writeDirectory();
+                end
+            end
 
         end
 

@@ -6,7 +6,7 @@ function opts = SOpowerphasehist_opts(varargin)
 %
 %   SOPOWERPHASEHIST_OPTS STRUCTURE PARAMETERS
 %       freq_range: 1x2 double - min and max frequencies of TF peak to include in the histograms (Hz).
-%                   Default = [0, 30]
+%                   Default = [2, 18]
 %       freq_binsizestep: 1x2 double - [size, step] frequency bin size and bin step for frequency
 %                         axis of SO power/phase histograms (Hz). Default = [1, 0.2]
 %       compute_rate: logical - histogram output in terms of TFpeaks/min instead of count.
@@ -30,11 +30,18 @@ function opts = SOpowerphasehist_opts(varargin)
 %
 %       SOpower_min_time_in_bin: numerical - time (minutes) required in each SO power bin to include in SOpower analysis. Otherwise all values
 %                                in that SO power bin will be NaN. Default = 10.
-%       SOpower_range: 1x2 double - min and max SO power values to consider in SO power analysis.
-%                      Default calculated using min and max of SO power
-%       SOpower_binsizestep: 1x2 double - [size, step] SO power bin size and step for SO power axis
-%                            of histogram. Units are radians. Default size is (SOpower_range(2)-SOpower_range(1))/10;
-%                            default step size is (SOpower_range(2)-SOpower_range(1))/100
+%       SOpower_range: 1x2 double - min and max SO power values (dB after
+%                      normalization) to consider in SO power analysis.
+%                      Default = [-5, 20] (fixed, so SOPHs are comparable
+%                      across subjects out of the box). Pass [] to opt
+%                      into per-subject adaptive range = [min, max] of
+%                      that subject's normalized SOpower.
+%       SOpower_binsizestep: 1x2 double - [size, step] SO power bin size
+%                            and step for SO power axis of histogram.
+%                            Default = [2.5, 0.25] dB (10x overlap, 91
+%                            bin centers from -3.75 to 18.75). Pass [] to
+%                            opt into adaptive: size = range/10, step =
+%                            range/100 (preserves the 10x overlap).
 %
 %       SOphase_filter: 1xF double - custom filter that will be used to estimate SOphase
 %
@@ -84,7 +91,7 @@ function opts = SOpowerphasehist_opts(varargin)
 p = inputParser;
 
 %% General settings
-addOptional(p, 'freq_range', [0, 30], @(x) validateattributes(x,{'numeric'},{'real','finite','vector','numel',2}));
+addOptional(p, 'freq_range', [2, 18], @(x) validateattributes(x,{'numeric'},{'real','finite','vector','numel',2}));
 addOptional(p, 'freq_binsizestep', [1, 0.2], @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
 addOptional(p, 'compute_rate', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'SOPH_stages', 1:3, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','vector'})); % W = 5, REM = 4, N1 = 3, N2 = 2, N3 = 1, Artifact = 6, Undefined = 0
@@ -99,9 +106,13 @@ addOptional(p, 'SOpower_retain_Fs', true, @(x) validateattributes(x, {'logical',
 
 %SOpower Histogram specific settings
 addOptional(p, 'SOpower_min_time_in_bin', 10, @(x) validateattributes(x,{'numeric'},{'real','finite','nonnegative','integer','scalar'}));
-%Ranges and bin step sizes determined dynamically with empty input [], user should set to fixed values when comparing between subjects
-addOptional(p, 'SOpower_range', [], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
-addOptional(p, 'SOpower_binsizestep', [], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
+% Defaults are fixed so SOPHs are comparable across subjects out of
+% the box. Pass [] explicitly to opt back into per-subject adaptive
+% bins (range = min/max of normalized SOpower, width = range/10,
+% step = range/100); the empty-input branch in SOpowerHistogram.m
+% handles that fallback.
+addOptional(p, 'SOpower_range', [-5, 25], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
+addOptional(p, 'SOpower_binsizestep', [2.5, 0.25], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
 
 %% SOphase computation params
 addOptional(p, 'SOphase_filter', []);

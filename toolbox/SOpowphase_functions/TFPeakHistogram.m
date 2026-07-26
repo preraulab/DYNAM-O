@@ -105,6 +105,11 @@ addOptional(p, 'min_peak_at_freq', 0, @(x) validateattributes(x,{'numeric'},{'re
 %Display settings
 addOptional(p, 'plot_on', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'verbose', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+% Pipeline backend: 'rust' (default) uses tfpeak_histogram_mex when
+% available for a ~20x speedup; 'matlab' forces the pure-MATLAB binning
+% loop below (bit-identical but slower). Plumbed from runDYNAMO through
+% SOpowerphaseHistogram → SOpowerHistogram / SOphaseHistogram.
+addOptional(p, 'backend', 'rust', @(x) any(validatestring(lower(char(x)), {'matlab','rust'})));
 
 parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
@@ -113,7 +118,7 @@ field_names = fieldnames(p.Results);
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 
 if islogical(Cmetric_stages) && Cmetric_stages %#ok<NODEF>
-    Cmetric_stages = true(size(Cmetric_valid));
+    Cmetric_stages = true(size(Cmetric_valid)); %#ok<*USENS>
 end
 
 if circular_Cmetric
@@ -141,123 +146,172 @@ num_Cbins = length(C_cbins);
 display_soph_setting(verbose, Cmetric_label, C_range, C_binsizestep, freq_range, freq_binsizestep, norm_method, min_time_in_bin, norm_dim, compute_rate)
 
 %% Create the histogram
-% Intialize Cmetric * freq matrix
-C_mat = nan(num_Cbins, num_freqbins);
 
-% Initialize time in bin
-if compute_TIB
-    time_in_bin = zeros(num_Cbins, 5);
-    prop_in_bin = zeros(num_Cbins, 5);
-end
-
-% Pre-compute the indices of peaks at each freq bin. Logical storage
-% (instead of double) cuts memory 8x and keeps the downstream & ops
-% on the SIMD-fast logical path.
-all_infreqbin_inds = false(length(TFpeak_freqs), num_freqbins);
-for f = 1:num_freqbins
-    % Get indices of TFpeaks that occur in this freq bin
-    all_infreqbin_inds(:, f) = (TFpeak_freqs >= freq_bin_edges(1,f)) & (TFpeak_freqs < freq_bin_edges(2,f));
-end
-
-% Pre-compute per-stage validity masks once (used inside the C-bin loop
-% for TIB computation). Builds a [N_times x 5] logical where column k
-% is "Cmetric_stages(i) == k AND Cmetric_valid(i)". Previously these
-% masks were rebuilt from scratch on every outer iteration — 5 masks
-% x num_Cbins outer iterations = hundreds of redundant recomputations.
-if compute_TIB
-    stage_valid_masks = false(numel(Cmetric_stages), 5);
-    Cmetric_valid_col = Cmetric_valid(:);
-    stages_col = Cmetric_stages(:);
-    for stg_ = 1:5
-        stage_valid_masks(:, stg_) = (stages_col == stg_) & Cmetric_valid_col;
+% MEX fast path: dynamo_rs::tfpeak_histogram covers the whole binning +
+% TIB + norm_dim + min_peak_at_freq + min_time_in_bin masking in one
+% shot, so we can skip the MATLAB loop entirely when the wrapper is
+% built. Inside a ThreadPool worker MATLAB blocks MEX execution — we
+% detect that and fall back to the pure-MATLAB path. Outputs are
+% bit-identical.
+% Set DYNAMO_HIST_MATLAB=1 to force the pure-MATLAB path (bisection aid).
+% backend='matlab' also forces the pure-MATLAB path (so the 'matlab'
+% backend stays a faithful reference implementation, no Rust behind
+% the scenes except the bundled multitaper_spectrogram_mex).
+use_mex = strcmpi(char(backend), 'rust') ...
+    && exist('tfpeak_histogram_mex', 'file') == 3;
+if use_mex
+    try
+        pool_ = gcp('nocreate');
+        if ~isempty(pool_) && isa(pool_, 'parallel.ThreadPool') && ~isempty(getCurrentTask)
+            use_mex = false; % ThreadPool worker — MEX disallowed, fall back
+        end
+    catch
+        % getCurrentTask isn't callable outside a worker context; that's fine.
     end
-    clear Cmetric_valid_col stages_col
+end
+if ~isempty(getenv('DYNAMO_HIST_MATLAB'))
+    use_mex = false;
 end
 
-for s = 1:num_Cbins
+if use_mex
+    mex_opts = struct( ...
+        'circular',         logical(circular_Cmetric), ...
+        'circular_lo',      circular_bounds(1), ...
+        'circular_hi',      circular_bounds(2), ...
+        'norm_dim',         int32(norm_dim), ...
+        'compute_rate',     logical(compute_rate), ...
+        'min_time_in_bin',  double(min_time_in_bin), ...
+        'min_peak_at_freq', int32(min_peak_at_freq));
+    % Reshape into the row-vector shapes the MEX expects; logical masks
+    % must already be logical (we enforced that at addRequired).
+    [C_mat, time_in_bin, prop_in_bin, peak_at_freq] = tfpeak_histogram_mex( ...
+        double(Cmetric(:)'), double(Cmetric_stages(:)'), double(Cmetric_times_step), ...
+        logical(Cmetric_valid(:)'), logical(Cmetric_valid_allstages(:)'), ...
+        double(TFpeak_freqs(:)), double(peak_Cmetric(:)), ...
+        double(freq_bin_edges), double(C_bin_edges), mex_opts);
+    % Rust already applied norm_dim / min_peak_at_freq / min_time_in_bin
+    % masking — skip the post-loop fix-ups below.
 
-    if circular_Cmetric
-        % Check for bins that need to be wrapped when Cmetric is circular
-        if (C_bin_edges(1,s) <= circular_low) % Lower limit should be wrapped
-            wrapped_edge_lowlim = C_bin_edges(1,s) + circular_range;
+else % Pure-MATLAB path (bit-identical reference).
+    % Intialize Cmetric * freq matrix
+    C_mat = nan(num_Cbins, num_freqbins);
 
-            if compute_TIB
-                TIB_inds = (Cmetric >= wrapped_edge_lowlim) | (Cmetric < C_bin_edges(2,s));
+    % Initialize time in bin
+    if compute_TIB
+        time_in_bin = zeros(num_Cbins, 5);
+        prop_in_bin = zeros(num_Cbins, 5);
+    end
+
+    % Pre-compute the indices of peaks at each freq bin. Logical storage
+    % (instead of double) cuts memory 8x and keeps the downstream & ops
+    % on the SIMD-fast logical path.
+    all_infreqbin_inds = false(length(TFpeak_freqs), num_freqbins);
+    for f = 1:num_freqbins
+        % Get indices of TFpeaks that occur in this freq bin
+        all_infreqbin_inds(:, f) = (TFpeak_freqs >= freq_bin_edges(1,f)) & (TFpeak_freqs < freq_bin_edges(2,f));
+    end
+
+    % Pre-compute per-stage validity masks once (used inside the C-bin loop
+    % for TIB computation). Builds a [N_times x 5] logical where column k
+    % is "Cmetric_stages(i) == k AND Cmetric_valid(i)". Previously these
+    % masks were rebuilt from scratch on every outer iteration — 5 masks
+    % x num_Cbins outer iterations = hundreds of redundant recomputations.
+    if compute_TIB
+        stage_valid_masks = false(numel(Cmetric_stages), 5);
+        Cmetric_valid_col = Cmetric_valid(:);
+        stages_col = Cmetric_stages(:);
+        for stg_ = 1:5
+            stage_valid_masks(:, stg_) = (stages_col == stg_) & Cmetric_valid_col;
+        end
+        clear Cmetric_valid_col stages_col
+    end
+
+    for s = 1:num_Cbins
+
+        if circular_Cmetric
+            % Check for bins that need to be wrapped when Cmetric is circular
+            if (C_bin_edges(1,s) <= circular_low) % Lower limit should be wrapped
+                wrapped_edge_lowlim = C_bin_edges(1,s) + circular_range;
+
+                if compute_TIB
+                    TIB_inds = (Cmetric >= wrapped_edge_lowlim) | (Cmetric < C_bin_edges(2,s));
+                end
+                inCbin_inds = (peak_Cmetric >= wrapped_edge_lowlim) | (peak_Cmetric < C_bin_edges(2,s));
+
+            elseif (C_bin_edges(2,s) >= circular_high) % Upper limit should be wrapped
+                wrapped_edge_highlim = C_bin_edges(2,s) - circular_range;
+
+                if compute_TIB
+                    TIB_inds = (Cmetric < wrapped_edge_highlim) | (Cmetric >= C_bin_edges(1,s));
+                end
+                inCbin_inds = (peak_Cmetric < wrapped_edge_highlim) | (peak_Cmetric >= C_bin_edges(1,s));
+
+            else % Both limits are within circular_bounds, no wrapping necessary
+                if compute_TIB
+                    TIB_inds = (Cmetric >= C_bin_edges(1,s)) & (Cmetric < C_bin_edges(2,s));
+                end
+                inCbin_inds = (peak_Cmetric >= C_bin_edges(1,s)) & (peak_Cmetric < C_bin_edges(2,s));
             end
-            inCbin_inds = (peak_Cmetric >= wrapped_edge_lowlim) | (peak_Cmetric < C_bin_edges(2,s));
 
-        elseif (C_bin_edges(2,s) >= circular_high) % Upper limit should be wrapped
-            wrapped_edge_highlim = C_bin_edges(2,s) - circular_range;
-
+        else
             if compute_TIB
-                TIB_inds = (Cmetric < wrapped_edge_highlim) | (Cmetric >= C_bin_edges(1,s));
-            end
-            inCbin_inds = (peak_Cmetric < wrapped_edge_highlim) | (peak_Cmetric >= C_bin_edges(1,s));
-
-        else % Both limits are within circular_bounds, no wrapping necessary
-            if compute_TIB
+                % Get indices of Cmetric that occur in this Cmetric bin
                 TIB_inds = (Cmetric >= C_bin_edges(1,s)) & (Cmetric < C_bin_edges(2,s));
             end
+
+            % Get indices of valid TFpeaks that occur in this Cmetric bin
             inCbin_inds = (peak_Cmetric >= C_bin_edges(1,s)) & (peak_Cmetric < C_bin_edges(2,s));
         end
 
-    else
+        % Get time in bin (min) and proportion of time in bin.
+        % Vectorized: a single sum along rows of a [N_times x 5] masked
+        % logical matrix replaces the per-stage for-loop. stage_valid_masks
+        % was precomputed once above.
         if compute_TIB
-            % Get indices of Cmetric that occur in this Cmetric bin
-            TIB_inds = (Cmetric >= C_bin_edges(1,s)) & (Cmetric < C_bin_edges(2,s));
+            TIB_col = TIB_inds(:);
+            time_in_bin(s,:) = (sum(TIB_col & stage_valid_masks, 1) * Cmetric_times_step) / 60;
+
+            time_in_bin_allstages = (sum(TIB_inds & Cmetric_valid_allstages) * Cmetric_times_step) / 60;
+            prop_in_bin(s,:) = time_in_bin(s,:) / time_in_bin_allstages;
+
+            % if less than threshold time in C bin, nan the whole column of CPH
+            if sum(time_in_bin(s,:)) < min_time_in_bin
+                continue
+            end
         end
 
-        % Get indices of valid TFpeaks that occur in this Cmetric bin
-        inCbin_inds = (peak_Cmetric >= C_bin_edges(1,s)) & (peak_Cmetric < C_bin_edges(2,s));
-    end
-
-    % Get time in bin (min) and proportion of time in bin.
-    % Vectorized: a single sum along rows of a [N_times x 5] masked
-    % logical matrix replaces the per-stage for-loop. stage_valid_masks
-    % was precomputed once above.
-    if compute_TIB
-        TIB_col = TIB_inds(:);
-        time_in_bin(s,:) = (sum(TIB_col & stage_valid_masks, 1) * Cmetric_times_step) / 60;
-
-        time_in_bin_allstages = (sum(TIB_inds & Cmetric_valid_allstages) * Cmetric_times_step) / 60;
-        prop_in_bin(s,:) = time_in_bin(s,:) / time_in_bin_allstages;
-
-        % if less than threshold time in C bin, nan the whole column of CPH
-        if sum(time_in_bin(s,:)) < min_time_in_bin
-            continue
+        % Vectorized replacement for the inner freq-bin loop. inCbin_inds is
+        % [N_peaks x 1] logical; all_infreqbin_inds is [N_peaks x num_freqbins]
+        % logical. Broadcasting &, then sum along rows, produces a
+        % [1 x num_freqbins] count in one call — replaces 150 iterations of
+        % an N_peaks-length AND+sum. 3-5x faster on typical workloads.
+        if any(inCbin_inds)
+            % (:) forces inCbin_inds to column so broadcasting with
+            % [N_peaks x num_freqbins] always works regardless of whether
+            % peak_Cmetric was passed as a row or column vector.
+            C_mat(s, :) = sum(inCbin_inds(:) & all_infreqbin_inds, 1);
+        else
+            C_mat(s,:) = 0;
         end
+
+        if compute_rate
+            C_mat(s,:) = C_mat(s,:) / sum(time_in_bin(s,:));
+        end
+
     end
 
-    % Vectorized replacement for the inner freq-bin loop. inCbin_inds is
-    % [N_peaks x 1] logical; all_infreqbin_inds is [N_peaks x num_freqbins]
-    % logical. Broadcasting &, then sum along rows, produces a
-    % [1 x num_freqbins] count in one call — replaces 150 iterations of
-    % an N_peaks-length AND+sum. 3-5x faster on typical workloads.
-    if any(inCbin_inds)
-        % (:) forces inCbin_inds to column so broadcasting with
-        % [N_peaks x num_freqbins] always works regardless of whether
-        % peak_Cmetric was passed as a row or column vector.
-        C_mat(s, :) = sum(inCbin_inds(:) & all_infreqbin_inds, 1);
-    else
-        C_mat(s,:) = 0;
+    % Mask out freq bins with too few peaks
+    peak_at_freq = sum(all_infreqbin_inds, 1);
+    C_mat(:, peak_at_freq < min_peak_at_freq) = nan;
+
+    % Normalize along a dimension if desired
+    if norm_dim
+        dim_sum = sum(C_mat, norm_dim, 'omitnan');
+        dim_sum(dim_sum == 0) = 1; % avoid 0/0 = nan
+        C_mat = C_mat ./ dim_sum;
     end
 
-    if compute_rate
-        C_mat(s,:) = C_mat(s,:) / sum(time_in_bin(s,:));
-    end
-
-end
-
-% Mask out freq bins with too few peaks
-peak_at_freq = sum(all_infreqbin_inds, 1);
-C_mat(:, peak_at_freq < min_peak_at_freq) = nan;
-
-% Normalize along a dimension if desired
-if norm_dim
-    dim_sum = sum(C_mat, norm_dim, 'omitnan');
-    dim_sum(dim_sum == 0) = 1; % avoid 0/0 = nan
-    C_mat = C_mat ./ dim_sum;
-end
+end % end of pure-MATLAB else branch
 
 %% Plot
 if plot_on

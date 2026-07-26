@@ -1,4 +1,4 @@
-function [splinefit, coefs, spline_obj, knots_x, knots_y, f] = spline_basis(type, SOPH, SOfeature_bins, freq_bins, varargin)
+function [splinefit, coefs, spline_obj, knots_x, knots_y, fit_SOfeature_bins, fit_freq_bins, f] = spline_basis(type, SOPH, SOfeature_bins, freq_bins, varargin)
 %SPLINE_BASIS  Compute spline approximation for Slow Oscillation Power/Phase Histogram
 %
 %   Usage:
@@ -118,6 +118,9 @@ field_names = fieldnames(p.Results);
 %Automatically add parser results to the workspace
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 
+SOfeature_bins = SOfeature_bins(:).';
+freq_bins = freq_bins(:);
+
 % Verify the dimensions of SOPH inputs
 if size(SOPH, 1) == length(SOfeature_bins) && size(SOPH, 2) == length(freq_bins)
     % then SOPH needs to be transposed to work as a 2D image
@@ -137,7 +140,7 @@ switch type
         SOfeature_limits = phase_limits;
 end
 valid_SOfeature_bins = SOfeature_bins >= SOfeature_limits(1) & SOfeature_bins <= SOfeature_limits(2) & all(valid_mat, 1);
-valid_freq_bins = freq_bins >= freq_limits(1) & freq_bins <= freq_limits(2) & ~invalid_freq';
+valid_freq_bins = freq_bins >= freq_limits(1) & freq_bins <= freq_limits(2) & ~invalid_freq;
 
 SOPH_original = SOPH;
 SOfeature_bins_original = SOfeature_bins;
@@ -146,6 +149,13 @@ freq_bins_original = freq_bins;
 SOPH = SOPH(valid_freq_bins, valid_SOfeature_bins);
 SOfeature_bins = SOfeature_bins(valid_SOfeature_bins);
 freq_bins = freq_bins(valid_freq_bins);
+
+% Expose the filtered (fit-domain) bins so callers can save them
+% alongside coefs/knots and reconstruct the spline on the same grid
+% used to fit it. The unfiltered "source" bins are still available
+% to callers (they passed them in).
+fit_SOfeature_bins = SOfeature_bins;
+fit_freq_bins      = freq_bins;
 
 %%
 %Create interpolation grid

@@ -11,6 +11,8 @@ function [stats_table, SOpower, SOpower_times, norm_method] = computePeakSOpower
 %       Fs: numerical - sampling frequency of data (Hz) --required
 %
 %    OPTIONAL:
+%       stage_times: 1xS double or single - stage onset times (s). Default = []
+%       stage_vals: 1xS double or single - sleep stage values 5=W,4=R,3=N1,2=N2,1=N3. Default = []
 %       EEG_times: 1xN double - times for each EEG data sample. Default = (0:length(data)-1)/Fs
 %       time_range: 1x2 double - min and max times for which to include TFpeaks. Also used to normalize
 %                   SOpower. Default = [EEG_times(1), EEG_times(end)]
@@ -103,6 +105,10 @@ addRequired(p, 'stats_table', @(x) validateattributes(x, {'table'}, {'real','2d'
 addRequired(p, 'data', @(x) validateattributes(x, {'numeric'}, {'real','vector'}));
 addRequired(p, 'Fs', @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','scalar'}));
 
+%Stage info
+addOptional(p, 'stage_times', [], @(x) validateattributes(x, {'double','single'}, {'real','finite','nondecreasing','2d'}));
+addOptional(p, 'stage_vals', [], @(x) validateattributes(x, {'double','single'}, {'real','finite','nonnegative','2d'}));
+
 %EEG time settings
 addOptional(p, 'EEG_times', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
 addOptional(p, 'time_range', [], @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
@@ -127,7 +133,7 @@ eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
 assert(ismember('PeakTime', stats_table.Properties.VariableNames), 'PeakTime must be available in the stats_table to compute SOpower at each TF peak.') %#ok<NODEF>
 
 %% Compute SO-power
-[SOpower, SOpower_times, ~, norm_method] = computeSOpower(data, Fs,...
+[SOpower, SOpower_times, ~, norm_method] = computeSOpower(data, Fs, 'stage_times', stage_times, 'stage_vals', stage_vals,...
     'EEG_times', EEG_times, 'time_range', time_range, 'isexcluded', isexcluded,...
     'SO_freqrange', SO_freqrange, 'tapers', SOpower_tapers, 'window_params', SOpower_window_params,...
     'SOpower_outlier_threshold', SOpower_outlier_threshold, 'norm_method', SOpower_norm_method, 'retain_Fs', SOpower_retain_Fs);

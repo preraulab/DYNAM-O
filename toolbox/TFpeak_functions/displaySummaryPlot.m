@@ -31,7 +31,13 @@ function [fh] = displaySummaryPlot(varargin)
 %
 %    >> TIME-FREQUENCY PEAK SCATTERPLOT
 %       stats_table:        table - features of each TFpeak
-%       hist_peakidx        [1xP] logical - which TFpeaks are counted in the feature histograms
+%       hist_peakidx        [Px1] logical - which TFpeaks are counted in the feature histograms.
+%                           This population sets the scatter-plot dot-size scale; all non-artifact
+%                           TFpeaks with valid SO phase are displayed.
+%       SOPH_stages:        [1xS] numeric - sleep-stage values the SO-power/phase histograms include
+%                           (0:Undef 1:N3 2:N2 3:N1 4:REM 5:Wake 6:Art). Periods whose stage is not
+%                           in this set or whose interpolated SOpower_norm is NaN are shaded gray behind
+%                           the TF-peak scatter. Default = [1 2 3]
 %       peak_size_prctiles: [1x2] double - percentiles used to scale the dot size of TF-peaks in the scatter plot.
 %                           Default = [5, 95]
 %
@@ -81,7 +87,12 @@ p = inputParser;
 % hypnogram needs these variables
 addParameter(p, 'stage_times', [], @(x) validateattributes(x, {'double','single'}, {'real','finite','nondecreasing','2d'}));
 addParameter(p, 'stage_vals', [], @(x) validateattributes(x, {'double','single'}, {'real','finite','nonnegative','2d'}));
-addParameter(p, 'artifacts', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
+% Accept logical OR numeric mask (numeric gets coerced to logical
+% after parse). Earlier versions only accepted logical, but some
+% callers persist artifacts via .mat round-trips or struct copies
+% that promote them to double; rejecting those here aborts the
+% summary figure for an entire subject over a harmless type drift.
+addParameter(p, 'artifacts', logical([]), @(x) validateattributes(x,{'logical','numeric'},{'real','finite','2d'}));
 addParameter(p, 't_time_range', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
 
 % spectrogram needs these variables
@@ -100,6 +111,7 @@ addParameter(p, 'SOpower_norm_method', 'p2shift1234', @(x) validateattributes(x,
 addParameter(p, 'stats_table', [], @(x) validateattributes(x, {'double','table'}, {'real','2d'}));
 addParameter(p, 'hist_peakidx', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
 addParameter(p, 'peak_size_prctiles', [5, 95], @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
+addParameter(p, 'SOPH_stages', [1, 2, 3], @(x) validateattributes(x, {'numeric'}, {'real','finite','vector'}));
 
 % Both SOPH need these variables
 addParameter(p, 'freq_bins', [], @(x) validateattributes(x, {'numeric'}, {'real','finite','2d'}));
@@ -119,6 +131,11 @@ field_names = fieldnames(p.Results);
 
 %Automatically add parser results to the workspace
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
+
+% Coerce numeric artifact masks to logical (validator accepts both).
+if ~islogical(artifacts)
+    artifacts = logical(artifacts);
+end
 
 %% Handle default values
 if isempty(t_time_range) && ~isempty(artifacts)
@@ -207,7 +224,7 @@ end
 
 %% Plot spectrogram
 if isgraphics(hypn_spect_ax(2))
-    [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_mex(data, Fs, mtm_freq_range, [15 29], [30 15], [],'linear',[],false,false);
+    [spect_disp, stimes_disp, sfreqs_disp] = multitaper_spectrogram_dynamo(data, Fs, mtm_freq_range, [15 29], [30 15], [],'linear',[],false,false);
 
     stimes_inds = stimes_disp >= time_range(1) & stimes_disp <= time_range(2);
     imagesc(hypn_spect_ax(2), stimes_disp(stimes_inds)/3600, sfreqs_disp, pow2db(spect_disp(:, stimes_inds)));
@@ -263,19 +280,76 @@ end
 
 %% Plot time-frequency peak scatterplot
 if isgraphics(ax(1))
-    % Plot only TF peaks that contribute to SO-power/phase histograms
+    hold(ax(1), 'on')
+    shade_patches = gobjects(0);
+
+    % Reconstruct the time intervals used by the SOPH histograms. Evaluate
+    % the same linearly interpolated SOpower and previous-stage predicates
+    % used for peak_selection_inds in SOpowerHistogram. SOpower_norm already
+    % carries artifact exclusions as NaNs.
+    if ~isempty(SOpower_norm) && ~isempty(SOpower_times) && numel(SOpower_times) > 1
+        SOpower_times_plot = SOpower_times(:);
+        SOpower_norm_plot = SOpower_norm(:);
+        SOpower_times_step = SOpower_times_plot(2) - SOpower_times_plot(1);
+        SOpower_interp_start = SOpower_times_plot(1) - SOpower_times_step;
+        SOpower_interp_end = SOpower_times_plot(end) + SOpower_times_step;
+
+        interval_edges = unique([time_range(:); SOpower_interp_start; ...
+            SOpower_times_plot; SOpower_interp_end; stage_times(:)]);
+        interval_edges = interval_edges(interval_edges >= time_range(1) & interval_edges <= time_range(2));
+        interval_midpoints = (interval_edges(1:end-1) + interval_edges(2:end)) / 2;
+
+        SOpower_at_interval = interp1( ...
+            [SOpower_interp_start; SOpower_times_plot; SOpower_interp_end], ...
+            [SOpower_norm_plot(1); SOpower_norm_plot; SOpower_norm_plot(end)], ...
+            interval_midpoints);
+        interval_excluded = isnan(SOpower_at_interval);
+        if ~isempty(stage_times) && ~isempty(stage_vals)
+            stages_at_interval = interp1(stage_times, stage_vals, interval_midpoints, 'previous');
+            stages_at_interval(isnan(stages_at_interval)) = 0;
+            interval_excluded = interval_excluded | ~ismember(stages_at_interval, SOPH_stages);
+        end
+
+        excluded_edges = diff([false; interval_excluded; false]);
+        excluded_runs = [find(excluded_edges == 1), find(excluded_edges == -1) - 1];
+
+        shade_color = [0.85, 0.85, 0.85];
+        shade_alpha = 0.6;
+        for k = 1:size(excluded_runs, 1)
+            t0 = interval_edges(excluded_runs(k, 1)) / 3600;
+            t1 = interval_edges(excluded_runs(k, 2) + 1) / 3600;
+            if t1 > t0
+                shade_patches(end+1) = patch(ax(1), [t0 t1 t1 t0], ...
+                    [freq_limits(1) freq_limits(1) freq_limits(2) freq_limits(2)], ...
+                    shade_color, 'FaceAlpha', shade_alpha, 'EdgeColor', 'none', ...
+                    'HandleVisibility', 'off'); %#ok<*AGROW>
+            end
+        end
+    end
+
+    % Use histogram-included peaks only to define the marker-size scale.
     stats_table_SOPH = stats_table(hist_peakidx, :);
+    if isempty(stats_table_SOPH)
+        peak_size = 0.5 * ones(height(stats_table), 1);
+    else
+        % scatter SizeData is marker area in points^2, unlike plot
+        % MarkerSize, which is a linear size in points.
+        max_peak_size = 10;
+        pmin = prctile(stats_table_SOPH.Volume, peak_size_prctiles(1));
+        pmax = prctile(stats_table_SOPH.Volume, peak_size_prctiles(2));
+        relative_peak_size = min(stats_table.Volume, pmax) / pmin;
+        relative_max_size = pmax / pmin;
+        peak_size = relative_peak_size / relative_max_size * max_peak_size;
+    end
 
-    %Compute peak dot size
-    pmin = prctile(stats_table_SOPH.Volume, peak_size_prctiles(1)); % get 5th ptile of volumes
-    peak_size = stats_table_SOPH.Volume / pmin * 0.5;  % 5th ptile fixed at size 0.5
-
-    %Do not plot larger than 95th ptile or else dots could obscure other things on the plot
-    pmax = prctile(stats_table_SOPH.Volume, peak_size_prctiles(2)); % get 95th ptile of volumes
-    pmax_inds = stats_table_SOPH.Volume> pmax;
-    peak_size(pmax_inds) = nan;
-
-    scatter(ax(1), stats_table_SOPH.PeakTime/3600, stats_table_SOPH.PeakFrequency, peak_size, stats_table_SOPH.SOphase, 'filled', 'MarkerEdgeColor', 'none');
+    % Artifact-excluded peaks have NaN SO phase. Plot every remaining peak
+    % using the circular phase colormap.
+    display_peakidx = ~isnan(stats_table.SOphase);
+    scatter(ax(1), stats_table.PeakTime(display_peakidx)/3600, stats_table.PeakFrequency(display_peakidx), ...
+        peak_size(display_peakidx), stats_table.SOphase(display_peakidx), 'filled', 'MarkerEdgeColor', 'none');
+    if ~isempty(shade_patches)
+        uistack(shade_patches, 'top');
+    end
 
     %Make circular colormap
     colormap(ax(1),circshift(hsv(2^12),-650))
@@ -311,7 +385,7 @@ if isgraphics(ax(2))
         c.Label.VerticalAlignment = "bottom";
     end
 
-    ylim(ax(2), freq_limits);
+    ylim(ax(2), [min(freq_bins) max(freq_bins)]);
     ylabel(ax(2), 'Frequency (Hz)');
 
     switch SOpower_norm_method
@@ -346,7 +420,7 @@ if isgraphics(ax(3))
         c.Label.VerticalAlignment = "bottom";
     end
 
-    ylim(ax(3), freq_limits);
+    ylim(ax(3), [min(freq_bins) max(freq_bins)]);
 
     if ~isgraphics(ax(2))
         ylabel(ax(3), 'Frequency (Hz)');

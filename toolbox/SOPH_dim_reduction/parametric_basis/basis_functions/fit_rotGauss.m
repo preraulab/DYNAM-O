@@ -123,8 +123,11 @@ else
 end
 
 %Fit
+dynamo_pool_trace('fit_rotGauss: before prepareSurfaceData');
 [xData, yData, zData] = prepareSurfaceData(pow_bins, freq_bins, pow_hist);
+dynamo_pool_trace('fit_rotGauss: after  prepareSurfaceData / before fit()');
 [fitresult, gof] = fit([xData, yData], zData, ft, opts);
+dynamo_pool_trace('fit_rotGauss: after  fit()');
 
 %%
 if plot_on

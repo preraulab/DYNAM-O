@@ -54,7 +54,7 @@ assert(ismember(type, {'power', 'phase'}), 'Invalid type. Valid types are ''powe
 
 % Default parameter values for 'power'
 default_params_power.power_limits = [-2, 20];
-default_params_power.freq_limits = [2, 16];
+default_params_power.freq_limits = [2, 18];
 default_params_power.num_knots_x = 5;
 default_params_power.num_knots_y = 18;
 default_params_power.plot_on = true;
@@ -62,7 +62,7 @@ default_params_power.SOPH_clim_prctiles = [5, 98];
 
 % Default parameter values for 'phase'
 default_params_phase.phase_limits = [-pi, pi];
-default_params_phase.freq_limits = [2, 16];
+default_params_phase.freq_limits = [2, 18];
 default_params_phase.num_knots_x = 5;
 default_params_phase.num_knots_y = 9;
 default_params_phase.plot_on = true;
