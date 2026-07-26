@@ -12,9 +12,8 @@ function validate_so_power_mex()
 %      spectrum leaves residual near zero after dB conversion).
 %
 % Per-sample MATLAB-vs-Rust parity is gated end-to-end by the
-% runDYNAMO test in task #11 (against canonical <private-path>/
-% testdata/DYNAM-O_results outputs) — this file just asserts the
-% bridge is internally consistent.
+% runDYNAMO test in task #11 against its canonical reference outputs;
+% this file just asserts the bridge is internally consistent.
 
     rng(11, 'twister');
     Fs = 100;
