@@ -9,8 +9,8 @@ function validate_mex_vs_matlab()
 %
 %   Run `export_validation_segment` first to populate data_cache/.
 
-    here      = fileparts(mfilename('fullpath'));           % DYNAM-O_dev/rust_bridge
-    dev_root  = fileparts(here);                             % DYNAM-O_dev
+    here      = fileparts(mfilename('fullpath'));           % DYNAM-O/rust_bridge
+    dev_root  = fileparts(here);                             % DYNAM-O
     cache_dir = fullfile(dev_root, '..', 'DYNAM-O_rs', 'data_cache');
     spect_mat = fullfile(cache_dir, 'segment_spect.mat');
     stats_csv = fullfile(cache_dir, 'segment_stats.csv');

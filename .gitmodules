@@ -1,7 +1,7 @@
 ; Submodule URLs use RELATIVE paths so the protocol (https/ssh) is
 ; inherited from the parent repository's remote. A user who clones this
-; repo via https://github.com/preraulab/DYNAM-O_dev.git gets https
-; submodules; a user who clones via git@github.com:preraulab/DYNAM-O_dev.git
+; repo via https://github.com/preraulab/DYNAM-O.git gets https
+; submodules; a user who clones via git@github.com:preraulab/DYNAM-O.git
 ; gets ssh submodules. Hardcoded SSH URLs here previously broke recursive
 ; HTTPS clones for team members without SSH keys configured (2026-04-24).
 ;

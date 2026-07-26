@@ -99,7 +99,7 @@ if strcmp(backend, 'rust') && ~isempty(stats_table)
     if exist('refine_peaks_mex', 'file') ~= 3
         error('refinePeakFrequency:missingMEX', ...
             ['backend=''rust'' selected but refine_peaks_mex.%s is not on the MATLAB path.\n' ...
-             'Build it with:  cd <DYNAM-O_dev>/rust_bridge && build_rust_mex'], mexext);
+             'Build it with:  cd <DYNAM-O>/rust_bridge && build_rust_mex'], mexext);
     end
     bb = double(stats_table.BoundingBox);
     % MEX ABI wants [f_lo, f_hi, t_lo, t_hi]; MATLAB BoundingBox is

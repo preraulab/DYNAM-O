@@ -15,8 +15,10 @@ function out_path = benchmark_runDYNAMO(varargin)
 %       'warmup'   — do a discarded warm-up run per backend before timing
 %                    to remove MATLAB JIT / cache / parpool spin-up noise
 %                    (default: true; adds ~30-160s per backend)
-%       'push'     — 'auto' (prompt), 'yes' (push without asking),
-%                    'no' (commit locally but don't push; default: 'auto')
+%       'push'     — 'auto' (prompt separately to commit, then push),
+%                    'no' (write JSON only; no Git changes),
+%                    'commit' (commit locally without pushing), or
+%                    'yes' (commit + push without asking; default: 'auto')
 %       'out_dir'  — where to write the JSON (default:
 %                    rust_bridge/benchmarks/runs/)
 %
@@ -25,7 +27,7 @@ function out_path = benchmark_runDYNAMO(varargin)
 %
 %   The JSON schema captures:
 %       timestamp, hostname, os, os_version, arch, cpu, cores, ram_gb,
-%       matlab_version, dynamo_dev_sha, dynamo_rs_sha, fixture, warmup,
+%       matlab_version, dynamo_sha, dynamo_rs_sha, fixture, warmup,
 %       per-backend: { peaks, timings, error (if any) }
 %
 %   Aggregated with: benchmark_summarize() in the same dir, which globs
@@ -35,7 +37,8 @@ function out_path = benchmark_runDYNAMO(varargin)
     addParameter(p, 'fixture', 'night', @(x) any(strcmpi(x, {'segment','night'})));
     addParameter(p, 'backends', {'rust','matlab'}, @iscellstr);
     addParameter(p, 'warmup', true, @islogical);
-    addParameter(p, 'push', 'auto', @(x) any(strcmpi(x, {'auto','yes','no'})));
+    addParameter(p, 'push', 'auto', ...
+        @(x) any(strcmpi(x, {'auto','yes','no','commit'})));
     here = fileparts(mfilename('fullpath'));
     addParameter(p, 'out_dir', fullfile(here, 'benchmarks', 'runs'), @ischar);
     parse(p, varargin{:});
@@ -47,8 +50,8 @@ function out_path = benchmark_runDYNAMO(varargin)
     sysinfo = collect_sysinfo();
 
     % --- repo SHAs (best-effort; empty if not a git checkout) ---
-    shas.dynamo_dev_sha = git_short_sha(fileparts(here));  % DYNAM-O_dev root
-    shas.dynamo_dev_dirty = git_is_dirty(fileparts(here));
+    shas.dynamo_sha = git_short_sha(fileparts(here));  % DYNAM-O root
+    shas.dynamo_dirty = git_is_dirty(fileparts(here));
     rs_root = find_dynamo_rs_root(here);
     shas.dynamo_rs_sha = git_short_sha(rs_root);
     shas.dynamo_rs_dirty = git_is_dirty(rs_root);
@@ -94,7 +97,7 @@ function out_path = benchmark_runDYNAMO(varargin)
 
     % --- assemble record ---
     record = struct();
-    record.schema_version = 1;
+    record.schema_version = 2;
     record.timestamp = datestr(now, 'yyyy-mm-ddTHH:MM:SS');
     record.hostname = sysinfo.hostname;
     record.os = sysinfo.os;
@@ -104,8 +107,8 @@ function out_path = benchmark_runDYNAMO(varargin)
     record.cores = sysinfo.cores;
     record.ram_gb = sysinfo.ram_gb;
     record.matlab_version = version;
-    record.dynamo_dev_sha = shas.dynamo_dev_sha;
-    record.dynamo_dev_dirty = shas.dynamo_dev_dirty;
+    record.dynamo_sha = shas.dynamo_sha;
+    record.dynamo_dirty = shas.dynamo_dirty;
     record.dynamo_rs_sha = shas.dynamo_rs_sha;
     record.dynamo_rs_dirty = shas.dynamo_rs_dirty;
     record.fixture = S.fixture;
@@ -239,18 +242,12 @@ end
 
 
 function rs_root = find_dynamo_rs_root(rust_bridge_dir)
-    % Canonical layout: DYNAM-O_dev/rust_bridge  sibling to  DYNAM-O_rs
-    candidates = {
-        fullfile(fileparts(fileparts(rust_bridge_dir)), 'DYNAM-O_rs'), ...
-        fullfile(fileparts(fileparts(rust_bridge_dir)), 'DYNAM-O_rs-rust-bridge')
-    };
-    for i = 1:numel(candidates)
-        if exist(fullfile(candidates{i}, '.git'), 'dir') || ...
-           exist(fullfile(candidates{i}, '.git'), 'file')
-            rs_root = candidates{i}; return;
-        end
+    % Canonical layout: DYNAM-O/rust_bridge sibling to DYNAM-O_rs.
+    rs_root = fullfile(fileparts(fileparts(rust_bridge_dir)), 'DYNAM-O_rs');
+    if ~(exist(fullfile(rs_root, '.git'), 'dir') || ...
+         exist(fullfile(rs_root, '.git'), 'file'))
+        rs_root = '';
     end
-    rs_root = '';
 end
 
 
@@ -264,8 +261,8 @@ function print_summary(record)
         record.cores, record.ram_gb);
     fprintf('  CPU:  %s\n', record.cpu);
     fprintf('  MATLAB: %s\n', record.matlab_version);
-    fprintf('  DYNAM-O_dev: %s%s  |  DYNAM-O_rs: %s%s\n', ...
-        record.dynamo_dev_sha, dirty_mark(record.dynamo_dev_dirty), ...
+    fprintf('  DYNAM-O: %s%s  |  DYNAM-O_rs: %s%s\n', ...
+        record.dynamo_sha, dirty_mark(record.dynamo_dirty), ...
         record.dynamo_rs_sha,  dirty_mark(record.dynamo_rs_dirty));
     fprintf('  Fixture: %s  (warmup=%s)\n', record.fixture, bool2str(record.warmup));
     fprintf('\n');
@@ -297,31 +294,36 @@ function s = bool2str(b),    if b, s = 'true';   else, s = 'false'; end, end
 function maybe_push(out_path, push_mode, sysinfo, shas)
     % Commit + push the single benchmark JSON file. Never touch unrelated
     % uncommitted work — we only `git add` the exact path we just wrote.
-    here = fileparts(fileparts(out_path));  % rust_bridge
-    repo = fileparts(here);                  % DYNAM-O_dev
-    rel = strrep(strrep(out_path, [repo filesep], ''), '\', '/');
-    msg = sprintf('bench: %s %s/%s (dynamo_dev @ %s, dynamo_rs @ %s)', ...
-        sysinfo.hostname, sysinfo.os, sysinfo.arch, ...
-        shas.dynamo_dev_sha, shas.dynamo_rs_sha);
+    if strcmpi(push_mode, 'no')
+        fprintf('\n  push=''no'': JSON written; no Git changes made.\n');
+        return;
+    end
 
-    fprintf('\nCommit + push result file?\n');
+    here = fileparts(fileparts(out_path));  % rust_bridge
+    repo = fileparts(here);                  % DYNAM-O
+    rel = strrep(strrep(out_path, [repo filesep], ''), '\', '/');
+    msg = sprintf('bench: %s %s/%s (dynamo @ %s, dynamo_rs @ %s)', ...
+        sysinfo.hostname, sysinfo.os, sysinfo.arch, ...
+        shas.dynamo_sha, shas.dynamo_rs_sha);
+
+    fprintf('\nBenchmark Git action:\n');
     fprintf('  file: %s\n', rel);
     fprintf('  message: %s\n', msg);
 
+    prompt_to_push = false;
     switch lower(push_mode)
-        case 'no'
-            fprintf('  push=''no'': staging only.\n');
-            do_add = true; do_commit = false; do_push = false;
+        case 'commit'
+            do_add = true; do_commit = true; do_push = false;
         case 'yes'
             do_add = true; do_commit = true; do_push = true;
         otherwise  % 'auto'
-            yn = input('  Commit + push now? [Y/n] ', 's');
-            if isempty(yn) || strncmpi(yn, 'y', 1)
-                do_add = true; do_commit = true; do_push = true;
-            else
+            yn = input('  Commit result now? [y/N] ', 's');
+            if ~strncmpi(yn, 'y', 1)
                 fprintf('  Skipping git.\n');
                 return;
             end
+            do_add = true; do_commit = true; do_push = false;
+            prompt_to_push = true;
     end
 
     if do_add
@@ -332,6 +334,13 @@ function maybe_push(out_path, push_mode, sysinfo, shas)
         [rc, out] = sh(sprintf('git -C %s commit -m %s', quote(repo), quote(msg)));
         if rc ~= 0, fprintf(2, 'git commit failed: %s\n', out); return; end
         fprintf('  committed.\n');
+    end
+    if prompt_to_push
+        yn = input('  Push commit now? [y/N] ', 's');
+        do_push = strncmpi(yn, 'y', 1);
+        if ~do_push
+            fprintf('  Commit is local; push skipped.\n');
+        end
     end
     if do_push
         [rc, out] = sh(sprintf('git -C %s push 2>&1', quote(repo)));

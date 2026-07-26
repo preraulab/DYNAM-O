@@ -1,5 +1,6 @@
 # Run benchmark_runDYNAMO in headless MATLAB (no desktop GUI, no CEF).
 # Windows parity to run_benchmark.sh — same CLI surface, same defaults.
+# The JSON is written without changing the Git index or history.
 #
 # Usage (from this dir or anywhere):
 #     powershell -ExecutionPolicy Bypass -File run_benchmark.ps1

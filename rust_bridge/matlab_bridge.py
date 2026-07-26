@@ -1,6 +1,6 @@
 """Thin wrapper around matlab.engine.connect_matlab for ad-hoc testing.
 
-Usage (from DYNAM-O_dev/.venv-matlab's Python):
+Usage (from DYNAM-O/.venv-matlab's Python):
     import matlab_bridge as mb
     out = mb.run("height(sortrows(magic(5)))")
     stats = mb.run_script("runDYNAMO_mex_test.m")

@@ -196,7 +196,7 @@ cargo build --release
 **b. Build the MEX wrappers** (needs a C compiler via `mex -setup C`):
 
 ```matlab
-cd <workspace>/DYNAM-O_dev/rust_bridge
+cd <workspace>/DYNAM-O/rust_bridge
 build_rust_mex
 ```
 
@@ -925,9 +925,9 @@ frequency, and SO-phase bias.
 Interactively, from MATLAB:
 
 ```matlab
-addpath('/path/to/DYNAM-O_dev');
+addpath('/path/to/DYNAM-O');
 init_DYNAMO();
-cd('/path/to/DYNAM-O_dev/tests');
+cd('/path/to/DYNAM-O/tests');
 run_all_tests                                 % whole folder, asserts on failure
 runtests('test_simulation_truth')             % one file, table output
 ```
@@ -977,7 +977,7 @@ so the nine assertion sub-tests cost milliseconds each.
 ## Repository Structure
 
 ```
-DYNAM-O_dev/
+DYNAM-O/
 ├── DYNAMO.m                         OOP pipeline class
 ├── runDYNAMO.m                      Functional pipeline entry point
 ├── runApp.m                         GUI launcher (toolbox + app on path, opens DYNAMOApp)

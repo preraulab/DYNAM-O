@@ -90,8 +90,8 @@ function out_path = benchmark_external_edf(edf_path, staging_path, varargin)
     sysinfo = collect_sysinfo();
 
     % --- repo SHAs ---
-    shas.dynamo_dev_sha = git_short_sha(dev_root);
-    shas.dynamo_dev_dirty = git_is_dirty(dev_root);
+    shas.dynamo_sha = git_short_sha(dev_root);
+    shas.dynamo_dirty = git_is_dirty(dev_root);
     rs_root = find_dynamo_rs_root(here);
     shas.dynamo_rs_sha = git_short_sha(rs_root);
     shas.dynamo_rs_dirty = git_is_dirty(rs_root);
@@ -180,7 +180,7 @@ function out_path = benchmark_external_edf(edf_path, staging_path, varargin)
 
     % --- assemble record ---
     record = struct();
-    record.schema_version = 1;
+    record.schema_version = 2;
     record.timestamp = datestr(now, 'yyyy-mm-ddTHH:MM:SS');
     record.hostname = sysinfo.hostname;
     record.os = sysinfo.os;
@@ -190,8 +190,8 @@ function out_path = benchmark_external_edf(edf_path, staging_path, varargin)
     record.cores = sysinfo.cores;
     record.ram_gb = sysinfo.ram_gb;
     record.matlab_version = version;
-    record.dynamo_dev_sha = shas.dynamo_dev_sha;
-    record.dynamo_dev_dirty = shas.dynamo_dev_dirty;
+    record.dynamo_sha = shas.dynamo_sha;
+    record.dynamo_dirty = shas.dynamo_dirty;
     record.dynamo_rs_sha = shas.dynamo_rs_sha;
     record.dynamo_rs_dirty = shas.dynamo_rs_dirty;
     record.fixture = 'external_edf';   % distinguishes from segment / night
@@ -329,17 +329,11 @@ end
 
 
 function rs_root = find_dynamo_rs_root(rust_bridge_dir)
-    candidates = {
-        fullfile(fileparts(fileparts(rust_bridge_dir)), 'DYNAM-O_rs'), ...
-        fullfile(fileparts(fileparts(rust_bridge_dir)), 'DYNAM-O_rs-rust-bridge')
-    };
-    for i = 1:numel(candidates)
-        if exist(fullfile(candidates{i}, '.git'), 'dir') || ...
-           exist(fullfile(candidates{i}, '.git'), 'file')
-            rs_root = candidates{i}; return;
-        end
+    rs_root = fullfile(fileparts(fileparts(rust_bridge_dir)), 'DYNAM-O_rs');
+    if ~(exist(fullfile(rs_root, '.git'), 'dir') || ...
+         exist(fullfile(rs_root, '.git'), 'file'))
+        rs_root = '';
     end
-    rs_root = '';
 end
 
 
@@ -353,8 +347,8 @@ function print_summary(record)
         record.cores, record.ram_gb);
     fprintf('  CPU:  %s\n', record.cpu);
     fprintf('  MATLAB: %s\n', record.matlab_version);
-    fprintf('  DYNAM-O_dev: %s%s  |  DYNAM-O_rs: %s%s\n', ...
-        record.dynamo_dev_sha, dirty_mark(record.dynamo_dev_dirty), ...
+    fprintf('  DYNAM-O: %s%s  |  DYNAM-O_rs: %s%s\n', ...
+        record.dynamo_sha, dirty_mark(record.dynamo_dirty), ...
         record.dynamo_rs_sha,  dirty_mark(record.dynamo_rs_dirty));
     fprintf('  EDF:    %s  channel=%s  duration=%.1f min  Fs=%g Hz\n', ...
         record.external_edf.edf_filename, record.external_edf.channel, ...
@@ -386,11 +380,11 @@ function s = bool2str(b),    if b, s = 'true';   else, s = 'false'; end, end
 
 function maybe_push(out_path, push_mode, sysinfo, shas)
     here = fileparts(fileparts(out_path));   % rust_bridge
-    repo = fileparts(here);                   % DYNAM-O_dev
+    repo = fileparts(here);                   % DYNAM-O
     rel = strrep(strrep(out_path, [repo filesep], ''), '\', '/');
-    msg = sprintf('bench(edf): %s %s/%s (dynamo_dev @ %s, dynamo_rs @ %s)', ...
+    msg = sprintf('bench(edf): %s %s/%s (dynamo @ %s, dynamo_rs @ %s)', ...
         sysinfo.hostname, sysinfo.os, sysinfo.arch, ...
-        shas.dynamo_dev_sha, shas.dynamo_rs_sha);
+        shas.dynamo_sha, shas.dynamo_rs_sha);
 
     fprintf('\nCommit + push result file?\n');
     fprintf('  file: %s\n', rel);
