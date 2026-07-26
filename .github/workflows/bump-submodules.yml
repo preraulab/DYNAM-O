@@ -1,9 +1,8 @@
 name: Bump submodules
 
-# Weekly: per active branch, advance every submodule pin to its remote tip
-# and open a PR against that branch with the resulting one-line gitlink
-# diffs. A human clicks merge — the bot never lands directly. Dormant
-# branches (UNet, history_profile) are intentionally not in the matrix.
+# Weekly: advance every submodule pin on master to its remote tip and open
+# a PR with the resulting one-line gitlink diffs. A human clicks merge —
+# the bot never lands directly.
 #
 # Manual trigger: Actions tab → "Bump submodules" → Run workflow.
 
@@ -24,9 +23,6 @@ jobs:
       matrix:
         branch:
           - master
-          - main_public
-          - file-manager-overhaul
-          - rust-bridge
 
     steps:
       - name: Checkout ${{ matrix.branch }} with submodules

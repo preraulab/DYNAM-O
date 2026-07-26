@@ -53,7 +53,7 @@ function benchmark_summarize(varargin)
             row.cpu       = truncate(rec.cpu, 30);
             row.cores     = rec.cores;
             row.matlab    = matlab_ver_short(rec.matlab_version);
-            row.dev_sha   = rec.dynamo_dev_sha;
+            row.dynamo_sha = rec.dynamo_sha;
             row.rs_sha    = rec.dynamo_rs_sha;
             row.fixture   = rec.fixture;
             row.backend   = backends{b};
@@ -87,13 +87,13 @@ function benchmark_summarize(varargin)
 
     % --- print ---
     fprintf('\n');
-    fprintf('%-19s %-28s %-14s %-8s %-8s %-10s %-8s %-8s %-8s\n', ...
-        'timestamp', 'host', 'os/arch', 'backend', 'dev_sha', 'total_s', 'ext1_s', 'ext2_s', 'peaks');
+    fprintf('%-19s %-28s %-14s %-8s %-10s %-10s %-8s %-8s %-8s\n', ...
+        'timestamp', 'host', 'os/arch', 'backend', 'dynamo_sha', 'total_s', 'ext1_s', 'ext2_s', 'peaks');
     fprintf('%s\n', repmat('-', 1, 120));
     for i = 1:height(t)
-        fprintf('%-19s %-28s %-14s %-8s %-8s %8.2f %8.2f %8.2f %8d\n', ...
+        fprintf('%-19s %-28s %-14s %-8s %-10s %8.2f %8.2f %8.2f %8d\n', ...
             t.timestamp(i), truncate(char(t.host(i)), 28), t.os_arch(i), ...
-            t.backend(i), t.dev_sha(i), t.total_s(i), t.extract1_s(i), ...
+            t.backend(i), t.dynamo_sha(i), t.total_s(i), t.extract1_s(i), ...
             t.extract2_s(i), t.peaks_final(i));
     end
 

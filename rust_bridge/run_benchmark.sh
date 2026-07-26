@@ -10,7 +10,8 @@
 #   ./run_benchmark.sh night rust               # skip matlab backend
 #
 # Auto-detects matlab on PATH or falls back to /Applications/MATLAB*.app
-# on macOS. Exits non-zero if MATLAB can't be launched.
+# on macOS. The JSON is written without changing the Git index or history.
+# Exits non-zero if MATLAB can't be launched.
 
 set -euo pipefail
 

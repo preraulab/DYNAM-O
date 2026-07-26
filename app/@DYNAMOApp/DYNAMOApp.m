@@ -610,7 +610,7 @@ classdef DYNAMOApp < matlab.apps.AppBase & DYNAMO
             %   If an internet connection is available, opens the GitHub README.
             %   Otherwise, falls back to a local HTML help file.
 
-            githubURL = 'https://github.com/preraulab/DYNAM-O_dev/blob/master/DYNAMOApp_README.md';
+            githubURL = 'https://github.com/preraulab/DYNAM-O/blob/master/DYNAMOApp_README.md';
 
             % Check for internet connectivity
             hasInternet = false;
