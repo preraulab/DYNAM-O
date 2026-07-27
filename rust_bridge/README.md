@@ -21,7 +21,6 @@ four overnight recordings (see [Backend parity](#backend-parity) below).
 | `refine_peaks_mex.c` | Hann-FFT refinement of peak frequencies |
 | `tfpeak_histogram_mex.c` | SO-power / SO-phase histogram accumulation |
 | `extract_tfpeaks_mex.mex*` etc. | Platform-specific compiled binaries (checked in) |
-| `data_matlab_filters/` | Runtime filter cache copied from `DYNAM-O_rs` by the builder |
 
 ---
 
@@ -113,10 +112,12 @@ current platform:
 | Linux | `.mexa64` | `extract_tfpeaks_mex.mexa64`, … |
 | Windows | `.mexw64` | `extract_tfpeaks_mex.mexw64`, … |
 
-The shared library is copied beside the MEX files, together with the
-runtime `data_matlab_filters` directory. macOS and Linux use loader-relative
-references (`@loader_path`/`@rpath` and `$ORIGIN`, respectively), while
-Windows loads the adjacent DLL.
+The shared library is copied beside the MEX files. The MEX interface receives
+filter coefficients from MATLAB, so it does not need the Python runtime's
+`data_matlab_filters` cache and the builder does not duplicate that directory
+under `rust_bridge`. macOS and Linux use loader-relative references
+(`@loader_path`/`@rpath` and `$ORIGIN`, respectively), while Windows loads the
+adjacent DLL.
 
 ### Sanity check
 
