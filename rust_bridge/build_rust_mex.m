@@ -1,9 +1,15 @@
-function build_rust_mex()
+function build_rust_mex(mode)
 %BUILD_RUST_MEX  Compile the MEX wrappers that bridge MATLAB to dynamo_rs.
 %
 %   Usage:
 %       cd /path/to/DYNAM-O/rust_bridge
 %       build_rust_mex
+%       build_rust_mex('prebuilt')
+%
+%   With no argument, the helper builds the Rust library before compiling
+%   the MEX wrappers. The parent DYNAM-O_toolbox release builder passes
+%   'prebuilt' after producing the CLI, Rust library, and shared library in
+%   one controlled Cargo invocation.
 %
 %   Prerequisites (must all be true before calling):
 %     1. DYNAM-O_rs exists as a sibling checkout:
@@ -31,6 +37,13 @@ function build_rust_mex()
 %   The MEX binaries link against a copy of libdynamo_rs placed beside
 %   them, using loader-relative lookup so the output is redistributable.
 
+if nargin == 0
+    mode = 'build';
+elseif nargin ~= 1 || ~ischar(mode) || ~strcmp(mode, 'prebuilt')
+    error('build_rust_mex:InvalidMode', ...
+        'Usage: build_rust_mex or build_rust_mex(''prebuilt'').');
+end
+
 here           = canonical_path(fileparts(mfilename('fullpath'))); % DYNAM-O/rust_bridge
 dev_root       = fileparts(here);                                % DYNAM-O
 workspace_root = fileparts(dev_root);                            % parent of all three repos
@@ -47,7 +60,11 @@ else
     dylib_name = 'libdynamo_rs.so';
 end
 mex_remap_args = compiler_path_remap_args(workspace_root);
-build_rust_library(rs_root, workspace_root, dylib_name);
+if strcmp(mode, 'build')
+    build_rust_library(rs_root, workspace_root, dylib_name);
+else
+    fprintf('Using the Rust library prebuilt by DYNAM-O_toolbox ...\n');
+end
 
 inc_dir   = fullfile(rs_root, 'include');
 lib_dir   = fullfile(rs_root, 'target', 'release');
