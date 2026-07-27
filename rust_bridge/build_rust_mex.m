@@ -137,7 +137,6 @@ if ~copied
     error('build_rust_mex:LibraryCopyFailed', ...
         'Failed to copy %s: %s', dylib_name, copy_message);
 end
-copy_filter_cache(rs_root, here);
 if ispc
     % Windows also needs the import library (.dll.lib) at link time
     % but NOT at runtime; skip copying the .lib here.
@@ -299,38 +298,6 @@ for i = 1:numel(candidates)
              'DYNAM-O_rs crate: %s -> %s'], candidate, resolved);
     end
 end
-end
-
-function copy_filter_cache(rs_root, here)
-source_dir = fullfile(fileparts(rs_root), 'data_matlab_filters');
-assert(isfolder(source_dir), ...
-    'MATLAB filter cache not found at %s.', source_dir);
-source_files = dir(fullfile(source_dir, '*.npy'));
-assert(numel(source_files) == 42, ...
-    'Expected 42 MATLAB filter-cache .npy files at %s; found %d.', ...
-    source_dir, numel(source_files));
-[~, order] = sort({source_files.name});
-source_files = source_files(order);
-
-destination_dir = fullfile(here, 'data_matlab_filters');
-if ~isfolder(destination_dir)
-    mkdir(destination_dir);
-end
-old_files = dir(fullfile(destination_dir, '*.npy'));
-for i = 1:numel(old_files)
-    delete(fullfile(destination_dir, old_files(i).name));
-end
-for i = 1:numel(source_files)
-    [copied, message] = copyfile( ...
-        fullfile(source_dir, source_files(i).name), ...
-        fullfile(destination_dir, source_files(i).name));
-    if ~copied
-        error('build_rust_mex:FilterCacheCopyFailed', ...
-            'Failed to copy %s: %s', source_files(i).name, message);
-    end
-end
-fprintf('Copied %d filter-cache files -> rust_bridge/data_matlab_filters.\n', ...
-    numel(source_files));
 end
 
 function encoded = release_rustflags(rs_root, workspace_root)
