@@ -73,6 +73,12 @@ cd <workspace>/DYNAM-O/rust_bridge
 build_rust_mex
 ```
 
+The parent release builder instead calls `build_rust_mex('prebuilt')` after one
+controlled Cargo invocation has produced the Rust CLI, `rlib`, and shared
+library. This avoids recompiling the same Rust dependency graph before the MEX
+wrappers are linked. The `prebuilt` mode is reserved for the parent builder;
+direct calls should use the no-argument form so the shared library is rebuilt.
+
 Do not commit artifacts produced by the direct helper: although it remaps Rust
 and C compiler source paths, it does not run the meta-repository's final
 artifact privacy checks or write the release provenance manifest.
