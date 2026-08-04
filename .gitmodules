@@ -68,8 +68,3 @@
 	url = ../sleep.git
 	branch = master
 	update = merge
-[submodule "app/components/CSSuicontrols"]
-	path = app/components/CSSuicontrols
-	url = ../CSSuicontrols.git
-	branch = master
-	update = merge
