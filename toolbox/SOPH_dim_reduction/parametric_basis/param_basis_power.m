@@ -229,9 +229,13 @@ else
         amp0 = stats_table.Height;
     end
     fmean0 = stats_table.PeakFrequency;
-    fstd0 = stats_table.Bandwidth / 1.96;
+    % Both widths are rotGauss standard deviations. The historical
+    % Bandwidth/1.96 and Duration/1.96 produced widths in the pre-half
+    % convention, so the extra sqrt(2) keeps the seeded mode shape identical
+    % now that the parameters are standard deviations.
+    fstd0 = stats_table.Bandwidth / (1.96*sqrt(2));
     pmean0 = stats_table.SOFeature;
-    pstd0 = stats_table.Duration / 1.96;
+    pstd0 = stats_table.Duration / (1.96*sqrt(2));
     theta0 = zeros(size(amp0));
 
     mode_params = [amp0, fmean0, fstd0, pmean0, pstd0, theta0];
@@ -307,9 +311,11 @@ if N_wshed_modes < 1
     valid_freq_axis  = freq_bins(valid_freq_bins);
     valid_power_axis = power_bins(valid_power_bins);
     fmean_seed = (max(valid_freq_axis)  + min(valid_freq_axis))  / 2;
-    fstd_seed  = (max(valid_freq_axis)  - min(valid_freq_axis))  / 4;
+    % Both widths are rotGauss standard deviations, so both take the extra
+    % sqrt(2) that carries the historical range/4 into the new convention.
+    fstd_seed  = (max(valid_freq_axis)  - min(valid_freq_axis))  / (4*sqrt(2));
     pmean_seed = (max(valid_power_axis) + min(valid_power_axis)) / 2;
-    pstd_seed  = (max(valid_power_axis) - min(valid_power_axis)) / 4;
+    pstd_seed  = (max(valid_power_axis) - min(valid_power_axis)) / (4*sqrt(2));
     pow_hist   = SOPH(valid_freq_bins, valid_power_bins);
     if wshed_exp
         amp_seed = log(max(pow_hist, [], 'all'));
@@ -380,7 +386,7 @@ for ii = 1:max_peaks
         [seed_row, found] = residual_max_seed( ...
             SOPH(valid_freq_bins, valid_power_bins), ...
             model_SOPH(valid_freq_bins, valid_power_bins), ...
-            power_bins(valid_power_bins), freq_bins(valid_freq_bins), B0i, min_freq_diff);
+            power_bins(valid_power_bins), freq_bins(valid_freq_bins), B0i, min_freq_diff, 'power');
         if found
             B0i = [B0i; seed_row]; %#ok<*AGROW>
         else

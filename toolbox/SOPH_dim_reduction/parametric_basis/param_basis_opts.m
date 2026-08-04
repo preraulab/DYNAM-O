@@ -23,8 +23,8 @@ function default_params = param_basis_opts(type, varargin)
 %       'prefix_modes' - Prefix modes in the form [amp0, fmean0, fstd0, pmean0, pstd0, theta0],
 %                        where fstd0 is a frequency standard deviation in Hz (default for 'power': [],
 %                                                                        default for 'phase': [],
-%                                                                        consider use for 'phase': [1e-3, 14, 2,        0,  pi/3, 0;
-%                                                                                                   1e-3, 5,  sqrt(10), pi, pi/3, 0])
+%                                                                        consider use for 'phase': [1e-3, 14, sqrt(2), 0,  pi/3, 0;
+%                                                                                                   1e-3, 5,  sqrt(5), pi, pi/3, 0])
 %       'prefix_modes_order' - Controls whether prefix modes are added before, after, or in place of watershed modes
 %                              -1 = append prefix modes after watershed modes
 %                              0  = use prefix modes only and ignore watershed modes
@@ -39,12 +39,12 @@ function default_params = param_basis_opts(type, varargin)
 %       'min_pctr2' - Minimum percentage change in R-squared for 'min%r2' criterion (default for 'power': 0.01,
 %                                                                                    default for 'phase': 0.025)
 %       'kneedle_tol' - Double, iteration tolerance for the kneedle algorithm (default: 0.01)
-%       'UB_default' - Upper bounds for the fitting parameters - [amp0, fmean0, fstd0,    pmean0, pstd0, theta0]
-%                                          (default for 'power': [nan,  nan,    2.5,      nan,    30,    0.03],
-%                                           default for 'phase': [nan,  nan,    sqrt(15), 2*pi,   2*pi,  pi/3])
-%       'LB_default' - Lower bounds for the fitting parameters - [amp0, fmean0, fstd0, pmean0, pstd0, theta0]
-%                                          (default for 'power': [nan,  nan,    0.1,   nan,    2.5,   -0.03],
-%                                           default for 'phase': [nan,  nan,    1,     -2*pi,  pi/5,  -pi/3])
+%       'UB_default' - Upper bounds for the fitting parameters - [amp0, fmean0, fstd0,     pmean0, pstd0,   theta0]
+%                                          (default for 'power': [nan,  nan,    2.5/sqrt(2), nan,  30/sqrt(2), 0.03],
+%                                           default for 'phase': [nan,  nan,    sqrt(7.5),   2*pi, 2*pi,       pi/3])
+%       'LB_default' - Lower bounds for the fitting parameters - [amp0, fmean0, fstd0,       pmean0, pstd0,      theta0]
+%                                          (default for 'power': [nan,  nan,    0.1/sqrt(2), nan,    2.5/sqrt(2), -0.03],
+%                                           default for 'phase': [nan,  nan,    1/sqrt(2),   -2*pi,  pi/5,        -pi/3])
 %       'constrain_freq_center' - Keep the frequency center within its configured bounds; false uses [-inf, inf] (default: true)
 %       'constrain_power_center' - Keep the SO-power center within its configured bounds; false uses [-inf, inf] (default: true; power only)
 %       'constrain_phase_center' - Keep the SO-phase center within its configured bounds; false uses [-inf, inf] (default: true; phase only)
@@ -53,9 +53,19 @@ function default_params = param_basis_opts(type, varargin)
 %       'verbose' - Flag to display detailed output (default: true)
 %       'peak_assign_prob' - Confidence level for assigning TF-peaks to fitted modes when computing per-mode Pk* summaries (default: 0.95)
 %
-%       Legacy phase prefix modes and custom LB_default/UB_default values made
-%       for the variance-form vmGauss equation must have fstd0 square-rooted
-%       before reuse with the standard-deviation parameterization.
+%       Migrating custom prefix_modes / LB_default / UB_default values. The
+%       Gaussian width slots are now true standard deviations, reached in two
+%       hops, so which hops a value needs depends on when it was authored:
+%         1. Values written for the original variance-form vmGauss equation
+%            (fstd0 entered as a variance v) need BOTH hops: sqrt(v), then
+%            divide by sqrt(2), i.e. sqrt(v/2).
+%         2. Values written for the intervening squared-denominator form
+%            (fstd0 already a width, but with no factor of one half in the
+%            exponent) need only the second hop: divide by sqrt(2).
+%       The second hop applies to fstd0 (slot 3) on both axes and to pstd0
+%       (slot 5) for 'power'. It does NOT apply to phase pstd0 (slot 5), which
+%       is recikappa: the von Mises factor carries its own half, so that value
+%       was always a true standard deviation and must be reused unchanged.
 %
 %   Output:
 %       default_params: Structure containing the parameters with either default or user-specified values
@@ -110,8 +120,12 @@ default_params_power.min_dr2 = 0.01;
 default_params_power.min_pctr2 = 0.01;
 default_params_power.kneedle_tol = 0.01;
 % fitted parameters follow this order: [amp0, fmean0, fstd0, pmean0, pstd0, theta0];
-default_params_power.UB_default =      [nan,  nan,    2.5,   nan,    30,    0.03];
-default_params_power.LB_default =      [nan,  nan,    0.1,   nan,    2.5,   -0.03];
+% fstd0 and pstd0 are true standard deviations of the rotGauss kernel. The
+% sqrt(2) divisors carry the historical bounds (2.5, 30, 0.1, 2.5) into the
+% standard-deviation convention, so each bound describes the same physical
+% window it always did; only the units of the number moved.
+default_params_power.UB_default =      [nan,  nan,    2.5/sqrt(2),   nan,    30/sqrt(2),  0.03];
+default_params_power.LB_default =      [nan,  nan,    0.1/sqrt(2),   nan,    2.5/sqrt(2), -0.03];
 default_params_power.constrain_freq_center = true;
 default_params_power.constrain_power_center = true;
 default_params_power.plot_on = 1;
@@ -137,11 +151,16 @@ default_params_phase.criterion = 'minpctr2';
 default_params_phase.min_dr2 = 0.01;
 default_params_phase.min_pctr2 = 0.025;
 default_params_phase.kneedle_tol = 0.01;
-% fitted parameters follow this order: [amp0, fmean0, fstd0,    pmean0, pstd0, theta0];
+% fitted parameters follow this order: [amp0, fmean0, fstd0, pmean0, pstd0, theta0];
 % Two periods retain every circular phase class while allowing fits to cross
 % the +/-pi seam without leaving the phase center completely unbounded.
-default_params_phase.UB_default =      [nan,  nan,    sqrt(15), 2*pi,   2*pi,  pi/3];
-default_params_phase.LB_default =      [nan,  nan,    1,        -2*pi,  pi/5,  -pi/3];
+% fstd0 is a true standard deviation (Hz): the historical bounds were sqrt(15)
+% and 1 in the pre-half convention, so the equivalents are sqrt(15)/sqrt(2) =
+% sqrt(7.5) and 1/sqrt(2). pstd0 is recikappa (rad), which was ALWAYS a true
+% standard deviation because the von Mises factor carries its own half, so
+% 2*pi and pi/5 are deliberately left alone.
+default_params_phase.UB_default =      [nan,  nan,    sqrt(7.5),   2*pi,   2*pi,  pi/3];
+default_params_phase.LB_default =      [nan,  nan,    1/sqrt(2),   -2*pi,  pi/5,  -pi/3];
 default_params_phase.constrain_freq_center = true;
 default_params_phase.constrain_phase_center = true;
 default_params_phase.plot_on = 1;

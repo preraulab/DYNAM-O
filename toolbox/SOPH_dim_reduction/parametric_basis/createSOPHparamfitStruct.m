@@ -24,21 +24,30 @@ function [SOPH_paramfit] = createSOPHparamfitStruct(type, params, fitobj, gof, m
 %
 %   NOTE: power Density is peaks/min/bin; phase Density and the model coupling column are proportion/phase-bin (phase histogram is row-normalized upstream). The SO phase-coupling metric is model-based only: PrefPhase/Coupling are read from the fitted phase parametric surface (the older raw-histogram argmax and circular-mean estimators have been retired).
 %
-%   Volume column — closed-form integral of the fitted basis surface:
+%   Volume column — closed-form integral of the fitted basis surface.
+%   Every width below is a true standard deviation, and both coefficients
+%   follow from ∫exp(-0.5·(d/sigma)^2) dd = sigma·sqrt(2*pi):
 %
-%     power (rotGauss, exp(-(u/sigma)^2) form, no factor of 1/2):
-%         V = Density · pi · SOpowerStd · FreqStd
+%     power (rotGauss, exp(-0.5·(u/sigma)^2) form):
+%         V = Density · 2*pi · SOpowerStd · FreqStd
 %         theta drops out (rotation is volume-preserving).
 %
 %     phase (vmGauss, von Mises × Gaussian; the freq Gaussian uses
-%            exp(-(dy/FreqStd)^2)):
+%            exp(-0.5·(dy/FreqStd)^2)):
 %         k = 1 / SOphaseStd^2
-%         V = Density · 2*pi · besseli(0,k,1) · sqrt(pi) · FreqStd
+%         V = Density · 2*pi · besseli(0,k,1) · sqrt(2*pi) · FreqStd
 %         (besseli(0,k,1) is the scaled form exp(-k)·I0(k), used to
 %         keep the product finite for sharp phase modes where exp(-k)
 %         and I0(k) would each over/underflow separately.)
+%         Only the frequency integral moved (sqrt(pi) → sqrt(2*pi)); the
+%         von Mises factor and k are untouched because SOphaseStd was
+%         always a standard deviation.
 %         For k >> 1 (sharp phase modes), this asymptotes to
-%             V ≈ Density · SOphaseStd · pi · sqrt(2) · FreqStd.
+%             V ≈ Density · 2*pi · SOphaseStd · FreqStd.
+%
+%     Volume is a physical quantity, so these emit the SAME numbers they did
+%     before the standard-deviation reparameterization: each coefficient grew
+%     by exactly the factor its widths shrank by.
 %
 %     For phase, Density carries the empirical no-sin amplitude (set
 %     by param_basis_phase after fit), so Volume here is the integral
@@ -87,15 +96,15 @@ fstd    = params(:,3);   % FreqStd
 xstd    = params(:,5);   % SOpowerStd or SOphaseStd
 switch type
     case 'power'
-        % rotGauss: V = density * pi * xstd * fstd
-        vol = density .* pi .* xstd .* fstd;
+        % rotGauss: V = density * 2*pi * xstd * fstd
+        vol = density .* (2*pi) .* xstd .* fstd;
     case 'phase'
-        % vmGauss: V = density * 2*pi * exp(-k) * I0(k) * sqrt(pi) * fstd
+        % vmGauss: V = density * 2*pi * exp(-k) * I0(k) * sqrt(2*pi) * fstd
         % Use the SCALED Bessel besseli(0,k,1) = exp(-k)*I0(k) so the
         % product stays finite for sharp phase modes (small xstd ->
         % large k -> exp(-k) underflows and I0(k) overflows separately).
         k   = 1 ./ (xstd .^ 2);
-        vol = density .* (2*pi) .* besseli(0, k, 1) .* sqrt(pi) .* fstd;
+        vol = density .* (2*pi) .* besseli(0, k, 1) .* sqrt(2*pi) .* fstd;
     otherwise
         vol = nan(size(density));
 end

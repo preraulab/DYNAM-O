@@ -20,7 +20,7 @@ function z = vmGauss(X,Y, amp, ymean, ystd, xmean, xstd, theta)
 %
 %   Equation:
 %       The von Mises Gaussian shape is computed using the following equation:
-%           z = amp .* exp(-(Y-ymean).^2/ystd^2).* exp(k*cos(X-xmean+(Y-ymean)*sin(theta))-k);
+%           z = amp .* exp(-0.5*(Y-ymean).^2/ystd^2).* exp(k*cos(X-xmean+(Y-ymean)*sin(theta))-k);
 %
 %       where:
 %       - amp: Amplitude of the von Mises Gaussian
@@ -30,6 +30,17 @@ function z = vmGauss(X,Y, amp, ymean, ystd, xmean, xstd, theta)
 %       - xstd: Standard deviation of the Gaussian along the X-axis
 %       - theta: Angle parameter for the von Mises distribution
 %       - k: kappa = concentration parameter that measures dispersion (computed as 1 / xstd^2)
+%
+%       Both widths are genuine standard deviations, but they get there by
+%       different routes and are NOT symmetric under rescaling:
+%       - ystd is a standard deviation because of the explicit factor of one
+%         half above. Squaring the denominator alone is not enough -- without
+%         the half the frequency width is sqrt(2) times the standard deviation.
+%       - xstd is ALREADY a standard deviation with no half needed, because the
+%         von Mises factor is its own small-angle Gaussian:
+%         exp(k*(cos(d)-1)) -> exp(-d^2/(2*xstd^2)). It carries the half
+%         intrinsically, so k = 1/xstd^2 and the von Mises factor are written
+%         here exactly as before. Never rescale xstd alongside ystd.
 %
 %   Example:
 %       % Example usage of the vmGauss function
@@ -69,4 +80,4 @@ function z = vmGauss(X,Y, amp, ymean, ystd, xmean, xstd, theta)
 % =========================================================================
 k = 1/xstd^2; % kappa = concentration parameter that measures dispersion
 
-z = amp .* exp(-(Y-ymean).^2/ystd^2).* exp(k*cos(X-xmean+(Y-ymean)*sin(theta))-k);
+z = amp .* exp(-0.5*(Y-ymean).^2/ystd^2).* exp(k*cos(X-xmean+(Y-ymean)*sin(theta))-k);

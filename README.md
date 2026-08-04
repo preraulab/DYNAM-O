@@ -741,6 +741,36 @@ SOPH(x,y) = Σₙ basis_n(x,y; ampₙ, fmeanₙ, fstdₙ, pmeanₙ, pstdₙ, θ�
             + xxx·x + yyy·y + zzz
 ```
 
+with the two kernels defined explicitly as
+
+```
+power (rotGauss.m), u =  (y-fmean)·cosθ + (x-pmean)·sinθ
+                    v = -(y-fmean)·sinθ + (x-pmean)·cosθ
+  basis = amp · exp(-½·(u/fstd)² - ½·(v/pstd)²)
+
+phase (vmGauss.m),  κ = 1/pstd²
+  basis = amp · exp(-½·((y-fmean)/fstd)²)
+              · exp(κ·(cos(x - pmean + (y-fmean)·sinθ) - 1))
+```
+
+> **σ contract.** `fstd` (both axes) and `pstd` (power only) are true
+> standard deviations, in Hz and dB respectively — the factor of ½ in the
+> exponent is what makes that so. The emitted `FreqStd` / `SOpowerStd`
+> columns are these values directly, with no variance ⇄ σ transform at any
+> boundary.
+>
+> Phase `pstd` is **not** a Gaussian σ in the same sense: it is `recikappa`
+> = 1/√κ in radians. It is nonetheless already a true σ, because the von
+> Mises factor is its own small-angle Gaussian
+> (`exp(κ(cos Δ − 1)) → exp(−Δ²/2pstd²)`) and carries the half
+> intrinsically. It therefore takes no ½ of its own, and never moves when
+> the Gaussian widths are rescaled.
+>
+> ⚠️ Fits written before this convention emitted `FreqStd` and
+> `SOpowerStd` as `√2·σ`. There is no version marker in the `.csv` or
+> `.mat` outputs, so old and new width columns must not be pooled.
+> `SOphaseStd` is unaffected.
+
 | Format | What it contains | Reconstruct? |
 |---|---|---|
 | `.csv` | Per-mode params table (`Density, FreqMean, FreqStd, …, Theta`, plus phase-coupling annotation columns for power) **and a fixed-format comment header** carrying `background.{xxx,yyy,zzz}`, `unit_row` (phase only), `gof.{sse,rsquare,dfe,adjrsquare,rmse}`, the source `freq_bins` / `SOpower_bins` (or `SOphase_bins`), and the **raw fitobj coefficients** (`fitobj_coefnames` + `fitobj_coefvalues` JSON arrays). Header lines start with `# ` and are skipped by both MATLAB `readtable` (`'CommentStyle','#'`) and pandas (`comment='#'`). | ✅ full — use `fitobj_coefvalues` for exact reconstruction |
