@@ -10,7 +10,7 @@ function default_params = spline_basis_opts(type, varargin)
 %   Optional inputs:
 %       'power_limits' - 1x2 vector of SO power limits over which histograms are fitted with splines (default: [-2, 20]; only used for power histogram)
 %       'phase_limits' - 1x2 vector of SO phase limits over which histograms are fitted with splines (default: [-pi, pi]; only used for phase histogram)
-%       'freq_limits' - 1x2 vector of frequency limits over which histograms are fitted with splines (default: [2, 16])
+%       'freq_limits' - 1x2 vector of frequency limits over which histograms are fitted with splines (default: [2, 18])
 %       'num_knots_x' - Integer number of internal knots in the x-direction (default for 'power': 5, default for 'phase': 5)
 %       'num_knots_y' - Integer number of internal knots in the frequency y-direction (default for 'power': 18, default for 'phase': 9)
 %       'plot_on' - Flag to control whether to plot results (default: true)
