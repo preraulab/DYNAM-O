@@ -163,7 +163,7 @@ if have_phase, setappdata(f, 'phase_ax', ax(phase_ax_idx(3))); end
                     [~, contours(k)] = contour(ax_handles(3), x_fine, freq_fine, cdata, 'w-', 'LineWidth', 0.5);
                     if isgraphics(contours(k))
                         % make contours non-pickable so they don't steal picks from markers
-                        set(contours(k), 'Visible','on', 'Tag','mode_contour', 'HitTest','off', 'PickableParts','none');
+                        set(contours(k), 'Visible','off', 'Tag','mode_contour', 'HitTest','off', 'PickableParts','none');
                     end
                 catch
                     contours(k) = gobjects(1);
@@ -240,8 +240,14 @@ set(dcm, 'Enable','on');
 set(f, 'WindowButtonMotionFcn', @(src,evt) hoverModeContour(src));
 
     function hoverModeContour(fig_handle)
-        % Only act if there's a current axes under the pointer
-        curr_ax = get(fig_handle, 'CurrentAxes');
+        % Reset both rows, then act only on the model axes under the pointer.
+        contours = findobj(fig_handle, 'Tag', 'mode_contour');
+        if ~isempty(contours)
+            set(contours, 'Visible', 'off');
+        end
+
+        curr_obj = hittest(fig_handle);
+        curr_ax = ancestor(curr_obj, 'axes');
         if isempty(curr_ax) || ~isgraphics(curr_ax)
             return
         end
@@ -256,12 +262,6 @@ set(f, 'WindowButtonMotionFcn', @(src,evt) hoverModeContour(src));
             hPts = getappdata(curr_ax, [plot_type_str '_mode_pts']);
             if isempty(hPts) || ~isvalid(hPts)
                 continue
-            end
-
-            % If cursor is over any mode point, do not update contours (let datatips work)
-            curr_obj = hittest(fig_handle);
-            if ~isempty(curr_obj) && any(curr_obj == hPts)
-                return
             end
 
             % Mouse in axis coordinates
@@ -290,17 +290,8 @@ set(f, 'WindowButtonMotionFcn', @(src,evt) hoverModeContour(src));
             % Find closest mode
             [min_dist, idx] = min(norm_dist);
 
-            % If not within threshold, hide all contours
+            % If not within threshold, leave all contours hidden
             if min_dist > hover_dist_threshold
-                for k = 1:length(contours)
-                    try
-                        if isgraphics(contours(k))
-                            set(contours(k),'Visible','off');
-                        end
-                    catch
-                        % ignore individual errors
-                    end
-                end
                 return
             end
 
