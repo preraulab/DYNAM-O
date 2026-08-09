@@ -972,7 +972,19 @@ DYNAM-O/
     ├── SOpowphase_functions/        SO-power/phase computation and histograms
     ├── SOPH_dim_reduction/          Parametric and spline fitting
     ├── TFsigma_peak_detector/       Alternative sigma-band peak detector
-    └── helper_functions/            Multitaper, artifacts, EDF, plotting, tests, …
+    └── helper_functions/            Shared helpers and pinned library submodules
+        ├── multitaper_toolbox/      Submodule: multitaper spectral estimation
+        ├── statistical_tests/       Submodule: preraulab/multicomp_test
+        ├── artifact_detection/      Submodule: EEG artifact detection
+        ├── EDF_toolbox/             Submodule: EDF/EDF+ I/O
+        ├── data_processing/         Submodule: signal and index manipulation
+        ├── binning/                 Submodule: 1-D and N-D binning
+        ├── conversion/              Submodule: data representation conversion
+        ├── nanstats/                Submodule: NaN-aware statistics
+        ├── graphical/               Submodule: higher-level plotting
+        ├── fig_tools/               Submodule: figure and axes utilities
+        ├── colormaps/               Submodule: MATLAB colormaps
+        ├── sleep/                   Submodule: sleep EEG analysis
         └── dynamo_helpers/          Run-record + settings infrastructure
             ├── generate_run_log.m            Write per-run options struct to JSON (safe, no eval)
             ├── load_run_log.m                Read run-settings JSON (replaces legacy `run()` loader)
@@ -990,20 +1002,40 @@ setup. There is no separate application tree.
 
 DYNAM-O depends on several standalone libraries included as Git submodules, all under `toolbox/helper_functions/`. All are cloned automatically with `--recursive` (see [Installation](#installation)).
 
-| Submodule | Repository | Description |
+| Submodule directory | Repository | Description |
 |---|---|---|
-| **Multitaper Spectrogram** | [preraulab/multitaper_toolbox](https://github.com/preraulab/multitaper_toolbox) | Multitaper spectral estimation (MATLAB, Python, R, Rust). Provides the time-frequency decomposition underlying TF-peak detection and SO-power computation. Includes an optimized C MEX implementation. |
-| **Artifact Detection** | [preraulab/artifact_detection](https://github.com/preraulab/artifact_detection) | Detects and removes artifacts in EEG time series using high-frequency and broadband filtering with adaptive z-score thresholding. Includes Hjorth feature-based detection. |
-| **Read EDF** | [preraulab/read_EDF](https://github.com/preraulab/read_EDF) | Reads European Data Format (EDF/EDF+) files with full metadata extraction, per-signal scaling, and optional MEX acceleration. Includes a GUI for exploring EDF headers. |
-| **Statistical Tests** | [preraulab/multicomp_test](https://github.com/preraulab/multicomp_test) | Permutation-based statistical tests and false discovery rate (FDR) correction for multi-dimensional data. Provides `permtest`, `gpermtest`, `FDR_1D`, and `FDR_2D`. |
+| **multitaper_toolbox** | [preraulab/multitaper_toolbox](https://github.com/preraulab/multitaper_toolbox) | Multitaper spectral estimation for MATLAB, Python, R, and Rust. |
+| **statistical_tests** | [preraulab/multicomp_test](https://github.com/preraulab/multicomp_test) | Permutation and FDR-controlled multiple-comparison tests for 1-D and 2-D MATLAB data. |
+| **artifact_detection** | [preraulab/artifact_detection](https://github.com/preraulab/artifact_detection) | Iterative z-score artifact detection for continuous time-series data, primarily sleep EEG. |
+| **EDF_toolbox** | [preraulab/EDF_toolbox](https://github.com/preraulab/EDF_toolbox) | EDF/EDF+ reading, writing, resampling, and batch processing for MATLAB. |
+| **data_processing** | [preraulab/data_processing](https://github.com/preraulab/data_processing) | Generic MATLAB signal and index manipulation utilities. |
+| **binning** | [preraulab/binning](https://github.com/preraulab/binning) | MATLAB utilities for 1-D and N-D binning and sliding-window histograms. |
+| **conversion** | [preraulab/conversion](https://github.com/preraulab/conversion) | MATLAB utilities for type, format, and representation conversions. |
+| **nanstats** | [preraulab/nanstats](https://github.com/preraulab/nanstats) | NaN-aware statistical helpers for MATLAB. |
+| **graphical** | [preraulab/graphical](https://github.com/preraulab/graphical) | Higher-level MATLAB plotting primitives. |
+| **fig_tools** | [preraulab/fig_tools](https://github.com/preraulab/fig_tools) | MATLAB figure layout, axes linking, and interactive pan/zoom controls. |
+| **colormaps** | [preraulab/colormaps](https://github.com/preraulab/colormaps) | Perceptually uniform and custom MATLAB colormaps. |
+| **sleep** | [preraulab/sleep](https://github.com/preraulab/sleep) | Sleep EEG staging, hypnograms, slow-wave extraction, and simulations. |
+| **CSSuicontrols** | [preraulab/CSSuicontrols](https://github.com/preraulab/CSSuicontrols) | CSS-styled HTML-backed UI controls for MATLAB `uifigure` apps. |
 
-> [!NOTE]
-> To update all submodules to their latest versions:
-> ```bash
-> git submodule update --recursive --remote
-> ```
-> This updates the working trees only — `git add` and commit the bumped
-> submodule pointers in the parent repo to land them.
+### Update Submodules
+
+**Users** should initialize submodules and check out the exact revisions recorded
+by DYNAM-O:
+
+```bash
+git submodule update --init --recursive
+```
+
+**Developers** who intend to update dependencies to the latest commits on their
+configured branches should run:
+
+```bash
+git submodule update --init --recursive --remote
+```
+
+Developers are responsible for reviewing the resulting changes and committing
+the updated submodule pointers in the parent DYNAM-O repository.
 
 ### Required MATLAB Toolboxes
 
