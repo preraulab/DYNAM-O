@@ -279,12 +279,12 @@ else
         amp0 = stats_table.Height;
     end
     fmean0 = stats_table.PeakFrequency;
-    % fstd0 is a Gaussian standard deviation, so the historical
-    % Bandwidth/1.96 (a pre-half width) picks up the extra sqrt(2) and the
-    % seeded mode shape is unchanged. pstd0 is recikappa, which was always a
-    % true standard deviation, so it deliberately keeps the plain /1.96.
-    % These two lines are not symmetric -- do not tidy them into one.
-    fstd0 = stats_table.Bandwidth / (1.96*sqrt(2));
+    % These empirical watershed-to-sigma estimates initialize true standard
+    % deviations. They are estimators, not serialized parameters being
+    % migrated to preserve a historical fitted surface, so they keep their
+    % numeric values after the Gaussian kernel correction. Phase pstd0 is
+    % recikappa and its kernel is unchanged.
+    fstd0 = stats_table.Bandwidth / 1.96;
     pmean0 = stats_table.SOFeature;
     pstd0 = stats_table.Duration / 1.96;
     theta0 = zeros(size(amp0));
@@ -362,12 +362,10 @@ if N_wshed_modes < 1
     valid_freq_axis  = freq_bins(valid_freq_bins);
     valid_phase_axis = phase_bins(valid_phase_bins);
     fmean_seed = (max(valid_freq_axis)  + min(valid_freq_axis))  / 2;
-    % fstd_seed is a Gaussian standard deviation and takes the sqrt(2) that
-    % carries the historical range/4 into the new convention. pstd_seed is
-    % recikappa, which was ALWAYS a true standard deviation (the von Mises
-    % factor carries its own half), so it deliberately does not. These two
-    % adjacent lines are not symmetric -- do not tidy them into one.
-    fstd_seed  = (max(valid_freq_axis)  - min(valid_freq_axis))  / (4*sqrt(2));
+    % Both range/4 values are standard-deviation priors, not serialized
+    % parameters being migrated to preserve an old fitted surface. Phase
+    % pstd_seed is recikappa and its kernel is unchanged.
+    fstd_seed  = (max(valid_freq_axis)  - min(valid_freq_axis))  / 4;
     pmean_seed = (max(valid_phase_axis) + min(valid_phase_axis)) / 2;
     pstd_seed  = (max(valid_phase_axis) - min(valid_phase_axis)) / 4;
     phase_hist = SOPhH(valid_freq_bins, valid_phase_bins);
@@ -456,7 +454,7 @@ for ii = 1:max_peaks
         [seed_row, found] = residual_max_seed( ...
             SOPhH(valid_freq_bins, valid_phase_bins), ...
             model_SOPhH(valid_freq_bins, valid_phase_bins), ...
-            phase_bins(valid_phase_bins), freq_bins(valid_freq_bins), B0i, 0, 'phase');
+            phase_bins(valid_phase_bins), freq_bins(valid_freq_bins), B0i, 0);
         if found
             B0i = [B0i; seed_row]; %#ok<*AGROW>
         else
