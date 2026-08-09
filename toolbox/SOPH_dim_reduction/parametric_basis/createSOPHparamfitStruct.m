@@ -7,11 +7,9 @@ function [SOPH_paramfit] = createSOPHparamfitStruct(type, params, fitobj, gof, m
 %            columns [amp0, fmean0, fstd0, pmean0, pstd0, theta0].
 %
 %   The returned .params field is a MATLAB table. The first column is
-%   `Density` — the rotgauss / vmGauss `amp` parameter, which (because
-%   the model is fit to a peak-density-style histogram) corresponds
-%   semantically to TF-peak density at the mode location. Renamed
-%   from the historical `Amplitude` to make the meaning explicit;
-%   the underlying mathematical model is unchanged.
+%   `Density`: the raw rotGauss `amp` for power, but an empirical
+%   no-sinusoid, jointly normalized model height substituted by
+%   param_basis_phase after fitting for phase.
 %
 %     power: Density (peaks/min/bin), FreqMean (Hz), FreqStd (Hz),
 %            SOpowerMean (dB), SOpowerStd (dB), Theta (rad),
@@ -20,31 +18,41 @@ function [SOPH_paramfit] = createSOPHparamfitStruct(type, params, fitobj, gof, m
 %            PrefPhase  (rad),  Coupling  (proportion/phase-bin).
 %     phase: Density (proportion/phase-bin), FreqMean (Hz), FreqStd (Hz),
 %            SOphaseMean (rad), SOphaseStd (rad), Theta (rad),
-%            Volume (proportion·rad·Hz — Density × area-under-mode).
+%            Volume (historical standalone-vmGauss area surrogate).
 %
 %   NOTE: power Density is peaks/min/bin; phase Density and the model coupling column are proportion/phase-bin (phase histogram is row-normalized upstream). The SO phase-coupling metric is model-based only: PrefPhase/Coupling are read from the fitted phase parametric surface (the older raw-histogram argmax and circular-mean estimators have been retired).
 %
-%   Volume column — closed-form integral of the fitted basis surface:
+%   Volume column — standalone-kernel area derived from the six reported
+%   parameters. Gaussian-width coefficients follow from
+%   ∫exp(-0.5·(d/sigma)^2) dd = sigma·sqrt(2*pi):
 %
-%     power (rotGauss, exp(-(u/sigma)^2) form, no factor of 1/2):
-%         V = Density · pi · SOpowerStd · FreqStd
+%     power (rotGauss, exp(-0.5·(u/sigma)^2) form):
+%         V = Density · 2*pi · SOpowerStd · FreqStd
 %         theta drops out (rotation is volume-preserving).
 %
 %     phase (vmGauss, von Mises × Gaussian; the freq Gaussian uses
-%            exp(-(dy/FreqStd)^2)):
+%            exp(-0.5·(dy/FreqStd)^2)):
 %         k = 1 / SOphaseStd^2
-%         V = Density · 2*pi · besseli(0,k,1) · sqrt(pi) · FreqStd
+%         V = Density · 2*pi · besseli(0,k,1) · sqrt(2*pi) · FreqStd
 %         (besseli(0,k,1) is the scaled form exp(-k)·I0(k), used to
 %         keep the product finite for sharp phase modes where exp(-k)
 %         and I0(k) would each over/underflow separately.)
+%         Only the frequency integral moved (sqrt(pi) → sqrt(2*pi)); the
+%         von Mises factor and k are untouched because SOphaseStd stores the
+%         existing recikappa = 1/sqrt(k) parameter.
 %         For k >> 1 (sharp phase modes), this asymptotes to
-%             V ≈ Density · SOphaseStd · pi · sqrt(2) · FreqStd.
+%             V ≈ Density · 2*pi · SOphaseStd · FreqStd.
 %
-%     For phase, Density carries the empirical no-sin amplitude (set
-%     by param_basis_phase after fit), so Volume here is the integral
-%     of the *displayed* mode amplitude — not the integral of the raw
-%     fitobj. Power Density is the raw fit coefficient, so power
-%     Volume is the exact analytic integral.
+%     Power Density is the raw fit coefficient, so power Volume is the exact
+%     full-plane integral of the standalone rotGauss component.
+%
+%     Phase Volume retains the historical surrogate: it multiplies the
+%     standalone vmGauss area by the empirical no-sinusoid model height that
+%     param_basis_phase reports as Density. That height comes from the full,
+%     jointly row-normalized model (background and all modes), so this is not
+%     the exact integral of an isolated jointly normalized component or of
+%     the raw fitobj component. The updated Gaussian coefficient preserves
+%     this surrogate under the frequency-width reparameterization.
 %
 %   Empty params produce an empty table with the right VariableNames so
 %   downstream isempty(...) checks still hold and column-name access
@@ -80,22 +88,22 @@ end
 
 
 function vol = compute_volume_(type, params)
-% Analytic integral of the fitted basis surface per mode. See header
-% docstring for derivations.
+% Standalone-kernel area per mode. Power is an exact component integral;
+% phase is the historical empirical-height surrogate described above.
 density = params(:,1);
 fstd    = params(:,3);   % FreqStd
 xstd    = params(:,5);   % SOpowerStd or SOphaseStd
 switch type
     case 'power'
-        % rotGauss: V = density * pi * xstd * fstd
-        vol = density .* pi .* xstd .* fstd;
+        % rotGauss: V = density * 2*pi * xstd * fstd
+        vol = density .* (2*pi) .* xstd .* fstd;
     case 'phase'
-        % vmGauss: V = density * 2*pi * exp(-k) * I0(k) * sqrt(pi) * fstd
+        % vmGauss: V = density * 2*pi * exp(-k) * I0(k) * sqrt(2*pi) * fstd
         % Use the SCALED Bessel besseli(0,k,1) = exp(-k)*I0(k) so the
         % product stays finite for sharp phase modes (small xstd ->
         % large k -> exp(-k) underflows and I0(k) overflows separately).
         k   = 1 ./ (xstd .^ 2);
-        vol = density .* (2*pi) .* besseli(0, k, 1) .* sqrt(pi) .* fstd;
+        vol = density .* (2*pi) .* besseli(0, k, 1) .* sqrt(2*pi) .* fstd;
     otherwise
         vol = nan(size(density));
 end

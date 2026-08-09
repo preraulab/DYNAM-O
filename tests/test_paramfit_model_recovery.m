@@ -4,9 +4,11 @@ function tests = test_paramfit_model_recovery
 %   Self-contained (no golden snapshot). Synthesize a SOPH surface from
 %   KNOWN rotGauss / vmGauss parameters, fit with param_basis_power /
 %   param_basis_phase, and verify the planted parameters are recovered.
-%   The power values mirror the Rust paramfit_model_recovery test. Phase
-%   frequency widths use the standard-deviation contract; the companion Rust
-%   implementation must use the same contract for cross-language fidelity.
+%   The power values mirror the Rust paramfit_model_recovery test. All
+%   Gaussian widths are true standard deviations (the kernels carry the factor
+%   of one half); the companion Rust implementation must use the same contract
+%   for cross-language fidelity. Phase recikappa is a reciprocal-square-root
+%   concentration/local small-angle scale whose kernel never changed.
 tests = functiontests(localfunctions);
 end
 
@@ -25,13 +27,49 @@ ystd = 2.5;
 z_center = vmGauss(0, ymean, amp, ymean, ystd, 0, 1, 0);
 z_one_std = vmGauss(0, ymean + ystd, amp, ymean, ystd, 0, 1, 0);
 
-testCase.verifyEqual(z_one_std / z_center, exp(-1), 'AbsTol', 1e-12);
+% One standard deviation out, a genuine Gaussian falls to exp(-0.5) of its
+% peak. exp(-1) here would mean the kernel is missing its factor of one half
+% and ystd is really sqrt(2) times the standard deviation it is named after.
+testCase.verifyEqual(z_one_std / z_center, exp(-0.5), 'AbsTol', 1e-12);
+end
+
+function test_rotgauss_uses_standard_deviations_on_both_axes(testCase)
+amp = 3;
+ymean = 10; ystd = 1.5;
+xmean = 4;  xstd = 6;
+z_center = rotGauss(xmean, ymean, amp, ymean, ystd, xmean, xstd, 0);
+z_freq_std = rotGauss(xmean, ymean + ystd, amp, ymean, ystd, xmean, xstd, 0);
+z_power_std = rotGauss(xmean + xstd, ymean, amp, ymean, ystd, xmean, xstd, 0);
+
+testCase.verifyEqual(z_freq_std / z_center, exp(-0.5), 'AbsTol', 1e-12);
+testCase.verifyEqual(z_power_std / z_center, exp(-0.5), 'AbsTol', 1e-12);
 end
 
 function test_phase_width_defaults_preserve_historical_range(testCase)
 opts = param_basis_opts('phase');
-testCase.verifyEqual(opts.LB_default(3), 1);
-testCase.verifyEqual(opts.UB_default(3), sqrt(15), 'AbsTol', eps);
+% The historical bounds were 1 and sqrt(15) in the pre-half convention, so
+% the standard-deviation equivalents divide by sqrt(2). The physical window
+% each bound describes is unchanged.
+testCase.verifyEqual(opts.LB_default(3), 1/sqrt(2), 'AbsTol', eps);
+testCase.verifyEqual(opts.UB_default(3), sqrt(7.5), 'AbsTol', eps);
+end
+
+function test_phase_recikappa_defaults_are_not_rescaled(testCase)
+% recikappa (slot 5) is a reciprocal-square-root concentration/local
+% small-angle scale whose von Mises kernel did not change. It must NOT move
+% with the Gaussian widths -- rescaling by column index rather than by kernel
+% would corrupt every phase fit with no error raised.
+opts = param_basis_opts('phase');
+testCase.verifyEqual(opts.LB_default(5), pi/5, 'AbsTol', eps);
+testCase.verifyEqual(opts.UB_default(5), 2*pi, 'AbsTol', eps);
+end
+
+function test_power_width_defaults_preserve_historical_range(testCase)
+opts = param_basis_opts('power');
+testCase.verifyEqual(opts.LB_default(3), 0.1/sqrt(2), 'AbsTol', eps);
+testCase.verifyEqual(opts.UB_default(3), 2.5/sqrt(2), 'AbsTol', eps);
+testCase.verifyEqual(opts.LB_default(5), 2.5/sqrt(2), 'AbsTol', eps);
+testCase.verifyEqual(opts.UB_default(5), 30/sqrt(2), 'AbsTol', eps);
 end
 
 function test_phase_center_defaults_span_two_periods(testCase)
@@ -69,7 +107,9 @@ freq_bins = linspace(2, 18, 65).';
 
 power_bins = linspace(-5, 25, 61);
 [Pg, Fg] = meshgrid(power_bins, freq_bins);
-power_mode = [8, 10, 1, 5, 4, 0];
+% Widths are standard deviations, so the historical [1, 4] shape is written
+% as [1, 4]/sqrt(2) and the synthesized surface is unchanged.
+power_mode = [8, 10, 1/sqrt(2), 5, 4/sqrt(2), 0];
 SOPH = rotGauss(Pg, Fg, power_mode(1), power_mode(2), ...
     power_mode(3), power_mode(4), power_mode(5), power_mode(6)) + 0.2;
 power_common = { ...
@@ -79,13 +119,13 @@ power_common = { ...
 
 power_freq_params = param_basis_power(SOPH, power_bins, freq_bins, ...
     power_common{:}, ...
-    'LB_default', [0.001, 11, 0.1, -5, 2.5, -0.03], ...
-    'UB_default', [20, 12, 2.5, 25, 30, 0.03], ...
+    'LB_default', [0.001, 11, 0.1/sqrt(2), -5, 2.5/sqrt(2), -0.03], ...
+    'UB_default', [20, 12, 2.5/sqrt(2), 25, 30/sqrt(2), 0.03], ...
     'constrain_freq_center', false, 'constrain_power_center', true);
 power_axis_params = param_basis_power(SOPH, power_bins, freq_bins, ...
     power_common{:}, ...
-    'LB_default', [0.001, 2, 0.1, 6, 2.5, -0.03], ...
-    'UB_default', [20, 18, 2.5, 7, 30, 0.03], ...
+    'LB_default', [0.001, 2, 0.1/sqrt(2), 6, 2.5/sqrt(2), -0.03], ...
+    'UB_default', [20, 18, 2.5/sqrt(2), 7, 30/sqrt(2), 0.03], ...
     'constrain_freq_center', true, 'constrain_power_center', false);
 
 testCase.assertSize(power_freq_params, [1, 6]);
@@ -95,7 +135,8 @@ testCase.verifyLessThan(abs(power_axis_params(1, 4) - power_mode(4)), 0.1);
 
 phase_bins = linspace(-pi, pi, 41);
 [PHg, Fg] = meshgrid(phase_bins, freq_bins);
-phase_mode = [0.05, 10, 1.5, 0, 1, 0];
+% Only fstd (col 3) rescales -- col 5 is recikappa and its kernel is unchanged.
+phase_mode = [0.05, 10, 1.5/sqrt(2), 0, 1, 0];
 SOPhH = normalized_vmGauss(PHg, Fg, true, 0, 0, 0.001, ...
     phase_mode(1), phase_mode(2), phase_mode(3), ...
     phase_mode(4), phase_mode(5), phase_mode(6));
@@ -106,13 +147,13 @@ phase_common = { ...
 
 phase_freq_params = param_basis_phase(SOPhH, phase_bins, freq_bins, ...
     phase_common{:}, ...
-    'LB_default', [0.001, 11, 1, -pi, 0.2, -0.2], ...
-    'UB_default', [1, 12, 3, pi, 2, 0.2], ...
+    'LB_default', [0.001, 11, 1/sqrt(2), -pi, 0.2, -0.2], ...
+    'UB_default', [1, 12, 3/sqrt(2), pi, 2, 0.2], ...
     'constrain_freq_center', false, 'constrain_phase_center', true);
 phase_axis_params = param_basis_phase(SOPhH, phase_bins, freq_bins, ...
     phase_common{:}, ...
-    'LB_default', [0.001, 2, 1, 1, 0.2, -0.2], ...
-    'UB_default', [1, 18, 3, 2, 2, 0.2], ...
+    'LB_default', [0.001, 2, 1/sqrt(2), 1, 0.2, -0.2], ...
+    'UB_default', [1, 18, 3/sqrt(2), 2, 2, 0.2], ...
     'constrain_freq_center', true, 'constrain_phase_center', false);
 
 testCase.assertSize(phase_freq_params, [1, 6]);
@@ -125,11 +166,11 @@ function test_default_phase_bounds_allow_crossing_pi_seam(testCase)
 phase_bins = linspace(-pi, pi, 81);
 freq_bins = linspace(2, 18, 65).';
 [PHg, Fg] = meshgrid(phase_bins, freq_bins);
-planted = [0.07, 10.5, 1.4, -pi + 0.12, 0.9, 0.42];
+planted = [0.07, 10.5, 1.4/sqrt(2), -pi + 0.12, 0.9, 0.42];
 SOPhH = normalized_vmGauss(PHg, Fg, true, 0.012, 0.35, 0.003, ...
     planted(1), planted(2), planted(3), ...
     planted(4), planted(5), planted(6));
-seed = [0.06, 10.2, 1.2, pi - 0.04, 1, 0.30];
+seed = [0.06, 10.2, 1.2/sqrt(2), pi - 0.04, 1, 0.30];
 
 [params, fitobj, gof] = param_basis_phase(SOPhH, phase_bins, freq_bins, ...
     'prefix_modes', seed, 'prefix_modes_order', 0, ...
@@ -149,7 +190,7 @@ params = [0.05, 11, 2, 0, 1.2, 0];
 out = createSOPHparamfitStruct('phase', params, [], [], [], []);
 out_class = DYNAMO.createSOPHparamfitStruct('phase', params, [], [], [], []);
 k = 1 / params(5)^2;
-expected = params(1) * (2*pi) * besseli(0, k, 1) * sqrt(pi) * params(3);
+expected = params(1) * (2*pi) * besseli(0, k, 1) * sqrt(2*pi) * params(3);
 
 testCase.verifyEqual(out.params.FreqStd, params(3));
 testCase.verifyEqual(out.params.Volume, expected, 'RelTol', 1e-12);
@@ -161,7 +202,9 @@ function test_phase_peak_assignment_uses_frequency_standard_deviation(testCase)
 prob = 0.95;
 fmean = 10;
 fstd = 2;
-freq_radius = fstd * sqrt(-log(1 - prob));
+% Q = 0.5*(dF/fstd)^2 on the freq axis (the von Mises term is zero there), so
+% the Q = -log(1-prob) boundary sits at dF/fstd = sqrt(-2*log(1-prob)).
+freq_radius = fstd * sqrt(-2*log(1 - prob));
 stats_table = table( ...
     [fmean + 0.99*freq_radius; fmean + 1.01*freq_radius], ...
     [0; 0], 'VariableNames', {'PeakFrequency', 'SOphase'});
@@ -169,6 +212,40 @@ stats_table = table( ...
 idx = get_mode_peaks([1, fmean, fstd, 0, 0.5, 0], ...
     'phase', stats_table, prob);
 testCase.verifyEqual(idx, [true; false]);
+end
+
+function test_power_containment_encloses_the_requested_probability(testCase)
+% The pairing of get_mode_peaks' Q with its -log(1-prob) threshold must
+% actually enclose `prob` of the fitted Gaussian's mass. This is the guard
+% the standard-deviation reparameterization needed and did not have: adding
+% the factor of one half to rotGauss.m without adding it to Q leaves every
+% other test green while silently dropping containment from 95% to ~77.7%,
+% which would shift every Pk* column with no error raised anywhere.
+%
+% Deterministic midpoint integration of the true bivariate normal the kernel
+% represents (sigma_freq = fstd, sigma_power = pstd), no RNG.
+fmean = 13; fstd = 1.3;
+pmean = 5;  pstd = 7;
+mode_params = [0, fmean, fstd, pmean, pstd, 0];
+
+n = 1201;
+span = 8;                                        % integrate to +/-8 sigma
+edges = linspace(-span, span, n + 1);
+z = (edges(1:end-1) + edges(2:end)) / 2;         % midpoints, in sigma units
+[ZP, ZF] = meshgrid(z, z);
+stats_table = table(fmean + ZF(:).*fstd, pmean + ZP(:).*pstd, ...
+    'VariableNames', {'PeakFrequency', 'SOpower'});
+dens = exp(-0.5 .* (ZF(:).^2 + ZP(:).^2));
+total = sum(dens);
+
+for prob = [0.5, 0.8, 0.95, 0.99]
+    idx = get_mode_peaks(mode_params, 'power', stats_table, prob);
+    captured = sum(dens(idx)) / total;
+    testCase.verifyEqual(captured, prob, 'AbsTol', 2e-3, ...
+        sprintf(['prob=%.2f: captured %.5f. A value near 0.777 at ' ...
+                 'prob=0.95 means Q lost its factor of one half.'], ...
+                 prob, captured));
+end
 end
 
 function test_phase_empirical_amplitude_uses_circular_distance(testCase)
@@ -180,13 +257,13 @@ freq_bins = linspace(2, 18, 65).';
 % the iteration-time min_amp check and final Density lookup must use the
 % shortest angular distance to the phase bins. Rust implementations should
 % apply the same circular-distance contract before selecting a phase bin.
-planted = [0.05, 10, 1.5, 0, 1, 0];
+planted = [0.05, 10, 1.5/sqrt(2), 0, 1, 0];
 SOPhH = normalized_vmGauss(PHg, Fg, true, 0, 0, 0.001, ...
     planted(1), planted(2), planted(3), planted(4), planted(5), planted(6));
 prefix_mode = planted;
 prefix_mode(4) = 2*pi;
-LB = [0.001, 9, 0.5, 2*pi - 0.2, 0.2, -0.2];
-UB = [1, 11, 3, 2*pi + 0.2, 2, 0.2];
+LB = [0.001, 9, 0.5/sqrt(2), 2*pi - 0.2, 0.2, -0.2];
+UB = [1, 11, 3/sqrt(2), 2*pi + 0.2, 2, 0.2];
 
 warning_id = 'curvefit:sfit:subsasgn:coeffsClearingConfBounds';
 warning_state = warning('error', warning_id);
@@ -220,9 +297,11 @@ end
 function test_power_recovers_planted_modes_with_column_bins(testCase)
 power_bins = linspace(-5, 25, 61).';
 freq_bins  = linspace(2, 18, 65).';
-% [amp, fmean, fstd, pmean, pstd, theta] -- same as the Rust test.
-planted = [8 11 1.0 5 10 0.01; ...
-           5 15 0.8 12 8 -0.01];
+% [amp, fmean, fstd, pmean, pstd, theta] -- same as the Rust test. Both
+% widths are standard deviations, so the historical shapes are written with
+% the sqrt(2) divisor and the synthesized surface is unchanged.
+planted = [8 11 1.0/sqrt(2) 5 10/sqrt(2) 0.01; ...
+           5 15 0.8/sqrt(2) 12 8/sqrt(2) -0.01];
 [Fg, Pg] = meshgrid(freq_bins, power_bins);          % [nPower x nFreq]
 SOPH = 0.001*Pg + 0.001*Fg + 0.2;                    % background plane
 for m = 1:size(planted, 1)
@@ -253,8 +332,8 @@ function test_power_revert_returns_selected_gof(testCase)
 power_bins = linspace(-2, 20, 41);
 freq_bins = linspace(2, 18, 33).';
 [Pg, Fg] = meshgrid(power_bins, freq_bins);
-modes = [6, 8, 1, 3, 6, 0; ...
-         4, 12, 1, 10, 6, 0];
+modes = [6, 8, 1/sqrt(2), 3, 6/sqrt(2), 0; ...
+         4, 12, 1/sqrt(2), 10, 6/sqrt(2), 0];
 SOPH = 0.2 + 0.001*Pg + 0.001*Fg;
 for m = 1:size(modes, 1)
     p = modes(m, :);
@@ -278,10 +357,13 @@ end
 function test_phase_recovers_planted_modes_with_column_bins(testCase)
 phase_bins = linspace(-pi, pi, 41).';
 freq_bins  = linspace(2, 18, 65).';
-% [amp, fmean, fstd, phasepref, recikappa, theta], with fstd in Hz.
-% Square roots preserve the modeled widths of the historical test modes.
-planted = [0.05 11 sqrt(2.0) 1.0 1.2 0.05; ...
-           0.04 15 sqrt(2.5) -1.5 1.5 -0.05];
+% [amp, fmean, fstd, phasepref, recikappa, theta], with fstd a true frequency
+% standard deviation in Hz. These values preserve the modeled widths of the
+% historical test modes: the original variance-form entries 2.0 and 2.5 become
+% sqrt(2.0/2) = 1 and sqrt(2.5/2) = sqrt(1.25). recikappa (col 5) never
+% rescales because its von Mises parameterization is unchanged.
+planted = [0.05 11 1           1.0 1.2 0.05; ...
+           0.04 15 sqrt(1.25) -1.5 1.5 -0.05];
 [Fg, PHg] = meshgrid(freq_bins, phase_bins);         % [nPhase x nFreq]
 SOPhH = zeros(size(Fg));
 for m = 1:size(planted, 1)
@@ -322,7 +404,7 @@ function test_power_baseline_fallback_returns_matching_gof(testCase)
 power_bins = linspace(-5, 25, 41);
 freq_bins = linspace(2, 18, 33).';
 [Pg, Fg] = meshgrid(power_bins, freq_bins);
-mode = [2, 10, 1, 5, 4, 0];
+mode = [2, 10, 1/sqrt(2), 5, 4/sqrt(2), 0];
 SOPH = rotGauss(Pg, Fg, mode(1), mode(2), mode(3), ...
     mode(4), mode(5), mode(6)) + 0.2;
 
@@ -351,7 +433,7 @@ function test_phase_baseline_fallback_returns_matching_gof(testCase)
 phase_bins = linspace(-pi, pi, 31);
 freq_bins = linspace(2, 18, 33).';
 [PHg, Fg] = meshgrid(phase_bins, freq_bins);
-mode = [0.05, 10, 1.5, 0, 1, 0];
+mode = [0.05, 10, 1.5/sqrt(2), 0, 1, 0];
 SOPhH = normalized_vmGauss(PHg, Fg, true, 0, 0, 0.001, ...
     mode(1), mode(2), mode(3), mode(4), mode(5), mode(6));
 

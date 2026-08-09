@@ -17,7 +17,7 @@ function [fitresult, gof] = fit_vmGauss(phase_hist, phase_bins, freq_bins, B0, L
 %           - fmean: Frequency mean of the peak.
 %           - fstd: Frequency standard deviation of the peak.
 %           - phasepref: Phase preference of the peak (in radians).
-%           - recikappa: Reciprocal kappa parameter.
+%           - recikappa: Reciprocal square root of kappa, recikappa = 1/sqrt(kappa).
 %           - theta: Angle parameter for the von Mises distribution (in radians).
 %           For example, to fit two von Mises 2D Gaussian peaks, B0 would be a 2x7 matrix.
 %

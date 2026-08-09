@@ -4,8 +4,9 @@ function T = annotateModesWithPeakStats(T, axis_kind, stats_table_SOPH, prob)
 %   T = annotateModesWithPeakStats(T, axis_kind, stats_table_SOPH, prob)
 %
 %   For each mode (row of the paramfit params table T) finds the TF-peaks
-%   inside the mode's confidence region (GET_MODE_PEAKS) and appends ten
-%   summary columns built from MODE_PEAK_STATS:
+%   inside the mode's assignment contour (GET_MODE_PEAKS) and appends ten
+%   summary columns built from MODE_PEAK_STATS. For power the contour encloses
+%   `prob` Gaussian mass; for phase it is a `(1-prob)` relative-height contour:
 %
 %     PkCount, PkFreq, PkDuration, PkBandwidth, PkHeight, PkVolume,
 %     PkArea, PkPeakiness, PkSOpower, PkSOphase

@@ -12,7 +12,8 @@ function z = vmGauss(X,Y, amp, ymean, ystd, xmean, xstd, theta)
 %       ymean: double - Mean of the Gaussian along the Y-axis
 %       ystd: double - Standard deviation of the Gaussian along the Y-axis
 %       xmean: double - Mean of the Gaussian along the X-axis
-%       xstd: double - Standard deviation of the Gaussian along the X-axis
+%       xstd: double - Reciprocal-square-root concentration 1/sqrt(kappa),
+%                      the local small-angle Gaussian scale along the X-axis
 %       theta: double - Angle parameter for the von Mises distribution
 %
 %   Output:
@@ -20,16 +21,28 @@ function z = vmGauss(X,Y, amp, ymean, ystd, xmean, xstd, theta)
 %
 %   Equation:
 %       The von Mises Gaussian shape is computed using the following equation:
-%           z = amp .* exp(-(Y-ymean).^2/ystd^2).* exp(k*cos(X-xmean+(Y-ymean)*sin(theta))-k);
+%           z = amp .* exp(-0.5*(Y-ymean).^2/ystd^2).* exp(k*cos(X-xmean+(Y-ymean)*sin(theta))-k);
 %
 %       where:
 %       - amp: Amplitude of the von Mises Gaussian
 %       - ymean: Mean of the Gaussian along the Y-axis
 %       - ystd: Standard deviation of the Gaussian along the Y-axis
 %       - xmean: Mean of the Gaussian along the X-axis
-%       - xstd: Standard deviation of the Gaussian along the X-axis
+%       - xstd: Reciprocal-square-root concentration 1/sqrt(kappa), the local
+%         small-angle Gaussian scale along the X-axis
 %       - theta: Angle parameter for the von Mises distribution
 %       - k: kappa = concentration parameter that measures dispersion (computed as 1 / xstd^2)
+%
+%       The two width-like parameters have different interpretations and are
+%       NOT symmetric under rescaling:
+%       - ystd is a standard deviation because of the explicit factor of one
+%         half above. Squaring the denominator alone is not enough -- without
+%         the half the frequency width is sqrt(2) times the standard deviation.
+%       - xstd = 1/sqrt(kappa) is a reciprocal-square-root concentration and
+%         local small-angle Gaussian scale, not the global circular standard
+%         deviation. Locally,
+%         exp(k*(cos(d)-1)) -> exp(-d^2/(2*xstd^2)). Since k = 1/xstd^2 and the
+%         von Mises factor are unchanged, xstd is not rescaled with ystd.
 %
 %   Example:
 %       % Example usage of the vmGauss function
@@ -69,4 +82,4 @@ function z = vmGauss(X,Y, amp, ymean, ystd, xmean, xstd, theta)
 % =========================================================================
 k = 1/xstd^2; % kappa = concentration parameter that measures dispersion
 
-z = amp .* exp(-(Y-ymean).^2/ystd^2).* exp(k*cos(X-xmean+(Y-ymean)*sin(theta))-k);
+z = amp .* exp(-0.5*(Y-ymean).^2/ystd^2).* exp(k*cos(X-xmean+(Y-ymean)*sin(theta))-k);

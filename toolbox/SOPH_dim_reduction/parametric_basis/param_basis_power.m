@@ -229,6 +229,10 @@ else
         amp0 = stats_table.Height;
     end
     fmean0 = stats_table.PeakFrequency;
+    % These empirical watershed-to-sigma estimates initialize true standard
+    % deviations. They are estimators, not serialized parameters being
+    % migrated to preserve a historical fitted surface, so they keep their
+    % numeric values after the Gaussian kernel correction.
     fstd0 = stats_table.Bandwidth / 1.96;
     pmean0 = stats_table.SOFeature;
     pstd0 = stats_table.Duration / 1.96;
@@ -307,6 +311,8 @@ if N_wshed_modes < 1
     valid_freq_axis  = freq_bins(valid_freq_bins);
     valid_power_axis = power_bins(valid_power_bins);
     fmean_seed = (max(valid_freq_axis)  + min(valid_freq_axis))  / 2;
+    % The range/4 values are standard-deviation priors, not serialized
+    % parameters being migrated to preserve an old fitted surface.
     fstd_seed  = (max(valid_freq_axis)  - min(valid_freq_axis))  / 4;
     pmean_seed = (max(valid_power_axis) + min(valid_power_axis)) / 2;
     pstd_seed  = (max(valid_power_axis) - min(valid_power_axis)) / 4;

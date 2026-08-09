@@ -41,6 +41,11 @@ function [seed_row, found] = residual_max_seed(SOPH_yx, model_SOPH_yx, x_axis, y
 %   (cols 3 and 5), with safety floors so the LM bounds stay
 %   non-degenerate. Theta starts at 0.
 %
+%   The medians and literal fallbacks are priors expressed directly in the
+%   current parameter units. They are not serialized parameters being migrated
+%   to preserve a historical fitted surface, so their numeric values do not
+%   change when the Gaussian kernel is corrected.
+%
 %   See also param_basis_power, param_basis_phase, mode_overlap.
 %
 % =========================================================================
@@ -97,17 +102,19 @@ amp = max_val;
 % Width priors: median of accepted-mode stds, with safety floors so
 % the LM bounds stay non-degenerate when accepted_modes is empty or
 % all-NaN.
+fstd_fallback = 1.0;
+pstd_fallback = 5.0;
 if isempty(accepted_modes)
-    fstd = 1.0;
-    pstd = 5.0;
+    fstd = fstd_fallback;
+    pstd = pstd_fallback;
 else
     fstd_med = median(accepted_modes(:, 3), 'omitnan');
     if ~isfinite(fstd_med) || fstd_med <= 0
-        fstd_med = 1.0;
+        fstd_med = fstd_fallback;
     end
     pstd_med = median(accepted_modes(:, 5), 'omitnan');
     if ~isfinite(pstd_med) || pstd_med <= 0
-        pstd_med = 5.0;
+        pstd_med = pstd_fallback;
     end
     fstd = fstd_med;
     pstd = pstd_med;

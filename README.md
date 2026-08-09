@@ -700,6 +700,28 @@ SOPH(x,y) = Σₙ basis_n(x,y; ampₙ, fmeanₙ, fstdₙ, pmeanₙ, pstdₙ, θ�
             + xxx·x + yyy·y + zzz
 ```
 
+with the two kernels defined explicitly as
+
+```
+power (rotGauss.m), u =  (y-fmean)·cosθ + (x-pmean)·sinθ
+                    v = -(y-fmean)·sinθ + (x-pmean)·cosθ
+  basis = amp · exp(-½·(u/fstd)² - ½·(v/pstd)²)
+
+phase (vmGauss.m),  κ = 1/pstd²
+  basis = amp · exp(-½·((y-fmean)/fstd)²)
+              · exp(κ·(cos(x - pmean + (y-fmean)·sinθ) - 1))
+```
+
+> `fstd` is the frequency standard deviation in Hz for both power and phase
+> fits. For power fits, `pstd` is the SO-power standard deviation in dB.
+> These values are reported as `FreqStd` and `SOpowerStd`, respectively.
+>
+> For phase fits, `pstd` is `recikappa = 1/√κ` in radians, where κ is the
+> von Mises concentration parameter; it is reported as `SOphaseStd`. Near the
+> phase center, `exp(κ(cos Δ − 1)) → exp(−Δ²/(2pstd²))`, so `pstd`
+> describes the local Gaussian scale rather than the circular standard
+> deviation.
+
 | Format | What it contains | Reconstruct? |
 |---|---|---|
 | `.csv` | Per-mode params table (`Density, FreqMean, FreqStd, …, Theta`, plus phase-coupling annotation columns for power) **and a fixed-format comment header** carrying `background.{xxx,yyy,zzz}`, `unit_row` (phase only), `gof.{sse,rsquare,dfe,adjrsquare,rmse}`, the source `freq_bins` / `SOpower_bins` (or `SOphase_bins`), and the **raw fitobj coefficients** (`fitobj_coefnames` + `fitobj_coefvalues` JSON arrays). Header lines start with `# ` and are skipped by both MATLAB `readtable` (`'CommentStyle','#'`) and pandas (`comment='#'`). | ✅ full — use `fitobj_coefvalues` for exact reconstruction |

@@ -23,8 +23,8 @@ function default_params = param_basis_opts(type, varargin)
 %       'prefix_modes' - Prefix modes in the form [amp0, fmean0, fstd0, pmean0, pstd0, theta0],
 %                        where fstd0 is a frequency standard deviation in Hz (default for 'power': [],
 %                                                                        default for 'phase': [],
-%                                                                        consider use for 'phase': [1e-3, 14, 2,        0,  pi/3, 0;
-%                                                                                                   1e-3, 5,  sqrt(10), pi, pi/3, 0])
+%                                                                        consider use for 'phase': [1e-3, 14, sqrt(2), 0,  pi/3, 0;
+%                                                                                                   1e-3, 5,  sqrt(5), pi, pi/3, 0])
 %       'prefix_modes_order' - Controls whether prefix modes are added before, after, or in place of watershed modes
 %                              -1 = append prefix modes after watershed modes
 %                              0  = use prefix modes only and ignore watershed modes
@@ -39,23 +39,33 @@ function default_params = param_basis_opts(type, varargin)
 %       'min_pctr2' - Minimum percentage change in R-squared for 'min%r2' criterion (default for 'power': 0.01,
 %                                                                                    default for 'phase': 0.025)
 %       'kneedle_tol' - Double, iteration tolerance for the kneedle algorithm (default: 0.01)
-%       'UB_default' - Upper bounds for the fitting parameters - [amp0, fmean0, fstd0,    pmean0, pstd0, theta0]
-%                                          (default for 'power': [nan,  nan,    2.5,      nan,    30,    0.03],
-%                                           default for 'phase': [nan,  nan,    sqrt(15), 2*pi,   2*pi,  pi/3])
-%       'LB_default' - Lower bounds for the fitting parameters - [amp0, fmean0, fstd0, pmean0, pstd0, theta0]
-%                                          (default for 'power': [nan,  nan,    0.1,   nan,    2.5,   -0.03],
-%                                           default for 'phase': [nan,  nan,    1,     -2*pi,  pi/5,  -pi/3])
+%       'UB_default' - Upper bounds for the fitting parameters - [amp0, fmean0, fstd0,     pmean0, pstd0,   theta0]
+%                                          (default for 'power': [nan,  nan,    2.5/sqrt(2), nan,  30/sqrt(2), 0.03],
+%                                           default for 'phase': [nan,  nan,    sqrt(7.5),   2*pi, 2*pi,       pi/3])
+%       'LB_default' - Lower bounds for the fitting parameters - [amp0, fmean0, fstd0,       pmean0, pstd0,      theta0]
+%                                          (default for 'power': [nan,  nan,    0.1/sqrt(2), nan,    2.5/sqrt(2), -0.03],
+%                                           default for 'phase': [nan,  nan,    1/sqrt(2),   -2*pi,  pi/5,        -pi/3])
 %       'constrain_freq_center' - Keep the frequency center within its configured bounds; false uses [-inf, inf] (default: true)
 %       'constrain_power_center' - Keep the SO-power center within its configured bounds; false uses [-inf, inf] (default: true; power only)
 %       'constrain_phase_center' - Keep the SO-phase center within its configured bounds; false uses [-inf, inf] (default: true; phase only)
 %       'plot_on' - Flag to plot: 0 plot nothing, 1: plot the final result, 2: plot iterations, 3: plot iterations and final (default: 1)
 %       'SOPH_clim_prctiles' - percentiles used to scale the heatmap color on SO feature histograms (default: [5, 98])
 %       'verbose' - Flag to display detailed output (default: true)
-%       'peak_assign_prob' - Confidence level for assigning TF-peaks to fitted modes when computing per-mode Pk* summaries (default: 0.95)
+%       'peak_assign_prob' - Gaussian probability for the power assignment contour and relative-height contour parameter for phase when computing per-mode Pk* summaries (default: 0.95)
 %
-%       Legacy phase prefix modes and custom LB_default/UB_default values made
-%       for the variance-form vmGauss equation must have fstd0 square-rooted
-%       before reuse with the standard-deviation parameterization.
+%       Migrating custom prefix_modes / LB_default / UB_default values. The
+%       Gaussian width slots now accept true standard deviations. Divide a
+%       legacy value by sqrt(2) only when the goal is to preserve the exact
+%       surface produced by the old no-half kernel. For that surface-preserving
+%       conversion, an original variance-form phase value v becomes sqrt(v/2),
+%       while an intervening no-half width w becomes w/sqrt(2). The latter
+%       conversion applies to fstd0 (slot 3) on both axes and pstd0 (slot 5)
+%       for 'power'. If a custom value was intentionally authored as the
+%       desired physical standard deviation, reuse it unchanged; dividing it
+%       by sqrt(2) would change that intended width. Phase pstd0 (slot 5) is
+%       recikappa = 1/sqrt(kappa), a reciprocal-square-root concentration and
+%       local small-angle Gaussian scale rather than a circular standard
+%       deviation. Its kernel is unchanged, so reuse it unchanged.
 %
 %   Output:
 %       default_params: Structure containing the parameters with either default or user-specified values
@@ -110,14 +120,18 @@ default_params_power.min_dr2 = 0.01;
 default_params_power.min_pctr2 = 0.01;
 default_params_power.kneedle_tol = 0.01;
 % fitted parameters follow this order: [amp0, fmean0, fstd0, pmean0, pstd0, theta0];
-default_params_power.UB_default =      [nan,  nan,    2.5,   nan,    30,    0.03];
-default_params_power.LB_default =      [nan,  nan,    0.1,   nan,    2.5,   -0.03];
+% fstd0 and pstd0 are true standard deviations of the rotGauss kernel. The
+% sqrt(2) divisors carry the historical bounds (2.5, 30, 0.1, 2.5) into the
+% standard-deviation convention, so each bound describes the same physical
+% window it always did; only the units of the number moved.
+default_params_power.UB_default =      [nan,  nan,    2.5/sqrt(2),   nan,    30/sqrt(2),  0.03];
+default_params_power.LB_default =      [nan,  nan,    0.1/sqrt(2),   nan,    2.5/sqrt(2), -0.03];
 default_params_power.constrain_freq_center = true;
 default_params_power.constrain_power_center = true;
 default_params_power.plot_on = 1;
 default_params_power.SOPH_clim_prctiles = [5, 98];
 default_params_power.verbose = true;
-% Confidence level for assigning TF-peaks to a mode (the Pk* per-mode
+% Gaussian probability for the power assignment contour (the Pk* per-mode
 % peak-property columns are means over peaks inside this region).
 default_params_power.peak_assign_prob = 0.95;
 
@@ -137,17 +151,22 @@ default_params_phase.criterion = 'minpctr2';
 default_params_phase.min_dr2 = 0.01;
 default_params_phase.min_pctr2 = 0.025;
 default_params_phase.kneedle_tol = 0.01;
-% fitted parameters follow this order: [amp0, fmean0, fstd0,    pmean0, pstd0, theta0];
+% fitted parameters follow this order: [amp0, fmean0, fstd0, pmean0, pstd0, theta0];
 % Two periods retain every circular phase class while allowing fits to cross
 % the +/-pi seam without leaving the phase center completely unbounded.
-default_params_phase.UB_default =      [nan,  nan,    sqrt(15), 2*pi,   2*pi,  pi/3];
-default_params_phase.LB_default =      [nan,  nan,    1,        -2*pi,  pi/5,  -pi/3];
+% fstd0 is a true standard deviation (Hz): the historical bounds were sqrt(15)
+% and 1 in the pre-half convention, so the equivalents are sqrt(15)/sqrt(2) =
+% sqrt(7.5) and 1/sqrt(2). pstd0 is recikappa = 1/sqrt(kappa) (rad), a
+% reciprocal-square-root concentration and local small-angle Gaussian scale;
+% its von Mises kernel is unchanged, so 2*pi and pi/5 are left alone.
+default_params_phase.UB_default =      [nan,  nan,    sqrt(7.5),   2*pi,   2*pi,  pi/3];
+default_params_phase.LB_default =      [nan,  nan,    1/sqrt(2),   -2*pi,  pi/5,  -pi/3];
 default_params_phase.constrain_freq_center = true;
 default_params_phase.constrain_phase_center = true;
 default_params_phase.plot_on = 1;
 default_params_phase.SOPH_clim_prctiles = [5, 98];
 default_params_phase.verbose = true;
-% Confidence level for assigning TF-peaks to a mode (the Pk* per-mode
+% Relative-height contour parameter for phase assignment (the Pk* per-mode
 % peak-property columns are means over peaks inside this region).
 default_params_phase.peak_assign_prob = 0.95;
 

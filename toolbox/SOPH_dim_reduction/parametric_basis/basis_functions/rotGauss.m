@@ -21,7 +21,7 @@ function z = rotGauss(X,Y, amp, ymean, ystd, xmean, xstd, theta)
 %   Equation:
 %       The 2D Gaussian with rotation is computed using the following equation:
 %
-%       z = amp .* exp(-(((Y-ymean).*cos(theta)+(X-xmean).*sin(theta))./ystd).^2-((-(Y-ymean).*sin(theta)+(X-xmean).*cos(theta))./xstd).^2);
+%       z = amp .* exp(-0.5*(((Y-ymean).*cos(theta)+(X-xmean).*sin(theta))./ystd).^2-0.5*((-(Y-ymean).*sin(theta)+(X-xmean).*cos(theta))./xstd).^2);
 %
 %       where:
 %       - amp: Amplitude of the Gaussian
@@ -30,6 +30,12 @@ function z = rotGauss(X,Y, amp, ymean, ystd, xmean, xstd, theta)
 %       - xmean: Mean of the Gaussian along the X-axis
 %       - xstd: Standard deviation of the Gaussian along the X-axis
 %       - theta: Angle of rotation (in radians) for the Gaussian
+%
+%       The factor of one half is what makes ystd and xstd genuine standard
+%       deviations: at one ystd from the center along the rotated Y-axis the
+%       kernel falls to exp(-0.5) of its peak. Squaring the denominator alone
+%       is not enough -- without the half the widths are sqrt(2) times the
+%       standard deviation they are named after.
 %
 %   Example:
 %       % Example usage of the rotGauss function
@@ -65,4 +71,4 @@ function z = rotGauss(X,Y, amp, ymean, ystd, xmean, xstd, theta)
 %   Sleep, 2022; zsac223. https://doi.org
 %
 % =========================================================================
-z = amp .* exp(-(((Y-ymean).*cos(theta)+(X-xmean).*sin(theta))./ystd).^2-((-(Y-ymean).*sin(theta)+(X-xmean)*cos(theta))./xstd).^2);
+z = amp .* exp(-0.5*(((Y-ymean).*cos(theta)+(X-xmean).*sin(theta))./ystd).^2-0.5*((-(Y-ymean).*sin(theta)+(X-xmean)*cos(theta))./xstd).^2);
