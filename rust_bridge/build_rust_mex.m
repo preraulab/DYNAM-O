@@ -230,6 +230,13 @@ end
 fprintf('  %s (%.0f KB) [shared library, required at runtime]\n', ...
     dylib_name, dir(dst_dylib).bytes / 1024);
 
+% Record what these binaries were built from. They are committed to the
+% repo, so without this a checkout cannot tell whether they match the Rust
+% source beside them, and a stale bridge is silent rather than loud.
+manifest_path = write_rust_bridge_manifest(here, rs_root, dylib_name);
+fprintf('  %s [build provenance]\n', 'build_manifest.json');
+fprintf('    recorded at %s\n', manifest_path);
+
 fprintf('\nTo sanity-check:\n');
 fprintf('  extract_tfpeaks_mex(zeros(2), [0 1], [0 1], [], struct(''seg_time'',30,''downsample_f'',1,''downsample_t'',1,''merge_thresh'',11,''trim_vol'',0.8,''dur_min'',1,''dur_max'',5,''bw_min'',1,''bw_max'',15,''freq_min'',-inf,''freq_max'',inf,''ht_db_min'',-inf))\n');
 end

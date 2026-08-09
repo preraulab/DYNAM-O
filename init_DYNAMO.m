@@ -34,7 +34,8 @@ function names = init_DYNAMO(varargin)
 %   <name>` on R2022b+ and falls back to `clear <name>` on older
 %   releases.
 
-    persistent done_root classnames_cache
+    persistent done_root done_gui classnames_cache bridge_checked
+    if isempty(done_gui), done_gui = false; end
 
     flags    = lower(string(varargin));
     do_clear = any(flags == "clear");
@@ -46,6 +47,7 @@ function names = init_DYNAMO(varargin)
     if do_force
         done_root        = '';
         classnames_cache = [];
+        bridge_checked   = [];
     end
 
     already_for_this_repo = ~isempty(done_root) && strcmp(done_root, repo_root);
@@ -81,6 +83,35 @@ function names = init_DYNAMO(varargin)
         addpath(genpath(fullfile(repo_root, 'toolbox')));
     end
     addpath(repo_root);
+
+    % --- Optional: GUI tree.
+    if do_gui && (~done_gui || do_clear || do_force)
+        app_dir = fullfile(repo_root, 'app');
+        if isfolder(app_dir)
+            addpath(genpath(app_dir));
+        end
+        done_gui = true;
+    end
+
+    % --- Warn once per session if the committed MEX binaries are stale
+    %     against the Rust source beside them. The binaries are checked in,
+    %     so a pull can leave them older than the code they were built from,
+    %     and the mismatch is otherwise silent: they load fine and return
+    %     plausible numbers computed by the old Rust. Fails open, since a
+    %     missing DYNAM-O_rs checkout is normal for an end user.
+    if isempty(bridge_checked) || do_force
+        bridge_checked = true;
+        bridge_check = fullfile(repo_root, 'rust_bridge', 'check_rust_bridge.m');
+        if isfile(bridge_check)
+            try
+                addpath(fullfile(repo_root, 'rust_bridge'));
+                check_rust_bridge();
+            catch err
+                warning('init_DYNAMO:bridgeCheckFailed', ...
+                    'Could not verify rust_bridge freshness: %s', err.message);
+            end
+        end
+    end
 
     done_root = repo_root;
 end
