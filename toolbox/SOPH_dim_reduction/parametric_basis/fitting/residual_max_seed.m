@@ -1,9 +1,8 @@
-function [seed_row, found] = residual_max_seed(SOPH_yx, model_SOPH_yx, x_axis, y_axis, accepted_modes, min_freq_diff, axis_kind)
+function [seed_row, found] = residual_max_seed(SOPH_yx, model_SOPH_yx, x_axis, y_axis, accepted_modes, min_freq_diff)
 %RESIDUAL_MAX_SEED  Matching-pursuit seed for iter-add paramfit.
 %
 %   [seed_row, found] = residual_max_seed(SOPH_yx, model_SOPH_yx, ...
-%                                         x_axis, y_axis, accepted_modes, ...
-%                                         min_freq_diff, axis_kind)
+%                                         x_axis, y_axis, accepted_modes, min_freq_diff)
 %
 %   Returns a 1x6 [amp, fmean, fstd, pmean, pstd, theta] seed taken
 %   from the (x, y) argmax of the residual `SOPH_yx - model_SOPH_yx`,
@@ -31,13 +30,6 @@ function [seed_row, found] = residual_max_seed(SOPH_yx, model_SOPH_yx, x_axis, y
 %                        matrix (B0i pre-append).
 %       min_freq_diff  - scalar - freq-exclusion radius (Hz). 0
 %                        disables the freq mask (phase axis convention).
-%       axis_kind      - 'power' or 'phase'. Required, because column 5 is
-%                        polymorphic: it is the SO-power Gaussian standard
-%                        deviation for 'power' but recikappa for 'phase',
-%                        and the two carry different width conventions (see
-%                        the fallback note below). Driving this by column
-%                        index alone would corrupt every phase seed with no
-%                        error raised.
 %
 %   Outputs:
 %       seed_row - [1, 6] double or [] - [amp, fmean, fstd, pmean,
@@ -49,12 +41,10 @@ function [seed_row, found] = residual_max_seed(SOPH_yx, model_SOPH_yx, x_axis, y
 %   (cols 3 and 5), with safety floors so the LM bounds stay
 %   non-degenerate. Theta starts at 0.
 %
-%   The medians ride whatever convention the accepted params already carry,
-%   so they need no rescale. Only the literal fallbacks do: the historical
-%   1.0 Hz and 5.0 were pre-half widths, so they divide by sqrt(2) to keep
-%   the same seeded shape now that the parameters are standard deviations.
-%   The col-5 fallback rescales for 'power' only -- for 'phase' it is
-%   recikappa, which was always a true standard deviation.
+%   The medians and literal fallbacks are priors expressed directly in the
+%   current parameter units. They are not serialized parameters being migrated
+%   to preserve a historical fitted surface, so their numeric values do not
+%   change when the Gaussian kernel is corrected.
 %
 %   See also param_basis_power, param_basis_phase, mode_overlap.
 %
@@ -68,12 +58,6 @@ function [seed_row, found] = residual_max_seed(SOPH_yx, model_SOPH_yx, x_axis, y
 %   GITHUB     https://github.com
 %
 % =========================================================================
-
-assert(nargin >= 7 && (ischar(axis_kind) || isstring(axis_kind)) && ...
-    ismember(lower(char(axis_kind)), {'power', 'phase'}), ...
-    'residual_max_seed:badAxisKind', ...
-    'axis_kind must be supplied as ''power'' or ''phase''.');
-is_phase = strcmpi(axis_kind, 'phase');
 
 [ny, nx] = size(SOPH_yx);
 assert(isequal(size(model_SOPH_yx), [ny, nx]), ...
@@ -118,12 +102,8 @@ amp = max_val;
 % Width priors: median of accepted-mode stds, with safety floors so
 % the LM bounds stay non-degenerate when accepted_modes is empty or
 % all-NaN.
-fstd_fallback = 1.0 / sqrt(2);
-if is_phase
-    pstd_fallback = 5.0;            % recikappa: already a standard deviation
-else
-    pstd_fallback = 5.0 / sqrt(2);  % rotGauss SO-power standard deviation
-end
+fstd_fallback = 1.0;
+pstd_fallback = 5.0;
 if isempty(accepted_modes)
     fstd = fstd_fallback;
     pstd = pstd_fallback;
