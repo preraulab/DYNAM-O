@@ -564,7 +564,7 @@ classdef DYNAMO < handle
             opts_phase = obj.param_basis_phase_options;
             opts_phase.plot_on = false;
 
-            % Per-mode TF-peak summary (Pk*) inputs: assignment confidence +
+            % Per-mode TF-peak summary (Pk*) inputs: assignment contours +
             % the SOPH-included peak population (PeakStage in SOPH_stages).
             pk_tbl = obj.stats_table;
             if istable(pk_tbl) && ~isempty(pk_tbl) && isstruct(obj.SOPH_options) ...
@@ -1562,18 +1562,17 @@ classdef DYNAMO < handle
             %         returned params table.
             %   params: N×6 numeric matrix [amp, fmean, fstd, pmean, pstd, theta]
             %
-            %   .params is returned as a table. The first column is `Density`
-            %   (the rotGauss/vmGauss `amp` coefficient — peak density for
-            %   power, proportion for phase); `Volume` is the closed-form
-            %   integral of the fitted mode surface. Matches the toolbox
-            %   createSOPHparamfitStruct column set.
+            %   .params is returned as a table. The first column is `Density`:
+            %   the raw rotGauss `amp` for power, but an empirical no-sinusoid,
+            %   jointly normalized model height for phase. `Volume` follows
+            %   the toolbox createSOPHparamfitStruct contract described below.
             %   power: Density (peaks/min/bin), FreqMean (Hz), FreqStd (Hz),
             %          SOpowerMean (dB), SOpowerStd (dB), Theta (rad),
             %          Volume (peaks/min), plus (added by fitParamBasis
             %          annotation): PrefPhase (rad), Coupling (proportion/phase-bin).
             %   phase: Density (proportion/phase-bin), FreqMean (Hz), FreqStd (Hz),
             %          SOphaseMean (rad), SOphaseStd (rad), Theta (rad),
-            %          Volume (proportion·rad·Hz).
+            %          Volume (historical standalone-vmGauss area surrogate).
             %
             %   NOTE: power Density is peaks/min/bin; phase Density and the model coupling column are proportion/phase-bin (phase histogram is row-normalized upstream). The SO phase-coupling metric is model-based only (the older raw-histogram argmax and circular-mean estimators have been retired).
             % Per-mode TF-peak summary columns (Pk*) appended by
@@ -1595,12 +1594,14 @@ classdef DYNAMO < handle
             if isempty(params)
                 SOPH_paramfit.params = array2table(zeros(0,numel(vn_full)),'VariableNames',vn_full);
             else
-                % Volume = closed-form integral of the fitted mode surface
-                % (same as the toolbox createSOPHparamfitStruct; every width
-                % is a true standard deviation, so both coefficients come
-                % from int exp(-0.5*(d/sigma)^2) dd = sigma*sqrt(2*pi)):
-                %   power (rotGauss): V = Density·2pi·SOpowerStd·FreqStd
-                %   phase (vmGauss):  V = Density·2pi·besseli(0,k,1)·sqrt(2pi)·FreqStd, k = 1/SOphaseStd^2
+                % Standalone-kernel area (same contract as the toolbox helper):
+                %   power: exact full-plane rotGauss component integral,
+                %     V = Density·2pi·SOpowerStd·FreqStd.
+                %   phase: historical standalone-vmGauss area surrogate,
+                %     V = Density·2pi·besseli(0,k,1)·sqrt(2pi)·FreqStd,
+                %     k = 1/SOphaseStd^2. Density is the empirical no-sinusoid
+                %     height of the full jointly normalized model, so V is not
+                %     the exact integral of an isolated normalized component.
                 density = params(:,1);
                 fstd    = params(:,3);
                 xstd    = params(:,5);

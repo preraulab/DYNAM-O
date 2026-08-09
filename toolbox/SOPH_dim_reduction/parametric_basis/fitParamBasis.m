@@ -13,11 +13,12 @@ function [SOPHs] = fitParamBasis(SOPHs, power_opts, phase_opts, valid_powerhist,
 %   When STATS_TABLE_SOPH (the per-peak TF-peak table) is supplied, each params
 %   table gets per-mode TF-peak summary columns (Pk*) via
 %   annotateModesWithPeakStats: the TF-peaks inside each mode's
-%   peak_assign_prob confidence region from the corresponding options
-%   struct. STATS_TABLE_SOPH should already be restricted to the SOPH peak
-%   population (the caller passes stats_table(hist_peakidx,:)). The Pk*
-%   columns are added regardless (0/NaN without stats) so the params-table
-%   schema is stable.
+%   assignment contour set by peak_assign_prob in the corresponding options
+%   struct. For power this is an enclosed Gaussian-mass probability; for
+%   phase it sets a (1 - peak_assign_prob) relative-height cutoff. STATS_TABLE_SOPH
+%   should already be restricted to the SOPH peak population (the caller
+%   passes stats_table(hist_peakidx,:)). The Pk* columns are added regardless
+%   (0/NaN without stats) so the params-table schema is stable.
 if nargin < 2 || isempty(power_opts); power_opts = param_basis_opts('power'); end
 if nargin < 3 || isempty(phase_opts); phase_opts = param_basis_opts('phase'); end
 if nargin < 4 || isempty(valid_powerhist); valid_powerhist = true; end
