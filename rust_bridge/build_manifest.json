@@ -1,22 +1,22 @@
 {
   "schema": 1,
-  "built_utc": "2026-08-09T19:44:26Z",
-  "mexext": "mexa64",
-  "matlab_release": "2024a",
-  "dylib": "libdynamo_rs.so",
+  "built_utc": "2026-08-09T20:08:50Z",
+  "mexext": "mexmaca64",
+  "matlab_release": "2025b",
+  "dylib": "libdynamo_rs.dylib",
   "dynamo_rs_sha": "b851cb457e1100ecf7b6e3c569a808aa30db2db9",
   "dynamo_rs_branch": "master",
   "dynamo_rs_dirty": false,
   "mex_files": [
-    "baseline_mex.mexa64",
-    "detect_artifacts_mex.mexa64",
-    "dpss_rust_mex.mexa64",
-    "extract_tfpeaks_mex.mexa64",
-    "mask_spectrogram_mex.mexa64",
-    "multitaper_spectrogram_rust_mex.mexa64",
-    "refine_peaks_mex.mexa64",
-    "so_phase_mex.mexa64",
-    "so_power_mex.mexa64",
-    "tfpeak_histogram_mex.mexa64"
+    "baseline_mex.mexmaca64",
+    "detect_artifacts_mex.mexmaca64",
+    "dpss_rust_mex.mexmaca64",
+    "extract_tfpeaks_mex.mexmaca64",
+    "mask_spectrogram_mex.mexmaca64",
+    "multitaper_spectrogram_rust_mex.mexmaca64",
+    "refine_peaks_mex.mexmaca64",
+    "so_phase_mex.mexmaca64",
+    "so_power_mex.mexmaca64",
+    "tfpeak_histogram_mex.mexmaca64"
   ]
 }
