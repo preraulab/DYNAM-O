@@ -7,8 +7,8 @@ function tests = test_paramfit_model_recovery
 %   The power values mirror the Rust paramfit_model_recovery test. All
 %   Gaussian widths are true standard deviations (the kernels carry the factor
 %   of one half); the companion Rust implementation must use the same contract
-%   for cross-language fidelity. Phase recikappa is the exception that proves
-%   the rule: it was always a standard deviation and never rescales.
+%   for cross-language fidelity. Phase recikappa is a reciprocal-square-root
+%   concentration/local small-angle scale whose kernel never changed.
 tests = functiontests(localfunctions);
 end
 
@@ -55,10 +55,10 @@ testCase.verifyEqual(opts.UB_default(3), sqrt(7.5), 'AbsTol', eps);
 end
 
 function test_phase_recikappa_defaults_are_not_rescaled(testCase)
-% recikappa (slot 5) was always a true standard deviation, because the von
-% Mises factor carries its own half. It must NOT move with the Gaussian
-% widths -- rescaling by column index rather than by kernel would corrupt
-% every phase fit with no error raised.
+% recikappa (slot 5) is a reciprocal-square-root concentration/local
+% small-angle scale whose von Mises kernel did not change. It must NOT move
+% with the Gaussian widths -- rescaling by column index rather than by kernel
+% would corrupt every phase fit with no error raised.
 opts = param_basis_opts('phase');
 testCase.verifyEqual(opts.LB_default(5), pi/5, 'AbsTol', eps);
 testCase.verifyEqual(opts.UB_default(5), 2*pi, 'AbsTol', eps);
@@ -135,8 +135,7 @@ testCase.verifyLessThan(abs(power_axis_params(1, 4) - power_mode(4)), 0.1);
 
 phase_bins = linspace(-pi, pi, 41);
 [PHg, Fg] = meshgrid(phase_bins, freq_bins);
-% Only fstd (col 3) rescales -- col 5 is recikappa and was always a standard
-% deviation.
+% Only fstd (col 3) rescales -- col 5 is recikappa and its kernel is unchanged.
 phase_mode = [0.05, 10, 1.5/sqrt(2), 0, 1, 0];
 SOPhH = normalized_vmGauss(PHg, Fg, true, 0, 0, 0.001, ...
     phase_mode(1), phase_mode(2), phase_mode(3), ...
@@ -362,7 +361,7 @@ freq_bins  = linspace(2, 18, 65).';
 % standard deviation in Hz. These values preserve the modeled widths of the
 % historical test modes: the original variance-form entries 2.0 and 2.5 become
 % sqrt(2.0/2) = 1 and sqrt(2.5/2) = sqrt(1.25). recikappa (col 5) never
-% rescales -- the von Mises factor carries its own half.
+% rescales because its von Mises parameterization is unchanged.
 planted = [0.05 11 1           1.0 1.2 0.05; ...
            0.04 15 sqrt(1.25) -1.5 1.5 -0.05];
 [Fg, PHg] = meshgrid(freq_bins, phase_bins);         % [nPhase x nFreq]

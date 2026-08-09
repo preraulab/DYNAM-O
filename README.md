@@ -759,17 +759,24 @@ phase (vmGauss.m),  κ = 1/pstd²
 > columns are these values directly, with no variance ⇄ σ transform at any
 > boundary.
 >
-> Phase `pstd` is **not** a Gaussian σ in the same sense: it is `recikappa`
-> = 1/√κ in radians. It is nonetheless already a true σ, because the von
-> Mises factor is its own small-angle Gaussian
-> (`exp(κ(cos Δ − 1)) → exp(−Δ²/2pstd²)`) and carries the half
-> intrinsically. It therefore takes no ½ of its own, and never moves when
-> the Gaussian widths are rescaled.
+> Phase `pstd` is **not** a Gaussian or circular standard deviation: it is
+> `recikappa` = 1/√κ in radians, the reciprocal-square-root concentration and
+> local small-angle Gaussian scale. Near the phase center,
+> `exp(κ(cos Δ − 1)) → exp(−Δ²/2pstd²)`, but that local approximation does not
+> make `pstd` the global circular standard deviation. The von Mises factor and
+> κ are unchanged by this correction, so `pstd` is not rescaled with the
+> Gaussian widths.
 >
-> ⚠️ Fits written before this convention emitted `FreqStd` and
-> `SOpowerStd` as `√2·σ`. There is no version marker in the `.csv` or
-> `.mat` outputs, so old and new width columns must not be pooled.
-> `SOphaseStd` is unaffected.
+> ⚠️ Legacy output conversion depends on the fit type and code era. Power fits
+> written before this convention emitted `FreqStd` and `SOpowerStd` as the
+> no-half widths `w = √2·σ`; convert either column with `σ = w/√2`. Phase fits
+> written before commit `f3153de` used a variance-form frequency parameter `v`
+> in `exp(-dy²/v)` and emitted that raw value as `FreqStd`; its current
+> equivalent is `σ = √(v/2)`. Phase fits from `f3153de` through the last
+> pre-half release emitted a no-half frequency width `w`, so use `σ = w/√2`.
+> `SOphaseStd` (`recikappa`) is unaffected. The CSV and MAT outputs do not carry
+> a width-convention marker, so legacy and current width columns must not be
+> pooled unconverted.
 
 | Format | What it contains | Reconstruct? |
 |---|---|---|
