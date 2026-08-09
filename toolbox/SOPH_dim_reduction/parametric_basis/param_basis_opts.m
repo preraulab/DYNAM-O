@@ -51,21 +51,21 @@ function default_params = param_basis_opts(type, varargin)
 %       'plot_on' - Flag to plot: 0 plot nothing, 1: plot the final result, 2: plot iterations, 3: plot iterations and final (default: 1)
 %       'SOPH_clim_prctiles' - percentiles used to scale the heatmap color on SO feature histograms (default: [5, 98])
 %       'verbose' - Flag to display detailed output (default: true)
-%       'peak_assign_prob' - Confidence level for assigning TF-peaks to fitted modes when computing per-mode Pk* summaries (default: 0.95)
+%       'peak_assign_prob' - Gaussian probability for the power assignment contour and relative-height contour parameter for phase when computing per-mode Pk* summaries (default: 0.95)
 %
 %       Migrating custom prefix_modes / LB_default / UB_default values. The
-%       Gaussian width slots are now true standard deviations, reached in two
-%       hops, so which hops a value needs depends on when it was authored:
-%         1. Values written for the original variance-form vmGauss equation
-%            (fstd0 entered as a variance v) need BOTH hops: sqrt(v), then
-%            divide by sqrt(2), i.e. sqrt(v/2).
-%         2. Values written for the intervening squared-denominator form
-%            (fstd0 already a width, but with no factor of one half in the
-%            exponent) need only the second hop: divide by sqrt(2).
-%       The second hop applies to fstd0 (slot 3) on both axes and to pstd0
-%       (slot 5) for 'power'. It does NOT apply to phase pstd0 (slot 5), which
-%       is recikappa: the von Mises factor carries its own half, so that value
-%       was always a true standard deviation and must be reused unchanged.
+%       Gaussian width slots now accept true standard deviations. Divide a
+%       legacy value by sqrt(2) only when the goal is to preserve the exact
+%       surface produced by the old no-half kernel. For that surface-preserving
+%       conversion, an original variance-form phase value v becomes sqrt(v/2),
+%       while an intervening no-half width w becomes w/sqrt(2). The latter
+%       conversion applies to fstd0 (slot 3) on both axes and pstd0 (slot 5)
+%       for 'power'. If a custom value was intentionally authored as the
+%       desired physical standard deviation, reuse it unchanged; dividing it
+%       by sqrt(2) would change that intended width. Phase pstd0 (slot 5) is
+%       recikappa = 1/sqrt(kappa), a reciprocal-square-root concentration and
+%       local small-angle Gaussian scale rather than a circular standard
+%       deviation. Its kernel is unchanged, so reuse it unchanged.
 %
 %   Output:
 %       default_params: Structure containing the parameters with either default or user-specified values
@@ -131,7 +131,7 @@ default_params_power.constrain_power_center = true;
 default_params_power.plot_on = 1;
 default_params_power.SOPH_clim_prctiles = [5, 98];
 default_params_power.verbose = true;
-% Confidence level for assigning TF-peaks to a mode (the Pk* per-mode
+% Gaussian probability for the power assignment contour (the Pk* per-mode
 % peak-property columns are means over peaks inside this region).
 default_params_power.peak_assign_prob = 0.95;
 
@@ -156,9 +156,9 @@ default_params_phase.kneedle_tol = 0.01;
 % the +/-pi seam without leaving the phase center completely unbounded.
 % fstd0 is a true standard deviation (Hz): the historical bounds were sqrt(15)
 % and 1 in the pre-half convention, so the equivalents are sqrt(15)/sqrt(2) =
-% sqrt(7.5) and 1/sqrt(2). pstd0 is recikappa (rad), which was ALWAYS a true
-% standard deviation because the von Mises factor carries its own half, so
-% 2*pi and pi/5 are deliberately left alone.
+% sqrt(7.5) and 1/sqrt(2). pstd0 is recikappa = 1/sqrt(kappa) (rad), a
+% reciprocal-square-root concentration and local small-angle Gaussian scale;
+% its von Mises kernel is unchanged, so 2*pi and pi/5 are left alone.
 default_params_phase.UB_default =      [nan,  nan,    sqrt(7.5),   2*pi,   2*pi,  pi/3];
 default_params_phase.LB_default =      [nan,  nan,    1/sqrt(2),   -2*pi,  pi/5,  -pi/3];
 default_params_phase.constrain_freq_center = true;
@@ -166,7 +166,7 @@ default_params_phase.constrain_phase_center = true;
 default_params_phase.plot_on = 1;
 default_params_phase.SOPH_clim_prctiles = [5, 98];
 default_params_phase.verbose = true;
-% Confidence level for assigning TF-peaks to a mode (the Pk* per-mode
+% Relative-height contour parameter for phase assignment (the Pk* per-mode
 % peak-property columns are means over peaks inside this region).
 default_params_phase.peak_assign_prob = 0.95;
 
