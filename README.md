@@ -17,21 +17,10 @@ siblings, see the parent meta-repo:
 
 ---
 
-## Start here — the DYNAM-O App (GUI)
+## Start here
 
-The **DYNAM-O App** is the primary interface for DYNAM-O. It is a
-graphical application for loading EDF recordings and hypnograms,
-configuring channels and analysis options, and running batch analyses
-across many subjects without writing MATLAB code. Standalone (compiled)
-executables for macOS, Windows, and Linux are in development; until those
-ship, the DYNAM-O App runs inside MATLAB.
-
-- **DYNAM-O App guide:** [`DYNAMOApp_README.md`](DYNAMOApp_README.md)
-- **Launch from MATLAB:** `runApp` (sets up the path, then opens the DYNAM-O App)
-
-Most users should start with the DYNAM-O App. The rest of this README
-covers the **MATLAB DYNAM-O API** — `runDYNAMO`, the `DYNAMO` class, and
-the underlying pipeline functions — for users writing their own analysis
+This README covers the **MATLAB DYNAM-O API** — `runDYNAMO`, the `DYNAMO`
+class, and the underlying pipeline functions — for writing analysis
 scripts or integrating DYNAM-O into a larger MATLAB workflow.
 
 ---
@@ -64,7 +53,6 @@ histograms.
 - [Main Pipeline Functions](#main-pipeline-functions)
   - [runDYNAMO](#rundynamo)
   - [DYNAMO (OOP class)](#dynamo-oop-class)
-  - [DYNAMOApp (GUI)](#dynamoapp-gui)
   - [Key Sub-Functions](#key-sub-functions)
 - [Options](#options)
   - [Detection Options](#detection-options-detection_opts)
@@ -74,7 +62,7 @@ histograms.
   - [stats_table](#stats_table--tf-peak-features)
   - [SOPHs](#sophs--histogram-struct)
   - [timings](#timings--per-stage-wallclock)
-- [Saved file formats (GUI batch outputs)](#saved-file-formats-gui-batch-outputs)
+- [Saved file formats (batch outputs)](#saved-file-formats-batch-outputs)
 - [Unit tests](#unit-tests)
 - [Repository Structure](#repository-structure)
 - [Algorithm details and background](#algorithm-details-and-background)
@@ -132,7 +120,7 @@ DYNAM-O ships two pipeline backends:
 | `'matlab'` | ~220–300 s | authoritative | None — works out of the box with MATLAB only |
 
 <details>
-<summary><b>How to select the backend</b> — call site, options struct, or GUI</summary>
+<summary><b>How to select the backend</b> — call site or options struct</summary>
 
 Pick at call time:
 
@@ -148,9 +136,6 @@ opts = detection_opts('backend', 'matlab');
 runDYNAMO(data, Fs, stage_times, stage_vals, opts);
 ```
 
-The GUI (`DYNAMOApp` / `DYNAMOOptionsApp`) also surfaces the
-`backend` setting as a dropdown on the Detection options panel — no
-command-line override needed.
 
 </details>
 
@@ -263,16 +248,6 @@ Use `runDYNAMO` for one-shot scripted or batch analysis. Use the `DYNAMO`
 class when you want to iterate on options against the same recording
 without reloading the data — re-run with different SOPH bin sizes or fit
 settings via `d.updateOptions(...)` and `d.runDYNAMO()`.
-
-### GUI batch processing
-
-```matlab
-runApp
-```
-
-<p align="right"><sub><a href="#table-of-contents">↑ Back to Table of Contents</a></sub></p>
-
----
 
 ## Recipes (advanced usage)
 
@@ -434,22 +409,6 @@ fh = d.displaySummaryPlot();
 | `fitSplineBasis()` | Fit spline basis |
 | `displaySummaryPlot()` | Generate summary figure |
 | `displayTFPeaks()` | Overlay peaks on spectrogram |
-
----
-
-### `DYNAMOApp` (GUI)
-
-App Designer application for batch processing EDF polysomnography files.
-
-```matlab
-runApp
-```
-
-- Add / remove EDF and staging file pairs
-- Channel selection and staging format configuration
-- Configure all pipeline options via the GUI
-- Save outputs: figures, stats tables, parametric fits, spline fits
-- Batch progress tracking with per-file logging
 
 ---
 
@@ -655,7 +614,7 @@ Optional 9th output. Struct with per-stage wallclock seconds.
 
 ---
 
-## Saved file formats (GUI batch outputs)
+## Saved file formats (batch outputs)
 
 The DYNAM-O App writes per-subject results into
 `<output_dir>/<channel>/<subdir>/`. For each artefact type the
@@ -973,7 +932,6 @@ so the nine assertion sub-tests cost milliseconds each.
 DYNAM-O/
 ├── DYNAMO.m                         OOP pipeline class
 ├── runDYNAMO.m                      Functional pipeline entry point
-├── runApp.m                         GUI launcher (toolbox + app on path, opens DYNAMOApp)
 ├── init_DYNAMO.m                    Path setup + class-cache reset (replaces DYNAMO_addpath / clearDynamoClasses)
 ├── example_data/
 │   ├── example_data.mat             Single-channel sleep EEG example
@@ -992,18 +950,6 @@ DYNAM-O/
 │   ├── tfpeak_histogram_mex.c              SOpower / SOphase histogram MEX
 │   ├── multitaper_spectrogram_rust_mex.c   Multitaper spectrogram MEX
 │   └── *.mex{a64,maca64,maci64,w64}        Platform-specific binaries
-├── app/                             GUI lives here (compile target for mcc -m)
-│   ├── @DYNAMOApp/          Class folder (split-file methods)
-│   │   ├── DYNAMOApp.m      Properties + constructor + most methods
-│   │   ├── createUIFigureAndShell.m Builder: figure, File menu, outer tabs
-│   │   ├── createBatchSetupTab.m    Builder: File Selection + Runtime Options
-│   │   ├── createBottomBar.m        Builder: status, RUN/STOP, Help, progress
-│   │   ├── createResultsBrowserTab.m Builder: tree + preview pane
-│   │   ├── createAnalysisTab.m      Builder: SO-Histograms host
-│   │   └── finalizeUI.m             Builder: Help menu (rightmost), tooltips
-│   ├── +results_browser/            Package: 19 helpers for the Results Browser
-│   └── components/
-│       └── CSSuicontrols/           Submodule: HTML-backed UI controls
 └── toolbox/                         Pure science (importable headlessly via init_DYNAMO)
     ├── dynamo_version.m             '<branch>@<sha>[.dirty]' build identifier
     ├── TFpeak_functions/            Watershed TF-peak extraction
@@ -1026,7 +972,19 @@ DYNAM-O/
     ├── SOpowphase_functions/        SO-power/phase computation and histograms
     ├── SOPH_dim_reduction/          Parametric and spline fitting
     ├── TFsigma_peak_detector/       Alternative sigma-band peak detector
-    └── helper_functions/            Multitaper, artifacts, EDF, plotting, tests, …
+    └── helper_functions/            Shared helpers and pinned library submodules
+        ├── multitaper_toolbox/      Submodule: multitaper spectral estimation
+        ├── statistical_tests/       Submodule: preraulab/multicomp_test
+        ├── artifact_detection/      Submodule: EEG artifact detection
+        ├── EDF_toolbox/             Submodule: EDF/EDF+ I/O
+        ├── data_processing/         Submodule: signal and index manipulation
+        ├── binning/                 Submodule: 1-D and N-D binning
+        ├── conversion/              Submodule: data representation conversion
+        ├── nanstats/                Submodule: NaN-aware statistics
+        ├── graphical/               Submodule: higher-level plotting
+        ├── fig_tools/               Submodule: figure and axes utilities
+        ├── colormaps/               Submodule: MATLAB colormaps
+        ├── sleep/                   Submodule: sleep EEG analysis
         └── dynamo_helpers/          Run-record + settings infrastructure
             ├── generate_run_log.m            Write per-run options struct to JSON (safe, no eval)
             ├── load_run_log.m                Read run-settings JSON (replaces legacy `run()` loader)
@@ -1037,39 +995,47 @@ DYNAM-O/
             └── dynamo_seed_index_from_cache.m  Generic seeder (consumed by both walkers)
 ```
 
-The toolbox is GUI-free: a script that does `init_DYNAMO; runDYNAMO(...)`
-never sees `app/` on its path. The launcher (`runApp.m`) calls
-`init_DYNAMO('clear','gui')` so `app/` and `app/components/` are
-layered on top for the GUI flow. `app/` is the natural
-`mcc -m` compile target.
+The toolbox is a library: `init_DYNAMO; runDYNAMO(...)` is the whole
+setup. There is no separate application tree.
 
 ### Included Submodules
 
-DYNAM-O depends on several standalone libraries included as Git submodules. The toolbox-side submodules live under `toolbox/helper_functions/`; the GUI's UI-control library lives under `app/components/`. All are cloned automatically with `--recursive` (see [Installation](#installation)).
+DYNAM-O depends on several standalone libraries included as Git submodules, all under `toolbox/helper_functions/`. All are cloned automatically with `--recursive` (see [Installation](#installation)).
 
-> [!IMPORTANT]
-> If you already have a checkout from before the `app/components/CSSuicontrols`
-> path was introduced, run once after pulling:
-> ```bash
-> git submodule sync && git submodule update --init --recursive
-> ```
-> This flips your local `.git/config` to point CSSuicontrols at its new path.
-
-| Submodule | Repository | Description |
+| Submodule directory | Repository | Description |
 |---|---|---|
-| **Multitaper Spectrogram** | [preraulab/multitaper_toolbox](https://github.com/preraulab/multitaper_toolbox) | Multitaper spectral estimation (MATLAB, Python, R, Rust). Provides the time-frequency decomposition underlying TF-peak detection and SO-power computation. Includes an optimized C MEX implementation. |
-| **Artifact Detection** | [preraulab/artifact_detection](https://github.com/preraulab/artifact_detection) | Detects and removes artifacts in EEG time series using high-frequency and broadband filtering with adaptive z-score thresholding. Includes Hjorth feature-based detection. |
-| **Read EDF** | [preraulab/read_EDF](https://github.com/preraulab/read_EDF) | Reads European Data Format (EDF/EDF+) files with full metadata extraction, per-signal scaling, and optional MEX acceleration. Includes a GUI for exploring EDF headers. |
-| **Statistical Tests** | [preraulab/multicomp_test](https://github.com/preraulab/multicomp_test) | Permutation-based statistical tests and false discovery rate (FDR) correction for multi-dimensional data. Provides `permtest`, `gpermtest`, `FDR_1D`, and `FDR_2D`. |
-| **CSSuicontrols** | [preraulab/CSSuicontrols](https://github.com/preraulab/CSSuicontrols) | CSS-styled HTML-backed UI controls for MATLAB App Designer. Powers the progress bar, text areas, buttons, and other custom widgets in DYNAMOApp. Lives at `app/components/CSSuicontrols/`. |
+| **multitaper_toolbox** | [preraulab/multitaper_toolbox](https://github.com/preraulab/multitaper_toolbox) | Multitaper spectral estimation for MATLAB, Python, R, and Rust. |
+| **statistical_tests** | [preraulab/multicomp_test](https://github.com/preraulab/multicomp_test) | Permutation and FDR-controlled multiple-comparison tests for 1-D and 2-D MATLAB data. |
+| **artifact_detection** | [preraulab/artifact_detection](https://github.com/preraulab/artifact_detection) | Iterative z-score artifact detection for continuous time-series data, primarily sleep EEG. |
+| **EDF_toolbox** | [preraulab/EDF_toolbox](https://github.com/preraulab/EDF_toolbox) | EDF/EDF+ reading, writing, resampling, and batch processing for MATLAB. |
+| **data_processing** | [preraulab/data_processing](https://github.com/preraulab/data_processing) | Generic MATLAB signal and index manipulation utilities. |
+| **binning** | [preraulab/binning](https://github.com/preraulab/binning) | MATLAB utilities for 1-D and N-D binning and sliding-window histograms. |
+| **conversion** | [preraulab/conversion](https://github.com/preraulab/conversion) | MATLAB utilities for type, format, and representation conversions. |
+| **nanstats** | [preraulab/nanstats](https://github.com/preraulab/nanstats) | NaN-aware statistical helpers for MATLAB. |
+| **graphical** | [preraulab/graphical](https://github.com/preraulab/graphical) | Higher-level MATLAB plotting primitives. |
+| **fig_tools** | [preraulab/fig_tools](https://github.com/preraulab/fig_tools) | MATLAB figure layout, axes linking, and interactive pan/zoom controls. |
+| **colormaps** | [preraulab/colormaps](https://github.com/preraulab/colormaps) | Perceptually uniform and custom MATLAB colormaps. |
+| **sleep** | [preraulab/sleep](https://github.com/preraulab/sleep) | Sleep EEG staging, hypnograms, slow-wave extraction, and simulations. |
+| **CSSuicontrols** | [preraulab/CSSuicontrols](https://github.com/preraulab/CSSuicontrols) | CSS-styled HTML-backed UI controls for MATLAB `uifigure` apps. |
 
-> [!NOTE]
-> To update all submodules to their latest versions:
-> ```bash
-> git submodule update --recursive --remote
-> ```
-> This updates the working trees only — `git add` and commit the bumped
-> submodule pointers in the parent repo to land them.
+### Update Submodules
+
+**Users** should initialize submodules and check out the exact revisions recorded
+by DYNAM-O:
+
+```bash
+git submodule update --init --recursive
+```
+
+**Developers** who intend to update dependencies to the latest commits on their
+configured branches should run:
+
+```bash
+git submodule update --init --recursive --remote
+```
+
+Developers are responsible for reviewing the resulting changes and committing
+the updated submodule pointers in the parent DYNAM-O repository.
 
 ### Required MATLAB Toolboxes
 
@@ -1169,7 +1135,7 @@ The mechanism: multitaper NFFT = `2^nextpow2(Fs / mtm_dsfreqs)` (default `mtm_ds
 | 500, 512 | 8192 | ~9.3× |
 | 1000 | 16384 | ~18× |
 
-The DYNAMOApp has Resample = ON at 100 Hz by default. For scripted callers (`runDYNAMO`, `DYNAMO` class):
+For scripted callers (`runDYNAMO`, `DYNAMO` class):
 
 ```matlab
 [p, q] = rat(100 / Fs);
