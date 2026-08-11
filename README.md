@@ -63,6 +63,7 @@ histograms.
   - [SOPHs](#sophs--histogram-struct)
   - [timings](#timings--per-stage-wallclock)
 - [Saved file formats (batch outputs)](#saved-file-formats-batch-outputs)
+- [Reading and writing the DYNAM-O output tree](#reading-and-writing-the-dynam-o-output-tree)
 - [Unit tests](#unit-tests)
 - [Repository Structure](#repository-structure)
 - [Algorithm details and background](#algorithm-details-and-background)
@@ -896,6 +897,76 @@ action. The aggregate `.tiff`s are multi-page (one page per subject)
 with the same `ImageDescription` bin metadata and a sibling
 `*_subjectIDs.txt` listing subject IDs in page order; the
 aggregate `.mat`s carry concatenated histogram and paramfit tables.
+
+<p align="right"><sub><a href="#table-of-contents">↑ Back to Table of Contents</a></sub></p>
+
+---
+
+## Reading and writing the DYNAM-O output tree
+
+The compute functions are in-memory-only; a set of helpers in
+`toolbox/helper_functions/dynamo_helpers/` serializes their returned
+results to the canonical on-disk tree shared by `dynamo-cli`, the
+desktop app, and `pydynamo`, and reads any tree those tools wrote. The
+normative spec is `documents/OUTPUT_FORMAT.md` in the
+[DYNAM-O_DesktopApp](https://github.com/preraulab/DYNAM-O_DesktopApp)
+repo — §1-2 for the tree layout and filenames, §8 for the provenance
+stamp every artifact carries.
+
+Writer / reader pairs, one per artifact:
+
+| Artifact | Writer | Reader |
+|---|---|---|
+| TF-peak stats CSV (`TFpeaks/`) | `writeStatsTableCsv` | `loadStatsTable` |
+| Paramfit CSV (`param_basis/`) | `writeParamfitCsv` | `loadParamfitCsv` |
+| SOPH TIFF (`SOPHs/`) | `writeSOPHsTiff` | `loadSOPHsTiff` |
+| Splinefit TIFF (`spline_basis/`) | `writeSplinefitTiff` | `imread` pages 1-2 + `imfinfo` metadata |
+| Auxiliary HDF5 (`auxiliary_data/`) | `writeAuxH5` | `loadAuxData` |
+
+`batch_script` calls all of them for you (the `SaveAppTree` flag);
+the individual functions are for custom pipelines and for reading
+trees produced by the other tools. Readers accept the legacy formats
+per the spec's §8.3 tolerance rules and return the recovered
+provenance alongside the data.
+
+**The provenance stamp.** Every artifact records what code produced it
+using four keys: `format` (an integer schema version, counted per
+artifact type), `writer` (`dynamo-matlab` for this toolbox), `writer_version`
+(the writing tool's build), and `kernel_version` (the build that
+computed the numbers). Version values share one grammar:
+
+```
+<semver>+<sha12>[.dirty]   e.g. 1.0.0+ab12cd34ef56.dirty
+```
+
+with the literal `unknown` as the fail-soft when git metadata is
+unavailable. The semver half comes from the `DYNAMO_TOOLBOX_VERSION`
+constant and the sha from the checkout, composed by `dynamo_version`.
+Every writer takes a stamp struct built by `dynamo_stamp`:
+
+- `dynamo_stamp()` records the loaded `dynamo_rs` kernel build (via
+  `dynamo_kernel_version`) — use it when the Rust backend computed
+  the results.
+- `dynamo_stamp('matlab-native')` marks results computed entirely on
+  the pure-MATLAB path (`backend 'matlab'`). The literal
+  `matlab-native` in a `kernel_version` always means no Rust kernel
+  was involved.
+
+```matlab
+% Load a stats CSV (any of formats 1/2/3) and inspect its stamp
+[T, stamp] = loadStatsTable('C3/TFpeaks/S001_stats_table_C3.csv');
+fprintf('format %d, %s %s (kernel %s)\n', stamp.format, ...
+    stamp.writer, stamp.writer_version, stamp.kernel_version);
+
+% Write it back out with this session's provenance
+writeStatsTableCsv('S001_stats_table_C3.csv', T, dynamo_stamp(), ...
+    'subjectID', 'S001');
+```
+
+One stamp rule has teeth: paramfit CSV format 1 stored sqrt(2)-scaled
+sigma widths, so `aggregate_DYNAMO_outputs` refuses to pool it with
+formats 2/3 (a hard error, not a warning). Check the `format` returned
+by `loadParamfitCsv` before doing any custom pooling of your own.
 
 <p align="right"><sub><a href="#table-of-contents">↑ Back to Table of Contents</a></sub></p>
 
