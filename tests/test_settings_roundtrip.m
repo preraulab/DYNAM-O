@@ -36,7 +36,9 @@ testCase.TestData.names = { ...
     'run_start', '20260505_103000', ...
     'file_path', testCase.TestData.tmpDir);
 testCase.TestData.fname = fname;
-testCase.TestData.S = load_run_log(fullfile(testCase.TestData.tmpDir, fname));
+% generate_run_log writes into the canonical <out>/settings/ subfolder.
+testCase.TestData.settingsDir = fullfile(testCase.TestData.tmpDir, 'settings');
+testCase.TestData.S = load_run_log(fullfile(testCase.TestData.settingsDir, fname));
 end
 
 function teardownOnce(testCase)
@@ -53,7 +55,7 @@ end
 function test_no_matlab_code_in_payload(testCase)
 % A byte-level guard: even a malformed jsonencode shouldn't slip an `eval`
 % or `system` token into the file. Reject obvious red flags.
-text = fileread(fullfile(testCase.TestData.tmpDir, testCase.TestData.fname));
+text = fileread(fullfile(testCase.TestData.settingsDir, testCase.TestData.fname));
 testCase.verifyEmpty(regexp(text, '(^|[^\w])(eval|system|run)\s*\(', 'once'), ...
     'Settings file contains a MATLAB-code-looking call.');
 end
