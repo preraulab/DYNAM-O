@@ -659,8 +659,8 @@ M  = sio.loadmat('subj01_stats_table_C3.mat', squeeze_me=True)
 
 Per-subject 2-D histograms of TF-peak rate by frequency × SO-feature
 (SO-power and SO-phase). The toolbox writes one file per axis
-(`*_SOPHs_<channel>` for `.mat`; `*_SOpower_SOPHs_<channel>` and
-`*_SOphase_SOPHs_<channel>` for `.tiff`).
+(`*_SOPHs_<channel>` for `.mat`; `*_SOPHs_power_<channel>` and
+`*_SOPHs_phase_<channel>` for `.tiff`).
 
 | Format | What it contains | Reconstruct? |
 |---|---|---|
@@ -669,8 +669,8 @@ Per-subject 2-D histograms of TF-peak rate by frequency × SO-feature
 
 ```matlab
 % MATLAB — read .tiff + bins
-M    = imread('subj01_SOpower_SOPHs_C3.tiff');
-info = imfinfo('subj01_SOpower_SOPHs_C3.tiff');
+M    = imread('subj01_SOPHs_power_C3.tiff');
+info = imfinfo('subj01_SOPHs_power_C3.tiff');
 meta = jsondecode(info(1).ImageDescription);  % .freq_bins, .SOpower_bins
 % MATLAB — read .mat
 S    = load('subj01_SOPHs_C3.mat');           % S.SOPHs.*
@@ -679,7 +679,7 @@ S    = load('subj01_SOPHs_C3.mat');           % S.SOPHs.*
 ```python
 # Python — read .tiff + bins
 import json, tifffile, numpy as np, scipy.io as sio
-with tifffile.TiffFile('subj01_SOpower_SOPHs_C3.tiff') as tf:
+with tifffile.TiffFile('subj01_SOPHs_power_C3.tiff') as tf:
     M    = tf.asarray()
     meta = json.loads(tf.pages[0].tags['ImageDescription'].value)
 freq_bins, sopower_bins = meta['freq_bins'], meta['SOpower_bins']
@@ -854,7 +854,8 @@ Results Browser and the aggregation step.
 Per-run JSON snapshot of every options struct (`detection_options`,
 `baseline_options`, `SOPH_options`, the four basis-fit options
 structs, etc.) plus a `run_start` timestamp and a `schema_version`.
-Written by `generate_run_log` as `run_settings_<timestamp>.json`,
+Written by `generate_run_log` as `batch_settings_<timestamp>.json`
+under `<out>/settings/`,
 read back by `load_run_log` (and by the DYNAM-O App's "Load
 settings" action). The format is pure data — no executable code —
 so loading a settings file from another user is safe. `Inf`, `-Inf`,
@@ -864,7 +865,7 @@ mixed numeric/sentinel entries and decoded back to numeric vectors.
 
 ```matlab
 % MATLAB
-opts = load_run_log('run_settings_260504_165939.json');
+opts = load_run_log('settings/batch_settings_260504_165939.json');
 % opts.detection_options, opts.baseline_options, ...
 ```
 
