@@ -616,9 +616,15 @@ Optional 9th output. Struct with per-stage wallclock seconds.
 
 ## Saved file formats (batch outputs)
 
-The DYNAM-O App writes per-subject results into
-`<output_dir>/<channel>/<subdir>/`. For each artefact type the
-**Saving Options** panel exposes a checkbox (save / don't save) and a
+Batch runs write per-subject results into the canonical per-channel
+tree `<output_dir>/<channel>/<subdir>/` shared by `batch_script`
+(the `SaveAppTree` flag, on by default), the DYNAM-O desktop app, and
+`dynamo-cli`. The normative spec for the tree layout, filenames, and
+per-artifact schemas is `documents/OUTPUT_FORMAT.md` in the
+[DYNAM-O_DesktopApp](https://github.com/preraulab/DYNAM-O_DesktopApp)
+repo (§1-2 for the tree, §8 for the provenance stamp); this section is
+a MATLAB-flavored summary. In the desktop app the **Saving Options**
+panel exposes a checkbox per artefact type (save / don't save) and a
 file-format dropdown with `--`, a slim format, `.mat`, and `All`.
 Default for all four save formats is `All` so reconstruction is
 always possible — pick a single format only when you know what you
@@ -627,14 +633,16 @@ need.
 This section documents what each format contains, when it's
 sufficient, and minimal read snippets in MATLAB and Python.
 
-### Peak stats table — `stats_table/`
+### Peak stats table — `TFpeaks/`
 
 Per-subject TF-peak feature table (one row per detected peak; columns
-described in [stats_table](#stats_table--tf-peak-features)).
+described in [stats_table](#stats_table--tf-peak-features)). The
+canonical directory is `TFpeaks/`; legacy MATLAB output used a
+`stats_table/` folder, and readers of old trees should look there too.
 
 | Format | What it contains | Reconstruct? |
 |---|---|---|
-| `.csv` | All scalar columns from `stats_table` | ✅ full |
+| `.csv` | All scalar columns from `stats_table`, plus a `#` provenance preamble (format 3) | ✅ full |
 | `.mat` | `stats_table` table variable | ✅ full |
 | `All`  | both | ✅ full |
 
@@ -643,15 +651,15 @@ keeping native MATLAB `categorical`s and round-tripping into other
 DYNAM-O calls without re-typing.
 
 ```matlab
-% MATLAB
-T = readtable('subj01_stats_table_C3.csv');
+% MATLAB — loadStatsTable accepts stamped and legacy layouts
+[T, stamp] = loadStatsTable('subj01_stats_table_C3.csv');
 S = load('subj01_stats_table_C3.mat');  T = S.stats_table;
 ```
 
 ```python
 # Python
 import pandas as pd, scipy.io as sio
-T  = pd.read_csv('subj01_stats_table_C3.csv')
+T  = pd.read_csv('subj01_stats_table_C3.csv', comment='#')
 M  = sio.loadmat('subj01_stats_table_C3.mat', squeeze_me=True)
 ```
 
@@ -845,9 +853,15 @@ with tifffile.TiffFile('subj01_SOpower_splinefit_C3.tiff') as tf:
 
 ### Auxiliary data — `auxiliary_data/`
 
-Per-subject `.mat` only. Contains `artifacts`, `Fs`,
-`SOpower_norm_method`, and other run-time scalars used by the
-Results Browser and the aggregation step.
+Per-subject `.h5` (the canonical format, written by `writeAuxH5`).
+Flat top-level datasets carry `Fs`, `subjectID`, the native-grid
+`SOpower_norm` series with its `SOpower_t_start` / window params,
+`SOpower_norm_method`, `artifact_spans`, and the staging vectors, plus
+the provenance stamp datasets (aux format 2). Read it back with
+`loadAuxData`, which splits the stamp from the data and tolerates its
+absence in older files. A per-subject `.mat` sidecar remains as the
+legacy format from older releases; `convert_aux_to_compact` migrates
+either layout to the compact schema in place.
 
 ### Run settings — `settings/`
 
