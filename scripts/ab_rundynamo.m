@@ -100,7 +100,7 @@ for ci = 1:size(classes, 1)
             if verbose, fprintf('  ok: %s\n', rel); end
         else
             report.mismatched{end+1, 1} = {rel, detail}; %#ok<AGROW>
-            if verbose, fprintf('  MISMATCH %s — %s\n', rel, detail); end
+            if verbose, fprintf('  MISMATCH %s: %s\n', rel, detail); end
         end
     end
 end

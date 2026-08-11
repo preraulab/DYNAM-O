@@ -447,7 +447,7 @@ if nargin < 3 || isempty(progFcn), progFcn = @(varargin) []; end
 % and refuse to pool paramfit format 1 with formats 2/3. Format 1 stored
 % sqrt(2)-scaled sigma widths (FreqStd, SO*Std), so averaging or
 % scatter-pooling it against true-sigma files silently corrupts the
-% aggregate — that mix is a hard error, not a warning. Mixed 2/3 (same
+% aggregate, so that mix is a hard error, not a warning. Mixed 2/3 (same
 % numerics, different preamble) and mixed writer builds are recorded as
 % warnings.
 if strcmp(fmt, 'csv')

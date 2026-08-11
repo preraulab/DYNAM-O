@@ -173,7 +173,7 @@ for ii = 1:length(scoring_fpaths)
     % separately)
     close all;
 
-    % Legacy flat saves — .mat is HDF5 internally (-v7.3) so h5py /
+    % Legacy flat saves. The .mat files are HDF5 internally (-v7.3) so h5py /
     % h5dump can read these files directly without a MATLAB round-trip.
     % Unstamped, byte-compatible with what earlier releases wrote.
     if SaveLegacyMat %#ok<NODEF>
