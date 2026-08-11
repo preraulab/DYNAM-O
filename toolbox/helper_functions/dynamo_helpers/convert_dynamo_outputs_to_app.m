@@ -6,7 +6,8 @@ function report = convert_dynamo_outputs_to_app(root, varargin)
 %   order, the three component converters:
 %       1. aux files   -> convert_aux_to_compact   (native SOpower, spans, uint8)
 %       2. SOPH/spline TIFFs -> convert_tiffs_to_f32 (f64 -> f32 + JSON aliases)
-%       3. stats CSVs  -> convert_stats_csv_to_app  (16-col schema, no subjectID)
+%       3. stats CSVs  -> convert_stats_csv_to_app  (verify-only: flags any
+%          layout loadStatsTable cannot read; no in-place rewriting)
 %   Each is idempotent and writes .bak backups by default, so this is safe to
 %   re-run and safe to interrupt.
 %
