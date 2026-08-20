@@ -18,9 +18,9 @@ function [ok, report] = check_rust_bridge(varargin)
 %                Rust source, OR when there is no bridge to check. False
 %                only when a genuine mismatch is detected.
 %       report : struct - fields `state` (char, one of 'ok', 'stale',
-%                'dirty', 'no_manifest', 'no_bridge', 'unknown'),
-%                `message` (char), and, when a manifest was read,
-%                `manifest` (struct).
+%                'dirty', 'runtime_mismatch', 'no_manifest', 'no_bridge',
+%                'unknown'), `message` (char), and, when a manifest was
+%                read, `manifest` (struct).
 %
 %   Notes:
 %       Fails OPEN by design. An unverifiable bridge warns but does not
@@ -78,6 +78,34 @@ catch err
     return
 end
 m = report.manifest;
+
+% Strongest check first: ask the LOADED library its own build identity
+% (dynamo_version_mex, DYNAM-O_rs >= 0.2.1) and compare against what the
+% manifest says was built. A mismatch means the dylib beside the MEX
+% binaries is not the one the manifest describes — the manifest's
+% provenance is unreliable for this session. Fails open like the rest.
+if exist('dynamo_version_mex', 'file') == 3
+    try
+        loaded = dynamo_version_mex();          % '<semver>+<sha12>[.dirty]'
+        plus_pos = strfind(loaded, '+');
+        loaded_sha = strrep(loaded(plus_pos(1)+1:end), '.dirty', '');
+        built_sha12 = getfield_or(m, 'dynamo_rs_sha', '');
+        built_sha12 = built_sha12(1:min(12, numel(built_sha12)));
+        if ~isempty(built_sha12) && ~strcmp(loaded_sha, 'unknown') ...
+                && ~strcmp(loaded_sha, built_sha12)
+            report.state = 'runtime_mismatch';
+            report.message = sprintf(['the loaded dynamo_rs library reports build %s, but ' ...
+                'build_manifest.json records @ %s. The library beside the MEX binaries is ' ...
+                'not the one the manifest describes; rebuild with build_rust_mex to ' ...
+                'restore trustworthy provenance.'], loaded, short(getfield_or(m, 'dynamo_rs_sha', '')));
+            ok = true;
+            emit(quiet, report.message);
+            return
+        end
+    catch
+        % Gateway unloadable: fall through to the manifest-vs-checkout check.
+    end
+end
 
 % The Rust checkout normally sits beside DYNAM-O in the bootstrap layout.
 repo_root = fileparts(bridge_dir);

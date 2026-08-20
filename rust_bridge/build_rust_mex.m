@@ -92,6 +92,16 @@ sources = {'extract_tfpeaks_mex.c', ...
     'so_power_mex.c', ...
     'so_phase_mex.c'};
 
+% dynamo_version_mex needs the version symbols introduced in
+% DYNAM-O_rs 0.2.1 (dynamo_version / dynamo_c_abi_version). Against an
+% older checkout the gateway is skipped rather than failing the build.
+if contains(fileread(hdr), 'dynamo_version(')
+    sources{end+1} = 'dynamo_version_mex.c';
+else
+    fprintf(['dynamo_rs.h declares no dynamo_version(); skipping ' ...
+        'dynamo_version_mex.c (DYNAM-O_rs < 0.2.1).\n']);
+end
+
 % Build options. Using the classic C MEX API (mxGetPr / mxGetData) —
 % -R2018a would pull in mexAdapter symbols for .cpp files and fail to
 % link on Apple Silicon. Classic API works everywhere and is enough
