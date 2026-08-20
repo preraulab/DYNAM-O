@@ -17,12 +17,14 @@ classdef DYNAMORunLogger < handle
     %   ∿∿∿  Prerau Laboratory MATLAB Codebase · sleepEEG.org  ∿∿∿
 
     properties (SetAccess = private)
-        Path        = ''
-        RunID       = ''
-        Host        = ''
-        User        = ''
-        Pid         = NaN
-        CodeVersion = ''
+        Path          = ''
+        RunID         = ''
+        Host          = ''
+        User          = ''
+        Pid           = NaN
+        CodeVersion   = ''            % dynamo_version() grammar '<semver>+<sha12>[.dirty]'
+        Writer        = 'dynamo-matlab'
+        KernelVersion = ''            % dynamo_kernel_version() or 'unknown'
         StartTime
     end
 
@@ -50,6 +52,7 @@ classdef DYNAMORunLogger < handle
             obj.RunID       = sprintf('%s_%s_pid%d', ...
                 DYNAMORunLogger.sanitize(obj.Host), ts, obj.Pid);
             obj.CodeVersion = DYNAMORunLogger.detectCodeVersion();
+            obj.KernelVersion = DYNAMORunLogger.detectKernelVersion();
             obj.Path        = fullfile(runsDir, [obj.RunID '.jsonl']);
 
             obj.fid = fopen(obj.Path, 'a');
@@ -79,7 +82,12 @@ classdef DYNAMORunLogger < handle
             evt.user          = obj.User;
             evt.pid           = obj.Pid;
             evt.run_id        = obj.RunID;
+            % Provenance stamp keys (OUTPUT_FORMAT.md section 8). The
+            % legacy code_version key stays and carries the writer_version
+            % value so pre-stamp readers keep working.
             evt.code_version  = obj.CodeVersion;
+            evt.writer        = obj.Writer;
+            evt.kernel_version = obj.KernelVersion;
             evt.subject       = subject;
             evt.channel       = channel;
             evt.input_file    = opts.InputFile;
@@ -135,10 +143,23 @@ classdef DYNAMORunLogger < handle
             s = regexprep(in, '[^A-Za-z0-9_-]', '_');
         end
         function s = detectCodeVersion()
+            %DETECTCODEVERSION  Toolbox build in the provenance grammar.
+            %   Fail-soft: an empty char when dynamo_version is not on
+            %   the path (the logger must never break a batch).
             try
                 s = dynamo_version();
             catch
                 s = '';
+            end
+        end
+        function s = detectKernelVersion()
+            %DETECTKERNELVERSION  Loaded dynamo_rs kernel build identity.
+            %   Fail-soft 'unknown' mirrors dynamo_kernel_version's own
+            %   fallback so jsonl events always carry the key.
+            try
+                s = dynamo_kernel_version();
+            catch
+                s = 'unknown';
             end
         end
     end

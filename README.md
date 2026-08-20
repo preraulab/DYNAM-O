@@ -63,6 +63,7 @@ histograms.
   - [SOPHs](#sophs--histogram-struct)
   - [timings](#timings--per-stage-wallclock)
 - [Saved file formats (batch outputs)](#saved-file-formats-batch-outputs)
+- [Reading and writing the DYNAM-O output tree](#reading-and-writing-the-dynam-o-output-tree)
 - [Unit tests](#unit-tests)
 - [Repository Structure](#repository-structure)
 - [Algorithm details and background](#algorithm-details-and-background)
@@ -616,9 +617,15 @@ Optional 9th output. Struct with per-stage wallclock seconds.
 
 ## Saved file formats (batch outputs)
 
-The DYNAM-O App writes per-subject results into
-`<output_dir>/<channel>/<subdir>/`. For each artefact type the
-**Saving Options** panel exposes a checkbox (save / don't save) and a
+Batch runs write per-subject results into the canonical per-channel
+tree `<output_dir>/<channel>/<subdir>/` shared by `batch_script`
+(the `SaveAppTree` flag, on by default), the DYNAM-O desktop app, and
+`dynamo-cli`. The normative spec for the tree layout, filenames, and
+per-artifact schemas is `documents/OUTPUT_FORMAT.md` in the
+[DYNAM-O_DesktopApp](https://github.com/preraulab/DYNAM-O_DesktopApp)
+repo (§1-2 for the tree, §8 for the provenance stamp); this section is
+a MATLAB-flavored summary. In the desktop app the **Saving Options**
+panel exposes a checkbox per artefact type (save / don't save) and a
 file-format dropdown with `--`, a slim format, `.mat`, and `All`.
 Default for all four save formats is `All` so reconstruction is
 always possible — pick a single format only when you know what you
@@ -627,14 +634,16 @@ need.
 This section documents what each format contains, when it's
 sufficient, and minimal read snippets in MATLAB and Python.
 
-### Peak stats table — `stats_table/`
+### Peak stats table — `TFpeaks/`
 
 Per-subject TF-peak feature table (one row per detected peak; columns
-described in [stats_table](#stats_table--tf-peak-features)).
+described in [stats_table](#stats_table--tf-peak-features)). The
+canonical directory is `TFpeaks/`; legacy MATLAB output used a
+`stats_table/` folder, and readers of old trees should look there too.
 
 | Format | What it contains | Reconstruct? |
 |---|---|---|
-| `.csv` | All scalar columns from `stats_table` | ✅ full |
+| `.csv` | All scalar columns from `stats_table`, plus a `#` provenance preamble (format 3) | ✅ full |
 | `.mat` | `stats_table` table variable | ✅ full |
 | `All`  | both | ✅ full |
 
@@ -643,15 +652,15 @@ keeping native MATLAB `categorical`s and round-tripping into other
 DYNAM-O calls without re-typing.
 
 ```matlab
-% MATLAB
-T = readtable('subj01_stats_table_C3.csv');
+% MATLAB — loadStatsTable accepts stamped and legacy layouts
+[T, stamp] = loadStatsTable('subj01_stats_table_C3.csv');
 S = load('subj01_stats_table_C3.mat');  T = S.stats_table;
 ```
 
 ```python
 # Python
 import pandas as pd, scipy.io as sio
-T  = pd.read_csv('subj01_stats_table_C3.csv')
+T  = pd.read_csv('subj01_stats_table_C3.csv', comment='#')
 M  = sio.loadmat('subj01_stats_table_C3.mat', squeeze_me=True)
 ```
 
@@ -659,8 +668,8 @@ M  = sio.loadmat('subj01_stats_table_C3.mat', squeeze_me=True)
 
 Per-subject 2-D histograms of TF-peak rate by frequency × SO-feature
 (SO-power and SO-phase). The toolbox writes one file per axis
-(`*_SOPHs_<channel>` for `.mat`; `*_SOpower_SOPHs_<channel>` and
-`*_SOphase_SOPHs_<channel>` for `.tiff`).
+(`*_SOPHs_<channel>` for `.mat`; `*_SOPHs_power_<channel>` and
+`*_SOPHs_phase_<channel>` for `.tiff`).
 
 | Format | What it contains | Reconstruct? |
 |---|---|---|
@@ -669,8 +678,8 @@ Per-subject 2-D histograms of TF-peak rate by frequency × SO-feature
 
 ```matlab
 % MATLAB — read .tiff + bins
-M    = imread('subj01_SOpower_SOPHs_C3.tiff');
-info = imfinfo('subj01_SOpower_SOPHs_C3.tiff');
+M    = imread('subj01_SOPHs_power_C3.tiff');
+info = imfinfo('subj01_SOPHs_power_C3.tiff');
 meta = jsondecode(info(1).ImageDescription);  % .freq_bins, .SOpower_bins
 % MATLAB — read .mat
 S    = load('subj01_SOPHs_C3.mat');           % S.SOPHs.*
@@ -679,7 +688,7 @@ S    = load('subj01_SOPHs_C3.mat');           % S.SOPHs.*
 ```python
 # Python — read .tiff + bins
 import json, tifffile, numpy as np, scipy.io as sio
-with tifffile.TiffFile('subj01_SOpower_SOPHs_C3.tiff') as tf:
+with tifffile.TiffFile('subj01_SOPHs_power_C3.tiff') as tf:
     M    = tf.asarray()
     meta = json.loads(tf.pages[0].tags['ImageDescription'].value)
 freq_bins, sopower_bins = meta['freq_bins'], meta['SOpower_bins']
@@ -845,16 +854,23 @@ with tifffile.TiffFile('subj01_SOpower_splinefit_C3.tiff') as tf:
 
 ### Auxiliary data — `auxiliary_data/`
 
-Per-subject `.mat` only. Contains `artifacts`, `Fs`,
-`SOpower_norm_method`, and other run-time scalars used by the
-Results Browser and the aggregation step.
+Per-subject `.h5` (the canonical format, written by `writeAuxH5`).
+Flat top-level datasets carry `Fs`, `subjectID`, the native-grid
+`SOpower_norm` series with its `SOpower_t_start` / window params,
+`SOpower_norm_method`, `artifact_spans`, and the staging vectors, plus
+the provenance stamp datasets (aux format 2). Read it back with
+`loadAuxData`, which splits the stamp from the data and tolerates its
+absence in older files. A per-subject `.mat` sidecar remains as the
+legacy format from older releases; `convert_aux_to_compact` migrates
+either layout to the compact schema in place.
 
 ### Run settings — `settings/`
 
 Per-run JSON snapshot of every options struct (`detection_options`,
 `baseline_options`, `SOPH_options`, the four basis-fit options
 structs, etc.) plus a `run_start` timestamp and a `schema_version`.
-Written by `generate_run_log` as `run_settings_<timestamp>.json`,
+Written by `generate_run_log` as `batch_settings_<timestamp>.json`
+under `<out>/settings/`,
 read back by `load_run_log` (and by the DYNAM-O App's "Load
 settings" action). The format is pure data — no executable code —
 so loading a settings file from another user is safe. `Inf`, `-Inf`,
@@ -864,7 +880,7 @@ mixed numeric/sentinel entries and decoded back to numeric vectors.
 
 ```matlab
 % MATLAB
-opts = load_run_log('run_settings_260504_165939.json');
+opts = load_run_log('settings/batch_settings_260504_165939.json');
 % opts.detection_options, opts.baseline_options, ...
 ```
 
@@ -881,6 +897,76 @@ action. The aggregate `.tiff`s are multi-page (one page per subject)
 with the same `ImageDescription` bin metadata and a sibling
 `*_subjectIDs.txt` listing subject IDs in page order; the
 aggregate `.mat`s carry concatenated histogram and paramfit tables.
+
+<p align="right"><sub><a href="#table-of-contents">↑ Back to Table of Contents</a></sub></p>
+
+---
+
+## Reading and writing the DYNAM-O output tree
+
+The compute functions are in-memory-only; a set of helpers in
+`toolbox/helper_functions/dynamo_helpers/` serializes their returned
+results to the canonical on-disk tree shared by `dynamo-cli`, the
+desktop app, and `pydynamo`, and reads any tree those tools wrote. The
+normative spec is `documents/OUTPUT_FORMAT.md` in the
+[DYNAM-O_DesktopApp](https://github.com/preraulab/DYNAM-O_DesktopApp)
+repo — §1-2 for the tree layout and filenames, §8 for the provenance
+stamp every artifact carries.
+
+Writer / reader pairs, one per artifact:
+
+| Artifact | Writer | Reader |
+|---|---|---|
+| TF-peak stats CSV (`TFpeaks/`) | `writeStatsTableCsv` | `loadStatsTable` |
+| Paramfit CSV (`param_basis/`) | `writeParamfitCsv` | `loadParamfitCsv` |
+| SOPH TIFF (`SOPHs/`) | `writeSOPHsTiff` | `loadSOPHsTiff` |
+| Splinefit TIFF (`spline_basis/`) | `writeSplinefitTiff` | `imread` pages 1-2 + `imfinfo` metadata |
+| Auxiliary HDF5 (`auxiliary_data/`) | `writeAuxH5` | `loadAuxData` |
+
+`batch_script` calls all of them for you (the `SaveAppTree` flag);
+the individual functions are for custom pipelines and for reading
+trees produced by the other tools. Readers accept the legacy formats
+per the spec's §8.3 tolerance rules and return the recovered
+provenance alongside the data.
+
+**The provenance stamp.** Every artifact records what code produced it
+using four keys: `format` (an integer schema version, counted per
+artifact type), `writer` (`dynamo-matlab` for this toolbox), `writer_version`
+(the writing tool's build), and `kernel_version` (the build that
+computed the numbers). Version values share one grammar:
+
+```
+<semver>+<sha12>[.dirty]   e.g. 1.0.0+ab12cd34ef56.dirty
+```
+
+with the literal `unknown` as the fail-soft when git metadata is
+unavailable. The semver half comes from the `DYNAMO_TOOLBOX_VERSION`
+constant and the sha from the checkout, composed by `dynamo_version`.
+Every writer takes a stamp struct built by `dynamo_stamp`:
+
+- `dynamo_stamp()` records the loaded `dynamo_rs` kernel build (via
+  `dynamo_kernel_version`) — use it when the Rust backend computed
+  the results.
+- `dynamo_stamp('matlab-native')` marks results computed entirely on
+  the pure-MATLAB path (`backend 'matlab'`). The literal
+  `matlab-native` in a `kernel_version` always means no Rust kernel
+  was involved.
+
+```matlab
+% Load a stats CSV (any of formats 1/2/3) and inspect its stamp
+[T, stamp] = loadStatsTable('C3/TFpeaks/S001_stats_table_C3.csv');
+fprintf('format %d, %s %s (kernel %s)\n', stamp.format, ...
+    stamp.writer, stamp.writer_version, stamp.kernel_version);
+
+% Write it back out with this session's provenance
+writeStatsTableCsv('S001_stats_table_C3.csv', T, dynamo_stamp(), ...
+    'subjectID', 'S001');
+```
+
+One stamp rule has teeth: paramfit CSV format 1 stored sqrt(2)-scaled
+sigma widths, so `aggregate_DYNAMO_outputs` refuses to pool it with
+formats 2/3 (a hard error, not a warning). Check the `format` returned
+by `loadParamfitCsv` before doing any custom pooling of your own.
 
 <p align="right"><sub><a href="#table-of-contents">↑ Back to Table of Contents</a></sub></p>
 

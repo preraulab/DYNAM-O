@@ -10,7 +10,12 @@ function [run_ID, fname] = generate_run_log(structs, struct_names, varargin)
 %
 %   Optional:
 %       run_start:      char    - start timestamp; default = now (yyyyMMdd_HHmmss)
-%       file_path:      char    - directory to write into; default = cwd
+%       file_path:      char    - results root to write into; default = cwd.
+%                                 The file lands in <file_path>/settings/
+%                                 (created if absent), the canonical
+%                                 settings location of the shared output
+%                                 tree. A file_path already named
+%                                 'settings' is used as-is.
 %       out_path:       char    - explicit full path (dir + filename) to
 %                                 write to. Overrides file_path/fname when
 %                                 given. Useful when the caller already has
@@ -124,6 +129,16 @@ if write_file
     else
         if isempty(file_path)
             file_path = pwd;
+        end
+        % Settings files live under <out>/settings/ in the canonical
+        % output tree (matching the desktop app and dynamo-cli). Skip the
+        % nesting when the caller already points at a settings folder.
+        [~, leaf] = fileparts(file_path);
+        if ~strcmpi(leaf, 'settings')
+            file_path = fullfile(file_path, 'settings');
+        end
+        if ~isfolder(file_path)
+            mkdir(file_path);
         end
         target = fullfile(file_path, fname);
     end

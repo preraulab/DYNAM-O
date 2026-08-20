@@ -442,6 +442,41 @@ ids          = {};
 warnings_out = {};
 if isempty(lst), return, end
 if nargin < 3 || isempty(progFcn), progFcn = @(varargin) []; end
+
+% Provenance pre-scan (CSV source only): read each file's '#' preamble
+% and refuse to pool paramfit format 1 with formats 2/3. Format 1 stored
+% sqrt(2)-scaled sigma widths (FreqStd, SO*Std), so averaging or
+% scatter-pooling it against true-sigma files silently corrupts the
+% aggregate, so that mix is a hard error, not a warning. Mixed 2/3 (same
+% numerics, different preamble) and mixed writer builds are recorded as
+% warnings.
+if strcmp(fmt, 'csv')
+    fmts = zeros(1, numel(lst));
+    wvs  = cell(1, numel(lst));
+    for ii = 1:numel(lst)
+        [fmts(ii), wvs{ii}] = paramfit_csv_provenance_(lst(ii).path);
+    end
+    if any(fmts == 1) && any(fmts >= 2)
+        v1_paths = strjoin({lst(fmts == 1).path}, sprintf('\n  '));
+        error('aggregate_DYNAMO_outputs:mixedParamfitFormats', ...
+            ['Cannot pool paramfit CSV format 1 with formats 2/3: format-1 ' ...
+             'files store sqrt(2)-scaled sigma widths (FreqStd/SO*Std), so the ' ...
+             'columns are not commensurable. Re-run the fits for the format-1 ' ...
+             'subjects (or aggregate them separately):\n  %s'], v1_paths);
+    end
+    if any(fmts == 2) && any(fmts == 3)
+        warnings_out{end+1} = sprintf( ...
+            'paramfit CSVs mix formats 2 and 3 (%d vs %d files); numerics are identical, pooling anyway', ...
+            sum(fmts == 2), sum(fmts == 3)); %#ok<AGROW>
+    end
+    uw = unique(wvs(~cellfun(@isempty, wvs)));
+    if numel(uw) > 1
+        warnings_out{end+1} = sprintf( ...
+            'paramfit CSVs come from %d different writer builds (%s); pooling anyway', ...
+            numel(uw), strjoin(uw, ', ')); %#ok<AGROW>
+    end
+end
+
 parts = cell(1, numel(lst));
 total = numel(lst);
 for ii = 1:total
@@ -479,6 +514,53 @@ end
 parts(cellfun(@isempty, parts)) = [];
 if isempty(parts), return, end
 T = vertcat(parts{:});
+end
+
+function [fmt, wv] = paramfit_csv_provenance_(p)
+%PARAMFIT_CSV_PROVENANCE_  Read format + writer build from a CSV preamble
+%
+%   Inputs:
+%       p : char - paramfit .csv path -- required
+%
+%   Outputs:
+%       fmt : double - artifact format: '# format: N' (formats 2/3) or the
+%             legacy '# version: N' key; 1 when neither key is present
+%             (bare files predate the format counter)
+%       wv  : char - writer build: '# writer_version:' or the legacy
+%             '# code_version:'; '' when absent
+%
+%   Notes:
+%       fgetl scan of the leading '#' lines only. readtable's CommentStyle
+%       cannot be used for this: it strips '#' anywhere in a line, so a
+%       '#' is only trustworthy as a comment marker at line start.
+fmt = 1;
+wv  = '';
+fid = fopen(p, 'r');
+if fid < 0
+    return
+end
+cleanup = onCleanup(@() fclose(fid)); %#ok<NASGU>
+while true
+    line = fgetl(fid);
+    if ~ischar(line) || ~startsWith(line, '#')
+        return
+    end
+    tok = regexp(line, '^#\s*(format|version|writer_version|code_version)\s*:\s*(\S+)', 'tokens', 'once');
+    if isempty(tok)
+        continue
+    end
+    switch tok{1}
+        case {'format', 'version'}
+            n = str2double(tok{2});
+            if isfinite(n)
+                fmt = n;
+            end
+        case {'writer_version', 'code_version'}
+            if isempty(wv)
+                wv = tok{2};
+            end
+    end
+end
 end
 
 function T = locate_paramfit_table(S)

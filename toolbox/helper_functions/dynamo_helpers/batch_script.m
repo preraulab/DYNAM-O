@@ -32,6 +32,13 @@ function batch_script(varargin)
 %       output_fname:                char - output filename base (default: 'DYNAM-O_output')
 %       fit_param_basis:             logical - run parametric fitting (default: true)
 %       fit_spline_basis:            logical - run spline fitting (default: true)
+%       SaveAppTree:                 logical - write the canonical per-channel output tree
+%                                    (<out>/<chan>/{TFpeaks,SOPHs,auxiliary_data,param_basis,
+%                                    spline_basis,figures/summary}) with provenance stamps,
+%                                    the layout shared with dynamo-cli and the desktop app
+%                                    (default: true)
+%       SaveLegacyMat:               logical - keep the flat unstamped .mat outputs and the
+%                                    legacy summary-figure name in <out>/ (default: true)
 %
 % =========================================================================
 %                  DYNAM-O Toolbox  |  Prerau Laboratory
@@ -89,6 +96,10 @@ addOptional(p, 'save_output_image', true, @(x) validateattributes(x, {'logical',
 addOptional(p, 'output_fname', 'DYNAM-O_output', @(x) validateattributes(x, {'char','string'}, {'nonempty','scalartext'}));
 addOptional(p, 'fit_param_basis', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'fit_spline_basis', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+% Output-tree selection. Post-compute serialization only: neither flag
+% changes what runDYNAMO computes or returns.
+addOptional(p, 'SaveAppTree', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'scalar', 'binary'}));
+addOptional(p, 'SaveLegacyMat', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'scalar', 'binary'}));
 
 parse(p,varargin{:});
 input_arguments = struct2cell(p.Results); %#ok<NASGU>
@@ -103,33 +114,243 @@ if size(scoring_fpaths)~=size(edf_fpaths) %#ok<USENS>
     error('Different number of scoring files to edf files')
 end
 
+% Provenance stamp for the canonical tree, resolved once per batch. The
+% kernel identity follows the backend that will compute the peaks: the
+% pure-MATLAB path records the literal 'matlab-native'; the default rust
+% backend records the loaded dynamo_rs build (or 'unknown').
+if SaveAppTree %#ok<NODEF>
+    batch_backend = 'rust';
+    if isstruct(detection_options) && isfield(detection_options, 'backend') ...
+            && ~isempty(detection_options.backend) %#ok<NODEF>
+        batch_backend = lower(char(detection_options.backend));
+    end
+    if strcmp(batch_backend, 'matlab')
+        tree_stamp = dynamo_stamp('matlab-native');
+    else
+        tree_stamp = dynamo_stamp();
+    end
+end
+
 % Loop through each pair
 for ii = 1:length(scoring_fpaths)
 
-    % File naming logistics
+    % File naming logistics. The subject ID is the EDF basename; the
+    % channel folder uses the label load_data actually emitted (falling
+    % back to the first requested channel spec).
     curr_scoring_fpath = scoring_fpaths{ii};
     curr_edf_fpath = edf_fpaths{ii};
     [~,input_fbase] = fileparts(curr_edf_fpath);
-    output_fig_name = strcat(output_fpath,'/',input_fbase,'_summary_fig.png');
+    legacy_fig_name = strcat(output_fpath,'/',input_fbase,'_summary_fig.png');
     output_stats_name = strcat(output_fpath,'/',input_fbase,'_stats_table.mat');
     output_SOPH_name = strcat(output_fpath,'/',input_fbase,'_SOPHs.mat');
- 
-    % Load Data
-    [data, Fs, stage_times, stage_vals] = load_data(curr_edf_fpath,curr_scoring_fpath,stage_col,time_col,channels,stage_vals_in,header_lines,start_time,epoch_dur,plot_on_staging,resample_freq);
 
-    % Run DYNAM-O
-    [stats_table, ~, ~, ~, ~, ~, ~, SOPHs] = runDYNAMO(data,Fs,stage_times,stage_vals,'save_output_image',save_output_image,'output_fname',output_fig_name);
+    % Load Data
+    [data, Fs, stage_times, stage_vals, signal_labels] = load_data(curr_edf_fpath,curr_scoring_fpath,stage_col,time_col,channels,stage_vals_in,header_lines,start_time,epoch_dur,plot_on_staging,resample_freq);
+
+    if exist('signal_labels', 'var') && iscell(signal_labels) && ~isempty(signal_labels)
+        chan = char(signal_labels{1});
+    elseif iscell(channels) %#ok<NODEF>
+        chan = char(channels{1});
+    else
+        chan = char(channels);
+    end
+
+    % Summary figure destination: the canonical figures/summary slot when
+    % the app tree is on, else the legacy flat name.
+    if SaveAppTree
+        fig_dir = fullfile(char(output_fpath), chan, 'figures', 'summary');
+        if ~isfolder(fig_dir), mkdir(fig_dir); end
+        output_fig_name = fullfile(fig_dir, sprintf('%s_summary_figure_%s.png', input_fbase, chan));
+    else
+        output_fig_name = legacy_fig_name;
+    end
+
+    % Run DYNAM-O. artifacts/t_time_range are captured for the auxiliary
+    % file; the compute call itself is unchanged.
+    [stats_table, ~, ~, ~, ~, t_time_range, artifacts, SOPHs] = runDYNAMO(data,Fs,stage_times,stage_vals,'save_output_image',save_output_image,'output_fname',output_fig_name);
 
     % (Several figures are generated during DYNAM-O, they are saved
     % separately)
     close all;
 
-    % Saving — .mat is HDF5 internally (-v7.3) so h5py / h5dump can
-    % read these files directly without a MATLAB round-trip.
-    save(output_stats_name,'stats_table','-v7.3');
-    save(output_SOPH_name,'SOPHs','-v7.3');
+    % Legacy flat saves. The .mat files are HDF5 internally (-v7.3) so h5py /
+    % h5dump can read these files directly without a MATLAB round-trip.
+    % Unstamped, byte-compatible with what earlier releases wrote.
+    if SaveLegacyMat %#ok<NODEF>
+        save(output_stats_name,'stats_table','-v7.3');
+        save(output_SOPH_name,'SOPHs','-v7.3');
+        if SaveAppTree && save_output_image && isfile(output_fig_name)
+            copyfile(output_fig_name, legacy_fig_name, 'f');
+        end
+    end
+
+    % Canonical per-channel tree (post-compute serialization of the
+    % returned results; per-artifact failures warn and move on so one
+    % bad write cannot lose the rest of the batch).
+    if SaveAppTree
+        write_app_tree_(char(output_fpath), chan, input_fbase, tree_stamp, ...
+            stats_table, SOPHs, SOPH_options, Fs, stage_times, stage_vals, ...
+            artifacts, t_time_range);
+    end
 
 end
 
+end
+
+
+function write_app_tree_(out_root, chan, subj, stamp, stats_table, SOPHs, ...
+    SOPH_options, Fs, stage_times, stage_vals, artifacts, t_time_range)
+%WRITE_APP_TREE_  Serialize one (subject, channel) result set to the canonical tree
+%
+%   Inputs:
+%       out_root     : char - results root directory -- required
+%       chan         : char - output channel label (folder name) -- required
+%       subj         : char - subject ID (file-name prefix) -- required
+%       stamp        : struct - provenance stamp from dynamo_stamp -- required
+%       stats_table  : table - per-peak features from runDYNAMO -- required
+%       SOPHs        : struct - histograms + fits from runDYNAMO -- required
+%       SOPH_options : struct - SOpowerphasehist_opts used for the run -- required
+%       Fs           : double - sample rate(s) from load_data -- required
+%       stage_times  : vector - stage onset times (s) -- required
+%       stage_vals   : vector - stage codes -- required
+%       artifacts    : logical vector - artifact mask over the analyzed range -- required
+%       t_time_range : vector - time axis of the analyzed range (s) -- required
+%
+%   Outputs:
+%       none (side effects only)
+chan_dir = fullfile(out_root, chan);
+
+% TFpeaks stats CSV (format 3)
+try
+    writeStatsTableCsv(fullfile(chan_dir, 'TFpeaks', ...
+        sprintf('%s_stats_table_%s.csv', subj, chan)), ...
+        stats_table, stamp, 'subjectID', subj);
+catch ME
+    warning('batch_script:writeFailed', 'stats CSV write failed for %s: %s', subj, ME.message);
+end
+
+% SOPH TIFFs (format 2)
+try
+    writeSOPHsTiff(fullfile(chan_dir, 'SOPHs', ...
+        sprintf('%s_SOPHs_power_%s.tiff', subj, chan)), ...
+        SOPHs.SOpower_mat, SOPHs.SOpower_bins, SOPHs.freq_bins, ...
+        'sopower', stamp, 'subjectID', subj);
+catch ME
+    warning('batch_script:writeFailed', 'SOPH power TIFF write failed for %s: %s', subj, ME.message);
+end
+try
+    writeSOPHsTiff(fullfile(chan_dir, 'SOPHs', ...
+        sprintf('%s_SOPHs_phase_%s.tiff', subj, chan)), ...
+        SOPHs.SOphase_mat, SOPHs.SOphase_bins, SOPHs.freq_bins, ...
+        'sophase', stamp, 'subjectID', subj);
+catch ME
+    warning('batch_script:writeFailed', 'SOPH phase TIFF write failed for %s: %s', subj, ME.message);
+end
+
+% Auxiliary data h5 (format 2)
+try
+    aux = assemble_aux_(subj, Fs, stage_times, stage_vals, SOPHs, ...
+        SOPH_options, artifacts, t_time_range);
+    aux_dir = fullfile(chan_dir, 'auxiliary_data');
+    if ~isfolder(aux_dir), mkdir(aux_dir); end
+    aux_path = fullfile(aux_dir, sprintf('%s_auxiliary_data_%s.h5', subj, chan));
+    % writeAuxH5 requires a fresh file (h5create cannot overwrite).
+    if isfile(aux_path), delete(aux_path); end
+    writeAuxH5(aux_path, aux, stamp);
+catch ME
+    warning('batch_script:writeFailed', 'auxiliary h5 write failed for %s: %s', subj, ME.message);
+end
+
+% Parametric-basis CSVs (format 3). Fields are absent or empty when the
+% fit was disabled or failed; both are quietly skipped.
+if isfield(SOPHs, 'SOpower_paramfit') && ~isempty(SOPHs.SOpower_paramfit)
+    try
+        writeParamfitCsv(fullfile(chan_dir, 'param_basis', ...
+            sprintf('%s_SOpower_paramfit_%s.csv', subj, chan)), ...
+            SOPHs.SOpower_paramfit, 'power', SOPHs.SOpower_bins, ...
+            SOPHs.freq_bins, stamp, 'subjectID', subj);
+    catch ME
+        warning('batch_script:writeFailed', 'power paramfit CSV write failed for %s: %s', subj, ME.message);
+    end
+end
+if isfield(SOPHs, 'SOphase_paramfit') && ~isempty(SOPHs.SOphase_paramfit)
+    try
+        writeParamfitCsv(fullfile(chan_dir, 'param_basis', ...
+            sprintf('%s_SOphase_paramfit_%s.csv', subj, chan)), ...
+            SOPHs.SOphase_paramfit, 'phase', SOPHs.SOphase_bins, ...
+            SOPHs.freq_bins, stamp, 'subjectID', subj, ...
+            'CrossHist', SOPHs.SOpower_mat, 'CrossBins', SOPHs.SOpower_bins);
+    catch ME
+        warning('batch_script:writeFailed', 'phase paramfit CSV write failed for %s: %s', subj, ME.message);
+    end
+end
+
+% Spline-basis TIFFs (format 2)
+if isfield(SOPHs, 'SOpower_splinefit') && ~isempty(SOPHs.SOpower_splinefit)
+    try
+        writeSplinefitTiff(fullfile(chan_dir, 'spline_basis', ...
+            sprintf('%s_SOpower_splinefit_%s.tiff', subj, chan)), ...
+            SOPHs.SOpower_splinefit, 'power', stamp, 'subjectID', subj);
+    catch ME
+        warning('batch_script:writeFailed', 'power splinefit TIFF write failed for %s: %s', subj, ME.message);
+    end
+end
+if isfield(SOPHs, 'SOphase_splinefit') && ~isempty(SOPHs.SOphase_splinefit)
+    try
+        writeSplinefitTiff(fullfile(chan_dir, 'spline_basis', ...
+            sprintf('%s_SOphase_splinefit_%s.tiff', subj, chan)), ...
+            SOPHs.SOphase_splinefit, 'phase', stamp, 'subjectID', subj);
+    catch ME
+        warning('batch_script:writeFailed', 'phase splinefit TIFF write failed for %s: %s', subj, ME.message);
+    end
+end
+end
+
+
+function aux = assemble_aux_(subj, Fs, stage_times, stage_vals, SOPHs, ...
+    SOPH_options, artifacts, t_time_range)
+%ASSEMBLE_AUX_  Build the compact auxiliary_data struct from run results
+%
+%   Inputs:
+%       subj         : char - subject ID -- required
+%       Fs           : double - sample rate(s); the first entry is used -- required
+%       stage_times  : vector - stage onset times (s) -- required
+%       stage_vals   : vector - stage codes 0-5 -- required
+%       SOPHs        : struct - carries SOpower_norm / SOpower_times -- required
+%       SOPH_options : struct - SOPH options (freq range, window params,
+%                      norm method); missing fields fall back to
+%                      SOpowerphasehist_opts defaults -- required
+%       artifacts    : logical vector - artifact mask over the analyzed range -- required
+%       t_time_range : vector - time axis of the analyzed range (s) -- required
+%
+%   Outputs:
+%       aux : struct - compact aux schema fields for writeAuxH5
+opts = mergeOptsDefaults(SOPH_options, SOpowerphasehist_opts());
+
+aux = struct();
+aux.Fs = double(Fs(1));
+aux.subjectID = subj;
+if isfield(SOPHs, 'SOpower_times') && ~isempty(SOPHs.SOpower_times)
+    % SOpower_times are the native window-center times; the compact
+    % schema stores the first center plus the step (window params).
+    aux.SOpower_t_start = double(SOPHs.SOpower_times(1));
+end
+aux.SOpower_freqrange = double(opts.SO_freqrange(:));
+if isfield(SOPHs, 'SOpower_norm') && ~isempty(SOPHs.SOpower_norm)
+    aux.SOpower_norm = double(SOPHs.SOpower_norm(:));
+end
+aux.SOpower_norm_method = char(string(opts.SOpower_norm_method));
+aux.SOpower_window_params = double(opts.SOpower_window_params(:));
+
+% Artifact mask indexes data within the analyzed range; shift the spans
+% by the range start so they are absolute seconds since recording start.
+spans = mask_to_spans(logical(artifacts), double(Fs(1)));
+if ~isempty(spans) && ~isempty(t_time_range)
+    spans = spans + double(t_time_range(1));
+end
+aux.artifact_spans = spans;
+
+aux.stage_times = double(stage_times(:)');
+aux.stage_vals = uint8(round(double(stage_vals(:)')));
 end
 

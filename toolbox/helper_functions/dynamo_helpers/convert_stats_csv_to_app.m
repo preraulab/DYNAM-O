@@ -1,40 +1,44 @@
 function report = convert_stats_csv_to_app(root, varargin)
-%CONVERT_STATS_CSV_TO_APP  Rewrite stats_table CSVs in the app's 16-col schema.
+%CONVERT_STATS_CSV_TO_APP  Verify stats_table CSVs are app/canonical readable.
 %
 %   Walks ROOT for per-subject stats_table CSVs (<chan>/TFpeaks/) and
-%   rewrites any in the OLD layout (leading subjectID column, BoundingBox as
-%   a single matrix column) into the DYNAM-O desktop app's strict schema:
-%       PeakTime,PeakFrequency,Duration,Bandwidth,Height,Volume,SegmentNum,
-%       Area,Peakiness,bbox_tl_s,bbox_tl_Hz,bbox_width_s,bbox_height_Hz,
-%       PeakStage,SOpower,SOphase
-%   subjectID is dropped (recovered from the filename on read); BoundingBox
-%   is decomposed into the four bbox_* columns.
+%   classifies each against the recognized stats-CSV formats:
+%       format 3 - '#' provenance preamble + canonical 14-column header
+%       format 2 - canonical 14-column header, bare
+%       format 1 - legacy 16-column header (with bbox_width_s/bbox_height_Hz)
+%   All three are readable by loadStatsTable and the desktop app, so they
+%   are skipped (nothing to convert). Any other layout is reported as
+%   failed with an error directing to loadStatsTable.
 %
-%   CSVs already in the app schema are skipped (idempotent).
+%   The old in-place rewriter (csv2table -> stats_table_to_app_csv ->
+%   table2csv) was removed: csv2table decodes cells via eval and silently
+%   mangles CLI-written 14-column files, so automated rewriting is no
+%   longer offered. To migrate a pre-app CSV, load it with the reader
+%   that matches how it was written and re-save with writeStatsTableCsv.
 %
 %   Usage:
 %       report = convert_stats_csv_to_app(root)
 %       report = convert_stats_csv_to_app(root, 'DryRun', true)
-%       report = convert_stats_csv_to_app(root, 'Backup', false)
 %
 %   Name-Value:
-%       'DryRun'  logical - classify + print intended action, write nothing
+%       'DryRun'  logical - retained for call compatibility; scanning
+%                 never writes, so this only labels the log output
 %       'Verbose' logical - one line per file (default: true)
-%       'Backup'  logical - keep a .bak copy of each original (default: true)
+%       'Backup'  logical - retained for call compatibility; unused now
+%                 that no files are rewritten
 %
 %   Output:
-%       report - struct: .scanned, .converted, .skipped {path,reason},
-%                .failed {path,reason}.
+%       report - struct: .scanned, .converted (always empty now),
+%                .skipped {path,reason}, .failed {path,reason}.
 %
-%   Safety: temp-then-rename; with 'Backup' (default) the original is copied
-%   to '<file>.bak' before the rewritten CSV replaces it.
-%
-%   See also: stats_table_to_app_csv, writeStatsTableFormats, csv2table,
-%             table2csv, convert_dynamo_outputs_to_app.
+%   See also: loadStatsTable, writeStatsTableCsv,
+%             convert_dynamo_outputs_to_app.
 %
 %   ∿∿∿  Prerau Laboratory MATLAB Codebase · sleepEEG.org  ∿∿∿
 
-APP_HEADER = ['PeakTime,PeakFrequency,Duration,Bandwidth,Height,Volume,' ...
+CANONICAL14 = ['PeakTime,PeakFrequency,Duration,Bandwidth,Height,Volume,' ...
+    'SegmentNum,Area,Peakiness,bbox_tl_s,bbox_tl_Hz,PeakStage,SOpower,SOphase'];
+LEGACY16 = ['PeakTime,PeakFrequency,Duration,Bandwidth,Height,Volume,' ...
     'SegmentNum,Area,Peakiness,bbox_tl_s,bbox_tl_Hz,bbox_width_s,' ...
     'bbox_height_Hz,PeakStage,SOpower,SOphase'];
 
@@ -44,10 +48,8 @@ addParameter(ip, 'DryRun',  false, @(x) islogical(x) || isnumeric(x));
 addParameter(ip, 'Verbose', true,  @(x) islogical(x) || isnumeric(x));
 addParameter(ip, 'Backup',  true,  @(x) islogical(x) || isnumeric(x));
 parse(ip, root, varargin{:});
-root     = char(ip.Results.root);
-dryRun   = logical(ip.Results.DryRun);
-verbose  = logical(ip.Results.Verbose);
-doBackup = logical(ip.Results.Backup);
+root    = char(ip.Results.root);
+verbose = logical(ip.Results.Verbose);
 
 assert(isfolder(root), 'convert_stats_csv_to_app:badRoot', 'Root not a folder: %s', root);
 
@@ -63,45 +65,37 @@ report = struct('scanned', n, 'converted', {{}}, 'skipped', {{}}, 'failed', {{}}
 
 if verbose
     fprintf('convert_stats_csv_to_app: scanning %s\n  found %d stats CSV(s)\n', root, n);
-    if dryRun, fprintf('  DRY RUN — no files will be written\n'); end
 end
 
 for ii = 1:n
     p = fullfile(listing(ii).folder, listing(ii).name);
 
-    hdr = read_header_(p);
-    if strcmp(hdr, APP_HEADER)
-        report.skipped{end+1, 1} = {p, 'already app schema'}; %#ok<AGROW>
-        if verbose, fprintf('  [%d/%d] skip (app schema): %s\n', ii, n, p); end
-        continue
-    end
-
-    if dryRun
-        report.converted{end+1, 1} = p; %#ok<AGROW>
-        if verbose, fprintf('  [%d/%d] WOULD CONVERT: %s\n', ii, n, p); end
-        continue
-    end
-
     try
-        T = csv2table(p);
-        T = stats_table_to_app_csv(T);
-
-        [pd, pn, pe] = fileparts(p);
-        tmp = fullfile(pd, [pn '.tmpconv' pe]);   % keep .csv so writecell accepts it
-        if isfile(tmp), delete(tmp); end
-        table2csv(T, tmp);
-        if doBackup
-            bak = [p '.bak'];
-            if ~isfile(bak)
-                [ok, msg] = copyfile(p, bak, 'f');
-                if ~ok, delete(tmp); error('backup failed: %s', msg); end
+        [hdr, preambled] = read_header_(p);
+        if strcmp(hdr, CANONICAL14)
+            if preambled
+                reason = 'already canonical (format 3)';
+            else
+                reason = 'already canonical (format 2)';
             end
+            report.skipped{end+1, 1} = {p, reason}; %#ok<AGROW>
+            if verbose, fprintf('  [%d/%d] skip (%s): %s\n', ii, n, reason, p); end
+            continue
         end
-        [ok, msg] = movefile(tmp, p, 'f');
-        if ~ok, error('movefile failed: %s', msg); end
-
-        report.converted{end+1, 1} = p; %#ok<AGROW>
-        if verbose, fprintf('  [%d/%d] converted: %s\n', ii, n, p); end
+        if strcmp(hdr, LEGACY16) && ~preambled
+            report.skipped{end+1, 1} = {p, 'already app schema (format 1)'}; %#ok<AGROW>
+            if verbose, fprintf('  [%d/%d] skip (app schema, format 1): %s\n', ii, n, p); end
+            continue
+        end
+        % Anything else is a pre-app layout (or a corrupted file). The
+        % eval-based rewriter that used to handle these was removed
+        % because it corrupted CLI-written canonical files; direct the
+        % user to the explicit load/rewrite path instead.
+        error('convert_stats_csv_to_app:legacyLayout', ...
+            ['unrecognized stats-CSV header. Automated rewriting was removed ' ...
+             '(the old csv2table/eval fallback corrupts canonical 14-column ' ...
+             'files). Load this file with the reader matching its writer, ' ...
+             'then re-save with writeStatsTableCsv. See loadStatsTable.']);
     catch ME
         report.failed{end+1, 1} = {p, ME.message}; %#ok<AGROW>
         if verbose, fprintf('  [%d/%d] FAIL %s — %s\n', ii, n, p, ME.message); end
@@ -109,17 +103,37 @@ for ii = 1:n
 end
 
 if verbose
-    fprintf('done: %d converted, %d skipped, %d failed (of %d)\n', ...
-        numel(report.converted), numel(report.skipped), numel(report.failed), report.scanned);
+    fprintf('done: %d skipped, %d failed (of %d)\n', ...
+        numel(report.skipped), numel(report.failed), report.scanned);
 end
 end
 
 
-function hdr = read_header_(p)
+function [hdr, preambled] = read_header_(p)
+%READ_HEADER_  First non-comment line of a CSV, noting a '#' preamble
+%
+%   Inputs:
+%       p : char - CSV path -- required
+%
+%   Outputs:
+%       hdr       : char - first line that does not start with '#',
+%                   whitespace-trimmed ('' when the file is empty)
+%       preambled : logical - true when leading '#' lines were skipped
 hdr = '';
+preambled = false;
 fid = fopen(p, 'r');
 if fid < 0, return, end
 cleanup = onCleanup(@() fclose(fid)); %#ok<NASGU>
-line = fgetl(fid);
-if ischar(line), hdr = strtrim(line); end
+while true
+    line = fgetl(fid);
+    if ~ischar(line)
+        return
+    end
+    if startsWith(line, '#')
+        preambled = true;
+        continue
+    end
+    hdr = strtrim(line);
+    return
+end
 end
