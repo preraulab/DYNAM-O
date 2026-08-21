@@ -552,7 +552,7 @@ One row per detected TF-peak. Available features (controlled by
 | `Duration` | s | Peak duration |
 | `Bandwidth` | Hz | Peak bandwidth |
 | `Volume` | s·μV² | Time-frequency volume |
-| `Peakiness` | dB | `10·log10(Area · Height / Volume)` — sharpness score |
+| `Peakiness` | unitless [0, 1] | `N/(N−1) · (max − mean) / (max − min)` of region pixels — 0 = flat plateau, 1 = spike (exactly, via the small-sample correction) |
 | `BoundingBox` | (s, Hz, s, Hz) | `[t_tl, f_tl, width, height]` |
 | `HeightData` | μV²/Hz | Per-pixel amplitudes within peak region |
 | `Boundaries` | (s, Hz) | Boundary pixel `(time, frequency)` |
