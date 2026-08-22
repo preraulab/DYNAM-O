@@ -195,17 +195,27 @@ if any(strcmpi(features,'SegmentNum'))
     stats_table.Properties.VariableUnits{'SegmentNum'} = '#';
 end
 
-%Peakiness = 10*log10(Area * Height / Volume), expressed in dB. 
-% Recomputed from PixelValues so this block is order-independent: stats_table.Area 
-% gets either rescaled (line 127) or emptied (line 131) above depending on whether
-% 'Area' is requested, and likewise stats_table.PixelValues is renamed/dropped below.
+%Peakiness = N/(N-1) * (max - mean) / (max - min) of the region's N pixel
+% values, in [0, 1]. The N/(N-1) factor is a small-sample correction
+% (cf. Bessel): a single-pixel spike has mean = min + (max-min)/N, so the
+% raw ratio caps at 1 - 1/N; the correction makes a spike score exactly 1
+% for every region size. Plateau -> 0 (asymptotically; floor 1/(N-1)).
+% Affine-invariant: amplifier gain and any additive pedestal both cancel
+% -- which requires artifact masking to write NaN, never 0 (a zeroed
+% pixel would pin the region min and masquerade as spikiness; NaN pixels
+% are excluded from regions above). NaN for degenerate regions where
+% max == min (0/0), e.g. single-pixel or perfectly flat.
+% Recomputed from PixelValues so this block is order-independent:
+% stats_table.PixelValues is renamed/dropped below depending on 'HeightData'.
 if any(strcmpi(features,'Peakiness'))
-    pk_area   = cellfun(@numel, stats_table.PixelValues) * dx * dy;       % sec*Hz
-    pk_height = cellfun(@max, stats_table.PixelValues) - cellfun(@min, stats_table.PixelValues);
-    pk_volume = cellfun(@(x) sum(x) * dx * dy, stats_table.PixelValues);  % sec*μV^2
-    stats_table.Peakiness = 10 * log10(pk_area .* pk_height ./ pk_volume);
-    stats_table.Properties.VariableDescriptions{'Peakiness'} = 'Peakiness: 10*log10(Area * Height / Volume)';
-    stats_table.Properties.VariableUnits{'Peakiness'} = 'dB';
+    pk_max  = cellfun(@max,   stats_table.PixelValues);
+    pk_min  = cellfun(@min,   stats_table.PixelValues);
+    pk_mean = cellfun(@mean,  stats_table.PixelValues);
+    pk_n    = cellfun(@numel, stats_table.PixelValues);
+    stats_table.Peakiness = (pk_n ./ max(pk_n - 1, 1)) .* ...
+        (pk_max - pk_mean) ./ (pk_max - pk_min);
+    stats_table.Properties.VariableDescriptions{'Peakiness'} = 'Peakiness: N/(N-1) * (max - mean) / (max - min) of region pixels; 0 = flat plateau, 1 = spike';
+    stats_table.Properties.VariableUnits{'Peakiness'} = 'unitless';
 end
 
 %Region data
