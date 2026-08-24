@@ -894,9 +894,12 @@ DYNAM-O state.
 
 Cross-subject stacks built by the Results Browser **Aggregate**
 action. The aggregate `.tiff`s are multi-page (one page per subject)
-with the same `ImageDescription` bin metadata and a sibling
-`*_subjectIDs.txt` listing subject IDs in page order; the
-aggregate `.mat`s carry concatenated histogram and paramfit tables.
+with the same `ImageDescription` bin metadata, plus a `subject_ids`
+array on page 0 giving the ids in page order and a per-page
+`DocumentName` tag (269); the aggregate `.mat`s carry concatenated
+histogram and paramfit tables. (Older runs also wrote a sibling
+`*_subjectIDs.txt`; it duplicated the in-file ids and is no longer
+written or read.)
 
 <p align="right"><sub><a href="#table-of-contents">↑ Back to Table of Contents</a></sub></p>
 
