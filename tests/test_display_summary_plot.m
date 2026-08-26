@@ -116,3 +116,29 @@ end
 testCase.verifyLessThan(max(patch_positions), min(scatter_positions));
 testCase.verifyEqual(stats_table, stats_table_before);
 end
+
+function test_hypnogram_artifact_patches_have_no_edges(testCase)
+old_visibility = get(groot, 'DefaultFigureVisible');
+set(groot, 'DefaultFigureVisible', 'off');
+visibility_cleanup = onCleanup(@() set(groot, 'DefaultFigureVisible', old_visibility));
+
+stage_times = [0 30 60];
+stage_vals = [2 2 2];
+artifact_times = 0:60;
+artifacts = false(size(artifact_times));
+artifacts(11:20) = true;
+
+fh = displaySummaryPlot( ...
+    'stage_times', stage_times, ...
+    'stage_vals', stage_vals, ...
+    'artifacts', artifacts, ...
+    't_time_range', artifact_times, ...
+    'hist_peakidx', true);
+figure_cleanup = onCleanup(@() close(fh));
+
+patches = findall(fh, 'Type', 'Patch');
+is_artifact_patch = arrayfun(@(h) min(h.YData(:)) < 0, patches);
+artifact_patches = patches(is_artifact_patch);
+testCase.verifyNumElements(artifact_patches, 1);
+testCase.verifyEqual(artifact_patches.EdgeColor, 'none');
+end
