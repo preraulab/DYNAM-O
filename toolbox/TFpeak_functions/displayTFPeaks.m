@@ -146,7 +146,15 @@ end
 bd = stats_table.Boundaries;
 hold on;
 for ii = 1:length(bd)
-    plot(bd{ii}(:, 1)/3600, bd{ii}(:, 2), 'w', 'LineWidth', 2)
+    boundary = bd{ii};
+    num_edges = size(boundary, 1)-1;
+    boundary_x = [boundary(1:end-1, 1), boundary(2:end, 1), ...
+        nan(num_edges, 1)]';
+    boundary_y = [boundary(1:end-1, 2), boundary(2:end, 2), ...
+        nan(num_edges, 1)]';
+    % R2026a can render thick closed polylines with spurious connections.
+    % NaN separators preserve every boundary edge as an independent path.
+    plot(boundary_x(:)/3600, boundary_y(:), 'w', 'LineWidth', 2)
 end
 
 %% Plot EEG trace
