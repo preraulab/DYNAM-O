@@ -1,12 +1,11 @@
-function T = annotateModesWithPeakStats(T, axis_kind, stats_table_SOPH, prob)
+function T = annotateModesWithPeakStats(T, axis_kind, stats_table_SOPH, assign, background)
 %ANNOTATEMODESWITHPEAKSTATS  Append per-mode TF-peak summary columns.
 %
-%   T = annotateModesWithPeakStats(T, axis_kind, stats_table_SOPH, prob)
+%   T = annotateModesWithPeakStats(T, axis_kind, stats_table_SOPH, assign, background)
 %
-%   For each mode (row of the paramfit params table T) finds the TF-peaks
-%   inside the mode's assignment contour (GET_MODE_PEAKS) and appends ten
-%   summary columns built from MODE_PEAK_STATS. For power the contour encloses
-%   `prob` Gaussian mass; for phase it is a `(1-prob)` relative-height contour:
+%   For each mode (row of the paramfit params table T) selects its member
+%   TF-peaks under the peak_assign rule (ASSIGN_MODE_PEAKS) and appends ten
+%   summary columns built from MODE_PEAK_STATS:
 %
 %     PkCount, PkFreq, PkDuration, PkBandwidth, PkHeight, PkVolume,
 %     PkArea, PkPeakiness, PkSOpower, PkSOphase
@@ -16,12 +15,20 @@ function T = annotateModesWithPeakStats(T, axis_kind, stats_table_SOPH, prob)
 %   writes (dynamo_pipeline::mode_peaks), so the MATLAB and Rust paramfit
 %   CSVs share one schema.
 %
+%   ASSIGN accepts anything PARSE_PEAK_ASSIGN does: a probability (0.3 or
+%   '0.3 p' - a numeric value keeps this function backward compatible with
+%   the old `prob` argument), a sigma radius ('1.3 sigma'), 'background',
+%   or 'argmax' (the toolbox default). BACKGROUND is the fit's [xxx yyy
+%   zzz] (GET_FIT_BACKGROUND); only the density rules consult it, and on
+%   the phase axis those fall back to the '0.95 p' contour (phase Density
+%   is row-normalized; the stored phase background is not).
+%
 %   The columns are ALWAYS added (stable schema). When STATS_TABLE_SOPH is
 %   empty/missing the expected columns, PkCount = 0 and the means are NaN.
 %
 %   STATS_TABLE_SOPH should already be restricted to the peak population that
-%   fed the SOPH (e.g. the SOPH sleep stages); GET_MODE_PEAKS handles the
-%   freq/SO-feature locality via the mode ellipse.
+%   fed the SOPH (e.g. the SOPH sleep stages); the assignment rule handles
+%   the freq/SO-feature locality.
 % =========================================================================
 %                  DYNAM-O Toolbox  |  Prerau Laboratory
 % =========================================================================
@@ -37,16 +44,20 @@ PkPeakiness = nan(nM,1);
 PkSOpower   = nan(nM,1);
 PkSOphase   = nan(nM,1);
 
+if nargin < 4 || isempty(assign); assign = 'argmax'; end
+if nargin < 5 || isempty(background); background = nan(1, 3); end
+assign = parse_peak_assign(assign);
+
 have_stats = nargin >= 3 && istable(stats_table_SOPH) && ~isempty(stats_table_SOPH) ...
     && ismember('PeakFrequency', stats_table_SOPH.Properties.VariableNames);
 
 if nM > 0 && have_stats
     props = {'PeakFrequency','Duration','Bandwidth','Height','Volume', ...
              'Area','Peakiness','SOpower','SOphase'};
+    params6 = T{:, 1:6};   % [Density,FreqMean,FreqStd,SO*Mean,SO*Std,Theta]
+    members = assign_mode_peaks(params6, axis_kind, stats_table_SOPH, assign, background);
     for m = 1:nM
-        mode_params = T{m, 1:6};   % [Density,FreqMean,FreqStd,SO*Mean,SO*Std,Theta]
-        idx = get_mode_peaks(mode_params, axis_kind, stats_table_SOPH, prob);
-        s   = mode_peak_stats(stats_table_SOPH, idx, props);
+        s = mode_peak_stats(stats_table_SOPH, members(:, m), props);
         PkCount(m)     = s.count;
         PkFreq(m)      = s.PeakFrequency;
         PkDuration(m)  = s.Duration;

@@ -596,7 +596,8 @@ classdef DYNAMO < handle
                     phase_ok = true;
                     if ~isempty(obj.SOPHs.SOphase_paramfit.params)
                         obj.SOPHs.SOphase_paramfit.params = annotateModesWithPeakStats( ...
-                            obj.SOPHs.SOphase_paramfit.params, 'phase', pk_tbl, opts_phase.peak_assign_prob);
+                            obj.SOPHs.SOphase_paramfit.params, 'phase', pk_tbl, ...
+                            opts_phase.peak_assign, get_fit_background(fitobj_phase));
                     end
                 end
             catch ME_phase
@@ -625,7 +626,8 @@ classdef DYNAMO < handle
                             obj.SOPHs.SOpower_paramfit.params, obj.SOPHs.SOphase_mat, ...
                             obj.SOPHs.freq_bins, obj.SOPHs.SOphase_bins, model_SOPhH_phase);
                         obj.SOPHs.SOpower_paramfit.params = annotateModesWithPeakStats( ...
-                            obj.SOPHs.SOpower_paramfit.params, 'power', pk_tbl, opts_pow.peak_assign_prob);
+                            obj.SOPHs.SOpower_paramfit.params, 'power', pk_tbl, ...
+                            opts_pow.peak_assign, get_fit_background(fitobj_pow));
                     end
                 end
             catch ME_pow
