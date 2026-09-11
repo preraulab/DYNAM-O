@@ -163,6 +163,13 @@ if ~isempty(subjectID)
 end
 fprintf(fid, '# fit_type: %s\n', fit_type);
 fprintf(fid, '# n_modes: %d\n', n_modes);
+% The peak->mode assignment the Pk* columns were computed under, as
+% effectively used on this axis (set by fitParamBasis / DYNAMO; the phase
+% axis records the '0.95 p' fallback under the density rules). Optional:
+% readers ignore unknown # keys, so files without it parse unchanged.
+if isfield(paramfit, 'peak_assign') && ~isempty(paramfit.peak_assign)
+    fprintf(fid, '# peak_assign: %s\n', char(paramfit.peak_assign));
+end
 for ii = 1:3
     fprintf(fid, '# background.%s: %.17g\n', bg_keys{ii}, bg(ii));
 end

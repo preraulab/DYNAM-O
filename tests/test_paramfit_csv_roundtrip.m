@@ -57,6 +57,27 @@ testCase.verifyTrue(isequaln(R.PkCount, pf.params.PkCount));
 testCase.verifyTrue(isequaln(R.PkSOphase, pf.params.PkSOphase));
 end
 
+function test_peak_assign_preamble_round_trip(testCase)
+% The '# peak_assign:' line is written when the struct carries the field,
+% surfaces on read, and its absence (old files / no field) stays harmless.
+pf = synthetic_paramfit_('power');
+pf.peak_assign = 'argmax';
+so_bins = 0:2; freq_bins = [10 12 14];
+p = fullfile(testCase.TestData.dir, 'S1_SOpower_paramfit_C3.csv');
+writeParamfitCsv(p, pf, 'power', so_bins, freq_bins, fixture_stamp_());
+txt = fileread(p);
+testCase.verifySubstring(txt, sprintf('# peak_assign: argmax\n'));
+[~, meta] = loadParamfitCsv(p);
+testCase.verifyEqual(meta.peak_assign, 'argmax');
+
+pf2 = synthetic_paramfit_('power');   % no field -> no line, empty on read
+p2 = fullfile(testCase.TestData.dir, 'S2_SOpower_paramfit_C3.csv');
+writeParamfitCsv(p2, pf2, 'power', so_bins, freq_bins, fixture_stamp_());
+testCase.verifyFalse(contains(fileread(p2), 'peak_assign'));
+[~, meta2] = loadParamfitCsv(p2);
+testCase.verifyEqual(meta2.peak_assign, '');
+end
+
 function test_phase_cross_axis_sopowermean(testCase)
 % The phase CSV inserts a cross-axis SOpowerMean column: the mean of the
 % finite SO-power histogram column at each mode's nearest freq bin.
