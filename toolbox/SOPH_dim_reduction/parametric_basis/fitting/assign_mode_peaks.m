@@ -32,6 +32,12 @@ function members = assign_mode_peaks(params6, axis_kind, stats_table, assign, ba
 %       attaining the maximal density, and only when that density beats
 %       the background there (ties with the background go to the
 %       background; non-finite background -> unassigned).
+%     * Both density rules operate within each mode's 3-sigma footprint
+%       (Q <= 4.5): outside it a mode neither claims a peak nor blocks
+%       another mode's argmax. Where the background plane approaches zero,
+%       an uncapped comparison would admit arbitrarily far tails (any
+%       positive mode density beats a ~zero background). Numeric contours
+%       are NOT capped - their radius is the user's explicit choice.
 %     * On the PHASE axis the density rules fall back to the '0.95 p'
 %       contour: phase Density is a row-normalized empirical height while
 %       the stored phase background is pre-normalization, so a density
@@ -78,10 +84,13 @@ switch assign.kind
         F = stats_table.PeakFrequency(:);
         S = stats_table.SOpower(:);
         amps = params6(:, 1).';
+        Q_CAP = 4.5;   % 3-sigma footprint (see help above; matches Rust
+                       % dynamo_pipeline::mode_peaks::DENSITY_ASSIGN_Q_CAP)
         D = zeros(nP, nM);
         for m = 1:nM
             if isfinite(amps(m)) && amps(m) > 0
-                D(ok(:, m), m) = amps(m) .* exp(-Q(ok(:, m), m));
+                in_cap = ok(:, m) & (Q(:, m) <= Q_CAP);
+                D(in_cap, m) = amps(m) .* exp(-Q(in_cap, m));
             end
         end
         bgv = background(1) .* S + background(2) .* F + background(3);

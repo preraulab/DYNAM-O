@@ -351,6 +351,27 @@ via_p = assign_mode_peaks(A, 'power', tbl, p_eq, nan(1, 3));
 testCase.verifyEqual(m, via_p);
 end
 
+function test_e11_density_rules_respect_the_footprint_cap(testCase)
+% Near-zero background: a peak at 3.5 sigma (Q = 6.125 > 4.5) must be
+% excluded under both density rules; one at 2.9 sigma (Q = 4.205) stays.
+[A, ~] = pk_modes_();
+tbl = pk_power_table_([13, 5 + 2.9*10; 13, 5 + 3.5*10]);
+for rule = {'background', 'argmax'}
+    m = assign_mode_peaks(A, 'power', tbl, rule{1}, [0, 0, 1e-6]);
+    testCase.verifyEqual(m, [true; false], rule{1});
+end
+end
+
+function test_e12_capped_out_mode_does_not_block_argmax(testCase)
+% A peak 4 sigma from strong mode A but at weak mode C's center: C wins
+% the argmax - A's extrapolated tail neither claims nor blocks it.
+[A, ~] = pk_modes_();
+C = [0.01, 13, 1, 45, 10, 0];
+tbl = pk_power_table_([13, 45]);
+m = assign_mode_peaks([A; C], 'power', tbl, 'argmax', [0, 0, 1e-6]);
+testCase.verifyEqual(m, [false, true]);
+end
+
 function test_e9_parser_forms_and_rejects(testCase)
 a = parse_peak_assign(0.3);
 testCase.verifyEqual({a.kind, a.value}, {'p', 0.3});
