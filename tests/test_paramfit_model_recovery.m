@@ -269,7 +269,7 @@ function test_e1_background_rule_equals_pstar_contour(testCase)
 [A, ~] = pk_modes_();
 r = sqrt(2 * log(20));
 tbl = pk_power_table_([13 + r - 1e-9, 5; 13 + r + 1e-3, 5]);
-m = assign_mode_peaks(A, 'power', tbl, 'background', [0, 0, 0.5]);
+m = assign_mode_peaks(A, 'power', tbl, 'background 3 s', [0, 0, 0.5]);
 testCase.verifyEqual(m, [true; false]);
 end
 
@@ -278,7 +278,7 @@ function test_e2_background_rule_adapts_to_amp(testCase)
 [~, B] = pk_modes_();
 b = 25 + sqrt(2 * log(10)) * 10;
 tbl = pk_power_table_([13, b - 0.01; 13, b + 0.01]);
-m = assign_mode_peaks(B, 'power', tbl, 'background', [0, 0, 0.5]);
+m = assign_mode_peaks(B, 'power', tbl, 'background 3 s', [0, 0, 0.5]);
 testCase.verifyEqual(m, [true; false]);
 end
 
@@ -287,9 +287,9 @@ function test_e3_background_evaluated_at_the_peak(testCase)
 % not a member; a constant bg 0.5 admits it.
 [A, ~] = pk_modes_();
 tbl = pk_power_table_([13, 25]);
-m = assign_mode_peaks(A, 'power', tbl, 'background', [0.1, 0, 0]);
+m = assign_mode_peaks(A, 'power', tbl, 'background 3 s', [0.1, 0, 0]);
 testCase.verifyEqual(m, false);
-m = assign_mode_peaks(A, 'power', tbl, 'background', [0, 0, 0.5]);
+m = assign_mode_peaks(A, 'power', tbl, 'background 3 s', [0, 0, 0.5]);
 testCase.verifyEqual(m, true);
 end
 
@@ -299,7 +299,7 @@ function test_e4_argmax_is_exclusive(testCase)
 tbl = pk_power_table_([13, 15]);
 both = assign_mode_peaks([A; B], 'power', tbl, 0.95, nan(1, 3));
 testCase.verifyEqual(both, [true, true]);
-ex = assign_mode_peaks([A; B], 'power', tbl, 'argmax', [0, 0, 0.5]);
+ex = assign_mode_peaks([A; B], 'power', tbl, 'argmax 3 s', [0, 0, 0.5]);
 testCase.verifyEqual(ex, [true, false]);
 end
 
@@ -307,7 +307,7 @@ function test_e5_background_wins_leaves_unassigned(testCase)
 % (13, 60): d_A ~ 2.7e-6, d_B ~ 0.0109, both < bg 0.5.
 [A, B] = pk_modes_();
 tbl = pk_power_table_([13, 60]);
-ex = assign_mode_peaks([A; B], 'power', tbl, 'argmax', [0, 0, 0.5]);
+ex = assign_mode_peaks([A; B], 'power', tbl, 'argmax 3 s', [0, 0, 0.5]);
 testCase.verifyEqual(ex, [false, false]);
 bgm = assign_mode_peaks([A; B], 'power', tbl, 'background', [0, 0, 0.5]);
 testCase.verifyEqual(bgm, [false, false]);
@@ -316,7 +316,7 @@ end
 function test_e6_argmax_tie_is_first_wins(testCase)
 [A, ~] = pk_modes_();
 tbl = pk_power_table_([13, 5]);
-ex = assign_mode_peaks([A; A], 'power', tbl, 'argmax', [0, 0, 0.5]);
+ex = assign_mode_peaks([A; A], 'power', tbl, 'argmax 3 s', [0, 0, 0.5]);
 testCase.verifyEqual(ex, [true, false]);
 end
 
@@ -325,7 +325,7 @@ mode = [0.5, 13, 1, 0, 0.5, 0];
 tbl = table([13; 13; 13], [0; 0.2; pi], ...
     'VariableNames', {'PeakFrequency', 'SOphase'});
 fallback = assign_mode_peaks(mode, 'phase', tbl, 0.95, nan(1, 3));
-for rule = {'background', 'argmax'}
+for rule = {'background', 'argmax', 'argmax 3 s'}
     m = assign_mode_peaks(mode, 'phase', tbl, rule{1}, [7, 7, 7]);
     testCase.verifyEqual(m, fallback, rule{1});
 end
@@ -356,9 +356,15 @@ function test_e11_density_rules_respect_the_footprint_cap(testCase)
 % excluded under both density rules; one at 2.9 sigma (Q = 4.205) stays.
 [A, ~] = pk_modes_();
 tbl = pk_power_table_([13, 5 + 2.9*10; 13, 5 + 3.5*10]);
-for rule = {'background', 'argmax'}
+for rule = {'background 3 s', 'argmax 3 s'}
     m = assign_mode_peaks(A, 'power', tbl, rule{1}, [0, 0, 1e-6]);
     testCase.verifyEqual(m, [true; false], rule{1});
+end
+% Bare density rules mean a 1.5-sigma footprint: 1.4 sigma in, 1.6 out.
+tbl2 = pk_power_table_([13, 5 + 1.4*10; 13, 5 + 1.6*10]);
+for rule = {'argmax', 'background'}
+    m = assign_mode_peaks(A, 'power', tbl2, rule{1}, [0, 0, 1e-6]);
+    testCase.verifyEqual(m, [true; false], [rule{1} ' default footprint']);
 end
 end
 
@@ -368,7 +374,7 @@ function test_e12_capped_out_mode_does_not_block_argmax(testCase)
 [A, ~] = pk_modes_();
 C = [0.01, 13, 1, 45, 10, 0];
 tbl = pk_power_table_([13, 45]);
-m = assign_mode_peaks([A; C], 'power', tbl, 'argmax', [0, 0, 1e-6]);
+m = assign_mode_peaks([A; C], 'power', tbl, 'argmax 3 s', [0, 0, 1e-6]);
 testCase.verifyEqual(m, [false, true]);
 end
 
@@ -378,9 +384,12 @@ testCase.verifyEqual({a.kind, a.value}, {'p', 0.3});
 testCase.verifyEqual(parse_peak_assign('0.3 P').thr, -log(0.7), 'AbsTol', 1e-15);
 testCase.verifyEqual(parse_peak_assign(' 1.3 SIGMA ').kind, 'sigma');
 testCase.verifyEqual(parse_peak_assign('1.3 s').thr, 0.5 * 1.3^2, 'AbsTol', 1e-15);
-testCase.verifyEqual(parse_peak_assign('Argmax').label, 'argmax');
-testCase.verifyEqual(parse_peak_assign('background').label, 'background');
-for bad = {'1.5 p', '0 sigma', '-1 s', 'nonsense', '3 q'}
+testCase.verifyEqual(parse_peak_assign('Argmax').label, 'argmax 1.5 sigma');
+a = parse_peak_assign('argmax 2 s');
+testCase.verifyEqual({a.kind, a.footprint, a.q_cap}, {'argmax', 2, 2});
+testCase.verifyEqual(parse_peak_assign('BACKGROUND 1.75 SIGMA').footprint, 1.75);
+testCase.verifyEqual(parse_peak_assign('background').label, 'background 1.5 sigma');
+for bad = {'1.5 p', '0 sigma', '-1 s', 'nonsense', '3 q', 'argmax 0 s', 'argmax 2 p', 'argmax 2'}
     testCase.verifyError(@() parse_peak_assign(bad{1}), ?MException, bad{1});
 end
 end

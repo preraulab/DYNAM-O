@@ -51,7 +51,7 @@ function default_params = param_basis_opts(type, varargin)
 %       'plot_on' - Flag to plot: 0 plot nothing, 1: plot the final result, 2: plot iterations, 3: plot iterations and final (default: 1)
 %       'SOPH_clim_prctiles' - percentiles used to scale the heatmap color on SO feature histograms (default: [5, 98])
 %       'verbose' - Flag to display detailed output (default: true)
-%       'peak_assign' - TF-peak -> mode assignment rule for the per-mode Pk* summaries: a probability (0.3 or '0.3 p'), a sigma radius ('1.3 sigma'), 'background', or 'argmax' (default: 'argmax'; see PARSE_PEAK_ASSIGN; density rules fall back to '0.95 p' on the phase axis)
+%       'peak_assign' - TF-peak -> mode assignment rule for the per-mode Pk* summaries: a probability (0.3 or '0.3 p'), a sigma radius ('1.3 sigma'), 'background', or 'argmax' (default: 'argmax' = argmax within a 1.5-sigma footprint; 'argmax 2 s' overrides the footprint; see PARSE_PEAK_ASSIGN; density rules fall back to '0.95 p' on the phase axis)
 %       'peak_assign_prob' - DEPRECATED alias: a probability p mapped onto peak_assign as '<p> p' when peak_assign itself is untouched
 %
 %       Migrating custom prefix_modes / LB_default / UB_default values. The
