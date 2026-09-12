@@ -34,8 +34,7 @@ function names = init_DYNAMO(varargin)
 %   <name>` on R2022b+ and falls back to `clear <name>` on older
 %   releases.
 
-    persistent done_root done_gui classnames_cache bridge_checked
-    if isempty(done_gui), done_gui = false; end
+    persistent done_root classnames_cache bridge_checked
 
     flags    = lower(string(varargin));
     do_clear = any(flags == "clear");
@@ -84,14 +83,6 @@ function names = init_DYNAMO(varargin)
     end
     addpath(repo_root);
 
-    % --- Optional: GUI tree.
-    if do_gui && (~done_gui || do_clear || do_force)
-        app_dir = fullfile(repo_root, 'app');
-        if isfolder(app_dir)
-            addpath(genpath(app_dir));
-        end
-        done_gui = true;
-    end
 
     % --- Warn once per session if the committed MEX binaries are stale
     %     against the Rust source beside them. The binaries are checked in,
