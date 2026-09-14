@@ -51,7 +51,8 @@ function default_params = param_basis_opts(type, varargin)
 %       'plot_on' - Flag to plot: 0 plot nothing, 1: plot the final result, 2: plot iterations, 3: plot iterations and final (default: 1)
 %       'SOPH_clim_prctiles' - percentiles used to scale the heatmap color on SO feature histograms (default: [5, 98])
 %       'verbose' - Flag to display detailed output (default: true)
-%       'peak_assign_prob' - Gaussian probability for the power assignment contour and relative-height contour parameter for phase when computing per-mode Pk* summaries (default: 0.95)
+%       'peak_assign' - TF-peak -> mode assignment rule for the per-mode Pk* summaries: a probability (0.3 or '0.3 p'), a sigma radius ('1.3 sigma'), 'background', or 'argmax' (default: 'argmax' = argmax within a 1.5-sigma footprint; 'argmax 2 s' overrides the footprint; see PARSE_PEAK_ASSIGN; density rules fall back to '0.95 p' on the phase axis)
+%       'peak_assign_prob' - DEPRECATED alias: a probability p mapped onto peak_assign as '<p> p' when peak_assign itself is untouched
 %
 %       Migrating custom prefix_modes / LB_default / UB_default values. The
 %       Gaussian width slots now accept true standard deviations. Divide a
@@ -131,9 +132,9 @@ default_params_power.constrain_power_center = true;
 default_params_power.plot_on = 1;
 default_params_power.SOPH_clim_prctiles = [5, 98];
 default_params_power.verbose = true;
-% Gaussian probability for the power assignment contour (the Pk* per-mode
-% peak-property columns are means over peaks inside this region).
-default_params_power.peak_assign_prob = 0.95;
+% TF-peak -> mode assignment rule for the Pk* per-mode peak-property
+% columns (see parse_peak_assign / assign_mode_peaks).
+default_params_power.peak_assign = 'argmax';
 
 % Default parameter values for 'phase'
 default_params_phase.phase_limits = [-pi, pi];
@@ -168,7 +169,7 @@ default_params_phase.SOPH_clim_prctiles = [5, 98];
 default_params_phase.verbose = true;
 % Relative-height contour parameter for phase assignment (the Pk* per-mode
 % peak-property columns are means over peaks inside this region).
-default_params_phase.peak_assign_prob = 0.95;
+default_params_phase.peak_assign = 'argmax';
 
 % Select appropriate default parameters based on type
 switch type
@@ -218,10 +219,24 @@ end
 addParameter(p, 'plot_on', default_params.plot_on, @(x) validateattributes(x, {'logical', 'numeric'}, {'scalar'}));
 addParameter(p, 'SOPH_clim_prctiles', default_params.SOPH_clim_prctiles, @(x) validateattributes(x, {'numeric'}, {'real','finite','positive','vector','numel',2}));
 addParameter(p, 'verbose', default_params.verbose, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
-addParameter(p, 'peak_assign_prob', default_params.peak_assign_prob, @(x) isnumeric(x) && isscalar(x) && x > 0 && x < 1);
+addParameter(p, 'peak_assign', default_params.peak_assign, @(x) isstruct(parse_peak_assign(x)));
+% Deprecated alias, kept one release: maps onto peak_assign below.
+addParameter(p, 'peak_assign_prob', [], @(x) isnumeric(x) && isscalar(x) && x > 0 && x < 1);
 
 % Parse input arguments
 parse(p, varargin{:});
 
 % Convert the parsed parameters into a structure
 default_params = p.Results;
+
+% Resolve the deprecated peak_assign_prob alias: honored only when
+% peak_assign itself was untouched, then removed from the struct.
+if ~isempty(default_params.peak_assign_prob)
+    if any(strcmp('peak_assign', p.UsingDefaults))
+        default_params.peak_assign = sprintf('%g p', default_params.peak_assign_prob);
+        warning('param_basis_opts:peakAssignProbDeprecated', ...
+            'peak_assign_prob is deprecated; use peak_assign (mapped to ''%s'').', ...
+            default_params.peak_assign);
+    end
+end
+default_params = rmfield(default_params, 'peak_assign_prob');

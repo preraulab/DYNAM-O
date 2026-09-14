@@ -248,6 +248,152 @@ for prob = [0.5, 0.8, 0.95, 0.99]
 end
 end
 
+%% ---- peak_assign rule engine (E1-E9; the same analytic fixtures are ----
+%% ---- pinned by the Rust mode_peaks tests and the DYNAM-O_py tests)  ----
+%
+% Power fixture, theta = 0:
+%   Mode A: amp 10 at (13 Hz, 5 dB),  sigma_f = 1, sigma_p = 10
+%   Mode B: amp  5 at (13 Hz, 25 dB), sigma_f = 1, sigma_p = 10
+
+function tbl = pk_power_table_(pts)
+tbl = table(pts(:, 1), pts(:, 2), 'VariableNames', {'PeakFrequency', 'SOpower'});
+end
+
+function [A, B] = pk_modes_()
+A = [10, 13, 1, 5, 10, 0];
+B = [5, 13, 1, 25, 10, 0];
+end
+
+function test_e1_background_rule_equals_pstar_contour(testCase)
+% Constant bg 0.5, amp 10 -> p* = 0.95: freq boundary at 13 + sqrt(2*log(20)).
+[A, ~] = pk_modes_();
+r = sqrt(2 * log(20));
+tbl = pk_power_table_([13 + r - 1e-9, 5; 13 + r + 1e-3, 5]);
+m = assign_mode_peaks(A, 'power', tbl, 'background 3 s', [0, 0, 0.5]);
+testCase.verifyEqual(m, [true; false]);
+end
+
+function test_e2_background_rule_adapts_to_amp(testCase)
+% amp 5 vs bg 0.5 -> p* = 0.9: power boundary at 25 + sqrt(2*log(10))*10.
+[~, B] = pk_modes_();
+b = 25 + sqrt(2 * log(10)) * 10;
+tbl = pk_power_table_([13, b - 0.01; 13, b + 0.01]);
+m = assign_mode_peaks(B, 'power', tbl, 'background 3 s', [0, 0, 0.5]);
+testCase.verifyEqual(m, [true; false]);
+end
+
+function test_e3_background_evaluated_at_the_peak(testCase)
+% Sloped bg [0.1 0 0]: at (13, 25) the plane is 2.5 while d_A ~ 1.3534 ->
+% not a member; a constant bg 0.5 admits it.
+[A, ~] = pk_modes_();
+tbl = pk_power_table_([13, 25]);
+m = assign_mode_peaks(A, 'power', tbl, 'background 3 s', [0.1, 0, 0]);
+testCase.verifyEqual(m, false);
+m = assign_mode_peaks(A, 'power', tbl, 'background 3 s', [0, 0, 0.5]);
+testCase.verifyEqual(m, true);
+end
+
+function test_e4_argmax_is_exclusive(testCase)
+% (13, 15) is inside both 95% ellipses; d_A > d_B -> argmax gives A only.
+[A, B] = pk_modes_();
+tbl = pk_power_table_([13, 15]);
+both = assign_mode_peaks([A; B], 'power', tbl, 0.95, nan(1, 3));
+testCase.verifyEqual(both, [true, true]);
+ex = assign_mode_peaks([A; B], 'power', tbl, 'argmax 3 s', [0, 0, 0.5]);
+testCase.verifyEqual(ex, [true, false]);
+end
+
+function test_e5_background_wins_leaves_unassigned(testCase)
+% (13, 60): d_A ~ 2.7e-6, d_B ~ 0.0109, both < bg 0.5.
+[A, B] = pk_modes_();
+tbl = pk_power_table_([13, 60]);
+ex = assign_mode_peaks([A; B], 'power', tbl, 'argmax 3 s', [0, 0, 0.5]);
+testCase.verifyEqual(ex, [false, false]);
+bgm = assign_mode_peaks([A; B], 'power', tbl, 'background', [0, 0, 0.5]);
+testCase.verifyEqual(bgm, [false, false]);
+end
+
+function test_e6_argmax_tie_is_first_wins(testCase)
+[A, ~] = pk_modes_();
+tbl = pk_power_table_([13, 5]);
+ex = assign_mode_peaks([A; A], 'power', tbl, 'argmax 3 s', [0, 0, 0.5]);
+testCase.verifyEqual(ex, [true, false]);
+end
+
+function test_e7_phase_axis_falls_back_to_prob(testCase)
+mode = [0.5, 13, 1, 0, 0.5, 0];
+tbl = table([13; 13; 13], [0; 0.2; pi], ...
+    'VariableNames', {'PeakFrequency', 'SOphase'});
+fallback = assign_mode_peaks(mode, 'phase', tbl, 0.95, nan(1, 3));
+for rule = {'background', 'argmax', 'argmax 3 s'}
+    m = assign_mode_peaks(mode, 'phase', tbl, rule{1}, [7, 7, 7]);
+    testCase.verifyEqual(m, fallback, rule{1});
+end
+end
+
+function test_e8_prob_form_matches_legacy_get_mode_peaks(testCase)
+[A, B] = pk_modes_();
+tbl = pk_power_table_([13, 5; 13, 15; 2, -4; 13.4, 28]);
+m = assign_mode_peaks([A; B], 'power', tbl, 0.95, nan(1, 3));
+testCase.verifyEqual(m(:, 1), get_mode_peaks(A, 'power', tbl, 0.95));
+testCase.verifyEqual(m(:, 2), get_mode_peaks(B, 'power', tbl, 0.95));
+end
+
+function test_e9_sigma_form_is_an_exact_sigma_radius(testCase)
+% '1 sigma': thr = 0.5 -> freq boundary at 13 + 1*sigma_f exactly, and
+% Sigma(n) equals Prob(1 - exp(-n^2/2)) on the power axis.
+[A, ~] = pk_modes_();
+tbl = pk_power_table_([14 - 1e-9, 5; 14 + 1e-3, 5]);
+m = assign_mode_peaks(A, 'power', tbl, '1 sigma', nan(1, 3));
+testCase.verifyEqual(m, [true; false]);
+p_eq = 1 - exp(-0.5);
+via_p = assign_mode_peaks(A, 'power', tbl, p_eq, nan(1, 3));
+testCase.verifyEqual(m, via_p);
+end
+
+function test_e11_density_rules_respect_the_footprint_cap(testCase)
+% Near-zero background: a peak at 3.5 sigma (Q = 6.125 > 4.5) must be
+% excluded under both density rules; one at 2.9 sigma (Q = 4.205) stays.
+[A, ~] = pk_modes_();
+tbl = pk_power_table_([13, 5 + 2.9*10; 13, 5 + 3.5*10]);
+for rule = {'background 3 s', 'argmax 3 s'}
+    m = assign_mode_peaks(A, 'power', tbl, rule{1}, [0, 0, 1e-6]);
+    testCase.verifyEqual(m, [true; false], rule{1});
+end
+% Bare density rules mean a 1.5-sigma footprint: 1.4 sigma in, 1.6 out.
+tbl2 = pk_power_table_([13, 5 + 1.4*10; 13, 5 + 1.6*10]);
+for rule = {'argmax', 'background'}
+    m = assign_mode_peaks(A, 'power', tbl2, rule{1}, [0, 0, 1e-6]);
+    testCase.verifyEqual(m, [true; false], [rule{1} ' default footprint']);
+end
+end
+
+function test_e12_capped_out_mode_does_not_block_argmax(testCase)
+% A peak 4 sigma from strong mode A but at weak mode C's center: C wins
+% the argmax - A's extrapolated tail neither claims nor blocks it.
+[A, ~] = pk_modes_();
+C = [0.01, 13, 1, 45, 10, 0];
+tbl = pk_power_table_([13, 45]);
+m = assign_mode_peaks([A; C], 'power', tbl, 'argmax 3 s', [0, 0, 1e-6]);
+testCase.verifyEqual(m, [false, true]);
+end
+
+function test_e9_parser_forms_and_rejects(testCase)
+a = parse_peak_assign(0.3);
+testCase.verifyEqual({a.kind, a.value}, {'p', 0.3});
+testCase.verifyEqual(parse_peak_assign('0.3 P').thr, -log(0.7), 'AbsTol', 1e-15);
+testCase.verifyEqual(parse_peak_assign(' 1.3 SIGMA ').kind, 'sigma');
+testCase.verifyEqual(parse_peak_assign('1.3 s').thr, 0.5 * 1.3^2, 'AbsTol', 1e-15);
+testCase.verifyEqual(parse_peak_assign('Argmax').label, 'argmax 1.5 sigma');
+a = parse_peak_assign('argmax 2 s');
+testCase.verifyEqual({a.kind, a.footprint, a.q_cap}, {'argmax', 2, 2});
+testCase.verifyEqual(parse_peak_assign('BACKGROUND 1.75 SIGMA').footprint, 1.75);
+testCase.verifyEqual(parse_peak_assign('background').label, 'background 1.5 sigma');
+for bad = {'1.5 p', '0 sigma', '-1 s', 'nonsense', '3 q', 'argmax 0 s', 'argmax 2 p', 'argmax 2'}
+    testCase.verifyError(@() parse_peak_assign(bad{1}), ?MException, bad{1});
+end
+end
+
 function test_phase_empirical_amplitude_uses_circular_distance(testCase)
 phase_bins = linspace(-pi, pi, 41);
 freq_bins = linspace(2, 18, 65).';

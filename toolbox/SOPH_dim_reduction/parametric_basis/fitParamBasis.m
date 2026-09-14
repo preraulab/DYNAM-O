@@ -54,7 +54,10 @@ if valid_phasehist
             % Per-mode TF-peak summary columns (Pk*).
             if ~isempty(SOPHs.SOphase_paramfit.params)
                 SOPHs.SOphase_paramfit.params = annotateModesWithPeakStats( ...
-                    SOPHs.SOphase_paramfit.params, 'phase', stats_table_SOPH, phase_opts.peak_assign_prob);
+                    SOPHs.SOphase_paramfit.params, 'phase', stats_table_SOPH, ...
+                    phase_opts.peak_assign, get_fit_background(fitobj_phase));
+                SOPHs.SOphase_paramfit.peak_assign = ...
+                    effective_peak_assign_label(phase_opts.peak_assign, 'phase');
             end
         end
     catch ME_phase
@@ -84,7 +87,10 @@ if valid_powerhist
                     SOPHs.freq_bins, SOPHs.SOphase_bins, model_SOPH_phase);
                 % Per-mode TF-peak summary columns (Pk*).
                 SOPHs.SOpower_paramfit.params = annotateModesWithPeakStats( ...
-                    SOPHs.SOpower_paramfit.params, 'power', stats_table_SOPH, power_opts.peak_assign_prob);
+                    SOPHs.SOpower_paramfit.params, 'power', stats_table_SOPH, ...
+                    power_opts.peak_assign, get_fit_background(fitobj_power));
+                SOPHs.SOpower_paramfit.peak_assign = ...
+                    effective_peak_assign_label(power_opts.peak_assign, 'power');
             end
         end
     catch ME_pow
