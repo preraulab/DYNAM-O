@@ -34,7 +34,7 @@ p = fullfile(testCase.TestData.dir, 'S1_SOPHs_power_C3.tiff');
 writeSOPHsTiff(p, H, so_bins, freq_bins, 'sopower', fixture_stamp_(), ...
     'subjectID', 'S1');
 
-[Hr, meta] = loadSOPHsTiff(p);
+[Hr, so_out, freq_out, meta] = loadSOPHsTiff(p);
 % Pixels are f32 on disk; compare at single precision, NaN-tolerant.
 testCase.verifyTrue(isequaln(single(Hr), single(H)));
 testCase.verifyEqual(meta.format, 2);
@@ -43,8 +43,8 @@ testCase.verifyEqual(meta.subjectID, 'S1');
 testCase.verifyEqual(meta.writer, 'dynamo-matlab');
 testCase.verifyEqual(meta.writer_version, '1.0.0+abcdef123456');
 testCase.verifyEqual(meta.kernel_version, 'matlab-native');
-testCase.verifyEqual(meta.so_bins, so_bins, 'AbsTol', 1e-12);
-testCase.verifyEqual(meta.freq_bins, freq_bins, 'AbsTol', 1e-12);
+testCase.verifyEqual(so_out, so_bins, 'AbsTol', 1e-12);
+testCase.verifyEqual(freq_out, freq_bins, 'AbsTol', 1e-12);
 % Both key families must be present for cross-tool readers.
 testCase.verifyTrue(isfield(meta.raw, 'row_centers'));
 testCase.verifyTrue(isfield(meta.raw, 'SOpower_bins'));
