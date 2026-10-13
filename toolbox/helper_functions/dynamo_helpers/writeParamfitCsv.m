@@ -204,10 +204,10 @@ function c = pk_cols_()
 %       none
 %
 %   Outputs:
-%       c : cell - the ten Pk* column names, matching
+%       c : cell - the eleven Pk* column names, matching
 %           annotateModesWithPeakStats and the Rust mode_peaks columns
 c = {'PkCount','PkFreq','PkDuration','PkBandwidth','PkHeight', ...
-     'PkVolume','PkArea','PkPeakiness','PkSOpower','PkSOphase'};
+     'PkPower','PkVolume','PkArea','PkPeakiness','PkSOpower','PkSOphase'};
 end
 
 
