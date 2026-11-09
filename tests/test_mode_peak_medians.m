@@ -26,6 +26,21 @@ s2 = mode_peak_stats(st, [true; true; false]);
 testCase.verifyEqual(s2.Height, 15, 'AbsTol', 1e-12);
 end
 
+function test_summary_mean_is_selectable(testCase)
+% 'Summary','mean' swaps the median for the mean on every property but
+% SOphase, which stays the circular mean under both summaries.
+st = peak_table_([13.0; 13.1; 13.2], [5.0; 5.5; 6.0], [10; 20; 999]);
+st.SOphase = [pi - 0.1; -pi + 0.1; pi];
+s_mean = mode_peak_stats(st, true(3, 1), [], 'Summary', 'mean');
+s_median = mode_peak_stats(st, true(3, 1));
+testCase.verifyEqual(s_mean.Height, 343, 'AbsTol', 1e-12);
+testCase.verifyEqual(s_median.Height, 20, 'AbsTol', 1e-12);
+% The three phases straddle +/-pi, so a linear mean would land near pi/3
+testCase.verifyEqual(abs(s_mean.SOphase), pi, 'AbsTol', 1e-12);
+testCase.verifyEqual(s_mean.SOphase, s_median.SOphase);
+testCase.verifyError(@() mode_peak_stats(st, true(3, 1), [], 'Summary', 'mode'), ?MException);
+end
+
 function test_pkpower_reanchors_to_the_baseline(testCase)
 % PkPower = median over member peaks of pow2db(Height x
 % baseline(PeakFrequency)) with clamped linear interpolation - the
