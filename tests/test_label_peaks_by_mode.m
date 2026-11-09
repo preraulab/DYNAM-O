@@ -104,6 +104,21 @@ testCase.verifyEqual(labels(in_nrem) == 1, contour);
 testCase.verifyGreaterThan(sum(contour), 0);
 end
 
+function test_peaks_without_sopower_are_outside_the_soph(testCase)
+% A NREM peak with no SOpower never entered the histogram, so it is NaN
+% like a REM or wake peak, not 0 (in the SOPH but in no mode).
+[st, params, bg] = two_power_modes_();
+in_nrem = find(ismember(st.PeakStage, 1:3));
+st.SOpower(in_nrem(1:5)) = NaN;
+
+labels = label_peaks_by_mode(st, params, 'Background', bg);
+
+in_soph = soph_peak_mask(st, 1:3);
+testCase.verifyEqual(sum(in_soph), numel(in_nrem) - 5);
+testCase.verifyTrue(all(isnan(labels(in_nrem(1:5)))));
+testCase.verifyEqual(isnan(labels), ~in_soph);
+end
+
 function test_csv_inputs_match_tables(testCase)
 % A CLI run leaves only CSVs. Reading them must give the same labels as
 % passing the tables and background directly, and the two files must

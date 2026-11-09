@@ -981,7 +981,8 @@ reads the power background from wherever the modes came from.
 ```matlab
 [labels, members] = label_peaks_by_mode('C3/TFpeaks/S001_stats_table_C3.csv', ...
     'C3/param_basis/S001_SOpower_paramfit_C3.csv');
-% labels(k)     : mode of peak k, 0 if in no mode, NaN if outside the SOPH stages
+% labels(k)     : mode of peak k, 0 if in no mode, NaN if never in the SOPH
+%                 (outside the SOPH stages, or no SOpower)
 % members(k, m) : peak k is in mode m (phase modes can overlap, so a peak
 %                 can be in both, which is how the Pk* columns count it)
 ```

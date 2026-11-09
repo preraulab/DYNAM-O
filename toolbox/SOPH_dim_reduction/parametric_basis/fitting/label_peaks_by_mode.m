@@ -38,9 +38,10 @@ function [peak_labels, mode_members] = label_peaks_by_mode(stats_table, modes, v
 %   Outputs:
 %       peak_labels : Nx1 double - one label per row of the stats table:
 %                       m   = the peak belongs to mode m (row m of the params)
-%                       0   = the peak is in the SOPH stages but in no mode
-%                       NaN = the peak is outside the SOPH stages, so it
-%                             was never in the histogram the modes were fit to
+%                       0   = the peak is in the SOPH histogram but in no mode
+%                       NaN = the peak was never in the histogram the modes
+%                             were fit to: it is outside the SOPH stages or
+%                             has no SOpower (see SOPH_PEAK_MASK)
 %       mode_members : NxM logical - mode_members(k, m) is true when peak k
 %                      belongs to mode m. Unlike peak_labels, a peak inside
 %                      several overlapping modes is true in each of them,
@@ -138,7 +139,7 @@ function [peak_labels, mode_members] = label_peaks_by_mode(stats_table, modes, v
 %
 %   See also: assign_mode_peaks, get_mode_peaks, parse_peak_assign,
 %             get_fit_background, loadStatsTable, loadParamfitCsv,
-%             annotateModesWithPeakStats, mode_peak_stats
+%             annotateModesWithPeakStats, mode_peak_stats, soph_peak_mask
 %
 %   ∿∿∿  Prerau Laboratory · sleepEEG.org  ∿∿∿
 
@@ -218,20 +219,20 @@ num_modes = height(params);
 %************************************************************
 %            KEEP ONLY THE PEAKS THAT BUILT THE SOPH
 %************************************************************
-% The modes were fit to a histogram of the peaks in the SOPH stages only,
-% so peaks from other stages cannot belong to a mode. They are labeled NaN
-% to keep them distinct from SOPH peaks that simply fall in no mode (0).
-in_soph_stages = ismember(stats_table.PeakStage, soph_stages);
+% The modes were fit to a histogram of the peaks in the SOPH stages that
+% have an SOpower, so no other peak can belong to a mode. Those are labeled
+% NaN to keep them distinct from SOPH peaks that simply fall in no mode (0).
+in_soph = soph_peak_mask(stats_table, soph_stages);
 
 peak_labels = nan(num_peaks, 1);
-peak_labels(in_soph_stages) = 0;
+peak_labels(in_soph) = 0;
 mode_members = false(num_peaks, num_modes);
 
-if num_modes == 0 || ~any(in_soph_stages)
+if num_modes == 0 || ~any(in_soph)
     return
 end
 
-soph_peaks = stats_table(in_soph_stages, :);
+soph_peaks = stats_table(in_soph, :);
 
 %************************************************************
 %              ASSIGN EACH PEAK TO ITS MODE
@@ -260,8 +261,8 @@ soph_labels = zeros(height(soph_peaks), 1);
 in_a_mode = isfinite(closest_distance);
 soph_labels(in_a_mode) = closest_mode(in_a_mode);
 
-peak_labels(in_soph_stages) = soph_labels;
-mode_members(in_soph_stages, :) = is_member;
+peak_labels(in_soph) = soph_labels;
+mode_members(in_soph, :) = is_member;
 end
 
 %************************************************************

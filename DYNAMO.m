@@ -566,12 +566,12 @@ classdef DYNAMO < handle
             opts_phase.plot_on = false;
 
             % Per-mode TF-peak summary (Pk*) inputs: assignment contours +
-            % the SOPH-included peak population (PeakStage in SOPH_stages).
+            % the peaks that built the SOPHs (soph_peak_mask).
             pk_tbl = obj.stats_table;
             if istable(pk_tbl) && ~isempty(pk_tbl) && isstruct(obj.SOPH_options) ...
                     && isfield(obj.SOPH_options, 'SOPH_stages') ...
-                    && ismember('PeakStage', pk_tbl.Properties.VariableNames)
-                pk_tbl = pk_tbl(ismember(pk_tbl.PeakStage, obj.SOPH_options.SOPH_stages), :);
+                    && all(ismember({'PeakStage', 'SOpower'}, pk_tbl.Properties.VariableNames))
+                pk_tbl = pk_tbl(soph_peak_mask(pk_tbl, obj.SOPH_options.SOPH_stages), :);
             end
             % Extraction baseline (linear power over sfreqs) re-anchors
             % peak heights to absolute power for PkPower; empty when the
