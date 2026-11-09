@@ -1,104 +1,119 @@
-function T = annotateModesWithPeakStats(T, axis_kind, stats_table_SOPH, assign, background, baseline)
-%ANNOTATEMODESWITHPEAKSTATS  Append per-mode TF-peak summary columns.
+function T = annotateModesWithPeakStats(T, axis_kind, stats_table_SOPH, assign, background, baseline, varargin)
+%ANNOTATEMODESWITHPEAKSTATS  Append per-mode TF-peak summary (Pk*) columns to a params table
 %
-%   T = annotateModesWithPeakStats(T, axis_kind, stats_table_SOPH, assign, background, baseline)
+%   Usage:
+%       T = annotateModesWithPeakStats(T, axis_kind, stats_table_SOPH)
+%       T = annotateModesWithPeakStats(T, axis_kind, stats_table_SOPH, assign, background, baseline)
+%       T = annotateModesWithPeakStats(T, axis_kind, stats_table_SOPH, assign, background, baseline, 'Summary', 'mean')
 %
-%   For each mode (row of the paramfit params table T) selects its member
-%   TF-peaks under the peak_assign rule (ASSIGN_MODE_PEAKS) and appends
-%   eleven summary columns built from MODE_PEAK_STATS:
+%   Inputs:
+%       T                : table - paramfit params table, one row per mode,
+%                          first six columns [Density FreqMean FreqStd
+%                          SO*Mean SO*Std Theta] -- required
+%       axis_kind        : char - 'power' or 'phase' -- required
+%       stats_table_SOPH : table - TF-peak stats table already restricted
+%                          to the peaks that built the SOPH (see
+%                          SOPH_PEAK_MASK) -- required
+%       assign           : char or double - peak_assign rule, anything
+%                          PARSE_PEAK_ASSIGN accepts (default: 'argmax')
+%       background       : 1x3 double - the fit's [xxx yyy zzz] from
+%                          GET_FIT_BACKGROUND, used by the density rules
+%                          on the power axis (default: nan(1, 3))
+%       baseline         : struct - extraction floor as struct('values', v,
+%                          'freqs', f), v linear power on the frequency
+%                          axis f, needed for PkPower (default: [])
 %
-%     PkCount, PkFreq, PkDuration, PkBandwidth, PkHeight, PkPower,
-%     PkVolume, PkArea, PkPeakiness, PkSOpower, PkSOphase
+%   Name-Value Pairs:
+%       'Summary' : char - statistic over each mode's member peaks,
+%                   'median' or 'mean', passed to MODE_PEAK_STATS
+%                   (default: 'median')
 %
-%   Every Pk* aggregate is a MEDIAN over the mode's member peaks
-%   (PkSOphase is a circular mean, PkCount a count) - see
-%   MODE_PEAK_STATS for why. These mirror, name-for-name, the per-mode
-%   columns the Rust pipeline writes (dynamo_pipeline::mode_peaks), so
-%   the MATLAB and Rust paramfit CSVs share one schema.
+%   Outputs:
+%       T : table - the input with eleven columns appended, in this order:
+%           PkCount, PkFreq, PkDuration, PkBandwidth, PkHeight, PkPower,
+%           PkVolume, PkArea, PkPeakiness, PkSOpower, PkSOphase
 %
-%   BASELINE (optional) is the extraction's per-frequency 2nd-percentile
-%   floor as struct('values', v, 'freqs', f): v LINEAR power on the
-%   frequency axis f (computeTFPeaks' baseline over sfreqs). It feeds
-%   PkPower, the median per-peak pow2db(Height * baseline(PeakFrequency)).
-%   Stats-table Height is a LINEAR prominence over the recording's own
-%   floor and is only comparable within a recording (the floor carries
-%   the stable subject-amplitude trait); multiplying the floor back in
-%   re-anchors it to absolute power - the spectrogram-domain counterpart
-%   of per-spindle bandpass-envelope amplitude. Omitted or empty ->
-%   PkPower = NaN (the column is still added).
+%   Notes:
+%       Each mode's member peaks are chosen by ASSIGN_MODE_PEAKS under the
+%       assign rule. PkCount counts them, and every other Pk* column is
+%       the summary of one stats-table property over them (PkSOphase is
+%       always a circular mean). The pipeline uses the default median, and
+%       the columns match name for name the ones the Rust pipeline writes
+%       (dynamo_pipeline::mode_peaks), so MATLAB and Rust paramfit CSVs
+%       share one schema.
 %
-%   ASSIGN accepts anything PARSE_PEAK_ASSIGN does: a probability (0.3 or
-%   '0.3 p' - a numeric value keeps this function backward compatible with
-%   the old `prob` argument), a sigma radius ('1.3 sigma'), 'background',
-%   or 'argmax' (the toolbox default). BACKGROUND is the fit's [xxx yyy
-%   zzz] (GET_FIT_BACKGROUND); only the density rules consult it, and on
-%   the phase axis those fall back to the '0.95 p' contour (phase Density
-%   is row-normalized; the stored phase background is not).
+%       PkPower is the summary over member peaks of pow2db(Height *
+%       baseline(PeakFrequency)). Stats-table Height is a linear prominence
+%       over the recording's own floor, so it is only comparable within a
+%       recording. Multiplying the floor back in re-anchors it to absolute
+%       power, the spectrogram-domain counterpart of per-spindle envelope
+%       amplitude. Without a baseline PkPower is NaN.
 %
-%   The columns are ALWAYS added (stable schema). When STATS_TABLE_SOPH is
-%   empty/missing the expected columns, PkCount = 0 and the means are NaN.
+%       On the phase axis the density rules fall back to the '0.95 p'
+%       contour, since phase Density is row-normalized and the stored
+%       background is not.
 %
-%   STATS_TABLE_SOPH should already be restricted to the peak population that
-%   fed the SOPH (e.g. the SOPH sleep stages); the assignment rule handles
-%   the freq/SO-feature locality.
-% =========================================================================
-%                  DYNAM-O Toolbox  |  Prerau Laboratory
-% =========================================================================
-nM = height(T);
-PkCount     = zeros(nM,1);
-PkFreq      = nan(nM,1);
-PkDuration  = nan(nM,1);
-PkBandwidth = nan(nM,1);
-PkHeight    = nan(nM,1);
-PkPower     = nan(nM,1);
-PkVolume    = nan(nM,1);
-PkArea      = nan(nM,1);
-PkPeakiness = nan(nM,1);
-PkSOpower   = nan(nM,1);
-PkSOphase   = nan(nM,1);
+%       The columns are always added, so the schema is stable. With no
+%       stats table, or no modes, PkCount is 0 and the rest are NaN.
+%
+%   See also: assign_mode_peaks, mode_peak_stats, label_peaks_by_mode,
+%             soph_peak_mask, parse_peak_assign, get_fit_background
+%
+%   ∿∿∿  Prerau Laboratory · sleepEEG.org  ∿∿∿
 
 if nargin < 4 || isempty(assign); assign = 'argmax'; end
 if nargin < 5 || isempty(background); background = nan(1, 3); end
 if nargin < 6; baseline = []; end
+
+p = inputParser;
+addParameter(p, 'Summary', 'median', @(x) any(validatestring(x, {'median', 'mean'})));
+parse(p, varargin{:});
+summary = p.Results.Summary;
+
 assign = parse_peak_assign(assign);
 
-have_stats = nargin >= 3 && istable(stats_table_SOPH) && ~isempty(stats_table_SOPH) ...
+% Each Pk* column and the stats-table property it summarizes, in the
+% shared cross-implementation column order (PkCount comes first). PowerDb
+% is not a stats-table column. It is computed per peak below.
+pk_columns = {
+    'PkFreq',      'PeakFrequency'
+    'PkDuration',  'Duration'
+    'PkBandwidth', 'Bandwidth'
+    'PkHeight',    'Height'
+    'PkPower',     'PowerDb'
+    'PkVolume',    'Volume'
+    'PkArea',      'Area'
+    'PkPeakiness', 'Peakiness'
+    'PkSOpower',   'SOpower'
+    'PkSOphase',   'SOphase'
+    };
+num_modes = height(T);
+
+pk_count = zeros(num_modes, 1);
+pk_values = nan(num_modes, size(pk_columns, 1));
+
+have_stats = istable(stats_table_SOPH) && ~isempty(stats_table_SOPH) ...
     && ismember('PeakFrequency', stats_table_SOPH.Properties.VariableNames);
 
-if nM > 0 && have_stats
-    % Per-peak absolute prominence power (dB); all-NaN without a baseline.
+if num_modes > 0 && have_stats
     stats_table_SOPH.PowerDb = peak_power_db_(stats_table_SOPH, baseline);
-    props = {'PeakFrequency','Duration','Bandwidth','Height','PowerDb', ...
-             'Volume','Area','Peakiness','SOpower','SOphase'};
-    params6 = T{:, 1:6};   % [Density,FreqMean,FreqStd,SO*Mean,SO*Std,Theta]
-    members = assign_mode_peaks(params6, axis_kind, stats_table_SOPH, assign, background);
-    for m = 1:nM
-        s = mode_peak_stats(stats_table_SOPH, members(:, m), props);
-        PkCount(m)     = s.count;
-        PkFreq(m)      = s.PeakFrequency;
-        PkDuration(m)  = s.Duration;
-        PkBandwidth(m) = s.Bandwidth;
-        PkHeight(m)    = s.Height;
-        PkPower(m)     = s.PowerDb;
-        PkVolume(m)    = s.Volume;
-        PkArea(m)      = s.Area;
-        PkPeakiness(m) = s.Peakiness;
-        PkSOpower(m)   = s.SOpower;
-        PkSOphase(m)   = s.SOphase;
+    mode_shapes = T{:, 1:6};
+    members = assign_mode_peaks(mode_shapes, axis_kind, stats_table_SOPH, assign, background);
+
+    for mode_num = 1:num_modes
+        s = mode_peak_stats(stats_table_SOPH, members(:, mode_num), pk_columns(:, 2)', ...
+            'Summary', summary);
+        pk_count(mode_num) = s.count;
+        for jj = 1:size(pk_columns, 1)
+            pk_values(mode_num, jj) = s.(pk_columns{jj, 2});
+        end
     end
 end
 
-T.PkCount     = PkCount;
-T.PkFreq      = PkFreq;
-T.PkDuration  = PkDuration;
-T.PkBandwidth = PkBandwidth;
-T.PkHeight    = PkHeight;
-T.PkPower     = PkPower;
-T.PkVolume    = PkVolume;
-T.PkArea      = PkArea;
-T.PkPeakiness = PkPeakiness;
-T.PkSOpower   = PkSOpower;
-T.PkSOphase   = PkSOphase;
+T.PkCount = pk_count;
+for jj = 1:size(pk_columns, 1)
+    T.(pk_columns{jj, 1}) = pk_values(:, jj);
+end
 end
 
 %************************************************************
