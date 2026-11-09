@@ -7,8 +7,12 @@
 %   parametric and spline fits are also computed.
 %
 %   Usage:
-%       [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs, timings] = runDYNAMO(data, Fs, stage_times, stage_vals, ...)
+%       [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs, timings, baseline] = runDYNAMO(data, Fs, stage_times, stage_vals, ...)
 %
+%   The 10th output `baseline` is the extraction's per-frequency percentile
+%   floor (LINEAR power, over sfreqs) - empty when a stats_table was
+%   supplied (SOPH-only path computes no spectrogram), in which case the
+%   PkPower column is NaN.
 %   The 9th output `timings` is optional; 7- and 8-output callers work
 %   unchanged.
 %
@@ -120,7 +124,7 @@
 %
 % =========================================================================
 
-function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs, timings] = runDYNAMO(varargin)
+function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs, timings, baseline] = runDYNAMO(varargin)
 %%%% Example script showing how to compute time-frequency peaks and SO-power/phase histograms
 %
 % Users are encouraged to edit this script and the data loading boilerplate in runExampleData()
@@ -169,6 +173,7 @@ if nargin == 0 || ~isnumeric(varargin{1})
     end
     addpath(fullfile(fileparts(which('runDYNAMO')), 'example_data'))
     [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, SOPHs, timings] = runExampleData(data_range, default_verbose, run_app, varargin{2:end});
+    baseline = [];
     return;
 end
 
@@ -403,7 +408,7 @@ end
 
 if isempty(stats_table)
     % If no stats table provided
-    [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, tfp_timings] = computeTFPeaks(data, Fs, stage_times, stage_vals,...
+    [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, tfp_timings, baseline] = computeTFPeaks(data, Fs, stage_times, stage_vals,...
         'time_range', time_range, 'verbose', verbose, baseline_options, detection_options);
     % Fold computeTFPeaks' per-stage timings into our master struct
     % (spect_pass1, artifact, baseline_pass1, extract_pass1, spect_pass2,
@@ -428,7 +433,7 @@ else
     time_range_inds = t_full >= time_range(1) & t_full <= time_range(2);
     data_time_range = data(time_range_inds);
     t_time_range = t_full(time_range_inds);
-    [spect, stimes, sfreqs] = deal([]);
+    [spect, stimes, sfreqs, baseline] = deal([]);
     t_stage = tic;
     if ~isempty(artifacts) && numel(artifacts) == numel(data_time_range)
         % Reuse the supplied mask (saved from the run that built this
@@ -543,7 +548,14 @@ if nargout > 7 && (fit_param_basis || fit_spline_basis)
     if fit_param_basis
         t_stage = tic;
         % Pass the SOPH-included peaks (hist_peakidx population) so the params tables carry per-mode TF-peak summary (Pk*) columns.
-        SOPHs = fitParamBasis(SOPHs, param_basis_power_options, param_basis_phase_options, valid_powerhist, valid_phasehist, verbose, plot_each, plot_both, stats_table(hist_peakidx, :));
+        % The extraction baseline (linear power over sfreqs) re-anchors peak
+        % heights to absolute power for PkPower; empty on the SOPH-only path.
+        if ~isempty(baseline) && ~isempty(sfreqs)
+            pk_baseline = struct('values', baseline(:), 'freqs', sfreqs(:));
+        else
+            pk_baseline = [];
+        end
+        SOPHs = fitParamBasis(SOPHs, param_basis_power_options, param_basis_phase_options, valid_powerhist, valid_phasehist, verbose, plot_each, plot_both, stats_table(hist_peakidx, :), pk_baseline);
         timings.fit_param_basis = toc(t_stage);
     end
 

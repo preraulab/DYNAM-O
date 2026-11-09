@@ -1,4 +1,9 @@
-function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, tfp_timings] = computeTFPeaks(data, Fs, stage_times, stage_vals, varargin)
+function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, artifacts, tfp_timings, baseline] = computeTFPeaks(data, Fs, stage_times, stage_vals, varargin)
+% The trailing 9th output `baseline` is the per-frequency percentile floor
+% (LINEAR power, over sfreqs) the extraction divided the spectrogram by -
+% the pass-2 baseline when the two-pass path ran. Callers that ignore it
+% are unaffected; fitParamBasis uses it to re-anchor peak heights to
+% absolute power for the PkPower column.
 %COMPUTETFPEAKS  Run watershed algorithm to extract time-frequency peaks from a spectrogram
 %
 %   Usage:

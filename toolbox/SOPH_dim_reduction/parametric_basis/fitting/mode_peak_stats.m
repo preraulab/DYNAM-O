@@ -5,9 +5,16 @@ function s = mode_peak_stats(stats_table, idx, props)
 %
 %   Given the member-peak selection `idx` (logical or numeric indices, e.g.
 %   from GET_MODE_PEAKS), returns a struct with the count of member peaks
-%   and the mean of each requested property over them. SOphase uses a
-%   circular mean; every other property uses the arithmetic mean over the
-%   finite member values (NaN if none are finite).
+%   and the MEDIAN of each requested property over them. SOphase uses a
+%   circular mean (the median is not the natural robust statistic on a
+%   circle); every other property uses the median over the finite member
+%   values (NaN if none are finite). Medians, not means: the per-peak size
+%   properties (Height, Volume, Area, Duration) are heavy-tailed, and a
+%   mean is dominated by a night's few giant tail events - on the NSS
+%   two-night cohort that costs all of the night-to-night subject
+%   reliability (mean PkVolume r ~ 0.0 vs median r ~ 0.8). MATLAB median
+%   averages the two middle values on even counts, matching the Rust and
+%   Python implementations exactly.
 %
 %   props : cellstr of stats_table column names. Default is the full
 %           tracked set:
@@ -45,7 +52,7 @@ for ii = 1:numel(props)
     elseif strcmpi(name, 'SOphase')
         s.(name) = angle(mean(exp(1i .* v)));   % circular mean
     else
-        s.(name) = mean(v);
+        s.(name) = median(v);
     end
 end
 end
