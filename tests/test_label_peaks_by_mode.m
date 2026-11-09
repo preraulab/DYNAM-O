@@ -119,6 +119,36 @@ testCase.verifyTrue(all(isnan(labels(in_nrem(1:5)))));
 testCase.verifyEqual(isnan(labels), ~in_soph);
 end
 
+function test_members_reproduce_every_pk_column(testCase)
+% Every Pk* column the pipeline writes is the median over mode_members of
+% one stats-table property, for argmax power modes and contour phase modes.
+[st, power_params, bg] = two_power_modes_();
+phase_params = array2table([1 13.5 1 0 0.8 0 0.3 12], 'VariableNames', ...
+    {'Density','FreqMean','FreqStd','SOphaseMean','SOphaseStd','Theta','Volume','SOpowerMean'});
+in_soph = soph_peak_mask(st, 1:3);
+pk_columns = {'PkFreq','PeakFrequency'; 'PkDuration','Duration'; 'PkBandwidth','Bandwidth'; ...
+    'PkHeight','Height'; 'PkVolume','Volume'; 'PkArea','Area'; 'PkPeakiness','Peakiness'; ...
+    'PkSOpower','SOpower'; 'PkSOphase','SOphase'};
+
+cases = {power_params, 'power', bg; phase_params, 'phase', nan(1, 3)};
+for cc = 1:size(cases, 1)
+    [params, axis_kind, background] = cases{cc, :};
+    [~, members] = label_peaks_by_mode(st, params, 'Background', background);
+    T = annotateModesWithPeakStats(params, axis_kind, st(in_soph, :), 'argmax', background);
+
+    for mode_num = 1:height(params)
+        s = mode_peak_stats(st, members(:, mode_num), pk_columns(:, 2)');
+        testCase.verifyEqual(T.PkCount(mode_num), s.count);
+        for jj = 1:size(pk_columns, 1)
+            testCase.verifyEqual(T.(pk_columns{jj, 1})(mode_num), s.(pk_columns{jj, 2}), ...
+                'AbsTol', 1e-12, sprintf('%s mode %d %s', axis_kind, mode_num, pk_columns{jj, 1}));
+        end
+        testCase.verifyEqual(T.PkDuration(mode_num), median(st.Duration(members(:, mode_num))), ...
+            'AbsTol', 1e-12);
+    end
+end
+end
+
 function test_csv_inputs_match_tables(testCase)
 % A CLI run leaves only CSVs. Reading them must give the same labels as
 % passing the tables and background directly, and the two files must

@@ -987,6 +987,10 @@ reads the power background from wherever the modes came from.
 %                 can be in both, which is how the Pk* columns count it)
 ```
 
+Each `Pk*` column is the median of one stats-table property over a mode's
+members, so `median(stats.Duration(members(:, m)))` is `PkDuration` for
+mode `m`.
+
 <p align="right"><sub><a href="#table-of-contents">↑ Back to Table of Contents</a></sub></p>
 
 ---

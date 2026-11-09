@@ -74,12 +74,13 @@ function [peak_labels, mode_members] = label_peaks_by_mode(stats_table, modes, v
 %
 %       Matching the Pk* columns: the Pk* columns count a peak in every mode
 %       that contains it, so use mode_members to reproduce them. PkCount for
-%       mode m is sum(mode_members(:, m)), and each other Pk* column
-%       summarizes its stats_table property over the rows where
-%       mode_members(:, m) is true (see MODE_PEAK_STATS). peak_labels gives
-%       the same peaks only when no modes overlap, as under argmax. The
-%       stages are not recorded in the CSVs, so pass 'Stages' if the run
-%       used SOPH stages other than NREM.
+%       mode m is sum(mode_members(:, m)), and each other Pk* column is the
+%       median of its stats_table property over the member rows, e.g.
+%       PkDuration is median(stats_table.Duration(mode_members(:, m))).
+%       MODE_PEAK_STATS computes all of them at once. peak_labels gives the
+%       same peaks only when no modes overlap, as under argmax. The stages
+%       are not recorded in the CSVs, so pass 'Stages' if the run used SOPH
+%       stages other than NREM.
 %
 %       When both inputs are CSVs that name their subject, the two subjects
 %       must match.
