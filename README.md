@@ -971,6 +971,21 @@ sigma widths, so `aggregate_DYNAMO_outputs` refuses to pool it with
 formats 2/3 (a hard error, not a warning). Check the `format` returned
 by `loadParamfitCsv` before doing any custom pooling of your own.
 
+**Linking peaks to modes.** `label_peaks_by_mode` tells you which fitted
+mode each TF-peak belongs to, using the same assignment rule that built
+the `Pk*` columns. It takes a subject's stats table and its modes, either
+as the two CSVs a run writes or as the tables and paramfit struct of a
+`DYNAMO` object. It works out whether the modes are power or phase, and
+reads the power background from wherever the modes came from.
+
+```matlab
+[labels, members] = label_peaks_by_mode('C3/TFpeaks/S001_stats_table_C3.csv', ...
+    'C3/param_basis/S001_SOpower_paramfit_C3.csv');
+% labels(k)     : mode of peak k, 0 if in no mode, NaN if outside the SOPH stages
+% members(k, m) : peak k is in mode m (phase modes can overlap, so a peak
+%                 can be in both, which is how the Pk* columns count it)
+```
+
 <p align="right"><sub><a href="#table-of-contents">↑ Back to Table of Contents</a></sub></p>
 
 ---
