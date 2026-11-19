@@ -120,13 +120,14 @@ default_params_power.criterion = 'minpctr2';
 default_params_power.min_dr2 = 0.01;
 default_params_power.min_pctr2 = 0.01;
 default_params_power.kneedle_tol = 0.01;
-% fstd0 and pstd0 are true standard deviations of the rotGauss kernel. The
-% sqrt(2) divisors carry the historical bounds (2.5, 30, 0.1, 2.5) into the
-% standard-deviation convention, so each bound describes the same physical
-% window it always did; only the units of the number moved.
-% fitted parameters follow this order: [amp0, fmean0, fstd0,         pmean0, pstd0,       theta0];
-default_params_power.UB_default =      [nan,  nan,    2.5/sqrt(2),   nan,    30/sqrt(2),  0.03];
-default_params_power.LB_default =      [nan,  nan,    0.1/sqrt(2),   nan,    2.5/sqrt(2), -0.03];
+% The bounds on the shape parameters (fstd0, pstd0, theta0) come from
+% default_mode_shape_bounds, which holds the same numbers as the Rust
+% kernel. fstd0 and pstd0 are standard deviations of the rotGauss kernel.
+% A nan bound is derived from the data by the fit.
+power_shape = default_mode_shape_bounds('power');
+% fitted parameters follow this order: [amp0, fmean0, fstd0,                  pmean0, pstd0,                  theta0];
+default_params_power.UB_default =      [nan,  nan,    power_shape.fstd_upper, nan,    power_shape.pstd_upper, power_shape.theta_upper];
+default_params_power.LB_default =      [nan,  nan,    power_shape.fstd_lower, nan,    power_shape.pstd_lower, power_shape.theta_lower];
 default_params_power.constrain_freq_center = true;
 default_params_power.constrain_power_center = true;
 default_params_power.plot_on = 1;
@@ -154,14 +155,15 @@ default_params_phase.min_pctr2 = 0.025;
 default_params_phase.kneedle_tol = 0.01;
 % Two periods retain every circular phase class while allowing fits to cross
 % the +/-pi seam without leaving the phase center completely unbounded.
-% fstd0 is a true standard deviation (Hz): the historical bounds were sqrt(15)
-% and 1 in the pre-half convention, so the equivalents are sqrt(15)/sqrt(2) =
-% sqrt(7.5) and 1/sqrt(2). pstd0 is recikappa = 1/sqrt(kappa) (rad), a
-% reciprocal-square-root concentration and local small-angle Gaussian scale;
-% its von Mises kernel is unchanged, so 2*pi and pi/5 are left alone.
-% fitted parameters follow this order: [amp0, fmean0, fstd0,     pmean0, pstd0, theta0];
-default_params_phase.UB_default =      [nan,  nan,    sqrt(7.5), 2*pi,   2*pi,  pi/3];
-default_params_phase.LB_default =      [nan,  nan,    1/sqrt(2), -2*pi,  pi/5,  -pi/3];
+% The bounds on the shape parameters (fstd0, pstd0, theta0) come from
+% default_mode_shape_bounds, which holds the same numbers as the Rust
+% kernel. fstd0 is a standard deviation in Hz. pstd0 is recikappa =
+% 1/sqrt(kappa) in radians, a reciprocal-square-root concentration and
+% local small-angle Gaussian scale.
+phase_shape = default_mode_shape_bounds('phase');
+% fitted parameters follow this order: [amp0, fmean0, fstd0,                  pmean0, pstd0,                  theta0];
+default_params_phase.UB_default =      [nan,  nan,    phase_shape.fstd_upper, 2*pi,   phase_shape.pstd_upper, phase_shape.theta_upper];
+default_params_phase.LB_default =      [nan,  nan,    phase_shape.fstd_lower, -2*pi,  phase_shape.pstd_lower, phase_shape.theta_lower];
 default_params_phase.constrain_freq_center = true;
 default_params_phase.constrain_phase_center = true;
 default_params_phase.plot_on = 1;
