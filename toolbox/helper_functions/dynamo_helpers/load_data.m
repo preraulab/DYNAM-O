@@ -203,11 +203,14 @@ end
 header.recording_starttime = time_str;
 %% LOAD SCORING
 if ~isempty(scoring_fpath)
+    % Length of the recording in seconds. read_staging uses it to refuse
+    % staging whose clock times begin before the recording does.
+    record_duration = size(data,1) / Fs(1);
     if isnumeric(header_lines) & ~isempty(header_lines)
-        staging = read_staging(scoring_fpath,time_col,stage_col,'stage_vals',stage_vals_in,'header_lines',header_lines,'start_time',header.recording_starttime,'delimiter',delimiter,'epoch_dur',epoch_dur,'plot_on',plot_on);
+        staging = read_staging(scoring_fpath,time_col,stage_col,'stage_vals',stage_vals_in,'header_lines',header_lines,'start_time',header.recording_starttime,'record_duration',record_duration,'delimiter',delimiter,'epoch_dur',epoch_dur,'plot_on',plot_on);
     else
         %% TO-DO: CHECK THIS
-        staging = read_staging(scoring_fpath,time_col,stage_col,'stage_vals',stage_vals_in,'start_time',header.recording_starttime,'delimiter',delimiter,'epoch_dur',epoch_dur,'plot_on',plot_on);
+        staging = read_staging(scoring_fpath,time_col,stage_col,'stage_vals',stage_vals_in,'start_time',header.recording_starttime,'record_duration',record_duration,'delimiter',delimiter,'epoch_dur',epoch_dur,'plot_on',plot_on);
     end
     stage_times = staging.times;
     stage_vals = staging.vals;
