@@ -52,28 +52,12 @@ function [stats_table, spect, stimes, sfreqs, data_time_range, t_time_range, art
 %                                  Default = 0.05 (seconds)
 %       downsample_spect (opt):    2D array representing the number of decimation steps during downsampling spectrogram
 %                                  for watershed and merging to extract peaks. First index decimates time (columns of spect).
-%                                  Second index decimates frequency (rows of spect). Default = [], to be set by quality_setting
+%                                  Second index decimates frequency (rows of spect). Default = [2, 2] (steps, steps).
+%                                  Pass [] to skip downsampling.
 %       seg_time (opt):            scalar - length in seconds of each segment of spectrogram on which peaks are extracted.
-%                                  Default = [], to be set by quality_setting
+%                                  Default = 30 (seconds)
 %       merge_thresh (opt):        scalar - threshold weight value for when to stop merge rule.
-%                                  Default = [], to be set by quality_setting
-%       quality_setting (opt):     character - Quality settings preset for the algorithm. Default = ''
-%                                  When non-empty, overrides downsample_spect, seg_time, and merge_thresh.
-%                                  When empty (default), individual params are used; their defaults
-%                                  match the 'default' preset values.
-%                                       'stokes_2023': matches Stokes et al. 2023 SLEEP paper settings exactly
-%                                           downsample_spect = [];
-%                                           seg_time = 60; (seconds)
-%                                           merge_thresh = 8; (merge weight unit)
-%                                       'precision': high resolution settings
-%                                           downsample_spect = [];
-%                                           seg_time = 30; (seconds)
-%                                           merge_thresh = 8; (merge weight unit)
-%                                       'default': speed-up with minimal impact on results *suggested*
-%                                           downsample_spect = [2, 2]; (steps, steps)
-%                                           seg_time = 30; (seconds)
-%                                           merge_thresh = 11; (merge weight unit)
-%                                  N.B.: using quality_setting will overwrite the downsample_spect, seg_time, and merge_thresh inputs
+%                                  Default = 11 (merge weight unit)
 %       max_merges (opt):          integer - maximum number of merges to perform. Default = inf
 %       trim_vol (opt):            scalar - fraction of maximum in trimmed volume (from 0 to 1), i.e. 1 means no trim. Default = 0.8
 %       dur_max (opt):             scalar - maximum duration allowed for a peak. Default = 5 (seconds)
@@ -200,7 +184,6 @@ addOptional(p, 'mtm_window_stepsize', detection_options.mtm_window_stepsize, @(x
 addOptional(p, 'downsample_spect', detection_options.downsample_spect, @(x) isa(x,'numeric') && (isempty(x) || length(x) == 2));
 addOptional(p, 'seg_time', detection_options.seg_time, @(x) isa(x,'numeric') && (isempty(x) || isscalar(x)));
 addOptional(p, 'merge_thresh', detection_options.merge_thresh, @(x) isa(x,'numeric') && (isempty(x) || isscalar(x)));
-addOptional(p, 'quality_setting', detection_options.quality_setting, @(x) (ischar(x) || isstring(x)) && (isempty(x) || any(validatestring(x, {'stokes_2023', 'precision', 'default'}))));
 addOptional(p, 'max_merges', detection_options.max_merges, @(x) validateattributes(x,{'numeric'},{'real','positive','scalar'}));
 addOptional(p, 'trim_vol', detection_options.trim_vol, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 addOptional(p, 'dur_max', detection_options.dur_max, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
@@ -541,25 +524,4 @@ spect_masked(region_inds) = spect(region_inds);
 border_inds = cat(1, borders{:}) - indshift;
 border_inds = border_inds(border_inds>=1 & border_inds<=numel(spect)); % limit to valid indices
 spect_masked(border_inds) = 0;
-end
-
-
-function [downsample_spect, seg_time, merge_thresh] = getPresets(quality_setting)
-% Check quality settings
-switch lower(quality_setting)
-    case {'stokes_2023'} %Matches Stokes et al. 2023 SLEEP paper settings exactly
-        downsample_spect = [];
-        seg_time = 60;
-        merge_thresh = 8;
-    case {'precision'} %Retaining high spectrogram precision but use smaller segments for speed
-        downsample_spect = [];
-        seg_time = 30;
-        merge_thresh = 8;
-    case {'default'} %Further speed improvement with little accuracy reduction by decimating the spectrogram
-        downsample_spect = [2, 2];
-        seg_time = 30;
-        merge_thresh = 11;
-    otherwise
-        error("quality_setting must be 'stokes_2023', 'precision', or 'default'")
-end
 end

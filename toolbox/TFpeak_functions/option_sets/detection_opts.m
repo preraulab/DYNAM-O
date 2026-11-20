@@ -48,12 +48,6 @@ addOptional(p, 'downsample_spect', [2, 2], @(x) isa(x,'numeric') && (isempty(x) 
 addOptional(p, 'seg_time', 30, @(x) isa(x,'numeric') && isscalar(x));
 %Threshold weight value for when to stop merge rule
 addOptional(p, 'merge_thresh', 11, @(x) isa(x,'numeric') && isscalar(x));
-%Quality setting preset: 'stokes_2023', 'precision', 'default', or '' (use individual params above).
-% Overrides downsample_spect, seg_time, and merge_thresh when non-empty.
-% 'stokes_2023':  downsample_spect=[],    seg_time=60, merge_thresh=8
-% 'precision':    downsample_spect=[],    seg_time=30, merge_thresh=8
-% 'default':      downsample_spect=[2,2], seg_time=30, merge_thresh=11
-addOptional(p, 'quality_setting', '', @(x) (ischar(x) || isstring(x)) && (isempty(x) || any(validatestring(x, {'stokes_2023', 'precision', 'default'}))));
 
 %% Merging and trimming parameters
 %Maximum number of merges to perform
@@ -99,21 +93,3 @@ addOptional(p, 'backend', 'rust', @(x) (ischar(x) || isstring(x)) && any(strcmpi
 %%
 parse(p,varargin{:});
 opts = p.Results;
-
-% A non-empty quality_setting overrides downsample_spect, seg_time, and merge_thresh
-if ~isempty(opts.quality_setting)
-    switch lower(opts.quality_setting)
-        case 'stokes_2023'
-            opts.downsample_spect = [];
-            opts.seg_time = 60;
-            opts.merge_thresh = 8;
-        case 'precision'
-            opts.downsample_spect = [];
-            opts.seg_time = 30;
-            opts.merge_thresh = 8;
-        case 'default'
-            opts.downsample_spect = [2, 2];
-            opts.seg_time = 30;
-            opts.merge_thresh = 11;
-    end
-end
