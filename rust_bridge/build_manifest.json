@@ -1,10 +1,10 @@
 {
   "schema": 1,
-  "built_utc": "2026-11-18T13:21:59Z",
+  "built_utc": "2026-11-20T00:07:49Z",
   "mexext": "mexmaca64",
   "matlab_release": "2025b",
   "dylib": "libdynamo_rs.dylib",
-  "dynamo_rs_sha": "2de63e020ef8b2063cc3e81805a8aa58a855ed20",
+  "dynamo_rs_sha": "855c14dfdf9a8bde31ecf598b464e94c7d477423",
   "dynamo_rs_branch": "master",
   "dynamo_rs_dirty": false,
   "mex_files": [
