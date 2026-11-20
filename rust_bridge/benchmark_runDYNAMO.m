@@ -163,10 +163,9 @@ function snap = pipeline_options_snapshot(det_opts)
     % Capture only the detection_options fields that materially affect
     % timing / parity. Keeps the JSON small and avoids leaking other
     % implementation-specific knobs that aren't comparable across
-    % toolbox versions. If the user changed quality_setting via the
-    % options app or detection_opts() default, this surfaces it.
+    % toolbox versions.
     keys = {'backend', 'seg_time', 'downsample_spect', ...
-            'merge_thresh', 'quality_setting', 'parallel_mode'};
+            'merge_thresh', 'parallel_mode'};
     snap = struct();
     for i = 1:numel(keys)
         if isfield(det_opts, keys{i})
