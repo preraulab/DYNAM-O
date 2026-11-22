@@ -323,7 +323,7 @@ exclude_stages = ~ismember(stage_vals, baseline_stages); %stages to use passed i
 exclude_stages_resamp = interp1(stage_times, single(exclude_stages), t_time_range, 'previous')~=0;
 baseline_exclude = artifacts(:) | exclude_stages_resamp(:) | baseline_exclude(:);
 
-baseline = computeBaseline(spect, stimes, t_time_range, baseline_exclude, baseline_range, baseline_ptile);
+baseline = computeBaseline(spect, stimes, t_time_range, baseline_exclude, baseline_range, baseline_ptile, backend);
 tfp_timings.baseline_pass1 = toc(t_stage);
 
 %% Compute time-frequency peaks
@@ -386,7 +386,7 @@ if double_watershed
     % empirical breakdown.
     t_stage = tic;
     if ~reuse_baseline
-        baseline = computeBaseline(spect, stimes, t_time_range, baseline_exclude, baseline_range, baseline_ptile);
+        baseline = computeBaseline(spect, stimes, t_time_range, baseline_exclude, baseline_range, baseline_ptile, backend);
     end
     % (else: keep `baseline` from pass-1 — same variable, not overwritten.)
 
@@ -487,13 +487,34 @@ end
 end
 
 
-function baseline = computeBaseline(spect, stimes, t_time_range, baseline_exclude, baseline_range, baseline_ptile)
-% Rust fast path: dispatches to dynamo_rs::compute_baseline (validated to
-% <=1e-9 vs MATLAB on the synthetic-spectrogram battery — see
-% rust_bridge/validate_baseline_mex.m). The Rust implementation handles
-% the same nearest-neighbor exclusion interp, baseline_range trimming,
-% NaN-zero treatment, and Hyndman-Fan #5 percentile.
-if exist('baseline_mex', 'file') == 3
+function baseline = computeBaseline(spect, stimes, t_time_range, baseline_exclude, baseline_range, baseline_ptile, backend)
+%COMPUTEBASELINE  Per-frequency percentile baseline over valid spectrogram times
+%
+%   Usage:
+%       baseline = computeBaseline(spect, stimes, t_time_range, baseline_exclude, baseline_range, baseline_ptile, backend)
+%
+%   Inputs:
+%       spect            : [F x T] double - spectrogram -- required
+%       stimes           : [1 x T] double - spectrogram times (s) -- required
+%       t_time_range     : [N x 1] double - data sample times (s) -- required
+%       baseline_exclude : [N x 1] logical - samples excluded from the baseline -- required
+%       baseline_range   : [1 x 2] double - time window (s) the baseline may use -- required
+%       baseline_ptile   : double - percentile taken along time -- required
+%       backend          : char - 'rust' or 'matlab' -- required
+%
+%   Outputs:
+%       baseline : [F x 1] double - baseline power per frequency
+%
+%   Notes:
+%       backend='rust' uses baseline_mex when it is on the path. It matches
+%       this MATLAB code to <=1e-9 (rust_bridge/validate_baseline_mex.m):
+%       same nearest-neighbor exclusion interp, baseline_range trimming,
+%       NaN-zero treatment and Hyndman-Fan #5 percentile. backend='matlab'
+%       always runs the MATLAB code, even when rust_bridge is on the path.
+%
+%   See also: computeTFPeaks, prctile
+
+if strcmpi(backend, 'rust') && exist('baseline_mex', 'file') == 3
     if isinf(baseline_range(1)) && baseline_range(1) < 0
         bl_lo = -realmax;
     else
