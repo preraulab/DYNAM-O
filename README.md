@@ -186,6 +186,10 @@ The controlled build produces ten `.mex*` files in `rust_bridge/`, plus the
 adjacent `libdynamo_rs` shared library and runtime filter cache. MEX extensions
 are `.mexmaca64`, `.mexmaci64`, `.mexa64`, or `.mexw64`, depending on platform.
 
+The macOS and Windows binaries are committed. The Linux binaries are not: a
+Linux binary only loads on systems whose glibc is at least as new as the build
+machine's, so each Linux machine runs `build_rust_mex` once to build its own.
+
 See [`rust_bridge/README.md`](rust_bridge/README.md) for per-platform
 details and troubleshooting.
 

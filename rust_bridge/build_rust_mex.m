@@ -240,11 +240,13 @@ end
 fprintf('  %s (%.0f KB) [shared library, required at runtime]\n', ...
     dylib_name, dir(dst_dylib).bytes / 1024);
 
-% Record what these binaries were built from. They are committed to the
-% repo, so without this a checkout cannot tell whether they match the Rust
-% source beside them, and a stale bridge is silent rather than loud.
+% Record what these binaries were built from. The macOS and Windows
+% binaries are committed to the repo, so without this a checkout cannot
+% tell whether they match the Rust source beside them, and a stale bridge
+% is silent rather than loud.
 manifest_path = write_rust_bridge_manifest(here, rs_root, dylib_name);
-fprintf('  %s [build provenance]\n', 'build_manifest.json');
+[~, manifest_name, manifest_ext] = fileparts(manifest_path);
+fprintf('  %s [build provenance]\n', [manifest_name manifest_ext]);
 fprintf('    recorded at %s\n', manifest_path);
 
 fprintf('\nTo sanity-check:\n');

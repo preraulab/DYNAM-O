@@ -1,5 +1,5 @@
 function [ok, report] = check_rust_bridge(varargin)
-%CHECK_RUST_BRIDGE  Verify the committed MEX binaries match the Rust source beside them
+%CHECK_RUST_BRIDGE  Verify this platform's MEX binaries match the Rust source beside them
 %
 %   Usage:
 %       check_rust_bridge()
@@ -57,12 +57,14 @@ if isempty(dir(fullfile(bridge_dir, ['*.' mexext])))
     return
 end
 
-manifest_path = fullfile(bridge_dir, 'build_manifest.json');
+% Each platform's binaries have their own manifest (write_rust_bridge_manifest).
+manifest_name = ['build_manifest_' mexext '.json'];
+manifest_path = fullfile(bridge_dir, manifest_name);
 if ~isfile(manifest_path)
     report.state = 'no_manifest';
-    report.message = sprintf(['rust_bridge has MEX binaries but no build_manifest.json, so ' ...
+    report.message = sprintf(['rust_bridge has MEX binaries but no %s, so ' ...
         'there is no way to tell what Rust source they were built from. ' ...
-        'Rebuild with build_rust_mex to record provenance.']);
+        'Rebuild with build_rust_mex to record provenance.'], manifest_name);
     ok = true;
     emit(quiet, report.message);
     return
@@ -95,9 +97,10 @@ if exist('dynamo_version_mex', 'file') == 3
                 && ~strcmp(loaded_sha, built_sha12)
             report.state = 'runtime_mismatch';
             report.message = sprintf(['the loaded dynamo_rs library reports build %s, but ' ...
-                'build_manifest.json records @ %s. The library beside the MEX binaries is ' ...
+                '%s records @ %s. The library beside the MEX binaries is ' ...
                 'not the one the manifest describes; rebuild with build_rust_mex to ' ...
-                'restore trustworthy provenance.'], loaded, short(getfield_or(m, 'dynamo_rs_sha', '')));
+                'restore trustworthy provenance.'], loaded, manifest_name, ...
+                short(getfield_or(m, 'dynamo_rs_sha', '')));
             ok = true;
             emit(quiet, report.message);
             return
