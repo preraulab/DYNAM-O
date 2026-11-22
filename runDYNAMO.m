@@ -25,7 +25,9 @@
 %   Optional Inputs (Name-Value Pairs):
 %       backend:                      char - pipeline backend: 'rust' (default, MEX wrappers
 %                                     around dynamo_rs; ~4x faster, -0.8% peak count vs MATLAB)
-%                                     or 'matlab' (pure MATLAB reference path).
+%                                     or 'matlab' (pure MATLAB reference path). 'rust' falls
+%                                     back to 'matlab' when the MEX bridge is not built or does
+%                                     not load on this machine (see rust_backend_available).
 %       time_range:                   [1 x 2] double - start and end time in seconds (default: entire scored range)
 %       baseline_options:             struct - parameters for baseline estimation (default: baseline_opts())
 %       detection_options:            struct - parameters for TF-peak detection (default: detection_opts())
@@ -72,7 +74,8 @@
 %         parametric and spline fit results for both SO-power and SO-phase histograms.
 %       - Two pipeline backends via the 'backend' option:
 %           * 'rust' (default) — dynamo_rs MEX wrappers. ~3.7x faster on night.
-%             Requires pre-built MEX files (see rust_bridge/README.md).
+%             Requires pre-built MEX files (see rust_bridge/README.md). When they
+%             are missing or do not load here, the run uses 'matlab' and says so.
 %             Rayon parallelises internally; MATLAB parpool is not started.
 %           * 'matlab' — pure MATLAB reference path. Uses parpool over
 %             segments; pool type is controlled by detection_options.parallel_mode
@@ -291,6 +294,17 @@ if isempty(backend)
     end
 end
 backend = lower(char(backend));
+
+% Fall back to the MATLAB backend when the Rust MEX bridge is not built
+% for this platform or does not load here (for example a Linux library
+% built against a newer glibc). rust_backend_available warns once per
+% session with the reason and the build command; each run then says in
+% one line which backend it is using.
+if strcmp(backend, 'rust') && ~rust_backend_available()
+    fprintf('Rust backend unavailable on this machine; running the MATLAB backend.\n');
+    backend = 'matlab';
+end
+
 % Sync the resolved value back into the struct so downstream struct-expand
 % callers see a single, consistent backend (prevents inputParser's
 % "Cannot include struct and duplicate parameters" error when the struct
@@ -307,27 +321,15 @@ setappdata(0, 'dynamo_backend', backend);
 mts_state_cleanup = onCleanup(@() rmappdata_safe(0, 'dynamo_backend'));
 
 if strcmp(backend, 'rust')
-    % Rust MEX backend: add rust_bridge/ to path, assert the four MEX
-    % wrappers exist, and skip parpool setup entirely (Rust internally
-    % parallelises via rayon).
+    % Rust MEX backend: add rust_bridge/ to path and skip parpool setup
+    % entirely (Rust parallelizes internally via rayon). The wrappers were
+    % checked to exist and load by rust_backend_available above.
     repo_root_ = fileparts(which('runDYNAMO'));
     rb_dir_ = fullfile(repo_root_, 'rust_bridge');
     if isfolder(rb_dir_)
         addpath(rb_dir_);
     end
     clear repo_root_ rb_dir_
-
-    needed = {'extract_tfpeaks_mex', 'mask_spectrogram_mex', ...
-        'refine_peaks_mex', 'tfpeak_histogram_mex'};
-    missing = needed(cellfun(@(n) exist(n, 'file') ~= 3, needed));
-    if ~isempty(missing)
-        error('runDYNAMO:missingMEX', ['backend=''rust'' requires compiled MEX files ' ...
-            '(missing: %s).\n\nFor distributable artifacts, run from <DYNAM-O_toolbox>:\n' ...
-            '  ./bootstrap.sh --yes   (Windows: bootstrap.ps1 -Yes)\n\n' ...
-            'For local development only:\n  cd <DYNAM-O>/rust_bridge; build_rust_mex\n\n' ...
-            'Or call runDYNAMO(..., ''backend'', ''matlab'') to use the pure MATLAB path.'], ...
-            strjoin(missing, ', '));
-    end
 
     % Defensively disable parpool auto-creation under the rust backend.
     % All rust-path stages that were known to use parfor (runSegmentedData,

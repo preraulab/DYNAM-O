@@ -97,6 +97,10 @@ function names = init_DYNAMO(varargin)
             try
                 addpath(fullfile(repo_root, 'rust_bridge'));
                 check_rust_bridge();
+                % Load the bridge once. If it is missing or does not load
+                % on this machine, this warns with the reason and the
+                % build command, and runDYNAMO will use the MATLAB backend.
+                rust_backend_available();
             catch err
                 warning('init_DYNAMO:bridgeCheckFailed', ...
                     'Could not verify rust_bridge freshness: %s', err.message);

@@ -159,8 +159,9 @@ and don't want the noise.
 
 The `'rust'` backend uses MEX wrappers around a pure-Rust kernel
 ([`DYNAM-O_rs`](https://github.com/preraulab/DYNAM-O_rs)). If you skip this step,
-`'matlab'` backend works immediately. If you call `'rust'` without the MEX files built, 
-you get a clear error with the build recipe.
+`'matlab'` backend works immediately. If the MEX files are not built, or do not load
+on this machine, a `'rust'` run warns once with the reason and the build command, then
+runs the `'matlab'` backend.
 
 For native files that will be committed or distributed, use the controlled
 meta-repository build. It applies path remapping, records provenance, and
