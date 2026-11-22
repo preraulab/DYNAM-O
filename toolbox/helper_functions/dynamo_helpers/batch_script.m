@@ -124,6 +124,11 @@ if SaveAppTree %#ok<NODEF>
             && ~isempty(detection_options.backend) %#ok<NODEF>
         batch_backend = lower(char(detection_options.backend));
     end
+    % runDYNAMO falls back to the MATLAB backend when the Rust bridge
+    % does not load here, so the stamp follows the same rule.
+    if strcmp(batch_backend, 'rust') && ~rust_backend_available()
+        batch_backend = 'matlab';
+    end
     if strcmp(batch_backend, 'matlab')
         tree_stamp = dynamo_stamp('matlab-native');
     else
