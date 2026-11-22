@@ -114,8 +114,16 @@ boundaries = boundaries(good_indices);
 %% Compute statistics
 %Bounding Box
 if any(strcmpi(features,'BoundingBox')) || any(strcmpi(features,'Duration')) || any(strcmpi(features,'Bandwidth'))
-    stats_table.BoundingBox(:,1) = stats_table.BoundingBox(:,1)*dx + seg_startx;
-    stats_table.BoundingBox(:,2) = stats_table.BoundingBox(:,2)*dy + seg_starty;
+    % regionprops returns the BoundingBox corner in 1-based pixel-edge
+    % coords: the center of the upper-left pixel is at (1.0, 1.0), so the
+    % corner of a box whose first pixel is column c sits at c - 0.5. The
+    % (-1) shifts to 0-based, the same shift PeakTime/PeakFrequency get
+    % from WeightedCentroid below, so the box starts half a bin before the
+    % center of its first pixel and ends half a bin after the center of
+    % its last one. Without it the whole box sits one bin late in time and
+    % one bin high in frequency.
+    stats_table.BoundingBox(:,1) = (stats_table.BoundingBox(:,1)-1)*dx + seg_startx;
+    stats_table.BoundingBox(:,2) = (stats_table.BoundingBox(:,2)-1)*dy + seg_starty;
     stats_table.BoundingBox(:,3) = stats_table.BoundingBox(:,3)*dx;
     stats_table.BoundingBox(:,4) = stats_table.BoundingBox(:,4)*dy;
     stats_table.Properties.VariableDescriptions{'BoundingBox'} = 'Bounding Box: (top left time, top left freq, width, height)';
