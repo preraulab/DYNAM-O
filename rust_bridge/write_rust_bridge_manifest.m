@@ -13,7 +13,8 @@ function manifest_path = write_rust_bridge_manifest(bridge_dir, rs_root, dylib_n
 %                    'libdynamo_rs.dylib' -- required
 %
 %   Outputs:
-%       manifest_path : char - full path to the manifest that was written
+%       manifest_path : char - full path to the manifest that was written,
+%                       rust_bridge/build_manifest_<mexext>.json
 %
 %   Notes:
 %       The MEX binaries and the shared library are committed to the repo,
@@ -33,6 +34,12 @@ function manifest_path = write_rust_bridge_manifest(bridge_dir, rs_root, dylib_n
 %       This manifest fixes all three: it travels with the artifacts, it is
 %       plain JSON, and it is written by the build itself rather than by a
 %       human remembering a commit-message format.
+%
+%       Each platform gets its own manifest, named after its MEX extension
+%       (build_manifest_mexmaca64.json, build_manifest_mexa64.json, ...),
+%       so building on one platform never overwrites the record of
+%       another. The Linux binaries and their manifest are not committed:
+%       each Linux machine builds its own, against its own glibc.
 %
 %   See also: check_rust_bridge, build_rust_mex
 %
@@ -61,7 +68,9 @@ info.dynamo_rs_dirty = ~isempty(status);
 d = dir(fullfile(bridge_dir, ['*.' mexext]));
 info.mex_files = sort({d.name});
 
-manifest_path = fullfile(bridge_dir, 'build_manifest.json');
+% One manifest per platform, so a build on one platform leaves the
+% record of every other platform's binaries untouched.
+manifest_path = fullfile(bridge_dir, ['build_manifest_' mexext '.json']);
 fid = fopen(manifest_path, 'w');
 assert(fid >= 0, 'write_rust_bridge_manifest:cannotWrite', ...
     'Could not open %s for writing.', manifest_path);

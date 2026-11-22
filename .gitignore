@@ -10,3 +10,9 @@ tests/*
 .aider*
 .claude/
 .codegraph/
+
+# Linux Rust bridge binaries are built on each machine (build_rust_mex), never
+# committed: a binary built against a newer glibc will not load on an older one.
+rust_bridge/*.mexa64
+rust_bridge/libdynamo_rs.so
+rust_bridge/build_manifest_mexa64.json

@@ -20,7 +20,8 @@ four overnight recordings (see [Backend parity](#backend-parity) below).
 | `mask_spectrogram_mex.c` | Mask pass-2 spectrogram with pass-1 labels |
 | `refine_peaks_mex.c` | Hann-FFT refinement of peak frequencies |
 | `tfpeak_histogram_mex.c` | SO-power / SO-phase histogram accumulation |
-| `extract_tfpeaks_mex.mex*` etc. | Platform-specific compiled binaries (checked in) |
+| `extract_tfpeaks_mex.mex*` etc. | Platform-specific compiled binaries (macOS and Windows checked in, Linux built locally) |
+| `build_manifest_<mexext>.json` | What each platform's binaries were built from (one file per platform) |
 
 ---
 
@@ -148,14 +149,29 @@ Then a full end-to-end test:
 
 ## Cross-platform distribution
 
-MEX binaries are platform-and-extension specific. The repo carries
-one compiled binary per platform × per MEX file. Current strategy:
+MEX binaries are platform-and-extension specific. Current strategy:
 
-- Run the **controlled meta-repository bootstrap build** on each of
-  {Apple Silicon, Intel, Linux, Windows}.
-- **Commit all built binaries** (~34 KB each, ~1.2 MB/platform total).
-- Rebuild and recommit whenever `DYNAM-O_rs/rust/src/` changes in a
-  way that affects the C ABI or pipeline behaviour.
+- **macOS (Apple Silicon, Intel) and Windows:** run the **controlled
+  meta-repository bootstrap build** on each platform and commit the
+  binaries (~34 KB each, ~1.2 MB/platform total) with their
+  `build_manifest_<mexext>.json`. Rebuild and recommit whenever
+  `DYNAM-O_rs/rust/src/` changes in a way that affects the C ABI or
+  pipeline behaviour.
+- **Linux:** the binaries are not committed (`.gitignore` excludes
+  `*.mexa64`, `libdynamo_rs.so`, and `build_manifest_mexa64.json`).
+  A shared library only loads on systems whose glibc is at least as new
+  as the one it was built against, so a binary built on one Linux
+  machine can fail on another with `version GLIBC_2.xx not found`.
+  Each Linux machine builds its own:
+
+  ```matlab
+  cd <workspace>/DYNAM-O/rust_bridge
+  build_rust_mex
+  ```
+
+  This needs the sibling `DYNAM-O_rs` checkout, `rustup`, and gcc
+  (`mex -setup C`). Until it is built, the toolbox runs the MATLAB
+  backend.
 
 Treat the MEX binaries like pre-compiled artifacts pinned to a specific
 `dynamo_rs` commit. Archive the meta-repository's generated

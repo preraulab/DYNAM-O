@@ -11,7 +11,7 @@
  *               library (additive-only contract)
  *
  * This reports the identity of the dynamo_rs library actually LOADED by
- * this process — unlike rust_bridge/build_manifest.json, which records
+ * this process — unlike rust_bridge/build_manifest_<mexext>.json, which records
  * what was on disk at build time. dynamo_kernel_version.m prefers this
  * gateway and falls back to the manifest when the gateway is absent.
  *
