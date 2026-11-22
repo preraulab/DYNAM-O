@@ -212,7 +212,7 @@ scaling analysis.
 
 Verified on four overnight recordings (the bundled `example_data` plus
 three Compumedics PSG nights `TS00304/TS00404/TS00504`, channel
-`C4-A1`, downsampled to 100 Hz, default `quality_setting` = `'default'`).
+`C4-A1`, downsampled to 100 Hz, default detection options).
 Each subject ran end-to-end through `computeTFPeaks` once per backend.
 
 ### Peak counts at each stage

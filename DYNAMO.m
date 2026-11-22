@@ -64,7 +64,7 @@ classdef DYNAMO < handle
     %       d.runDYNAMO();
     %
     %       % Update detection parameters programmatically, then re-run
-    %       opts = detection_opts('quality_setting', 'precision');
+    %       opts = detection_opts('merge_thresh', 8);
     %       d.updateOptions('detection_options', opts);
     %       d.runDYNAMO();
     %
@@ -1255,12 +1255,6 @@ classdef DYNAMO < handle
                 %   for pi-related values.
                 %
 
-                % Known enum options — return plain string (valid values shown in description)
-                if isequal(constructor, @detection_opts) && strcmp(param, 'quality_setting')
-                    str = char(value);
-                    return;
-                end
-
                 if isequal(constructor, @detection_opts) && strcmp(param, 'parallel_mode')
                     if isempty(value)
                         str = '(auto)';
@@ -1361,7 +1355,6 @@ classdef DYNAMO < handle
                         'downsample_spect', '[time, freq] downsample steps', ...
                         'seg_time', 'Segment length (s)', ...
                         'merge_thresh', 'Merge threshold', ...
-                        'quality_setting', 'Parameter preset', ...
                         'max_merges', 'Max merges per segment', ...
                         'trim_vol', 'Volume trim fraction', ...
                         'show_pbar','Show the progress bar',...

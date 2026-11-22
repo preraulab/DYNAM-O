@@ -248,7 +248,7 @@ function snap = pipeline_options_snapshot(det_opts)
     % timing / parity. Mirrors benchmark_runDYNAMO's snapshot so the
     % two scripts produce comparable JSON layouts.
     keys = {'backend', 'seg_time', 'downsample_spect', ...
-            'merge_thresh', 'quality_setting', 'parallel_mode'};
+            'merge_thresh', 'parallel_mode'};
     snap = struct();
     for i = 1:numel(keys)
         if isfield(det_opts, keys{i})

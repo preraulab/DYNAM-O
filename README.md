@@ -317,14 +317,11 @@ Request only 7 outputs; SOPH + fits are skipped:
 
 Cuts ~10 s from a typical run.
 
-### Option presets
+### Custom options
 
 ```matlab
-% Reproduce the Stokes-2023 paper parameters
-det = detection_opts('quality_setting', 'stokes_2023');
-
-% Highest-precision detection (no spectrogram downsampling)
-det = detection_opts('quality_setting', 'precision');
+% The Stokes-2023 paper parameters (no spectrogram downsampling)
+det = detection_opts('downsample_spect', [], 'seg_time', 60, 'merge_thresh', 8);
 
 % Custom SO-power normalization
 soph = SOpowerphasehist_opts('SOpower_norm_method', 'percentile');
@@ -445,22 +442,13 @@ Creates 2D SO-power and SO-phase histograms from TF-peak data.
 ### Detection Options (`detection_opts`)
 
 ```matlab
-opts = detection_opts('quality_setting', 'default', 'trim_vol', 0.8, ...);
+opts = detection_opts('merge_thresh', 11, 'trim_vol', 0.8, ...);
 ```
-
-**Quality presets** (set `downsample_spect`, `seg_time`, `merge_thresh` together):
-
-| Setting | Downsample | Segment | Merge Threshold | Use Case |
-|---|---|---|---|---|
-| `'stokes_2023'` | none | 60 s | 8 | Reproduces published results |
-| `'precision'` | none | 30 s | 8 | Highest accuracy |
-| `'default'` | 2×2 | 30 s | 11 | Recommended for general use |
 
 **All parameters:**
 
 | Parameter | Default | Description |
 |---|---|---|
-| `quality_setting` | `''` | Preset name (see above); empty → use individual params below |
 | `double_watershed` | `true` | Use two-pass watershed (1 s + 2 s windows) |
 | `downsample_spect` | `[2, 2]` | `[time_factor, freq_factor]` pre-watershed decimation |
 | `seg_time` | `30` s | Segment duration for parallel processing |
@@ -1211,7 +1199,7 @@ For in-depth algorithm documentation and video tutorials, visit the
 
 Verified on `example_data` plus three Compumedics PSG nights
 (`TS00304`/`TS00404`/`TS00504`, channel C4-A1, default
-`quality_setting`). Final-peak deltas span −0.82% to +0.45% — sign
+detection options). Final-peak deltas span −0.82% to +0.45% — sign
 varies, so Rust isn't systematically over- or under-counting. Both
 backends produce visually indistinguishable SO-power / SO-phase
 histograms (cosine similarity 0.999 / 0.996). See

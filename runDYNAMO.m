@@ -255,6 +255,13 @@ end
 detection_options = mergeOptsDefaults(detection_options, detection_opts());
 baseline_options  = mergeOptsDefaults(baseline_options,  baseline_opts());
 
+% An option struct saved by an older toolbox version can carry a
+% quality_setting field. computeTFPeaks does not accept it, and the values
+% it stood for are already in downsample_spect, seg_time and merge_thresh.
+if isfield(detection_options, 'quality_setting')
+    detection_options = rmfield(detection_options, 'quality_setting');
+end
+
 %Force data to be a column vector
 if isrow(data) %#ok<*NODEF>
     data = data(:);
