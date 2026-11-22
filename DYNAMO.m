@@ -130,6 +130,7 @@ classdef DYNAMO < handle
         hist_peakidx = logical([]) % TF peaks included in SOPH histograms
         SOPHs               % SO-power/phase histograms structure
         spect               % Spectrogram matrix
+        baseline            % Extraction baseline (per-frequency percentile floor, linear power; axis = sfreqs)
         stimes              % Spectrogram time vector
         sfreqs              % Spectrogram frequency vector
         data_time_range     % Data within time range
@@ -351,7 +352,7 @@ classdef DYNAMO < handle
             end
 
             [obj.stats_table, obj.spect, obj.stimes, obj.sfreqs,...
-                obj.data_time_range, obj.t_time_range, obj.artifacts, obj.SOPHs] = runDYNAMO(...
+                obj.data_time_range, obj.t_time_range, obj.artifacts, obj.SOPHs, ~, obj.baseline] = runDYNAMO(...
                 obj.data, obj.Fs, obj.stage_times, obj.stage_vals, obj.time_range, ...
                 obj.baseline_options, obj.detection_options, obj.SOPH_options, ...
                 'fit_param_basis', false, 'fit_spline_basis', false, 'plot_on', false, ...
@@ -572,6 +573,14 @@ classdef DYNAMO < handle
                     && ismember('PeakStage', pk_tbl.Properties.VariableNames)
                 pk_tbl = pk_tbl(ismember(pk_tbl.PeakStage, obj.SOPH_options.SOPH_stages), :);
             end
+            % Extraction baseline (linear power over sfreqs) re-anchors
+            % peak heights to absolute power for PkPower; empty when the
+            % object was populated from a CSV (no spectrogram computed).
+            if ~isempty(obj.baseline) && ~isempty(obj.sfreqs)
+                pk_baseline = struct('values', obj.baseline(:), 'freqs', obj.sfreqs(:));
+            else
+                pk_baseline = [];
+            end
 
             % Power and phase fits are isolated: a failure in one is logged
             % but does not block the other or anything downstream. Empty
@@ -597,7 +606,7 @@ classdef DYNAMO < handle
                     if ~isempty(obj.SOPHs.SOphase_paramfit.params)
                         obj.SOPHs.SOphase_paramfit.params = annotateModesWithPeakStats( ...
                             obj.SOPHs.SOphase_paramfit.params, 'phase', pk_tbl, ...
-                            opts_phase.peak_assign, get_fit_background(fitobj_phase));
+                            opts_phase.peak_assign, get_fit_background(fitobj_phase), pk_baseline);
                         obj.SOPHs.SOphase_paramfit.peak_assign = ...
                             effective_peak_assign_label(opts_phase.peak_assign, 'phase');
                     end
@@ -629,7 +638,7 @@ classdef DYNAMO < handle
                             obj.SOPHs.freq_bins, obj.SOPHs.SOphase_bins, model_SOPhH_phase);
                         obj.SOPHs.SOpower_paramfit.params = annotateModesWithPeakStats( ...
                             obj.SOPHs.SOpower_paramfit.params, 'power', pk_tbl, ...
-                            opts_pow.peak_assign, get_fit_background(fitobj_pow));
+                            opts_pow.peak_assign, get_fit_background(fitobj_pow), pk_baseline);
                         obj.SOPHs.SOpower_paramfit.peak_assign = ...
                             effective_peak_assign_label(opts_pow.peak_assign, 'power');
                     end

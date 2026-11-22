@@ -167,7 +167,7 @@ for ii = 1:length(scoring_fpaths)
 
     % Run DYNAM-O. artifacts/t_time_range are captured for the auxiliary
     % file; the compute call itself is unchanged.
-    [stats_table, ~, ~, ~, ~, t_time_range, artifacts, SOPHs] = runDYNAMO(data,Fs,stage_times,stage_vals,'save_output_image',save_output_image,'output_fname',output_fig_name);
+    [stats_table, ~, ~, sfreqs, ~, t_time_range, artifacts, SOPHs, ~, baseline] = runDYNAMO(data,Fs,stage_times,stage_vals,'save_output_image',save_output_image,'output_fname',output_fig_name);
 
     % (Several figures are generated during DYNAM-O, they are saved
     % separately)
@@ -190,7 +190,7 @@ for ii = 1:length(scoring_fpaths)
     if SaveAppTree
         write_app_tree_(char(output_fpath), chan, input_fbase, tree_stamp, ...
             stats_table, SOPHs, SOPH_options, Fs, stage_times, stage_vals, ...
-            artifacts, t_time_range);
+            artifacts, t_time_range, baseline, sfreqs);
     end
 
 end
@@ -199,7 +199,8 @@ end
 
 
 function write_app_tree_(out_root, chan, subj, stamp, stats_table, SOPHs, ...
-    SOPH_options, Fs, stage_times, stage_vals, artifacts, t_time_range)
+    SOPH_options, Fs, stage_times, stage_vals, artifacts, t_time_range, ...
+    baseline, sfreqs)
 %WRITE_APP_TREE_  Serialize one (subject, channel) result set to the canonical tree
 %
 %   Inputs:
@@ -251,6 +252,12 @@ end
 try
     aux = assemble_aux_(subj, Fs, stage_times, stage_vals, SOPHs, ...
         SOPH_options, artifacts, t_time_range);
+    % Baseline datasets (additive; OUTPUT_FORMAT.md section 2.3) so the
+    % Rust cache-rebuild path can compute PkPower from this tree too.
+    if ~isempty(baseline) && ~isempty(sfreqs)
+        aux.baseline = baseline(:)';
+        aux.baseline_freqs = sfreqs(:)';
+    end
     aux_dir = fullfile(chan_dir, 'auxiliary_data');
     if ~isfolder(aux_dir), mkdir(aux_dir); end
     aux_path = fullfile(aux_dir, sprintf('%s_auxiliary_data_%s.h5', subj, chan));

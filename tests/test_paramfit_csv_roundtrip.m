@@ -166,6 +166,7 @@ T.PkFreq      = [10.05; NaN];
 T.PkDuration  = [0.9; NaN];
 T.PkBandwidth = [1.8; NaN];
 T.PkHeight    = [4.2; NaN];
+T.PkPower     = [-10.25; NaN];
 T.PkVolume    = [6.5; NaN];
 T.PkArea      = [2.1; NaN];
 T.PkPeakiness = [1.1; NaN];
@@ -179,7 +180,7 @@ pf = struct('params', T, 'fitobj', [], ...
 end
 
 function c = pk_cols_()
-%PK_COLS_  The ten Pk* column names in schema order
+%PK_COLS_  The eleven Pk* column names in schema order
 %
 %   Inputs:
 %       none
@@ -187,7 +188,7 @@ function c = pk_cols_()
 %   Outputs:
 %       c : cell - column names matching annotateModesWithPeakStats
 c = {'PkCount','PkFreq','PkDuration','PkBandwidth','PkHeight', ...
-     'PkVolume','PkArea','PkPeakiness','PkSOpower','PkSOphase'};
+     'PkPower','PkVolume','PkArea','PkPeakiness','PkSOpower','PkSOphase'};
 end
 
 function stamp = fixture_stamp_()
